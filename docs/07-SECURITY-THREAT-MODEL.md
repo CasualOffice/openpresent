@@ -48,7 +48,7 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 | SEC-C05 | Font files: malformed tables; embedded `.fntdata` | Embedded fonts off by default for rendering; embedding rights honoured; `skrifa` only, fuzzed | Planned 2D |
 | SEC-C06 | Media: video and audio parsers | Browser plays in a sandbox; the engine never parses media | Planned 3 |
 | SEC-C07 | VBA, ActiveX, OLE | **Never executed.** Retained as bytes; `.pptm` opens with a visible notice; fallback image only | Planned 1L |
-| SEC-C08 | Geometry guide formulas: cycles, huge values, division by zero | Evaluated in document order with no recursion; saturating arithmetic; cap on guides and path points | Planned 1E |
+| SEC-C08 | Geometry guide formulas: cycles, huge values, division by zero | Evaluated in document order with no recursion; saturating arithmetic; cap on guides and path points. A seeded test exists; no fuzz target yet (`GEO-04`) | Partial |
 | SEC-C09 | Pathological text: combining floods, huge runs, deep lists | Per-body caps; layout time budget | Planned 2D |
 | SEC-C10 | Animation or transition trees that never end or explode | Depth and node caps; timeline compile time budget; infinite repeat bounded per show | Planned 1I, 8 |
 | SEC-C11 | Effects costing unbounded CPU, such as huge blur radii | Radius and rasterized-area caps per object | Planned 2C |
