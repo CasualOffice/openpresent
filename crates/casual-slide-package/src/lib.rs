@@ -17,7 +17,7 @@ mod path;
 
 pub use error::PackageError;
 pub use limits::PackageLimits;
-pub use package::{EntryInfo, Package};
+pub use package::{EntryInfo, Package, PartEdits};
 pub use path::is_safe_part_path;
 
 #[cfg(test)]

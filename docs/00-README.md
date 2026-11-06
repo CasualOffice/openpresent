@@ -16,8 +16,10 @@ Read in this order: 01 → 02 → 06 → 51 → 07. Then the pillar you are work
 | [10-ENTERPRISE-REQUIREMENTS](10-ENTERPRISE-REQUIREMENTS.md) | The enterprise bar | Draft for owner |
 | [14-EXECUTION-TRACKER](14-EXECUTION-TRACKER.md) | The only tracker | Live |
 | [19-WORKSPACE-SCAFFOLD-DESIGN](19-WORKSPACE-SCAFFOLD-DESIGN.md) | Crates, dependency DAG, provenance | Draft for owner |
+| [20-ERROR-CODE-REGISTRY](20-ERROR-CODE-REGISTRY.md) | Every diagnostic code | Live |
 | [22-NORMALIZED-SCHEMA](22-NORMALIZED-SCHEMA.md) | The presentation model and fidelity contract | Draft for owner |
 | [24-OPERATIONS-AND-COLLABORATION](24-OPERATIONS-AND-COLLABORATION.md) | Op set, undo, OT | Draft for owner |
+| [28-PACKAGE-AND-PART-GRAPH](28-PACKAGE-AND-PART-GRAPH.md) | Tier 1A | Built |
 | [42-TEXT-AND-RENDERING-ARCHITECTURE](42-TEXT-AND-RENDERING-ARCHITECTURE.md) | Text engine, display list, canvas, slide show, budgets | Draft for owner |
 | [47-POWERPOINT-SHELL-AND-FEATURE-MAP](47-POWERPOINT-SHELL-AND-FEATURE-MAP.md) | The UI target and the feature inventory | Draft; **recalled, not yet measured** |
 | [48-POWERPOINT-FEATURE-STUDY](48-POWERPOINT-FEATURE-STUDY.md) | What PowerPoint offers, from three views, with conflicts | Draft for owner |

@@ -41,10 +41,10 @@ Strict files use `http://purl.oclc.org/ooxml/officeDocument/relationships/…`. 
 
 ## Relationship types
 
-Suffix after the base above: `officeDocument`, `extendedProperties`, `customProperties`, `metadata/thumbnail`, `slide`,
+Suffix after the base above: `officeDocument`, `extended-properties` and `custom-properties` in Transitional files (`extendedProperties` and `customProperties` in Strict), `metadata/thumbnail`, `slide`,
 `slideLayout`, `slideMaster`, `notesSlide`, `notesMaster`, `handoutMaster`, `presProps`, `viewProps`, `tableStyles`, `tags`, `theme`,
 `themeOverride`, `comments`, `commentAuthors`, `slideUpdateInfo`, `slideUpdateUrl`, `image`, `audio`, `video`, `movie`, `hyperlink`,
 `chart`, `chartUserShapes`, `diagramData`, `diagramLayout`, `diagramQuickStyle`, `diagramColors`, `oleObject`, `package`, `control`,
-`font`, `customXml`, `customXmlProps`, `printerSettings`, `htmlPubSaveAs`, `attachedTemplate`.
+`font`, `customXml`, `customXmlProps`, `printerSettings`, `vmlDrawing`, `htmlPubSaveAs`, `attachedTemplate`.
 
 The part graph must also tolerate **unknown** relationship types: retained, named in the report, and never followed if external.

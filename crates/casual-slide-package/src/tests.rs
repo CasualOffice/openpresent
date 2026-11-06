@@ -46,7 +46,7 @@ fn admits_a_valid_package_and_reads_parts() {
 fn rejects_non_package() {
     let err = Package::open(b"not a zip at all".to_vec(), PackageLimits::default()).unwrap_err();
     assert_eq!(err, PackageError::NotAPackage);
-    assert_eq!(err.code(), "OC-PKG-0005");
+    assert_eq!(err.code(), "CS-PKG-0005");
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn rejects_oversized_input() {
     };
     let err = Package::open(bytes, limits).unwrap_err();
     assert!(matches!(err, PackageError::InputTooLarge { .. }));
-    assert_eq!(err.code(), "OC-PKG-0001");
+    assert_eq!(err.code(), "CS-PKG-0001");
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn rejects_too_many_entries() {
         err,
         PackageError::TooManyEntries { count: 3, limit: 2 }
     ));
-    assert_eq!(err.code(), "OC-PKG-0002");
+    assert_eq!(err.code(), "CS-PKG-0002");
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn rejects_zip_bomb_by_expansion_ratio() {
     };
     let err = Package::open(bytes, limits).unwrap_err();
     assert!(matches!(err, PackageError::ExpansionRatioExceeded { .. }));
-    assert_eq!(err.code(), "OC-PKG-0003");
+    assert_eq!(err.code(), "CS-PKG-0003");
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn rejects_expansion_over_total_cap() {
     };
     let err = Package::open(bytes, limits).unwrap_err();
     assert!(matches!(err, PackageError::ExpansionTooLarge { .. }));
-    assert_eq!(err.code(), "OC-PKG-0003");
+    assert_eq!(err.code(), "CS-PKG-0003");
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn rejects_path_traversal() {
     let bytes = make_zip(&[("../../etc/passwd", b"secret")]);
     let err = Package::open(bytes, PackageLimits::default()).unwrap_err();
     assert!(matches!(err, PackageError::UnsafePath { .. }));
-    assert_eq!(err.code(), "OC-PKG-0004");
+    assert_eq!(err.code(), "CS-PKG-0004");
 }
 
 #[test]
@@ -118,7 +118,7 @@ fn missing_part_is_reported() {
     let mut pkg = Package::open(bytes, PackageLimits::default()).unwrap();
     let err = pkg.read_part("nope.xml").unwrap_err();
     assert!(matches!(err, PackageError::PartNotFound { .. }));
-    assert_eq!(err.code(), "OC-PKG-0006");
+    assert_eq!(err.code(), "CS-PKG-0006");
 }
 
 /// Rewrite every declared uncompressed size in `zip` to `claim`.
@@ -190,7 +190,7 @@ fn a_part_that_produces_more_than_it_declared_is_refused() {
         matches!(err, PackageError::ExpansionTooLarge { .. }),
         "got {err:?}"
     );
-    assert_eq!(err.code(), "OC-PKG-0003");
+    assert_eq!(err.code(), "CS-PKG-0003");
 }
 
 /// **The whole-package ceiling is charged against bytes that actually exist.**
@@ -337,4 +337,107 @@ fn record_count_follows_a_zip64_end_record() {
     end[12..16].copy_from_slice(&[0xFF; 4]);
     out.extend_from_slice(&end);
     assert_eq!(crate::directory::record_count(&out), Some(2));
+}
+
+// ---- Rewriting (docs/28-PACKAGE-AND-PART-GRAPH.md) ------------------------------
+
+fn raw_stream(zip: &[u8], name: &str) -> Vec<u8> {
+    use std::io::Read;
+    let mut archive = zip::ZipArchive::new(Cursor::new(zip)).unwrap();
+    let mut entry = archive.by_name_raw(name.as_bytes()).unwrap();
+    let mut out = Vec::new();
+    entry.read_to_end(&mut out).unwrap();
+    out
+}
+
+#[test]
+fn a_rewrite_with_no_edits_returns_the_source_bytes() {
+    let zip = make_zip(&[("a.xml", b"<a/>"), ("b.xml", b"<b/>")]);
+    let mut pkg = Package::open(zip.clone(), PackageLimits::default()).unwrap();
+    assert_eq!(pkg.source_bytes(), zip.as_slice());
+    assert_eq!(pkg.rewrite(&crate::PartEdits::default()).unwrap(), zip);
+}
+
+#[test]
+fn a_rewrite_keeps_untouched_parts_compressed_bytes_and_applies_edits() {
+    // Stored rather than deflated, so a recompressing rewrite would change the stream.
+    let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
+    let stored = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+    writer.start_file("keep.xml", stored).unwrap();
+    writer.write_all(b"<keep>same</keep>").unwrap();
+    writer.start_file("edit.xml", stored).unwrap();
+    writer.write_all(b"<old/>").unwrap();
+    writer.start_file("gone.xml", stored).unwrap();
+    writer.write_all(b"<gone/>").unwrap();
+    let zip = writer.finish().unwrap().into_inner();
+
+    let mut edits = crate::PartEdits::default();
+    edits.replace("EDIT.xml", b"<new/>".to_vec());
+    edits.replace("added.xml", b"<added/>".to_vec());
+    edits.remove("GONE.xml");
+
+    let mut pkg = Package::open(zip.clone(), PackageLimits::default()).unwrap();
+    let out = pkg.rewrite(&edits).unwrap();
+    assert_eq!(raw_stream(&zip, "keep.xml"), raw_stream(&out, "keep.xml"));
+    assert_eq!(raw_stream(&out, "keep.xml"), b"<keep>same</keep>");
+
+    let mut re = Package::open(out.clone(), PackageLimits::default()).unwrap();
+    assert_eq!(re.read_part("edit.xml").unwrap(), b"<new/>");
+    assert_eq!(re.read_part("added.xml").unwrap(), b"<added/>");
+    assert!(!re.contains("gone.xml"));
+    assert_eq!(re.entry_names(), ["keep.xml", "edit.xml", "added.xml"]);
+
+    // The same edits give the same bytes.
+    let mut again = Package::open(zip, PackageLimits::default()).unwrap();
+    assert_eq!(again.rewrite(&edits).unwrap(), out);
+}
+
+#[test]
+fn a_rewrite_refuses_an_unsafe_new_part_name() {
+    let mut edits = crate::PartEdits::default();
+    edits.replace("../evil.xml", b"x".to_vec());
+    let zip = make_zip(&[("a.xml", b"<a/>")]);
+    let mut pkg = Package::open(zip, PackageLimits::default()).unwrap();
+    assert!(pkg.rewrite(&edits).is_err());
+}
+
+#[test]
+fn find_part_ignores_case() {
+    let zip = make_zip(&[("ppt/Slides/Slide1.xml", b"<a/>")]);
+    let pkg = Package::open(zip, PackageLimits::default()).unwrap();
+    assert_eq!(
+        pkg.find_part("PPT/slides/slide1.XML"),
+        Some("ppt/Slides/Slide1.xml")
+    );
+    assert_eq!(pkg.find_part("ppt/missing.xml"), None);
+}
+
+/// The overall ratio alone is diluted by ordinary parts. SEC-P12.
+#[test]
+fn a_bomb_diluted_by_ordinary_parts_is_refused() {
+    // Incompressible filler, so the package as a whole stays under the ratio.
+    let filler: Vec<u8> = (0..200_000u32)
+        .flat_map(|i| i.wrapping_mul(2_654_435_761).to_le_bytes())
+        .collect();
+    let bytes = make_zip(&[("zeros.bin", &vec![0u8; 64 << 20]), ("filler.bin", &filler)]);
+    let err = Package::open(bytes, PackageLimits::default()).unwrap_err();
+    assert!(
+        matches!(err, PackageError::ExpansionRatioExceeded { .. }),
+        "{err}"
+    );
+}
+
+/// Refused from the declaration, with nothing decompressed. SEC-P13.
+#[test]
+fn a_capped_read_refuses_before_decompressing() {
+    let zip = make_zip(&[("big.xml", &[b'x'; 5000]), ("small.xml", b"<a/>")]);
+    let mut pkg = Package::open(zip, PackageLimits::default()).unwrap();
+    let err = pkg.read_part_capped("big.xml", 1000).unwrap_err();
+    assert!(
+        matches!(err, PackageError::PartTooLarge { size: 5000, .. }),
+        "{err}"
+    );
+    assert_eq!(pkg.consumed(), 0);
+    assert_eq!(pkg.read_part_capped("small.xml", 1000).unwrap(), b"<a/>");
+    assert_eq!(pkg.consumed(), 4);
 }

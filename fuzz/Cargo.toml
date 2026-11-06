@@ -1,0 +1,38 @@
+# A separate workspace: nightly-only cargo-fuzz dependencies stay out of the
+# product graph. Every parser has a target (docs/07-SECURITY-THREAT-MODEL.md).
+[package]
+name = "casual-slide-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+casual-slide-ooxml = { path = "../crates/casual-slide-ooxml" }
+casual-slide-package = { path = "../crates/casual-slide-package" }
+libfuzzer-sys = "0.4"
+
+[workspace]
+
+[[bin]]
+name = "bounded_package"
+path = "fuzz_targets/bounded_package.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "presentation_package"
+path = "fuzz_targets/presentation_package.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "xml_walker"
+path = "fuzz_targets/xml_walker.rs"
+test = false
+doc = false
+bench = false

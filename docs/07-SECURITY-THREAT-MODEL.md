@@ -18,6 +18,8 @@ lands; nothing marked Planned exists yet.
 | SEC-P05 | Duplicate entries: a scanner approves one, the editor opens another. The `zip` crate hides them | Raw walk of the central directory compared with the crate's count | Tested |
 | SEC-P06 | Part names differing only in case | Refused, per OPC equivalence | Tested |
 | SEC-P07 | Malformed names: `.`, empty segment, trailing dot, control characters, `%2e`, `%2f`, `%5c` | Refused | Tested |
+| SEC-P12 | Zip bomb diluted by ordinary parts, so the overall ratio passes | Ratio also checked per entry. Found by the corpus: a 64 MiB run of zeros was admitted | Tested |
+| SEC-P13 | Part decompressed before its size is judged | XML reads refuse on the declaration, with nothing decompressed | Tested |
 | SEC-P08 | Encrypted or unusual compression methods in entries | Refuse cleanly on read; hostile fixture | Planned 0 |
 | SEC-P09 | Recursive bomb: embedded `.xlsx` or `.pptx` inside a deck | Embedded parts are retained, never auto-opened; opening one is a separate bounded admission with an inherited budget | Planned 1J, 1L |
 | SEC-P10 | Slow decompression within the size budget | Time budget, cancellable; host-supplied predicate | Planned 1A |
@@ -27,12 +29,12 @@ lands; nothing marked Planned exists yet.
 
 | ID | Threat | Control | Status |
 | --- | --- | --- | --- |
-| SEC-X01 | Billion laughs, entity expansion | **Any DOCTYPE is refused**; OOXML never needs one | Planned 1A |
-| SEC-X02 | XXE, SSRF through external entities | Same, and the parser has no resolver | Planned 1A |
-| SEC-X03 | Deep nesting exhausts the stack | Depth cap; parsers iterative where recursion follows input | Planned 1A |
-| SEC-X04 | Element, attribute or text volume | Per-part caps, as OpenCalc's `-ooxml` limits | Planned 1A |
+| SEC-X01 | Billion laughs, entity expansion | **Any DOCTYPE is refused**; OOXML never needs one. Undeclared entity references also refused | Tested |
+| SEC-X02 | XXE, SSRF through external entities | Same, and the parser has no resolver | Tested |
+| SEC-X03 | Deep nesting exhausts the stack | Depth cap; parsers iterative where recursion follows input | Tested |
+| SEC-X04 | Element, attribute or text volume | Per-part caps on size, elements and attributes | Tested |
 | SEC-X05 | `mc:AlternateContent` used to hide content from a scanner | Choice resolved by a fixed rule; retained branch is never interpreted | Planned 1A |
-| SEC-X06 | Relationship cycles or a part reached many ways | Graph walk with a visited set and a depth cap | Planned 1A |
+| SEC-X06 | Relationship cycles or a part reached many ways | Breadth-first walk with a visited set, relationship caps | Tested |
 | SEC-X07 | Theme, master or layout chains that recurse | Fixed walk order; cycle refused | Planned 1D |
 
 ## Content
@@ -56,8 +58,8 @@ lands; nothing marked Planned exists yet.
 
 | ID | Threat | Control | Status |
 | --- | --- | --- | --- |
-| SEC-N01 | **Tracking and SSRF:** `TargetMode="External"` images, media, OLE links, remote templates | **Never fetched automatically**, on the server especially. Host policy decides; placeholder otherwise | Planned 1A, 3 |
-| SEC-N02 | NTLM credential theft through UNC paths such as `\\host\share` | UNC and `file:` targets refused for automatic use, and shown as inert | Planned 1A |
+| SEC-N01 | **Tracking and SSRF:** `TargetMode="External"` images, media, OLE links, remote templates | **Never fetched automatically**, on the server especially; every one reported. Host policy and placeholder come in Phase 3 | Tested for 1A |
+| SEC-N02 | NTLM credential theft through UNC paths such as `\\host\share` | UNC and `file:` targets classified, reported, never followed; inert display comes in Phase 3 | Tested for 1A |
 | SEC-N03 | Link schemes: `javascript:`, `data:`, `vbscript:`, `file:` | Allowlist: `http`, `https`, `mailto`, `tel`, and in-deck jumps. Confirmation before leaving | Planned 3 |
 | SEC-N04 | `ppaction://` program launch and macro actions | Parsed and retained; program and macro actions never run | Planned 1D, 8 |
 | SEC-N05 | Link text that lies about its target | Tooltip shows the real target | Planned 3 |

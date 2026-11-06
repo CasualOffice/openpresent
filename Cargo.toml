@@ -4,6 +4,7 @@ resolver = "3"
 # a first consumer, so this list grows with the phases.
 members = [
     "crates/casual-slide-package",
+    "crates/casual-slide-ooxml",
     "crates/casual-slide-text",
 ]
 

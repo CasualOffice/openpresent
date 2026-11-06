@@ -11,7 +11,7 @@ OpenCalc's documents unless they exist in this repository.
 Divergence from OpenCalc:
 
 - Crate doc comment now names `.pptx` as the consumer.
-- Duplicate and case-equivalent part names are refused (`OC-PKG-0007`).
+- Duplicate and case-equivalent part names are refused (`CS-PKG-0007`).
 - OPC part-name grammar enforced: empty and dot-ending segments, control
   characters, and percent-encoded dots and separators are refused.
 - `read_part` no longer sizes its allocation from the declared size.

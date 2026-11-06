@@ -4,7 +4,7 @@
 use core::fmt;
 
 /// A reason a package was refused, or a part could not be read. Every variant
-/// maps to a stable `OC-PKG-*` code via [`PackageError::code`]. All refusals are
+/// maps to a stable `CS-PKG-*` code via [`PackageError::code`]. All refusals are
 /// *clean*: on any error the package is not partially admitted.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -24,6 +24,10 @@ pub enum PackageError {
     /// Two entries name the same part, exactly or by OPC's case-insensitive
     /// equivalence.
     DuplicatePart { path: String },
+    /// A part declares more bytes than its reader accepts.
+    PartTooLarge { name: String, size: u64, limit: u64 },
+    /// A new package could not be written.
+    RewriteFailed,
     /// The input is not a valid ZIP/OPC package.
     NotAPackage,
     /// A requested part does not exist in the package.
@@ -34,14 +38,16 @@ impl PackageError {
     /// The stable diagnostic code for this error (`docs/20`).
     pub fn code(&self) -> &'static str {
         match self {
-            PackageError::InputTooLarge { .. } => "OC-PKG-0001",
-            PackageError::TooManyEntries { .. } => "OC-PKG-0002",
+            PackageError::InputTooLarge { .. } => "CS-PKG-0001",
+            PackageError::TooManyEntries { .. } => "CS-PKG-0002",
             PackageError::ExpansionTooLarge { .. }
-            | PackageError::ExpansionRatioExceeded { .. } => "OC-PKG-0003",
-            PackageError::PathTooLong { .. } | PackageError::UnsafePath { .. } => "OC-PKG-0004",
-            PackageError::NotAPackage => "OC-PKG-0005",
-            PackageError::PartNotFound { .. } => "OC-PKG-0006",
-            PackageError::DuplicatePart { .. } => "OC-PKG-0007",
+            | PackageError::ExpansionRatioExceeded { .. } => "CS-PKG-0003",
+            PackageError::PathTooLong { .. } | PackageError::UnsafePath { .. } => "CS-PKG-0004",
+            PackageError::NotAPackage => "CS-PKG-0005",
+            PackageError::PartNotFound { .. } => "CS-PKG-0006",
+            PackageError::DuplicatePart { .. } => "CS-PKG-0007",
+            PackageError::RewriteFailed => "CS-PKG-0008",
+            PackageError::PartTooLarge { .. } => "CS-PKG-0009",
         }
     }
 }
@@ -73,6 +79,13 @@ impl fmt::Display for PackageError {
             }
             PackageError::UnsafePath { path } => write!(f, "unsafe entry path: {path:?}"),
             PackageError::DuplicatePart { path } => write!(f, "duplicate part name: {path:?}"),
+            PackageError::PartTooLarge { name, size, limit } => {
+                write!(
+                    f,
+                    "part {name:?} declares {size} bytes, over the limit {limit}"
+                )
+            }
+            PackageError::RewriteFailed => write!(f, "could not write the package"),
             PackageError::NotAPackage => write!(f, "not a valid ZIP/OPC package"),
             PackageError::PartNotFound { name } => write!(f, "part not found: {name:?}"),
         }
