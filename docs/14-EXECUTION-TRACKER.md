@@ -7,15 +7,15 @@
 
 | ID | Decision | St | Recommendation | Why it matters |
 | --- | --- | --- | --- | --- |
-| DEC-01 | Product name | Open | Rename before anything is published | "OpenSlide" is an established digital-pathology library and "OpenSlides" an established assembly-management product. Crate prefix `casual-slide-` is unaffected |
+| DEC-01 | Product name | Done | **OpenPresent**, decided on the owner's delegation, 2026-11-07 | `OpenSlide` is a digital-pathology library and `OpenSlides` an assembly product. One search found no project called OpenPresent, which is **not** trademark clearance (`DEC-07`). Fits OpenDoc and OpenCalc. Cheap to change until first public release. Crates stay `casual-slide-*`; rename is `NAME-01` |
 | DEC-02 | Where to build, and how to share code with OpenCalc | Done | Owner, 2026-11-07: separate repo in this folder; copy from OpenCalc and reuse what fits | Each copied crate carries `PROVENANCE.md` |
-| DEC-03 | Accent colour | Open | Rose `#b5336b` (5.75:1 on white) | Must be deliberately not PowerPoint's orange-red, as OpenCalc's green is not Excel's. Taste call |
-| DEC-04 | Access to a signed-in PowerPoint for the web, and PowerPoint-rendered reference images | Open | Provide a signed-in Chrome session and, if possible, a desktop PowerPoint for references | [47](47-POWERPOINT-SHELL-AND-FEATURE-MAP.md) is recalled from memory. OpenCalc's shell was measured; this one should be too. LibreOffice alone is a second opinion, not the target |
-| DEC-05 | Build our own Designer and Copilot equivalents? | Open | Not now; keep the seam | Large, separate product decision |
-| DEC-06 | Feature bar where web and desktop differ | Done | Owner, 2026-11-07: **both web and desktop, as OpenCalc.** Full desktop feature bar, web and Tauri desktop hosts. Legacy `.ppt` is `DEC-08` | [48](48-POWERPOINT-FEATURE-STUDY.md) |
-| DEC-08 | Read legacy `.ppt`? | Open | Decide after Phase 2. Large binary format; refused cleanly for now as `CS-OPC-0005` | Microsoft's web converts it |
-| DEC-09 | Create a remote so CI can run | Open | Private repo under `CasualOffice`, name per `DEC-01` | CI has never run. Phase 0 cannot close without it |
-| DEC-07 | Legal review of bundled schemas, fonts, and Microsoft's patent notice | Open | Have counsel read [schemas/README](../schemas/README.md) before the first release | Enterprise buyers will ask; ENT-24 |
+| DEC-03 | Accent colour | Done | Rose `#b5336b` (5.75:1 on white) | Deliberately not PowerPoint's orange-red, as OpenCalc's green is not Excel's. Changeable through one token |
+| DEC-04 | PowerPoint verification | Done | Owner, 2026-11-07: LibreOffice is the working reference, and UI and UX come from online research. **PowerPoint verification moves from Phases 0 to 3 to a release gate** (`PV-01`), run earlier whenever access exists | So work never waits on it. Risk: repair prompts and visual differences found late. Mitigated by schema validation, Microsoft's validator (`F-006`) and real PowerPoint-written decks as input (`F-007`). "Matches PowerPoint" stays unclaimable until then |
+| DEC-05 | Designer and Copilot equivalents | Done | Not built now; a host seam keeps the door open; their file metadata is retained | Needs an AI service, against the air-gapped default. Cheap to add later, and costly to design around now |
+| DEC-06 | Feature bar and hosts | Done | Owner, 2026-11-07: **both web and desktop, as OpenCalc.** The goal is a clone, so the full desktop feature set, in both hosts | [48](48-POWERPOINT-FEATURE-STUDY.md) |
+| DEC-08 | Legacy `.ppt` | Done | **Yes, import-only, in Phase 10** (`PPT-01`), saved as `.pptx`. Until then refused cleanly as `CS-OPC-0005` | Enterprises hold years of these. A bounded binary parser needs its own threat work, after the model is stable. The model needs no change for it |
+| DEC-09 | Remote for CI | Blocked | Private `CasualOffice/openpresent`. The name is free and `gh` is signed in | Creating it and pushing was denied by the session's permission system. Needs the owner to allow or do it. CI cannot run until then |
+| DEC-07 | Legal review of bundled schemas and fonts, Microsoft's patent notice, and the name | Open | Needs a lawyer, so it is the owner's. **Blocks first public release only** | Enterprise buyers will ask; ENT-24 |
 
 ## Phase D
 
@@ -28,7 +28,7 @@
 | DOC-006 | Working rules and skills | Done | P1 | `CLAUDE.md` holds standards, one-roadmap-one-tracker, document updates. Six project skills in `.claude/skills`. `check-repo.py` refuses a second tracker or plan | Seeded second tracker seen failing |
 | ENG-01 | Enforce standards by lint | Open | P1 | Add `unwrap_used`, `expect_used`, `indexing_slicing`, `missing_docs` for non-test code. Waits for the parallel sessions to merge, since it touches their files. Copied `-text` needs a pass | Clippy passes with the lints on |
 | DOC-002 | Owner review of the remaining ADRs | Open | P0 | ADR-003 Accepted; the rest Proposed | ADRs Accepted or changed |
-| UX-001 | Measure PowerPoint for the web and turn 47 into a measured target | Blocked | P1 | Needs `DEC-04` | Shell prototype approved by owner, as OpenCalc's docs/95 was |
+| UX-001 | PowerPoint UI and UX study | In progress | P1 | Online research running, for docs 49, 50 and 52. Pixel sizes stay unmeasured without a live session, so geometry starts from OpenCalc's measured ribbon | Shell prototype approved by owner |
 
 ## Phase 0
 
@@ -46,6 +46,12 @@
 | SPEC-04 | Enumerate extension parts and relationship types | Open | P1 | Not in [spec/parts.md](spec/parts.md) | Listed from MS-PPTX and MS-ODRAWXML |
 | SPEC-05 | Checklist generated | Done | P0 | 8730 rows from 77 schemas; an unassigned type fails generation | Staleness and unassigned-namespace failures both seen |
 | PKG-01 | Read budget is cumulative | Open | P2 | `read_part` charges a whole-package budget on every read, so an editor re-reading parts can exhaust it on a legitimate deck | A long session does not refuse |
+| F-006 | Microsoft's Open XML validator in the fidelity tools | Open | P0 | Needs `dotnet`. Closest available stand-in for PowerPoint's strictness | Rejects a seeded invalid part; corpus exports pass |
+| F-007 | Real PowerPoint-written decks as input | Open | P0 | Find decks with clear reuse rights, record provenance. Unclear rights: test locally, never commit | At least 20 decks, Windows and Mac, open and round-trip |
+| PV-01 | PowerPoint verification | Open | P0 | Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Run whenever access exists; earlier is cheaper | Before first stable release |
+| PPT-01 | Import legacy `.ppt` | Open | P2 | `DEC-08`. CFB and MS-PPT parsers with limits and fuzz targets | Phase 10 |
+| NAME-01 | Rename product to OpenPresent in docs and site | Open | P2 | After parallel sessions merge. Crate prefix and folder unchanged | No product use of the old name remains |
+| DOC-007 | Owner instruction log | Done | P0 | [03](03-OWNER-INSTRUCTIONS.md), first in authority, cited from `CLAUDE.md` | Exists, indexed |
 | GEO-01 | `upArrow` missing from Ecma's preset definitions | Open | P1 | The file defines `upDownArrow` twice and `upArrow` never. A generator keyed on names ships 186 of 187 | A fixture draws all 187; `upArrow` matches a reference |
 | SEC-010 | Package threats SEC-P04 to SEC-P07 | Done | P1 | Oversized allocation from a forged size; duplicate and case-equivalent names; malformed names. The `zip` crate merges duplicates, so a raw directory walk was added. Inherited from OpenCalc | Each test seen red; guards disabled and seen red again; 19 tests pass |
 | SEC-011 | Report package findings to OpenCalc | Open | P1 | Same code at `b23c67c`; that repo is not modified from here | Owner informed |

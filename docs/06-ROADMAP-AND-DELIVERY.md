@@ -7,6 +7,8 @@ out, and what closes it.
 **Order follows the owner's priority (2026-11-07):** fidelity is the most critical thing, so import, export and
 modelling come first, then layout and rendering, then the editor. **Web and desktop are both first-class** (`DEC-06`).
 
+**PowerPoint verification is a release gate, not a phase blocker** (`DEC-04`, `PV-01`). Until it passes, phases close against LibreOffice, schemas and Microsoft's validator, and nothing may claim to match PowerPoint.
+
 **No dates.** Row counts measure surface, not effort. Tiers 1A to 1D calibrate throughput, and the rest is sized from that.
 
 ## Where things stand
@@ -14,7 +16,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | Phase | State | Note |
 | --- | --- | --- |
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
-| 0 Foundation | **Open** | CI has never run, and a remote is needed (`DEC-09`) |
+| 0 Foundation | **Blocked** on `DEC-09` for CI | CI has never run; everything else proceeds |
 | 1 Model, import, export | **Open under waiver W-1** | 1A, 1B, 1C, 1E started |
 | 2 to 10 | Not opened | `SPK-01` and the fidelity tools are Phase 0 work feeding Phase 2 |
 
@@ -46,9 +48,9 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
   - [x] Package threats `SEC-P01`–`P07`, `P12`, `P13` have tests seen red. Evidence: `SEC-010`, `SEC-013`.
   - [x] Spec checklist generated, and fails on an unassigned type. Evidence: `SPEC-05`.
   - [ ] CI green on three platforms, with a seeded violation seen failing each job (`F-003`, `DEC-09`).
-  - [ ] Fixture corpus includes PowerPoint-written decks, with rights recorded (`F-004`, `DEC-04`).
+  - [ ] Fixture corpus has provenance recorded, including real PowerPoint-written decks as input (`F-004`, `F-007`).
   - [ ] `SPK-01` reported; ADR-004 and ADR-005 settled.
-  - [ ] `SPK-02` runs 5 decks end to end, with at least one PowerPoint reference (`DEC-04`).
+  - [ ] `SPK-02` runs 5 decks end to end against LibreOffice; Microsoft's validator runs (`F-006`).
   - [ ] Owner sign-off.
 
 ## Phase 1 — Model, import, export
@@ -56,7 +58,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 - **Gives:** any `.pptx` opens and saves with nothing lost, and every construct is accounted for. **No UI, and nothing drawn.**
 - **Opens:** Phase 0 closed, or a waiver. Currently W-1.
 - **In:** every row in [spec/](spec/README.md), by tier below; behaviours BEH-01 to 04, 18, 21, 22, 24 in [51](51-SPEC-CHECKLIST-AND-FIDELITY.md).
-- **Out:** rendering; UI; edit operations beyond what round-trip tests need. Legacy `.ppt` (`DEC-08`), `.odp` (Phase 10).
+- **Out:** rendering; UI; edit operations beyond what round-trip tests need. Legacy `.ppt` and `.odp` (Phase 10).
 
 | Tier | Scope | Rows | Opens after |
 | --- | --- | ---: | --- |
@@ -85,8 +87,8 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 
 **Phase 1 closes when:**
 - [ ] All tiers closed.
-- [ ] **PowerPoint reopens every exported corpus deck with no repair prompt** (F5, `DEC-04`).
-- [ ] Corpus includes real decks from PowerPoint on Windows and Mac, Keynote and Google Slides, with rights recorded.
+- [ ] Every exported corpus deck passes schema validation and Microsoft's validator, and LibreOffice reopens it. The PowerPoint check is `PV-01`.
+- [ ] Corpus includes real decks from PowerPoint on Windows and Mac, Keynote and Google Slides, with provenance recorded.
 - [ ] A 500-slide deck opens within its budget, and a hostile corpus run shows no crash or hang.
 - [ ] Owner sign-off.
 
@@ -107,7 +109,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | **2G** | PDF, JPEG, print layouts | 2A to 2F |
 
 **Closes when:**
-- [ ] Each corpus deck is within its threshold against a **PowerPoint** reference (F6), with thresholds recorded per fixture.
+- [ ] Each corpus deck is within its recorded threshold against its reference: a PowerPoint-exported PDF or image where the deck ships with one, else LibreOffice, labelled as such.
 - [ ] Each behaviour row has a passing fixture.
 - [ ] Budgets in [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md) replaced with measurements and asserted.
 - [ ] Output identical on Linux, macOS and Windows.
@@ -117,7 +119,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 ## Phase 3 — Viewer
 
 - **Gives:** a browser and a Tauri desktop window open a real deck, with thumbnails, views and zoom, and no editing.
-- **Opens:** Phase 2 closed; `UX-001` measured and the shell prototype approved by the owner.
+- **Opens:** Phase 2 closed; `UX-001` done and the shell prototype approved by the owner.
 - **In:** WASM bridge, Canvas2D painter, native desktop path, shell, rail, status bar, Normal, Sorter, Reading views, notes pane, accessible DOM, CSP.
 - **Out:** every edit.
 - **Closes when:**
@@ -131,7 +133,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 ## Phases 4 to 7 — Editing
 
 **Common entry:** the previous editing phase closed, plus the prerequisites below. **Common exit:** the op set is inverse-tested,
-the UI status is filled for every in-scope checklist row, a PowerPoint user test passes (F8) for the phase's verbs, keyboard and screen
+the UI status is filled for every in-scope checklist row, a task test by people who use PowerPoint passes for the phase's verbs, keyboard and screen
 reader work for every new verb, and the owner signs.
 
 | Phase | Gives | Opens after | In | Out | Extra exit criteria |
@@ -148,7 +150,7 @@ reader work for every new verb, and the owner signs.
 - **In:** timeline, all transitions, Morph, all animation classes, triggers, motion paths, animation pane, presenter view, custom shows, timings, kiosk, narration playback, zoom.
 - **Out:** recording new narration, unless the gap analysis adds it.
 - **Closes when:**
-  - [ ] Deterministic timeline goldens for each timing construct, compared with PowerPoint video or stepwise references.
+  - [ ] Deterministic timeline goldens for each timing construct, against the documented semantics in BEH-23.
   - [ ] 60 fps on the animation corpus on a named device.
   - [ ] Presenter sync test; owner sign-off.
 
@@ -168,11 +170,12 @@ reader work for every new verb, and the owner signs.
 
 - **Gives:** an enterprise can deploy and support it. **First stable release.**
 - **Opens:** Phases 8 and 9 closed.
-- **In:** all remaining [10](10-ENTERPRISE-REQUIREMENTS.md) rows, SDK, WOPI, MCP, `.odp`, Helm, release process.
+- **In:** all remaining [10](10-ENTERPRISE-REQUIREMENTS.md) rows, SDK, WOPI, MCP, `.odp`, import of legacy `.ppt` (`PPT-01`), Helm, release process.
 - **Closes when:**
   - [ ] Each `ENT-*` row closed with evidence.
   - [ ] Third-party penetration test; findings closed.
   - [ ] WOPI validator passes; SBOM and signed releases published.
+  - [ ] **`PV-01` passed: PowerPoint opens every exported corpus deck with no repair prompt, with visual and edit comparison recorded.**
   - [ ] No P0 or P1 open; legal review complete (`DEC-07`); owner sign-off.
 
 ## Claims

@@ -3,6 +3,10 @@
 The working rules for this repository. [AGENTS.md](AGENTS.md) holds the full contract and applies to every agent.
 Sister repo `../opencalc` is the architecture reference: copy from it with provenance, and never modify it.
 
+## Owner instructions come first
+
+**[docs/03](docs/03-OWNER-INSTRUCTIONS.md) records everything the owner has instructed. Follow it without deviating.** Record each new instruction there in the same turn. If something seems wrong or conflicts, raise it; do not quietly choose. Within those instructions, make decisions yourself, thinking of the goal and the future, rather than asking.
+
 ## What this is
 
 An **enterprise-grade** PowerPoint-compatible engine and editor, on **web and desktop**. Not an MVP or a demo.
@@ -61,7 +65,7 @@ Industry-standard practice applies everywhere, with these specifics.
 - No macro execution, no automatic network fetch, no document string reaching the DOM as HTML. No secrets in code or logs.
 
 **Fidelity**
-- Absent stays absent; never materialize a defaults. Edits patch named nodes (ADR-013); never re-serialize a part from the model.
+- Absent stays absent; never materialize a default. Edits patch named nodes (ADR-013); never re-serialize a part from the model.
 - Nothing is lost silently. Anything unmodelled is retained and reported. The word "lossless" is banned unless the dimension is named.
 
 **Tests**

@@ -1,7 +1,6 @@
 # AGENTS.md — Agent contract for OpenSlide
 
-Read this in full before doing anything else. Working rules, engineering standards and skills are in [CLAUDE.md](CLAUDE.md). "OpenSlide" is a working name
-(`DEC-01`); crates use the prefix `casual-slide-`, which does not depend on it.
+Read this in full before doing anything else. Owner instructions are in [docs/03](docs/03-OWNER-INSTRUCTIONS.md) and come first. Working rules, engineering standards and skills are in [CLAUDE.md](CLAUDE.md). The product is being renamed OpenPresent (`DEC-01`, `NAME-01`); crates use the prefix `casual-slide-`, which does not depend on it.
 
 ## Repository boundary
 

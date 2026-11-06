@@ -74,15 +74,15 @@ Measured separately, since passing one says nothing of the next.
 | F2 Parts | Do untouched parts match after an edit? | Per-part hash, with a per-edit allow-list | — |
 | F3 Semantics | Is import → export → import a fixed point? | Model compare | — |
 | F4 Validity | Is the XML schema-valid? | `xmllint` against vendored XSD | — |
-| F5 Acceptance | Does PowerPoint open it with no repair prompt? | **PowerPoint itself**, by automation or by hand | `DEC-04` |
-| F6 Pixels | Does it look like PowerPoint's rendering? | Perceptual compare against **PowerPoint's** PNG or PDF | `DEC-04` |
-| F7 Second opinion | Does LibreOffice agree, where it differs? | Convert and compare; a difference is a question, not a verdict | `ENV-01` |
-| F8 Edit | Does an edit look right in PowerPoint? | Scripted edit, reopen, compare with a PowerPoint-made equivalent | `DEC-04` |
+| F5 Acceptance | Does PowerPoint open it with no repair prompt? | **PowerPoint itself**, by automation or by hand | `PV-01` |
+| F6 Pixels | Does it look like PowerPoint's rendering? | Perceptual compare against **PowerPoint's** PNG or PDF | `PV-01` |
+| F7 Second opinion | Does LibreOffice agree, where it differs? | Convert and compare; a difference is a question, not a verdict | Available |
+| F8 Edit | Does an edit look right in PowerPoint? | Scripted edit, reopen, compare with a PowerPoint-made equivalent | `PV-01` |
 
 **Thresholds are per fixture and set from evidence.** A global "95% similar" would hide a missing bullet, so
 comparison also checks text positions, per-region differences and structure from PDF output.
 
-**Reality check.** Without PowerPoint, only F1 to F4 and F7 can run. Those prove we keep the data and write valid
+**Reality check** (`DEC-04`). Until `PV-01`, only F1 to F4 and F7 run, plus Microsoft's validator (`F-006`) and real PowerPoint-written decks as input (`F-007`). Those prove we keep the data and write valid
 files. They cannot prove we match PowerPoint, and no claim saying so may be made from them.
 
 ## Corpus
