@@ -24,6 +24,7 @@ by saying so.
 | 13 | 2026-11-07 | LibreOffice is already installed: use it. Do the UI and UX study through online research | `DEC-04`, `UX-001` |
 | 14 | 2026-11-07 | Note everything instructed, and do not deviate | This page, [CLAUDE.md](../CLAUDE.md) |
 | 15 | 2026-11-07 | Use cyan as the colour | `DEC-03` |
+| 16 | 2026-11-07 | Complete Phase 0 soon | Phase 0 exit criteria prioritised over other work; workers commit each criterion as soon as it is done |
 
 ## Boundaries set by the environment
 
