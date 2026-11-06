@@ -1,5 +1,7 @@
 # 47 — The PowerPoint shell and feature map
 
+Behaviour and rules are in [50](50-POWERPOINT-UX-STUDY.md) and commands in [49](49-POWERPOINT-COMMAND-INVENTORY.md), which win over this page.
+
 **Superseded on scope by [48](48-POWERPOINT-FEATURE-STUDY.md), and phases by [06](06-ROADMAP-AND-DELIVERY.md).** This page remains the UI sketch.
 
 **Provenance warning.** This inventory is written from recall of PowerPoint for the web, not
@@ -23,8 +25,7 @@ Same structure, behaviour, keyboard, dialogs and wording, so a PowerPoint user n
 Microsoft's themes, templates, stock content and icon artwork are **not** copied. We author our own.
 
 The shell reuses OpenCalc's `ribbon.js`, `ribbon.model.js` pattern, `commands.js` registry and token
-spine. Classic and Simplified ribbon both exist, and phones get the bottom command bar. Web
-PowerPoint defaults to Simplified, and that default is one thing `UX-001` should confirm.
+spine. Classic and Simplified ribbon both exist, and phones get the bottom command bar. **Classic is our default** (`DEC-10`). Which default the web uses is unconfirmed (`UX-002`).
 
 ## Main window
 

@@ -15,6 +15,12 @@
 | DEC-06 | Feature bar and hosts | Done | Owner, 2026-11-07: **both web and desktop, as OpenCalc.** The goal is a clone, so the full desktop feature set, in both hosts | [48](48-POWERPOINT-FEATURE-STUDY.md) |
 | DEC-08 | Legacy `.ppt` | Done | **Yes, import-only, in Phase 10** (`PPT-01`), saved as `.pptx`. Until then refused cleanly as `CS-OPC-0005` | Enterprises hold years of these. A bounded binary parser needs its own threat work, after the model is stable. The model needs no change for it |
 | DEC-09 | Remote for CI | Done | Owner created private `CasualOffice/openpresent` and pushed, 2026-11-07. `main` and PR #1 added so CI runs | — |
+| DEC-10 | Default ribbon | Done | **Classic, with Simplified as a toggle** | Matches OpenCalc's owner-approved shell, and the full desktop feature bar. Microsoft's guide advises Simplified off for keyboard work. Whether the web defaults to Simplified is unconfirmed (`UX-002`); a preference flips it cheaply |
+| DEC-11 | Inserting a shape | Done | **Click drops a default-size shape; drag draws one** | Serves both the web's and desktop's habit, with no collision |
+| DEC-12 | `Ctrl+Shift+V` | Done | **By selection level:** with a caret, plain paste, as web; with an object, apply format, as desktop | Each keeps its own users' habit. `Ctrl+[` and `]` change layer as on the web, and font size is `Ctrl+Shift+>` and `<` |
+| DEC-13 | Copilot slot in the shell | Done | **None in our chrome.** A host may register a command or pane through the seam | Follows `DEC-05`. No dead space on air-gapped deployments |
+| DEC-14 | Presenter View target | Done | **The redesigned version on Microsoft's roadmap for November 2026** | A clone should target where the product is going, as we would otherwise build the old one twice. Known only from a roadmap digest, so it is re-checked when Phase 8 opens |
+| DEC-15 | Chart data editing | Done | **OpenCalc embedded in a pane, in the same window** | Works identically on web and desktop, and avoids popup blockers. Depends on `CROSS-01` |
 | DEC-07 | Legal review of bundled schemas and fonts, Microsoft's patent notice, and the name | Open | Needs a lawyer, so it is the owner's. **Blocks first public release only** | Enterprise buyers will ask; ENT-24 |
 
 ## Phase D
@@ -28,7 +34,7 @@
 | DOC-006 | Working rules and skills | Done | P1 | `CLAUDE.md` holds standards, one-roadmap-one-tracker, document updates. Six project skills in `.claude/skills`. `check-repo.py` refuses a second tracker or plan | Seeded second tracker seen failing |
 | ENG-01 | Enforce standards by lint | Open | P1 | Add `unwrap_used`, `expect_used`, `indexing_slicing`, `missing_docs` for non-test code. Waits for the parallel sessions to merge, since it touches their files. Copied `-text` needs a pass | Clippy passes with the lints on |
 | DOC-002 | ADR review | Done | P0 | All Accepted except ADR-004 and ADR-005, which wait on `SPK-01` | [08](08-ADR-REGISTER.md) |
-| UX-001 | PowerPoint UI and UX study | In progress | P1 | [49](49-POWERPOINT-COMMAND-INVENTORY.md) done: desktop commands from Microsoft's control-ID workbook, Current Channel 2402, so 32 months old; web mostly unknown (1470 of 1855 rows `?`). Docs 50 and 52 running. Pixel sizes stay unmeasured without a live session, so geometry starts from OpenCalc's measured ribbon | Shell prototype approved by owner |
+| UX-001 | PowerPoint UI and UX study | In progress | P1 | [49](49-POWERPOINT-COMMAND-INVENTORY.md) done: desktop commands from Microsoft's control-ID workbook, Current Channel 2402, so 32 months old; web mostly unknown (1470 of 1855 rows `?`). [50](50-POWERPOINT-UX-STUDY.md) done, with 24 shell rules; nothing first-hand, and every pixel figure an estimate. Doc 52 running. Pixel sizes stay unmeasured without a live session, so geometry starts from OpenCalc's measured ribbon | Shell prototype approved by owner |
 
 ## Phase 0
 
@@ -48,6 +54,7 @@
 | PKG-01 | Read budget is cumulative | Open | P2 | `read_part` charges a whole-package budget on every read, so an editor re-reading parts can exhaust it on a legitimate deck | A long session does not refuse |
 | F-006 | Microsoft's Open XML validator in the fidelity tools | Open | P0 | Needs `dotnet`. Closest available stand-in for PowerPoint's strictness | Rejects a seeded invalid part; corpus exports pass |
 | F-007 | Real PowerPoint-written decks as input | Open | P0 | Find decks with clear reuse rights, record provenance. Unclear rights: test locally, never commit | At least 20 decks, Windows and Mac, open and round-trip |
+| UX-002 | Live-session measurements | Open | P1 | [50](50-POWERPOINT-UX-STUDY.md) §40 lists 21 measurements, and §42 the behaviours only a live session settles: marquee rule, group entry, undo depth, web default ribbon. Run with `PV-01`'s access, earlier if possible | Each recorded, and rules corrected |
 | PV-01 | PowerPoint verification | Open | P0 | Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Run whenever access exists; earlier is cheaper | Before first stable release |
 | PPT-01 | Import legacy `.ppt` | Open | P2 | `DEC-08`. CFB and MS-PPT parsers with limits and fuzz targets | Phase 10 |
 | NAME-01 | Rename product to OpenPresent in docs and site | Open | P2 | After parallel sessions merge. Crate prefix and folder unchanged | No product use of the old name remains |
