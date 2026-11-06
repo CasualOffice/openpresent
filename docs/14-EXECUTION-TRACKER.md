@@ -1,0 +1,83 @@
+# 14 — Execution tracker
+
+**The only tracker.** Every unit of work has one row. Ids are stable and never
+reused. Status: `Open`, `In progress`, `Blocked`, `Done`.
+
+## Owner decisions
+
+| ID | Decision | St | Recommendation | Why it matters |
+| --- | --- | --- | --- | --- |
+| DEC-01 | Product name | Open | Rename before anything is published | "OpenSlide" is an established digital-pathology library and "OpenSlides" an established assembly-management product. Crate prefix `casual-slide-` is unaffected |
+| DEC-02 | Where to build, and how to share code with OpenCalc | Done | Owner, 2026-11-07: separate repo in this folder; copy from OpenCalc and reuse what fits | Each copied crate carries `PROVENANCE.md` |
+| DEC-03 | Accent colour | Open | Rose `#b5336b` (5.75:1 on white) | Must be deliberately not PowerPoint's orange-red, as OpenCalc's green is not Excel's. Taste call |
+| DEC-04 | Access to a signed-in PowerPoint for the web, and PowerPoint-rendered reference images | Open | Provide a signed-in Chrome session and, if possible, a desktop PowerPoint for references | [47](47-POWERPOINT-SHELL-AND-FEATURE-MAP.md) is recalled from memory. OpenCalc's shell was measured; this one should be too. LibreOffice alone is a second opinion, not the target |
+| DEC-05 | Build our own Designer and Copilot equivalents? | Open | Not now; keep the seam | Large, separate product decision |
+| DEC-06 | Feature bar where web and desktop differ, and whether to read legacy `.ppt` | Open | Web sets the UI style, desktop sets the feature bar. `.ppt`: decide after Phase 2; Microsoft's web converts it, and it is a large binary format | [48](48-POWERPOINT-FEATURE-STUDY.md). Masters and presenter view are desktop-only per Microsoft's pages |
+| DEC-07 | Legal review of bundled schemas, fonts, and Microsoft's patent notice | Open | Have counsel read [schemas/README](../schemas/README.md) before the first release | Enterprise buyers will ask; ENT-24 |
+
+## Phase D
+
+| ID | Title | St | Sev | Mechanism | Gate |
+| --- | --- | --- | --- | --- | --- |
+| DOC-001 | Initial design set | Done | P0 | Written 2026-11-07 from a scan of `../opencalc` at `b23c67c` | Owner review, below |
+| DOC-002 | Owner review of the remaining ADRs | Open | P0 | ADR-003 Accepted; the rest Proposed | ADRs Accepted or changed |
+| UX-001 | Measure PowerPoint for the web and turn 47 into a measured target | Blocked | P1 | Needs `DEC-04` | Shell prototype approved by owner, as OpenCalc's docs/95 was |
+
+## Phase 0
+
+| ID | Title | St | Sev | Mechanism | Gate |
+| --- | --- | --- | --- | --- | --- |
+| F-001 | Cargo workspace, toolchain 1.96.0 and MSRV matching OpenCalc | Done | P0 | [19](19-WORKSPACE-SCAFFOLD-DESIGN.md). MSRV 1.88.0 is declared but not yet run on that toolchain; F-003 gates it | fmt, clippy `-D warnings`, doc and wasm32 check pass locally |
+| F-002 | Fork `-package` and `-text` with provenance | Done | P0 | Copied at `b23c67c` and renamed; `webapp/fonts/cjk` copied because `-text` tests read it. `-secrets` waits for its first consumer in Phase 9 | 12 and 40 tests pass. Disabling the traversal and expansion-ratio guards turned 4 package tests red; restored and green |
+| F-003 | CI matrix and `check-*` gates | Open | P0 | Port from `../opencalc/.github`, `tools/` | Green on three platforms; a seeded violation fails each gate |
+| F-004 | Fixture corpus with rights review and checksums | Open | P0 | Generated decks plus reviewed real-producer decks | Manifest SHA-256 gate |
+| F-005 | Fuzz targets for admission | Open | P1 | Port from `../opencalc/fuzz` | Campaign with no crash |
+| ENV-01 | LibreOffice unusable here | Open | P2 | `/opt/homebrew/bin/soffice` points at `/Applications/LibreOffice.app`, which is gone, though the cask is still recorded. Earlier docs said `soffice` was available; that was wrong | `soffice --version` runs |
+| SPEC-01 | Audit tool fills checklist status from the code | Open | P1 | Port `../opencalc/tools/fidelity-audit` | A seeded gap is reported |
+| SPEC-02 | Read MS-OI29500 notes per tier | Open | P1 | Where Office departs from the standard | Notes recorded before each tier opens |
+| SPEC-03 | Independent count check in CI | Open | P1 | Done by hand 2026-11-07; found 74 missing global attributes | Generator counts compared with raw XSD |
+| SPEC-04 | Enumerate extension parts and relationship types | Open | P1 | Not in [spec/parts.md](spec/parts.md) | Listed from MS-PPTX and MS-ODRAWXML |
+| SPEC-05 | Checklist generated | Done | P0 | 8730 rows from 77 schemas; an unassigned type fails generation | Staleness and unassigned-namespace failures both seen |
+| GEO-01 | `upArrow` missing from Ecma's preset definitions | Open | P1 | The file defines `upDownArrow` twice and `upArrow` never. A generator keyed on names ships 186 of 187 | A fixture draws all 187; `upArrow` matches a reference |
+| SEC-010 | Package threats SEC-P04 to SEC-P07 | Done | P1 | Oversized allocation from a forged size; duplicate and case-equivalent names; malformed names. The `zip` crate merges duplicates, so a raw directory walk was added. Inherited from OpenCalc | Each test seen red; guards disabled and seen red again; 19 tests pass |
+| SEC-011 | Report package findings to OpenCalc | Open | P1 | Same code at `b23c67c`; that repo is not modified from here | Owner informed |
+| SEC-012 | Remaining threats in [07](07-SECURITY-THREAT-MODEL.md) | Open | P0 | One row per `SEC-*`, closed by the tier named there | Hostile fixture per threat |
+| ENT-000 | Requirements in [10](10-ENTERPRISE-REQUIREMENTS.md) | Open | P0 | Gate on each delivering phase | Per requirement |
+| SPK-01 | WASM shaping and glyph-path frame time | Open | P0 | [06](06-ROADMAP-AND-DELIVERY.md) | Numbers in 42 |
+| SPK-02 | Fidelity oracle pipeline | Blocked | P0 | Needs `ENV-01`, and `DEC-04` for PowerPoint references | 5 decks end to end |
+| SPK-03 | Preset shape definition licensing | Done | P0 | Ecma's notice permits use in conformant implementations; vendored unmodified. Formal review is `DEC-07` | Recorded in [schemas/README](../schemas/README.md) |
+
+## Phases 1 to 10
+
+Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when opened. Scope per row is [spec/](spec/README.md).
+
+| ID | Title | St | Sev | Mechanism | Gate |
+| --- | --- | --- | --- | --- | --- |
+| T-1A | Package, part graph, repackager | Open | P0 | 392 rows | Per-tier gate in 06 |
+| T-1B | Presentation part, view state | Open | P0 | 297 rows | Per-tier gate |
+| T-1C | Colour and theme | Open | P0 | 473 rows | Per-tier gate |
+| T-1D | Slides, masters, layouts, shape tree, `-style` | Open | P0 | 564 rows | Per-tier gate |
+| T-1E | Geometry, fills, lines, effects, 3D | Open | P0 | 1082 rows | Per-tier gate |
+| T-1F | Text model | Open | P0 | 317 rows | Per-tier gate |
+| T-1G | Tables | Open | P0 | 113 rows | Per-tier gate |
+| T-1H | Pictures and media | Open | P0 | 116 rows | Per-tier gate |
+| T-1I | Timing and transitions | Open | P0 | 522 rows | Per-tier gate |
+| T-1J | Charts | Open | P0 | 1764 rows | Per-tier gate |
+| T-1K | SmartArt, equations, ink | Open | P0 | 1263 rows | Per-tier gate |
+| T-1L | OLE, VML, 3D retained | Open | P0 | 951 rows | Per-tier gate |
+| T-1M | Comments, review, sections, zoom, labels | Open | P0 | 876 rows | Per-tier gate |
+| T-2A | Composition | Open | P0 | Render | 51 ladder |
+| T-2B | Shapes | Open | P0 | Render | 51 ladder |
+| T-2C | Effects | Open | P1 | Render | 51 ladder |
+| T-2D | Text engine | Open | P0 | Render | 51 ladder |
+| T-2E | Tables, pictures | Open | P0 | Render | 51 ladder |
+| T-2F | Charts, SmartArt, equations, ink | Open | P0 | Render | 51 ladder |
+| T-2G | PDF, JPEG, print | Open | P0 | Render | 51 ladder |
+| P-3 | Viewer | Open | P0 | 06 | Exit gate |
+| P-4 | Object editing | Open | P0 | 06 | Exit gate |
+| P-5 | Text editing | Open | P0 | 06 | Exit gate |
+| P-6 | Rich object editing | Open | P0 | 06 | Exit gate |
+| P-7 | Design surface | Open | P0 | 06 | Exit gate |
+| P-8 | Slide show | Open | P0 | 06 | Exit gate |
+| P-9 | Collaboration | Open | P0 | 06 | Exit gate |
+| P-10 | Enterprise and hosts | Open | P0 | 06 | Exit gate |

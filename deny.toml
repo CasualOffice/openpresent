@@ -1,0 +1,42 @@
+# cargo-deny supply-chain policy. See docs/15-CI-AND-RELEASE-GATES.md.
+
+[advisories]
+yanked = "deny"
+# **Individually listed, each with a reason and a row — never a category.**
+#
+# Relaxing `unmaintained` wholesale would be how a supply-chain gate stops
+# being one: the next unmaintained crate would arrive silently. Each entry is
+# named one at a time so that adding one is a deliberate edit somebody has to
+# justify in review, and so an entry that stops being needed shows up as unused
+# rather than living here forever.
+#
+# **Empty, and that is the point.** It held the text-shaping stack —
+# `rustybuzz` and its `ttf-parser` — for as long as there was nowhere to go.
+# `DEP-14` moved the shaper to `harfrust`, which is the same algorithm
+# maintained under the harfbuzz organisation and built on `read-fonts`, so both
+# entries were deleted rather than renewed. An ignore list that empties is one
+# that was being read.
+ignore = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Intra-workspace path dependencies have no version; that is not a real wildcard.
+allow-wildcard-paths = true
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "NCSA",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
