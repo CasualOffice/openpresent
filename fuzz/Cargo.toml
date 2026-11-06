@@ -10,6 +10,9 @@ edition = "2021"
 cargo-fuzz = true
 
 [dependencies]
+casual-slide-export = { path = "../crates/casual-slide-export" }
+casual-slide-import = { path = "../crates/casual-slide-import" }
+casual-slide-model = { path = "../crates/casual-slide-model" }
 casual-slide-ooxml = { path = "../crates/casual-slide-ooxml" }
 casual-slide-package = { path = "../crates/casual-slide-package" }
 libfuzzer-sys = "0.4"
@@ -33,6 +36,13 @@ bench = false
 [[bin]]
 name = "xml_walker"
 path = "fuzz_targets/xml_walker.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "properties_presentation"
+path = "fuzz_targets/properties_presentation.rs"
 test = false
 doc = false
 bench = false

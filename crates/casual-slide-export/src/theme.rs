@@ -88,7 +88,9 @@ fn patch_text_attribute(
     if tree.plain_attribute(el, name).as_deref() == Some(value) {
         return Ok(false);
     }
-    tree.set_attribute(el, name, value);
+    if !tree.set_attribute(el, name, value) {
+        return Err(ExportError::MalformedNode(name));
+    }
     Ok(true)
 }
 

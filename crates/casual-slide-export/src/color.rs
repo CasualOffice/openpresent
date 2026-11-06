@@ -207,12 +207,16 @@ fn patch_attributes(
         match (wanted, current) {
             (Some(want), Some(text)) => {
                 if !want.same_as(&text) {
-                    tree.set_attribute(el, name, &want.write(strict || text.contains('%')));
+                    if !tree.set_attribute(el, name, &want.write(strict || text.contains('%'))) {
+                        return Err(ExportError::MalformedNode("colour"));
+                    }
                     changed = true;
                 }
             }
             (Some(want), None) => {
-                tree.set_attribute(el, name, &want.write(strict));
+                if !tree.set_attribute(el, name, &want.write(strict)) {
+                    return Err(ExportError::MalformedNode("colour"));
+                }
                 changed = true;
             }
             (None, Some(_)) => {

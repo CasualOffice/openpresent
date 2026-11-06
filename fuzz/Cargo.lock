@@ -21,13 +21,38 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
+name = "casual-slide-export"
+version = "0.0.0"
+dependencies = [
+ "casual-slide-import",
+ "casual-slide-model",
+ "casual-slide-ooxml",
+ "casual-slide-package",
+]
+
+[[package]]
 name = "casual-slide-fuzz"
 version = "0.0.0"
 dependencies = [
+ "casual-slide-export",
+ "casual-slide-import",
+ "casual-slide-model",
  "casual-slide-ooxml",
  "casual-slide-package",
  "libfuzzer-sys",
 ]
+
+[[package]]
+name = "casual-slide-import"
+version = "0.0.0"
+dependencies = [
+ "casual-slide-model",
+ "casual-slide-ooxml",
+]
+
+[[package]]
+name = "casual-slide-model"
+version = "0.0.0"
 
 [[package]]
 name = "casual-slide-ooxml"

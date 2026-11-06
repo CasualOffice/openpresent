@@ -7,6 +7,7 @@ rust-version.workspace = true
 publish = false
 
 [dependencies]
+casual-slide-import = { path = "../casual-slide-import" }
 casual-slide-model = { path = "../casual-slide-model" }
 casual-slide-ooxml = { path = "../casual-slide-ooxml" }
 casual-slide-package = { path = "../casual-slide-package" }

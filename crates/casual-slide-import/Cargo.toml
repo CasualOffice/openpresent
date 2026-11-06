@@ -10,5 +10,8 @@ publish = false
 casual-slide-model = { path = "../casual-slide-model" }
 casual-slide-ooxml = { path = "../casual-slide-ooxml" }
 
+[dev-dependencies]
+casual-slide-package = { path = "../casual-slide-package" }
+
 [lints]
 workspace = true

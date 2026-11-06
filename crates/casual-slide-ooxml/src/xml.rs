@@ -517,7 +517,7 @@ impl XmlTree {
         let mut seen: Vec<String> = Vec::new();
         while let Some(el) = at {
             let (start, _) = self.element(el);
-            for (key, _) in attribute_spans(start, self.qualified_name(el).len())? {
+            for (key, _) in attribute_ranges(start, self.qualified_name(el).len())? {
                 let Some(key) = start.get(key) else { continue };
                 let prefix = match key.strip_prefix("xmlns") {
                     Some("") => "",
@@ -572,55 +572,7 @@ impl XmlTree {
                 a.normalized_value(quick_xml::XmlVersion::Implicit1_0)
                     .is_ok()
             })
-        }) && attribute_spans(start, name_len).is_some()
-    }
-
-    /// Set an attribute by its name as written, patching only its value and
-    /// keeping its quotes. Adds it at the end of the start tag if absent. Returns
-    /// false, changing nothing, if the start tag's attributes are malformed.
-    pub fn set_attribute(&mut self, id: ElementId, name: &str, value: &str) -> bool {
-        let name_len = self.qualified_name(id).len();
-        let Node::Element { start, .. } = &mut self.nodes[id.0] else {
-            return false;
-        };
-        let Some(spans) = attribute_spans(start, name_len) else {
-            return false;
-        };
-        let escaped = escape_attribute(value);
-        let found = spans
-            .into_iter()
-            .find(|(key, _)| start.get(key.clone()) == Some(name));
-        if let Some((_, span)) = found {
-            start.replace_range(span, &escaped);
-        } else {
-            let trimmed = start.trim_end().len();
-            start.insert_str(trimmed, &format!(" {name}=\"{escaped}\""));
-        }
-        true
-    }
-
-    /// Remove an attribute by its name as written, with the space before it.
-    /// Returns whether it was there.
-    pub fn remove_attribute(&mut self, id: ElementId, name: &str) -> bool {
-        let name_len = self.qualified_name(id).len();
-        let Node::Element { start, .. } = &mut self.nodes[id.0] else {
-            return false;
-        };
-        let Some(spans) = attribute_spans(start, name_len) else {
-            return false;
-        };
-        let Some((key, value)) = spans
-            .into_iter()
-            .find(|(key, _)| start.get(key.clone()) == Some(name))
-        else {
-            return false;
-        };
-        let begin = start
-            .get(..key.start)
-            .map_or(key.start, |s| s.trim_end().len());
-        // The value's span excludes its closing quote.
-        start.replace_range(begin..value.end + 1, "");
-        true
+        }) && attribute_ranges(start, name_len).is_some()
     }
 
     /// Turn an element into a new one in the same place with the same handle,
@@ -687,7 +639,7 @@ impl XmlTree {
 
 /// The byte ranges of each attribute's name and of its value without quotes.
 /// `None` if the start tag does not scan as attributes.
-fn attribute_spans(
+fn attribute_ranges(
     start: &str,
     name_len: usize,
 ) -> Option<Vec<(core::ops::Range<usize>, core::ops::Range<usize>)>> {
@@ -741,8 +693,264 @@ fn new_start_tag(name: &str, attributes: &[(&str, &str)]) -> String {
     start
 }
 
+/// Where one attribute sits in an element's source text.
+struct AttributeSpan {
+    /// From the whitespace before the name to the closing quote.
+    whole: std::ops::Range<usize>,
+    name: std::ops::Range<usize>,
+    /// Between the quotes.
+    value: std::ops::Range<usize>,
+}
+
+/// Locate an element's attributes. `None` if its text is not well formed.
+fn attribute_spans(start: &str, name_len: usize) -> Option<Vec<AttributeSpan>> {
+    let b = start.as_bytes();
+    let mut spans = Vec::new();
+    let mut i = name_len;
+    loop {
+        let before = i;
+        while b.get(i).is_some_and(u8::is_ascii_whitespace) {
+            i += 1;
+        }
+        if i >= b.len() {
+            return Some(spans);
+        }
+        let name_start = i;
+        while b
+            .get(i)
+            .is_some_and(|c| *c != b'=' && !c.is_ascii_whitespace())
+        {
+            i += 1;
+        }
+        let name = name_start..i;
+        while b.get(i).is_some_and(u8::is_ascii_whitespace) {
+            i += 1;
+        }
+        if b.get(i) != Some(&b'=') {
+            return None;
+        }
+        i += 1;
+        while b.get(i).is_some_and(u8::is_ascii_whitespace) {
+            i += 1;
+        }
+        let quote = *b.get(i).filter(|c| matches!(**c, b'"' | b'\''))?;
+        i += 1;
+        let value_start = i;
+        i += b[i..].iter().position(|c| *c == quote)?;
+        spans.push(AttributeSpan {
+            whole: before..i + 1,
+            name,
+            value: value_start..i,
+        });
+        i += 1;
+    }
+}
+
+/// Reading attributes and mixed content, and the edits the model's export needs.
+/// Each changes only the nodes it names.
+impl XmlTree {
+    /// Every attribute as `(name as written, value)`, in order and unescaped.
+    /// Unlike [`XmlTree::attribute`] this tells `r:id` from `id`, and refuses a
+    /// malformed or repeated attribute.
+    pub fn attributes(
+        &self,
+        id: ElementId,
+        part: &str,
+    ) -> Result<Vec<(String, String)>, OoxmlError> {
+        let (start, _) = self.element(id);
+        let name_len = self.qualified_name(id).len();
+        // The reader below takes `a="1"b="2"`, which XML does not, and which an
+        // edit that removed `a` would fuse into the element's name.
+        let spaced = attribute_spans(start, name_len)
+            .is_some_and(|spans| spans.iter().all(|s| s.whole.start < s.name.start));
+        if !spaced && !start[name_len..].trim().is_empty() {
+            return Err(malformed(part, "attributes not separated by whitespace"));
+        }
+        let tag = BytesStart::from_content(start, name_len);
+        let mut out = Vec::new();
+        for a in tag.attributes() {
+            let a = a.map_err(|err| malformed(part, err.to_string()))?;
+            let key = std::str::from_utf8(a.key.as_ref())
+                .map_err(|_| malformed(part, "not valid UTF-8"))?
+                .to_owned();
+            // A prefix holding a colon or a control character cannot be resolved,
+            // and a new element named with it would not read back.
+            let pieces = key.split(':').count();
+            if pieces > 2
+                || key
+                    .split(':')
+                    .any(|p| p.is_empty() || p.contains(char::is_control))
+            {
+                return Err(malformed(part, "attribute name is not a qualified name"));
+            }
+            let value = a
+                .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                .map_err(|err| malformed(part, err.to_string()))?;
+            out.push((key, value.into_owned()));
+        }
+        Ok(out)
+    }
+
+    /// An element's own text, unescaped and with line ends normalized as XML
+    /// requires, skipping any child elements. `None` if a reference is invalid.
+    pub fn own_text(&self, id: ElementId) -> Option<String> {
+        let (_, children) = self.element(id);
+        let mut raw = String::new();
+        for &c in children {
+            match &self.nodes[c] {
+                Node::Text(s) => raw.push_str(&s.replace("\r\n", "\n").replace('\r', "\n")),
+                Node::Verbatim(s) if s.starts_with("<![CDATA[") => {
+                    let inner = s[9..s.len() - 3].replace("\r\n", "\n").replace('\r', "\n");
+                    raw.push_str(&escape(&inner));
+                }
+                _ => {}
+            }
+        }
+        quick_xml::escape::unescape(&raw)
+            .ok()
+            .map(std::borrow::Cow::into_owned)
+    }
+
+    /// Set an attribute, keeping its place and quote style, or add it after the
+    /// last one. `name` is as written, prefix included. `false`, with nothing
+    /// changed, if the element's text is not well formed.
+    #[must_use]
+    pub fn set_attribute(&mut self, id: ElementId, name: &str, value: &str) -> bool {
+        let name_len = self.qualified_name(id).len();
+        let Node::Element { start, .. } = &mut self.nodes[id.0] else {
+            return false;
+        };
+        let Some(spans) = attribute_spans(start, name_len) else {
+            return false;
+        };
+        let escaped = escape_attribute(value);
+        match spans.iter().find(|s| &start[s.name.clone()] == name) {
+            Some(span) => start.replace_range(span.value.clone(), &escaped),
+            None => {
+                let at = spans.last().map_or(name_len, |s| s.whole.end);
+                start.insert_str(at, &format!(" {name}=\"{escaped}\""));
+            }
+        }
+        true
+    }
+
+    /// Remove an attribute, by its name as written, and the whitespace before it.
+    /// `false` if it was not there.
+    pub fn remove_attribute(&mut self, id: ElementId, name: &str) -> bool {
+        let name_len = self.qualified_name(id).len();
+        let Node::Element { start, .. } = &mut self.nodes[id.0] else {
+            return false;
+        };
+        let Some(spans) = attribute_spans(start, name_len) else {
+            return false;
+        };
+        match spans.iter().find(|s| &start[s.name.clone()] == name) {
+            Some(span) => {
+                start.replace_range(span.whole.clone(), "");
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// A new self-closed element, not yet in the tree. `name` is as written.
+    pub fn new_element(&mut self, name: &str) -> ElementId {
+        let id = self.nodes.len();
+        self.nodes.push(Node::Element {
+            start: name.to_owned(),
+            end: None,
+            children: Vec::new(),
+        });
+        ElementId(id)
+    }
+
+    /// Put `child` before `before`, or if `None`, just after the last child
+    /// element, so a closing tag's indentation stays last.
+    pub fn insert_child(&mut self, parent: ElementId, before: Option<ElementId>, child: ElementId) {
+        self.open(parent);
+        let at = self.insertion_point(parent, before);
+        if let Node::Element { children, .. } = &mut self.nodes[parent.0] {
+            children.insert(at, child.0);
+        }
+    }
+
+    fn insertion_point(&self, parent: ElementId, before: Option<ElementId>) -> usize {
+        let (_, children) = self.element(parent);
+        if let Some(i) = before.and_then(|b| children.iter().position(|&c| c == b.0)) {
+            return i;
+        }
+        children
+            .iter()
+            .rposition(|&c| matches!(self.nodes[c], Node::Element { .. }))
+            .map_or(children.len(), |i| i + 1)
+    }
+
+    /// Turn a self-closed element into one that can hold content.
+    fn open(&mut self, id: ElementId) {
+        let name = self.qualified_name(id).to_owned();
+        if let Node::Element { start, end, .. } = &mut self.nodes[id.0]
+            && end.is_none()
+        {
+            let trimmed = start.trim_end().len();
+            start.truncate(trimmed);
+            *end = Some(name);
+        }
+    }
+
+    /// Take `child` out of `parent`. `false` if it was not a child.
+    pub fn remove_child(&mut self, parent: ElementId, child: ElementId) -> bool {
+        if let Node::Element { children, .. } = &mut self.nodes[parent.0] {
+            let before = children.len();
+            children.retain(|&c| c != child.0);
+            return children.len() != before;
+        }
+        false
+    }
+
+    /// Replace the run of elements `old` with `new`, slot by slot, so anything
+    /// between them stays where it is. Spare slots close up; extra elements follow
+    /// the last slot, or the last child element when there were no slots.
+    pub fn replace_children(&mut self, parent: ElementId, old: &[ElementId], new: &[ElementId]) {
+        self.open(parent);
+        let fallback = self.insertion_point(parent, None);
+        let Node::Element { children, .. } = &mut self.nodes[parent.0] else {
+            return;
+        };
+        let slots: std::collections::HashSet<usize> = old.iter().map(|e| e.0).collect();
+        let mut incoming = new.iter().map(|e| e.0);
+        let mut out = Vec::with_capacity(children.len() + new.len());
+        let mut at = None;
+        for (i, &c) in children.iter().enumerate() {
+            if i == fallback && slots.is_empty() {
+                at = Some(out.len());
+            }
+            if slots.contains(&c) {
+                if let Some(n) = incoming.next() {
+                    out.push(n);
+                }
+                at = Some(out.len());
+            } else {
+                out.push(c);
+            }
+        }
+        let at = at.unwrap_or(out.len());
+        let rest: Vec<usize> = incoming.collect();
+        out.splice(at..at, rest);
+        *children = out;
+    }
+
+    /// Remove everything inside an element, keeping its tags.
+    pub fn clear_content(&mut self, id: ElementId) {
+        self.open(id);
+        if let Node::Element { children, .. } = &mut self.nodes[id.0] {
+            children.clear();
+        }
+    }
+}
+
 fn escape(s: &str) -> String {
-    quick_xml::escape::escape(s).into_owned()
+    // A literal carriage return would come back as a line feed.
+    quick_xml::escape::escape(s).replace('\r', "&#13;")
 }
 
 /// Escape for an attribute. Tab and line breaks go as references, since a literal
@@ -902,6 +1110,107 @@ mod tree_tests {
         assert!(t.remove_element(t.root(), b));
         assert!(!t.remove_element(t.root(), b));
         assert_eq!(t.to_bytes(), b"<r><n:z v=\"&lt;\"><c/></n:z> <m/></r>");
+    }
+
+    #[test]
+    fn attributes_tell_prefixed_from_plain_and_refuse_repeats() {
+        let t = parse("<a r:id=\"rel\" id=\"7\" k='&lt;'/>");
+        let attrs = t.attributes(t.root(), "t").unwrap();
+        assert_eq!(attrs[0], ("r:id".to_owned(), "rel".to_owned()));
+        assert_eq!(attrs[1], ("id".to_owned(), "7".to_owned()));
+        assert_eq!(attrs[2].1, "<");
+        for bad in [
+            "<a b=\"1\" b=\"2\"/>",
+            "<a b=1/>",
+            "<a b/>",
+            "<a b=\"&nope;\"/>",
+            "<a b=\"1\"c=\"2\"/>",
+            "<a x:y:z=\"1\"/>",
+            "<a :y=\"1\"/>",
+            "<a xmlns:=\"u\"/>",
+            "<a b\u{0}=\"1\"/>",
+        ] {
+            let t = parse(bad);
+            let err = t.attributes(t.root(), "t").unwrap_err();
+            assert_eq!(err.code(), "CS-XML-0004", "{bad}");
+        }
+    }
+
+    #[test]
+    fn attribute_edits_touch_only_that_attribute() {
+        let mut t = parse("<a  x='1'\n\ty = \"2\" z=\"3\" />");
+        let r = t.root();
+        assert!(t.set_attribute(r, "y", "a'\"<\t\n\r"));
+        assert_eq!(
+            t.to_bytes(),
+            b"<a  x='1'\n\ty = \"a&apos;&quot;&lt;&#9;&#10;&#13;\" z=\"3\" />"
+        );
+        assert_eq!(t.attributes(r, "t").unwrap()[1].1, "a'\"<\t\n\r");
+        assert!(t.set_attribute(r, "n", "v"));
+        assert!(t.remove_attribute(r, "x"));
+        assert!(!t.remove_attribute(r, "x"));
+        assert!(t.to_bytes().ends_with(b"z=\"3\" n=\"v\" />"));
+        let mut bad = parse("<a b=1/>");
+        let r = bad.root();
+        assert!(!bad.set_attribute(r, "c", "v"));
+        assert_eq!(bad.to_bytes(), b"<a b=1/>");
+    }
+
+    #[test]
+    fn inserting_opens_a_self_closed_parent_and_keeps_order() {
+        let mut t = parse("<r><a/>\n <c />\n</r>");
+        let r = t.root();
+        let c = t.child(r, "c").unwrap();
+        let b = t.new_element("p:b");
+        t.insert_child(r, Some(c), b);
+        let d = t.new_element("d");
+        t.insert_child(r, None, d);
+        let e = t.new_element("e");
+        t.insert_child(c, None, e);
+        assert_eq!(t.to_bytes(), b"<r><a/>\n <p:b/><c><e/></c><d/>\n</r>");
+        assert!(t.remove_child(r, b));
+        assert!(!t.remove_child(r, b));
+        t.clear_content(c);
+        assert_eq!(t.to_bytes(), b"<r><a/>\n <c></c><d/>\n</r>");
+    }
+
+    #[test]
+    fn replacing_children_keeps_what_sits_between_them() {
+        let mut t = parse("<r> <a/> <!--k--> <b/> <x/> <c/> </r>");
+        let r = t.root();
+        let (a, b, c) = (
+            t.child(r, "a").unwrap(),
+            t.child(r, "b").unwrap(),
+            t.child(r, "c").unwrap(),
+        );
+        t.replace_children(r, &[a, b, c], &[c, a]);
+        assert_eq!(t.to_bytes(), b"<r> <c/> <!--k--> <a/> <x/>  </r>");
+        let n = t.new_element("n");
+        t.replace_children(r, &[c, a], &[c, a, n]);
+        assert_eq!(t.to_bytes(), b"<r> <c/> <!--k--> <a/><n/> <x/>  </r>");
+        let mut empty = parse("<r>\n</r>");
+        let r = empty.root();
+        let n = empty.new_element("n");
+        empty.replace_children(r, &[], &[n]);
+        assert_eq!(empty.to_bytes(), b"<r>\n<n/></r>");
+    }
+
+    #[test]
+    fn own_text_skips_children_and_normalizes_line_ends() {
+        let t = parse("<a>x\r\ny<b>no</b>&#13;<![CDATA[<z>]]></a>");
+        assert_eq!(t.own_text(t.root()).unwrap(), "x\ny\r<z>");
+        let bad = parse("<a>&#xD800;</a>");
+        assert_eq!(bad.own_text(bad.root()), None);
+    }
+
+    #[test]
+    fn a_carriage_return_set_as_text_comes_back() {
+        let mut t = parse("<a/>");
+        let r = t.root();
+        t.set_text(r, "x\ry");
+        assert_eq!(t.to_bytes(), b"<a>x&#13;y</a>");
+        let again = XmlTree::parse(&t.to_bytes(), "t", &OoxmlLimits::default()).unwrap();
+        assert_eq!(again.own_text(again.root()).unwrap(), "x\ry");
     }
 
     #[test]
