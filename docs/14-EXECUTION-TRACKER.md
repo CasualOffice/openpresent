@@ -46,9 +46,9 @@
 | F-004 | Fixture corpus with checksums | In progress | P0 | 43 fixtures: generated, hostile, LibreOffice-written. No PowerPoint-written deck yet (`DEC-04`) | Manifest SHA-256 gate passes |
 | F-005 | Fuzz targets for admission | Done | P1 | `bounded_package`, `presentation_package`, `xml_walker`; 505k, 968k and 5.4M runs, 46 s each, no crash. Short runs; longer campaigns belong in scheduled CI | No artifact |
 | ENV-01 | LibreOffice unusable here | Done | P2 | `/opt/homebrew/bin/soffice` points at `/Applications/LibreOffice.app`, which is gone, though the cask is still recorded. Earlier docs said `soffice` was available; that was wrong | Reinstalled 26.8.2.2; `soffice --version` runs |
-| SPEC-01 | Audit tool fills checklist status from the code | Open | P1 | Port `../opencalc/tools/fidelity-audit` | A seeded gap is reported |
+| SPEC-01 | Audit reports checklist coverage from code and fixtures | Done | P1 | `tools/spec-audit/audit.py`. Fixtures exercise 1822 of 8730 rows; code 0, since import and export are stubs on this base. Reports rather than fills status columns; reads source text, not behaviour, and owner detection is untested on a real importer | Planted `y` row seen failing by main session; in CI |
 | SPEC-02 | Read MS-OI29500 notes per tier | Open | P1 | Where Office departs from the standard | Notes recorded before each tier opens |
-| SPEC-03 | Independent count check in CI | Open | P1 | Done by hand 2026-11-07; found 74 missing global attributes | Generator counts compared with raw XSD |
+| SPEC-03 | Independent count check | Done | P1 | `tools/spec-audit/count.py`: 8730 rows, 0 mismatches | Tests see a dropped row and an added attribute fail; in CI |
 | SPEC-04 | Enumerate extension parts and relationship types | Open | P1 | Not in [spec/parts.md](spec/parts.md) | Listed from MS-PPTX and MS-ODRAWXML |
 | SPEC-05 | Checklist generated | Done | P0 | 8730 rows from 77 schemas; an unassigned type fails generation | Staleness and unassigned-namespace failures both seen |
 | PKG-01 | Read budget is cumulative | Open | P2 | `read_part` charges a whole-package budget on every read, so an editor re-reading parts can exhaust it on a legitimate deck | A long session does not refuse |
@@ -65,6 +65,9 @@
 | FUZZ-01 | `XmlTree::parse` has no fuzz target | Open | P1 | A second reader, with different config | Target exists, campaign clean |
 | CI-01 | Gate that crates never depend on a server | Open | P2 | Stated in 19; OpenCalc has it, we do not | Seeded edge fails |
 | SPEC-06 | Catch-all area rules removed | Done | P0 | Audit seeded `ZZ_Unassigned`, filed silently under PRES. The final rules now name their types | Seeded type fails generation; output unchanged |
+| FID-01 | Autonumber behaviour | Open | P1 | LibreOffice resave changes `arabicParenBoth` to `2)`, and Thai and Hebrew schemes to a bullet. Renders two paragraphs with `startAt=2` as `(b) (b)`; PowerPoint's behaviour unknown. Feeds BEH-11 | Fixture against a reference |
+| F4-02 | `buSzPct` form | Open | P1 | Vendored XSD rejects `100000` and takes `100%`. PowerPoint may write the numeric form (unverified), which would make F4 reject real decks | Checked on a real deck via `F-007` |
+| FID-02 | Fixture coverage | Open | P1 | No decks for charts, SmartArt, math, ink, media, OLE, comments, VML, signatures or extension namespaces | Coverage per tier closes |
 | GEO-01 | `upArrow` missing from Ecma's preset definitions | Open | P1 | The file defines `upDownArrow` twice and `upArrow` never. A generator keyed on names ships 186 of 187 | A fixture draws all 187; `upArrow` matches a reference |
 | SEC-010 | Package threats SEC-P04 to SEC-P07 | Done | P1 | Oversized allocation from a forged size; duplicate and case-equivalent names; malformed names. The `zip` crate merges duplicates, so a raw directory walk was added. Inherited from OpenCalc | Each test seen red; guards disabled and seen red again; 19 tests pass |
 | SEC-011 | Report package findings to OpenCalc | Open | P1 | Same code at `b23c67c`; that repo is not modified from here | Owner informed |
@@ -72,7 +75,7 @@
 | SEC-012 | Remaining threats in [07](07-SECURITY-THREAT-MODEL.md) | Open | P0 | One row per `SEC-*`, closed by the tier named there | Hostile fixture per threat |
 | ENT-000 | Requirements in [10](10-ENTERPRISE-REQUIREMENTS.md) | Open | P0 | Gate on each delivering phase | Per requirement |
 | SPK-01 | WASM shaping and glyph-path frame time | Open | P0 | [06](06-ROADMAP-AND-DELIVERY.md) | Numbers in 42 |
-| SPK-02 | Fidelity oracle pipeline | In progress | P0 | LibreOffice half works: decks convert to PDF and `.pptx`. PowerPoint references need `DEC-04` | 5 decks end to end |
+| SPK-02 | Fidelity oracle pipeline | Done | P0 | `tools/fidelity`, in a network-denied sandbox, refusing hostile decks. Whole-page SSIM misranks: a 0.06 pt shift scored worse than a lost shape, so regions and word positions decide. Linux path untested. PowerPoint references wait on `PV-01` | 10 comparisons over 8 decks; a seeded lost shape is named |
 | SPK-03 | Preset shape definition licensing | Done | P0 | Ecma's notice permits use in conformant implementations; vendored unmodified. Formal review is `DEC-07` | Recorded in [schemas/README](../schemas/README.md) |
 
 ## Phases 1 to 10
