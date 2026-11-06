@@ -55,7 +55,7 @@
 | F-006 | Microsoft's Open XML validator in the fidelity tools | Open | P0 | Needs `dotnet`. Closest available stand-in for PowerPoint's strictness | Rejects a seeded invalid part; corpus exports pass |
 | F-007 | Real PowerPoint-written decks as input | Open | P0 | Find decks with clear reuse rights, record provenance. Unclear rights: test locally, never commit | At least 20 decks, Windows and Mac, open and round-trip |
 | UX-002 | Live-session measurements | Open | P1 | [50](50-POWERPOINT-UX-STUDY.md) §40 lists 21 measurements, and §42 the behaviours only a live session settles: marquee rule, group entry, undo depth, web default ribbon. Run with `PV-01`'s access, earlier if possible | Each recorded, and rules corrected |
-| PV-01 | PowerPoint verification | Open | P0 | Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Run whenever access exists; earlier is cheaper | Before first stable release |
+| PV-01 | PowerPoint verification | Open | P0 | Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Microsoft publishes no repair-trigger list, and a schema-valid deck can still prompt, so also open the seeded `RR-*` fixtures. Run whenever access exists; earlier is cheaper | Before first stable release |
 | PPT-01 | Import legacy `.ppt` | Open | P2 | `DEC-08`. CFB and MS-PPT parsers with limits and fuzz targets | Phase 10 |
 | NAME-01 | Rename product to OpenPresent in docs and site | Open | P2 | After parallel sessions merge. Crate prefix and folder unchanged | No product use of the old name remains |
 | DOC-007 | Owner instruction log | Done | P0 | [03](03-OWNER-INSTRUCTIONS.md), first in authority, cited from `CLAUDE.md` | Exists, indexed |
@@ -129,10 +129,10 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | ID | Title | St | Sev | Mechanism | Gate |
 | --- | --- | --- | --- | --- | --- |
 | WR-01 | Fidelity gates can pass without the writer running | In progress | P0 | Unedited save returns input bytes, so F1, F3 and F5 prove nothing about it. Forced-rewrite mode: touch every modelled part | F3 and validators run on forced-rewrite output |
-| WR-02 | Export and save design, Tier 1N | In progress | P0 | No rules for part naming, rId allocation, content-type updates, shared parts, id rules, app.xml, thumbnails, signature drop, format conversion. Design in docs/36 | One repair-risk fixture per invariant |
-| WR-03 | Fallbacks go stale on edit | In progress | P0 | Per-construct policy: regenerate, drop, or block edit. Render-on-save hosted in `-sdk`. In docs/36 | Phase 6 exit |
+| WR-02 | Export and save, Tier 1N | Open | P0 | Designed in [36](36-EXPORT-AND-SAVE.md): 118 invariants, each with a specified `RR-*` fixture; none built yet. Thinly sourced: slide-level ChartEx and 3D `AlternateContent`, `.thmx` structure, PowerPoint's own notes master | One repair-risk fixture per invariant |
+| WR-03 | Fallbacks go stale on edit | Open | P0 | Policy designed in 36; render-on-save in `-sdk`. Not built | Phase 6 exit |
 | WR-04 | Signature dropped explicitly on edit | Open | P1 | Promised in 07, no owner until now. Tier 1N | Signed fixture |
-| WR-05 | Save-as matrix, including `.pptm` to `.pptx` and template to deck | Open | P1 | Tier 1N, in docs/36. `.ppsm`, `.potm`, `.thmx`, `.ppam`, `.xps`, outline, images each assigned or refused | Fixture per pair |
+| WR-05 | Save-as matrix | Open | P1 | 121-pair grid with VBA fate designed in 36. Not built | Fixture per pair |
 | OPC-01 | Percent-encoded part names misread | In progress | P1 | **Confirmed by running:** space in a target against `%20` in the entry gives a false dangling and a false orphan | Fixture passes |
 | MCE-01 | Markup compatibility missing | In progress | P0 | **Confirmed:** 0 checklist rows and no code. Needs Part 3 rules: Ignorable, ProcessContent, MustUnderstand, Choice order, both branches kept on edit | Checklist area, tests, F4 preprocess |
 | F4-01 | F4 validation tool | In progress | P0 | Listed as unblocked but does not exist. `xmllint` likely rejects real parts without MCE preprocessing | Runs on corpus exports |
@@ -163,6 +163,8 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | SPEC-07 | Standard's internal inconsistencies recorded | Done | P2 | `dkSeaGreen` differs from `darkSeaGreen`, `ltGoldenrodYellow` from `lightGoldenrodYellow`, followed as written. Worked examples for `hslClr` 240/100/50, `lumMod` and `blueOff` contradict computation or themselves | Tests pin each |
 | GEOM-01 | Path boolean engine for merge shapes | Open | P1 | In `-geometry`, Phase 4. Must be deterministic like the rest | Golden shapes |
 | D3-01 | 3D model rendering and editing | Open | P2 | **Decided, clone goal:** Edit in Phase 10, Retain with fallback until then. Spec level changed to match | Phase 10 |
+| PKG-02 | Part name comparison uses Unicode lowercase | Open | P1 | `Package` uses `to_lowercase`. Read, no failing test yet. Must follow OPC's equivalence, shared with `OPC-01` | Fixture |
+| PKG-03 | Rewrite's fixed timestamp relies on a feature staying off | Open | P2 | If `zip`'s `time` feature enters through unification, determinism breaks silently | Set explicitly; test |
 | GOV-01 | Gates, governance and release | Open | P1 | Port OpenCalc's self-test, doc-claims, doc-references, tracker-shape, fuzz-lock, host-seams and post-merge. Add SECURITY, CONTRIBUTING, CHANGELOG, NOTICE. docs/15 for test strategy and release | Phase 0 exit |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |

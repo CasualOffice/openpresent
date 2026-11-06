@@ -75,7 +75,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | **1K** | SmartArt, equations, ink | 1263 | 1E, 1F |
 | **1L** | OLE, VML, 3D models, retained with fallback | 951 | 1H |
 | **1M** | Comments, review, sections, zoom, labels, tags, custom XML | 876 | 1D |
-| **1N** | **The writer:** part naming, rId allocation, content types, shared parts, id rules, app.xml, thumbnails, signature drop, save-as matrix (`docs/36`, in progress) | invariants | 1A; grows with each tier |
+| **1N** | **The writer:** part naming, rId allocation, content types, shared parts, id rules, app.xml, thumbnails, signature drop, save-as matrix ([36](36-EXPORT-AND-SAVE.md)) | invariants | 1A; grows with each tier |
 
 **Walking skeleton (`SKEL-01`).** As soon as 1D closes, 5 real decks go through 2A, 2B and basic text, so that wrong semantics show up before the remaining tiers build on them. It adds to import-export-first; it does not reorder it.
 
