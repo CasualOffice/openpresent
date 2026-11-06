@@ -41,6 +41,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # F4 needs xmllint. On Linux a missing tool fails the run; elsewhere the test skips, and says so.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get install -y libxml2-utils
+      - if: runner.os == 'Linux'
+        run: echo "F4_REQUIRED=1" >> "$GITHUB_ENV"
       - run: cargo test --workspace --all-features --locked
 
   msrv:

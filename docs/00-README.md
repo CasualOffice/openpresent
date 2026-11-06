@@ -32,3 +32,4 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [52-COMPETITOR-STUDY](52-COMPETITOR-STUDY.md) | What other editors learned; 17 ranked fidelity problems as fixture candidates | Live |
 | [96-POWERPOINT-FIT-GAP](96-POWERPOINT-FIT-GAP.md) | Every PowerPoint feature (318) with a disposition, phase and reason | Live |
 | [36-EXPORT-AND-SAVE](36-EXPORT-AND-SAVE.md) | The writer: 118 invariants, each with a repair-risk fixture; save-as grid; fallback policy. Designed, not built | Draft for owner |
+| [64-SPK-01-TEXT-COST](64-SPK-01-TEXT-COST.md) | Measurements behind ADR-004 and ADR-005: bundle, layout, frame time, appearance | Measured |

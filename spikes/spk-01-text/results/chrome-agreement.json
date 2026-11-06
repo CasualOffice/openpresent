@@ -1,0 +1,217 @@
+[
+ {
+  "name": "Latin (Carlito)",
+  "clusters": 1910,
+  "engine_width": 13171.5546875,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": 0,
+   "kerning=normal textRendering=auto": 0,
+   "kerning=auto textRendering=optimizeLegibility": 0,
+   "kerning=auto textRendering=geometricPrecision": 0
+  },
+  "first_divergence": null,
+  "cluster_adv_differs_gt_0_01px": 368,
+  "cluster_adv_mean_abs": 0.052985929319371725,
+  "cluster_adv_max": 1.421875,
+  "words": 288,
+  "word_adv_differs_gt_0_05px": 0,
+  "word_adv_max": 0,
+  "shape": {
+   "plain": {
+    "distinct": 48,
+    "distinct_wrong_form": 0,
+    "occurrences": 1623,
+    "occurrences_wrong_form": 0,
+    "min_coverage": {
+     "n": 48,
+     "median": 1,
+     "p95": 1,
+     "min": 1,
+     "max": 1
+    },
+    "examples": []
+   }
+  }
+ },
+ {
+  "name": "Latin (Liberation Sans)",
+  "clusters": 2000,
+  "engine_width": 14280.9921875,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": 10.2109375,
+   "kerning=normal textRendering=auto": 0,
+   "kerning=auto textRendering=optimizeLegibility": 0,
+   "kerning=auto textRendering=geometricPrecision": 0
+  },
+  "first_divergence": {
+   "at_char": 83,
+   "context": "e of Typ"
+  },
+  "cluster_adv_differs_gt_0_01px": 85,
+  "cluster_adv_mean_abs": 0.03448046875,
+  "cluster_adv_max": 1.7734375,
+  "words": 288,
+  "word_adv_differs_gt_0_05px": 3,
+  "word_adv_max": 0.8828125,
+  "shape": {
+   "plain": {
+    "distinct": 42,
+    "distinct_wrong_form": 0,
+    "occurrences": 1713,
+    "occurrences_wrong_form": 0,
+    "min_coverage": {
+     "n": 42,
+     "median": 1,
+     "p95": 1,
+     "min": 1,
+     "max": 1
+    },
+    "examples": []
+   }
+  }
+ },
+ {
+  "name": "Arabic (Noto Sans Arabic)",
+  "clusters": 1934,
+  "engine_width": 12601.2294921875,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": -0.001953125,
+   "kerning=normal textRendering=auto": -0.029296875,
+   "kerning=auto textRendering=optimizeLegibility": -0.029296875,
+   "kerning=auto textRendering=geometricPrecision": -0.029296875
+  },
+  "first_divergence": null,
+  "cluster_adv_differs_gt_0_01px": 1253,
+  "cluster_adv_mean_abs": 2.5095857867533815,
+  "cluster_adv_max": 11.583984851837158,
+  "words": 332,
+  "word_adv_differs_gt_0_05px": 0,
+  "word_adv_max": 0.00008440017700195312,
+  "shape": {
+   "plain": {
+    "distinct": 81,
+    "distinct_wrong_form": 60,
+    "occurrences": 1602,
+    "occurrences_wrong_form": 1249,
+    "min_coverage": {
+     "n": 81,
+     "median": 0.6220322886989553,
+     "p95": 1,
+     "min": 0.10669781931464174,
+     "max": 1
+    },
+    "examples": [
+     "ي",
+     "ن",
+     "ا",
+     "ي",
+     "ب",
+     "ل",
+     "م",
+     "ي",
+     "د",
+     "ق",
+     "ت",
+     "و"
+    ]
+   },
+   "zwj_both": {
+    "distinct": 81,
+    "distinct_wrong_form": 58,
+    "occurrences": 1602,
+    "occurrences_wrong_form": 1151,
+    "min_coverage": {
+     "n": 81,
+     "median": 0.7201394943330427,
+     "p95": 1,
+     "min": 0.09764789736279401,
+     "max": 1
+    },
+    "examples": [
+     "ن",
+     "ي",
+     "ب",
+     "ل",
+     "ا",
+     "م",
+     "ي",
+     "ق",
+     "ت",
+     "ط",
+     "ط",
+     "خ"
+    ]
+   },
+   "best_of_4_zwj": {
+    "distinct": 81,
+    "distinct_wrong_form": 44,
+    "occurrences": 1602,
+    "occurrences_wrong_form": 860,
+    "min_coverage": {
+     "n": 81,
+     "median": 0.7201394943330427,
+     "p95": 1,
+     "min": 0.10669781931464174,
+     "max": 1
+    },
+    "examples": [
+     "ن",
+     "ي",
+     "ب",
+     "ل",
+     "م",
+     "ي",
+     "ق",
+     "ت",
+     "ط",
+     "خ",
+     "ن",
+     "س"
+    ]
+   }
+  }
+ },
+ {
+  "name": "CJK (Noto Sans SC)",
+  "clusters": 2000,
+  "engine_width": 31565.236328125,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": -215.6328125,
+   "kerning=normal textRendering=auto": -215.6328125,
+   "kerning=auto textRendering=optimizeLegibility": -215.6328125,
+   "kerning=auto textRendering=geometricPrecision": -215.6328125
+  },
+  "first_divergence": {
+   "at_char": 17,
+   "context": "安全今年，，こん"
+  },
+  "cluster_adv_differs_gt_0_01px": 85,
+  "cluster_adv_mean_abs": 0.0918004961013794,
+  "cluster_adv_max": 2.160003662109375,
+  "words": 1,
+  "word_adv_differs_gt_0_05px": 1,
+  "word_adv_max": 215.6124973297119,
+  "shape": {
+   "plain": {
+    "distinct": 140,
+    "distinct_wrong_form": 5,
+    "occurrences": 2000,
+    "occurrences_wrong_form": 85,
+    "min_coverage": {
+     "n": 140,
+     "median": 1,
+     "p95": 1,
+     "min": 0.30513231756214915,
+     "max": 1
+    },
+    "examples": [
+     "한",
+     "국",
+     "어",
+     "세",
+     "계"
+    ]
+   }
+  }
+ }
+]

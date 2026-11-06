@@ -68,7 +68,7 @@
 | FID-01 | Autonumber behaviour | Open | P1 | LibreOffice resave changes `arabicParenBoth` to `2)`, and Thai and Hebrew schemes to a bullet. Renders two paragraphs with `startAt=2` as `(b) (b)`; PowerPoint's behaviour unknown. Feeds BEH-11 | Fixture against a reference |
 | F4-02 | `buSzPct` form | Open | P1 | Vendored XSD rejects `100000` and takes `100%`. PowerPoint may write the numeric form (unverified), which would make F4 reject real decks | Checked on a real deck via `F-007` |
 | FID-02 | Fixture coverage | Open | P1 | No decks for charts, SmartArt, math, ink, media, OLE, comments, VML, signatures or extension namespaces | Coverage per tier closes |
-| SPK-04 | Third painting option for ADR-005 | Open | P0 | None of 4 editors whose text path could be established paints glyph paths interactively (ONLYOFFICE bitmaps, inferred from identifiers; Google SVG text at engine positions). Compare `Path2D`, `fillText` at engine positions, and engine-rasterized bitmaps. Extends `SPK-01` | ADR-005 settled on all three |
+| SPK-04 | Third painting option | Open | P2 | Engine-rasterized bitmaps not measured. **Decided:** `Path2D` proceeds; bitmaps tried only if `TXT-05` shows no-GPU clients need them | `TXT-05` |
 | TXT-03 | Verify Akasia against Aptos | Open | P0 | Self-reported OFL metric-compatible face, first released June 2026. If true, it removes the largest reflow risk. Needs metric comparison without bundling Aptos | Advance widths compared; licence read |
 | OT-01 | Is character OT needed? | Open | P1 | Figma and Google Docs support server order and per-property rules. ONLYOFFICE ships presentations with object marking and no character OT in the same object. **Kept: a clone must allow two people in one text box**, so character OT stays (ADR-009). Reviewed again at Phase 9's audit | Decision recorded at Phase 9 |
 | FID-03 | Fixtures for the 17 ranked problems | Open | P0 | [52](52-COMPETITOR-STUDY.md): fonts, autofit, SmartArt, animation and round-trip validity first. The first five were each reported by several products | Each has a fixture in its tier |
@@ -83,7 +83,7 @@
 | SEC-013 | Zip bomb dilution, XML read before size check | Done | P1 | Found by the corpus: 64 MiB of zeros admitted because other parts diluted the ratio | Tests seen red; `SEC-P12`, `SEC-P13` |
 | SEC-012 | Remaining threats in [07](07-SECURITY-THREAT-MODEL.md) | Open | P0 | One row per `SEC-*`, closed by the tier named there | Hostile fixture per threat |
 | ENT-000 | Requirements in [10](10-ENTERPRISE-REQUIREMENTS.md) | Open | P0 | Gate on each delivering phase | Per requirement |
-| SPK-01 | WASM shaping and glyph-path frame time | Open | P0 | [06](06-ROADMAP-AND-DELIVERY.md) | Numbers in 42 |
+| SPK-01 | WASM text cost and painting | Done | P0 | [64](64-SPK-01-TEXT-COST.md), on an Apple M4 under load. Full text stack 313 KiB Brotli over a bare bundle; 2,000 characters lay out in under 1 ms warm; dense slide 8 to 13 ms on GPU. `Path2D` is correct, lighter than `fillText`. Windows, Firefox, Safari, low-end devices, a real deck: not measured | Main session viewed the side-by-side PNG |
 | SPK-02 | Fidelity oracle pipeline | Done | P0 | `tools/fidelity`, in a network-denied sandbox, refusing hostile decks. Whole-page SSIM misranks: a 0.06 pt shift scored worse than a lost shape, so regions and word positions decide. Linux path untested. PowerPoint references wait on `PV-01` | 10 comparisons over 8 decks; a seeded lost shape is named |
 | SPK-03 | Preset shape definition licensing | Done | P0 | Ecma's notice permits use in conformant implementations; vendored unmodified. Formal review is `DEC-07` | Recorded in [schemas/README](../schemas/README.md) |
 
@@ -93,8 +93,8 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 
 | ID | Title | St | Sev | Mechanism | Gate |
 | --- | --- | --- | --- | --- | --- |
-| T-1A | Package, part graph, repackager | In progress | P0 | Structure, findings and repackager built ([28](28-PACKAGE-AND-PART-GRAPH.md)). Properties parts not modelled yet | Per-tier gate in 06 |
-| T-1B | Presentation part, view state | Open | P0 | 297 rows | Per-tier gate |
+| T-1A | Package, part graph, properties, repackager | In progress | P0 | Structure, properties, repackager, MCE, Strict built and merged. Open: `XML-02`, `SEC-015`, `SEC-016`, `SEC-017`, `PKG-04`, `SPEC-08` | Per-tier gate in 06 |
+| T-1B | Presentation part, view state | In progress | P0 | Built and merged, with fuzz target. Removing a whole part refused; `defaultTextStyle`, `penClr`, `clrMru`, `extLst` retained, not modelled; app counts not recalculated | Per-tier gate |
 | T-1C | Colour and theme | In progress | P0 | Model, import and export built and merged; 236 workspace tests pass. Audit: code references 314 COLOR and 159 THEME rows partly. Remaining: `COLOR-01`, `COLOR-02`, `COLOR-03`, effect reference, format scheme internals, object defaults, `themeManager` | Per-tier gate in 06 |
 | T-1D | Slides, masters, layouts, shape tree, `-style` | Open | P0 | 564 rows | Per-tier gate |
 | T-1E | Geometry, fills, lines, effects, 3D | Open | P0 | 1082 rows | Per-tier gate |
@@ -128,15 +128,15 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 
 | ID | Title | St | Sev | Mechanism | Gate |
 | --- | --- | --- | --- | --- | --- |
-| WR-01 | Fidelity gates can pass without the writer running | In progress | P0 | Unedited save returns input bytes, so F1, F3 and F5 prove nothing about it. Forced-rewrite mode: touch every modelled part | F3 and validators run on forced-rewrite output |
+| WR-01 | Fidelity gates can pass without the writer running | Done | P0 | Every XML part in the corpus is forced through tree and writer, then compared with bytes, findings and F4 | Mutation of tree writing seen red by the worker |
 | WR-02 | Export and save, Tier 1N | Open | P0 | Designed in [36](36-EXPORT-AND-SAVE.md): 118 invariants, each with a specified `RR-*` fixture; none built yet. Thinly sourced: slide-level ChartEx and 3D `AlternateContent`, `.thmx` structure, PowerPoint's own notes master | One repair-risk fixture per invariant |
 | WR-03 | Fallbacks go stale on edit | Open | P0 | Policy designed in 36; render-on-save in `-sdk`. Not built | Phase 6 exit |
 | WR-04 | Signature dropped explicitly on edit | Open | P1 | Promised in 07, no owner until now. Tier 1N | Signed fixture |
 | WR-05 | Save-as matrix | Open | P1 | 121-pair grid with VBA fate designed in 36. Not built | Fixture per pair |
-| OPC-01 | Percent-encoded part names misread | In progress | P1 | **Confirmed by running:** space in a target against `%20` in the entry gives a false dangling and a false orphan | Fixture passes |
-| MCE-01 | Markup compatibility missing | In progress | P0 | **Confirmed:** 0 checklist rows and no code. Needs Part 3 rules: Ignorable, ProcessContent, MustUnderstand, Choice order, both branches kept on edit | Checklist area, tests, F4 preprocess |
-| F4-01 | F4 validation tool | In progress | P0 | Listed as unblocked but does not exist. `xmllint` likely rejects real parts without MCE preprocessing | Runs on corpus exports |
-| STRICT-01 | Strict is detected, not handled | In progress | P0 | **Decided:** normalise namespaces at the read boundary, write back in source form. Vendor Strict XSDs; PowerPoint-saved Strict fixture via `F-007` | Strict deck round-trips |
+| OPC-01 | Percent-encoded part names misread | Done | P1 | `part_name.rs`: ECMA-376 Part 2 equivalence; refuses what decodes to traversal | Main session broke percent decoding; 4 tests red |
+| MCE-01 | Markup compatibility | In progress | P0 | Pure resolver over namespace URIs; both branches kept. Understood list is ECMA-376 alone, so `p14` takes Fallback until the importer maps it. Checklist has no rows, since Part 3 ships no XSD (`SPEC-08`) | Tests and F4 agree on 23 vectors plus 4 decks |
+| F4-01 | F4 validation tool | Done | P0 | `tools/f4/validate.py`; in CI on Linux. Microsoft-namespace parts report `no-schema`, `.vml` is unchecked, Dublin Core is stubbed | Seeded invalid part fails |
+| STRICT-01 | Strict handling | In progress | P0 | Namespace map and write-back in source form; 14 Strict XSDs vendored. The only Strict deck is synthetic. Import reads Strict percentages; nothing above that uses the map fully yet | PowerPoint-saved Strict deck via `F-007` |
 | ARC-01 | ADR-013 wording contradicted the DAG | Done | P0 | **Decided:** `-model` stays plain values. The tree lives with `-export`; ops mark objects dirty, and save applies dirty values to the tree. See [28](28-PACKAGE-AND-PART-GRAPH.md) | Phase 1 tiers follow it |
 | ARC-02 | Prove ADR-013 end to end | In progress | P0 | One property through tree, model, edit, save, reopen | Row for each view follows it |
 | SKEL-01 | Walking skeleton | Open | P0 | **Decided:** 5 real decks through 2A, 2B and basic text right after 1D, so semantics errors appear early. Adds to, not replaces, import-export-first | 5 decks render |
@@ -154,6 +154,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | MODEL-01 | "No floats in the model" is false | Open | P1 | Charts and timing use doubles; coordinates admit units such as `1in`. Keep source lexemes | Fixtures; fix 22 |
 | THR-01 | Threshold ceilings | Open | P1 | Class ceilings, a ratchet, unwaivable structural checks | Applied in 51 |
 | DT-01 | Desktop plan | Open | P1 | Tauri notes, signing identities, updater, file associations. Fix 19's Phase 10 against 06's Phase 3 | Phase 3 |
+| PROC-02 | Mistake during a merge | Done | P2 | A stray `git checkout --theirs .` overwrote conflict resolutions mid-merge. Nothing committed was affected; conflicts restored with `checkout -m` and redone. Do not run wildcards in a merge | — |
 | PROC-01 | Check worker gate workarounds | Done | P1 | A worker met the README link failure and temporarily symlinked a sibling in a shared directory. It used no `--no-verify`, but was not authorised to, and it worked around a gate. Root cause fixed in `77354d1`, link removed and checked gone. Worker brief now says a failing gate is reported, never routed around | `openslide-worker` skill |
 | COLOR-01 | Finish Tier 1C security | Open | P1 | Skill requires a fuzz target, hostile fixtures and limits in `OoxmlLimits`; caps are constants so far (64 transforms). In-test byte mutation is no substitute | Target runs clean; fixtures seen red |
 | COLOR-02 | Colour arithmetic left open by the standard | Open | P1 | `inv` encoded against LibreOffice's linear, `gray` weights, gamma transfer, `hueMod` clamp, half-up rounding, HSL state, `sysClr` fallback from Windows defaults recalled from memory, `masterClrMapping` chain. Each pinned by an `open_*` test. BEH-03, BEH-04 | Settled by `PV-01` or `F-007` |
@@ -165,6 +166,15 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | D3-01 | 3D model rendering and editing | Open | P2 | **Decided, clone goal:** Edit in Phase 10, Retain with fallback until then. Spec level changed to match | Phase 10 |
 | PKG-02 | Part name comparison uses Unicode lowercase | Open | P1 | `Package` uses `to_lowercase`. Read, no failing test yet. Must follow OPC's equivalence, shared with `OPC-01` | Fixture |
 | PKG-03 | Rewrite's fixed timestamp relies on a feature staying off | Open | P2 | If `zip`'s `time` feature enters through unification, determinism breaks silently | Set explicitly; test |
+| PKG-04 | `PresentationPackage::read_part` is uncapped | Open | P0 | Import of optional parts decompresses before the tree refuses size, bounded only by the package budget. Add a capped read | Test on `consumed()` |
+| PKG-05 | Duplicate security rule | Open | P1 | `resolve_internal` is private, so import copies it as `resolve_target`. Export it and delete the copy | One rule, tested |
+| XML-03 | Walker admits non-XML | Open | P0 | NUL in names, `a="1"b="2"`, undeclared prefixes. With `XML-02`: refuse in `walk`, so all readers agree | Hostile fixtures |
+| WR-06 | Signature parts not dropped on edit | Open | P1 | `SaveOutcome.signature_invalidated` reports it; docs/07 says drop. Part of `WR-04` | Signed fixture |
+| SPEC-08 | Checklist area for markup compatibility | Open | P0 | Hand-written rows for `mc:Ignorable`, `ProcessContent`, `MustUnderstand`, `AlternateContent`, `Choice`, `Requires`, `Fallback`, tied to BEH-18 | Rows in `docs/spec` |
+| TXT-04 | White-on-dark text weight | Open | P1 | `fillText` has 25 to 68% more ink on macOS dark backgrounds. Viewed: `Path2D` is correct and legible but visibly lighter. Try weight compensation; compare to PowerPoint via `PV-01` | Compared on dark slides |
+| TXT-05 | Low-end and no-GPU clients | Open | P1 | Software rendering of dense CJK reaches 27 to 36 ms, over a frame. Known weak case | Measured on a named device |
+| TXT-06 | Windows, Firefox, Safari check | Open | P1 | Windows Chrome is the platform most likely to favour `fillText`. Before Phase 3 closes | Same PNG viewed on each |
+| TXT-07 | Thai and similar line breaking | Open | P1 | `unicode-linebreak` has no dictionary; icu_segmenter adds 297 KiB. Load per script, on demand | Fixture passes |
 | GOV-01 | Gates, governance and release | Open | P1 | Port OpenCalc's self-test, doc-claims, doc-references, tracker-shape, fuzz-lock, host-seams and post-merge. Add SECURITY, CONTRIBUTING, CHANGELOG, NOTICE. docs/15 for test strategy and release | Phase 0 exit |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |

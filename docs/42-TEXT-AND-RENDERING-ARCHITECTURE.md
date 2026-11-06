@@ -61,8 +61,7 @@ Items carry object ids so the editor can invalidate and reuse them per object.
 Glyph paths rather than `fillText` because `fillText` re-shapes and can disagree with the engine.
 The cost is losing LCD antialiasing and hinting, which matter little at slide scale and not at all
 in a rotated title, but do matter in small text at low zoom. `SPK-01` looks at this directly, on
-both frame time and appearance. **If it looks wrong, ADR-005 changes**, to `fillText` per cluster
-at engine-given positions, keeping engine layout.
+both frame time and appearance. Measured in [64](64-SPK-01-TEXT-COST.md); ADR-005 is Accepted. **The fallback, if needed, is `fillText` per word** at engine positions, with `fontKerning='normal'`, `textRendering='geometricPrecision'` and `direction` from the engine. Per cluster draws wrong Arabic forms.
 
 WebGL is held back for transitions that need it. Canvas2D first; effects that it cannot draw
 cheaply (soft edge, reflection) rasterize once per object into an `OffscreenCanvas` and are reused.
@@ -100,4 +99,4 @@ environment, as OpenCalc's docs/30 does.
 | Slide switch, cached | under 50 ms |
 | First paint of a 500-slide deck | under 1 s after bytes arrive |
 | Animation, 30 simultaneous objects | 60 fps |
-| WASM bundle before fonts, Brotli | decided by `SPK-01` |
+| Text stack in WASM, before fonts, Brotli | 313 KiB measured as an increment over a bare bundle ([64](64-SPK-01-TEXT-COST.md)); whole-engine budget set in Phase 3 |

@@ -1,0 +1,15 @@
+{
+ "version": "158.0.8127.18",
+ "isolated": true,
+ "webgl_renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+ "chrome_gpu": {
+  "error": "Error: page.goto: net::ERR_FAILED at chrome://gpu\nCall log:\n  - navigating to \"chrome://gpu\", waiting until \"load\"\n"
+ },
+ "idle_raf_ms": {
+  "n": 60,
+  "median": 16.66500000000002,
+  "p95": 16.670000000000016,
+  "min": 16.659999999999968,
+  "max": 16.670000000000073
+ }
+}

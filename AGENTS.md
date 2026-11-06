@@ -69,4 +69,4 @@ Every task, none of it optional:
 
 ## Current state
 
-**Phases 0 and 1 are open, under waiver W-1** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Model, import and export are being built, and nothing renders yet. All ADRs are Accepted except ADR-004 and ADR-005, which wait on `SPK-01`.
+**Phases 0 and 1 are open, under waiver W-1** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Tiers 1A, 1B and 1C are built but not closed, and nothing renders yet. All ADRs are Accepted.
