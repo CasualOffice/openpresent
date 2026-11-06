@@ -7,11 +7,14 @@ use casual_slide_package::{Package, PartEdits};
 use crate::content_types::{CONTENT_TYPES_PART, ContentTypes};
 use crate::error::OoxmlError;
 use crate::limits::OoxmlLimits;
+use crate::mce::{Compatibility, resolve_compatibility};
+use crate::namespaces::{to_strict, to_transitional};
+use crate::part_name::{PartIndex, entry_key, part_name_key};
 use crate::rels::{
     ExternalKind, Relationship, TargetMode, classify_external, parse_relationships, rels_part_for,
     resolve_internal, source_of_rels,
 };
-use crate::xml::{walk, wrong_root};
+use crate::xml::{XmlTree, walk, wrong_root};
 
 const TRANSITIONAL_RELS: &str =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
@@ -80,6 +83,17 @@ pub enum Conformance {
     Transitional,
     /// `purl.oclc.org`.
     Strict,
+}
+
+impl Conformance {
+    /// A namespace as this file spells it, for anything newly written into it.
+    /// Reading goes the other way, through [`to_transitional`].
+    pub fn spell(self, uri: &str) -> &str {
+        match self {
+            Self::Transitional => to_transitional(uri),
+            Self::Strict => to_strict(uri),
+        }
+    }
 }
 
 /// What the main part's content type says the file is.
@@ -151,6 +165,11 @@ pub enum FindingKind {
     Signature,
     /// An embedded object or package. Retained as bytes and never opened.
     EmbeddedObject,
+    /// A target or entry name that decodes to traversal, or to no valid name at
+    /// all. A target is not followed; an entry is retained and unreachable.
+    DisguisedPartName,
+    /// The part breaks ECMA-376 Part 3's syntax. Nothing was guessed at.
+    MarkupCompatibility,
 }
 
 impl FindingKind {
@@ -167,6 +186,8 @@ impl FindingKind {
             Self::MacroProject => "CS-FND-0008",
             Self::Signature => "CS-FND-0009",
             Self::EmbeddedObject => "CS-FND-0010",
+            Self::DisguisedPartName => "CS-FND-0011",
+            Self::MarkupCompatibility => "CS-FND-0012",
         }
     }
 }
@@ -186,6 +207,7 @@ pub struct Finding {
 #[derive(Debug)]
 pub struct PresentationPackage {
     package: Package,
+    index: PartIndex,
     limits: OoxmlLimits,
     content_types: ContentTypes,
     main_part: String,
@@ -204,8 +226,9 @@ impl PresentationPackage {
             return Err(OoxmlError::CompoundFile);
         }
         let mut package = Package::open(bytes, limits.package)?;
-        let ct_name = package
-            .find_part(CONTENT_TYPES_PART)
+        let index = PartIndex::build(package.entry_names())?;
+        let ct_name = index
+            .find(CONTENT_TYPES_PART)
             .ok_or_else(|| OoxmlError::MissingPart {
                 name: CONTENT_TYPES_PART.to_owned(),
             })?
@@ -214,10 +237,10 @@ impl PresentationPackage {
         let content_types =
             ContentTypes::parse(&package.read_part_capped(&ct_name, cap)?, &limits)?;
 
-        let root_rels = read_rels(&mut package, "", &limits, &mut 0)?;
+        let root_rels = read_rels(&mut package, &index, "", &limits, &mut 0)?;
         let (main_part, conformance) = find_main_part(&root_rels)?;
-        let main_part = package
-            .find_part(&main_part)
+        let main_part = part_name_key(&main_part)
+            .and_then(|key| index.find_key(&key))
             .ok_or(OoxmlError::MissingPart {
                 name: main_part.clone(),
             })?
@@ -236,10 +259,22 @@ impl PresentationPackage {
             }
             Ok(())
         })?;
+        let compatibility =
+            checked_compatibility(&XmlTree::parse(&main, &main_part, &limits)?, &main_part)?;
 
-        let (relationships, findings) = walk_graph(&mut package, &limits, &content_types)?;
+        let (relationships, mut findings) =
+            walk_graph(&mut package, &index, &limits, &content_types)?;
+        if !compatibility.nonconformances.is_empty() {
+            findings.push(Finding {
+                kind: FindingKind::MarkupCompatibility,
+                part: main_part.clone(),
+                rel_id: None,
+            });
+            findings.sort();
+        }
         Ok(Self {
             package,
+            index,
             limits,
             content_types,
             main_part,
@@ -290,16 +325,31 @@ impl PresentationPackage {
         self.package.entry_names()
     }
 
-    /// Read a part, matched case-insensitively.
+    /// Read a part by any spelling equivalent to its name.
     pub fn read_part(&mut self, name: &str) -> Result<Vec<u8>, OoxmlError> {
-        let actual = self
-            .package
-            .find_part(name)
+        let actual = self.actual_name(name)?;
+        Ok(self.package.read_part(&actual)?)
+    }
+
+    /// Read an XML part for use: its tree, keeping every branch and byte, and what
+    /// markup compatibility says applies. Refuses a must-understand namespace that
+    /// is not understood, in the part as read and not in a branch not taken.
+    pub fn read_resolved(&mut self, name: &str) -> Result<(XmlTree, Compatibility), OoxmlError> {
+        let actual = self.actual_name(name)?;
+        let cap = self.limits.max_xml_part_bytes as u64;
+        let bytes = self.package.read_part_capped(&actual, cap)?;
+        let tree = XmlTree::parse(&bytes, &actual, &self.limits)?;
+        let compatibility = checked_compatibility(&tree, &actual)?;
+        Ok((tree, compatibility))
+    }
+
+    fn actual_name(&self, name: &str) -> Result<String, OoxmlError> {
+        self.index
+            .find(name)
+            .map(str::to_owned)
             .ok_or_else(|| OoxmlError::MissingPart {
                 name: name.to_owned(),
-            })?
-            .to_owned();
-        Ok(self.package.read_part(&actual)?)
+            })
     }
 
     /// The file exactly as it arrived.
@@ -310,6 +360,17 @@ impl PresentationPackage {
     /// Write the file with `edits`. Every other part keeps its compressed bytes.
     pub fn save_with(&mut self, edits: &PartEdits) -> Result<Vec<u8>, OoxmlError> {
         Ok(self.package.rewrite(edits)?)
+    }
+}
+
+fn checked_compatibility(tree: &XmlTree, part: &str) -> Result<Compatibility, OoxmlError> {
+    let compatibility = resolve_compatibility(tree);
+    match compatibility.must_understand.iter().next() {
+        Some(namespace) => Err(OoxmlError::MustUnderstand {
+            part: part.to_owned(),
+            namespace: namespace.clone(),
+        }),
+        None => Ok(compatibility),
     }
 }
 
@@ -335,12 +396,13 @@ fn find_main_part(root: &[Relationship]) -> Result<(String, Conformance), OoxmlE
 /// A part's relationships, charged against the package-wide total.
 fn read_rels(
     package: &mut Package,
+    index: &PartIndex,
     part: &str,
     limits: &OoxmlLimits,
     total: &mut usize,
 ) -> Result<Vec<Relationship>, OoxmlError> {
     let name = rels_part_for(part);
-    let Some(actual) = package.find_part(&name).map(str::to_owned) else {
+    let Some(actual) = index.find(&name).map(str::to_owned) else {
         return Ok(Vec::new());
     };
     let xml = package.read_part_capped(&actual, limits.max_xml_part_bytes as u64)?;
@@ -360,6 +422,7 @@ type Graph = (BTreeMap<String, Vec<Relationship>>, Vec<Finding>);
 /// part reached by many routes, costs one visit.
 fn walk_graph(
     package: &mut Package,
+    index: &PartIndex,
     limits: &OoxmlLimits,
     content_types: &ContentTypes,
 ) -> Result<Graph, OoxmlError> {
@@ -377,10 +440,10 @@ fn walk_graph(
     };
 
     while let Some(part) = queue.pop_front() {
-        if !visited.insert(part.to_lowercase()) {
+        if !visited.insert(entry_key(&part)) {
             continue;
         }
-        let rels = read_rels(package, &part, limits, &mut total)?;
+        let rels = read_rels(package, index, &part, limits, &mut total)?;
         for r in &rels {
             let id = Some(r.id.as_str());
             inspect_type(r, &part, &mut note);
@@ -402,9 +465,12 @@ fn walk_graph(
                     }
                     match resolve_internal(&part, &r.target) {
                         None => note(FindingKind::TargetEscapesPackage, &part, id),
-                        Some(target) => match package.find_part(&target) {
-                            None => note(FindingKind::DanglingTarget, &part, id),
-                            Some(actual) => queue.push_back(actual.to_owned()),
+                        Some(target) => match part_name_key(&target) {
+                            None => note(FindingKind::DisguisedPartName, &part, id),
+                            Some(key) => match index.find_key(&key) {
+                                None => note(FindingKind::DanglingTarget, &part, id),
+                                Some(actual) => queue.push_back(actual.to_owned()),
+                            },
                         },
                     }
                 }
@@ -415,17 +481,23 @@ fn walk_graph(
         }
     }
 
+    let content_types_key = entry_key(CONTENT_TYPES_PART);
     for name in package.entry_names() {
-        if name == CONTENT_TYPES_PART || name.ends_with('/') {
+        let key = entry_key(&name);
+        if key == content_types_key || name.ends_with('/') {
             continue;
         }
-        if let Some(source) = source_of_rels(&name) {
-            if !visited.contains(&source.to_lowercase()) {
+        if part_name_key(&name).is_none() {
+            note(FindingKind::DisguisedPartName, &name, None);
+        }
+        // On the key, so `_RELS/.RELS` and `%5Frels/.rels` are recognized too.
+        if let Some(source) = source_of_rels(&key) {
+            if !visited.contains(&source) {
                 note(FindingKind::OrphanPart, &name, None);
             }
             continue;
         }
-        if !visited.contains(&name.to_lowercase()) {
+        if !visited.contains(&key) {
             note(FindingKind::OrphanPart, &name, None);
         }
         if content_types.resolve(&name).is_none() {

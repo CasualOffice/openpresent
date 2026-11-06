@@ -20,6 +20,7 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 | SEC-P07 | Malformed names: `.`, empty segment, trailing dot, control characters, `%2e`, `%2f`, `%5c` | Refused | Tested |
 | SEC-P12 | Zip bomb diluted by ordinary parts, so the overall ratio passes | Ratio also checked per entry. Found by the corpus: a 64 MiB run of zeros was admitted | Tested |
 | SEC-P13 | Part decompressed before its size is judged | XML reads refuse on the declaration, with nothing decompressed | Tested |
+| SEC-P14 | One part under two spellings (`a b.png`, `a%20b.png`): a scanner approves one, the editor opens the other. A target that decodes to traversal: `%2e%2e`, `%252e`, overlong `%c0%ae`, `..\`, look-alike dots and slashes | ECMA-376 Part 2 equivalence in `part_name_key`. Two entries for one part refused as `CS-PKG-0007`; a disguised target or entry reported as `CS-FND-0011`, and not followed; `two_entries_naming_one_part_are_refused`, `what_decodes_to_traversal_is_refused`, `a_target_that_decodes_to_traversal_is_reported_and_not_followed` | Tested |
 | SEC-P08 | Encrypted or unusual compression methods in entries | Refuse cleanly on read; hostile fixture | Planned 0 |
 | SEC-P09 | Recursive bomb: embedded `.xlsx` or `.pptx` inside a deck | Embedded parts are retained, never auto-opened; opening one is a separate bounded admission with an inherited budget | Planned 1J, 1L |
 | SEC-P10 | Slow decompression within the size budget | Time budget, cancellable; host-supplied predicate | Planned 1A |
@@ -33,7 +34,7 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 | SEC-X02 | XXE, SSRF through external entities | Same, and the parser has no resolver | Tested |
 | SEC-X03 | Deep nesting exhausts the stack | Depth cap; parsers iterative where recursion follows input | Tested |
 | SEC-X04 | Element, attribute or text volume | Per-part caps on size, elements and attributes. **Controls exist; no test exercises them** (`SEC-016`) | Partial |
-| SEC-X05 | `mc:AlternateContent` used to hide content from a scanner | Choice resolved by a fixed rule; retained branch is never interpreted | Planned 1A |
+| SEC-X05 | `mc:AlternateContent` used to hide content from a scanner | Choice resolved by a fixed rule over namespace URIs, never prefixes; retained branch is never interpreted, and is named in the report; a malformed construct is never selected. A must-understand namespace we do not know refuses as `CS-MCE-0001` where it is read. `the_first_choice_whose_requirements_are_understood_wins`, `prefixes_are_not_believed`, `a_branch_not_taken_is_retained_and_never_interpreted`, `broken_constructs_are_reported_and_not_guessed_at`. Applied to the main part on open, and to other parts by `read_resolved` | Tested |
 | SEC-X06 | Relationship cycles or a part reached many ways | Visited set tested. Relationship and content-type caps exist with no test (`SEC-016`) | Partial |
 | SEC-X07 | Theme, master or layout chains that recurse | Fixed walk order; cycle refused | Planned 1D |
 

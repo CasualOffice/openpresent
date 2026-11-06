@@ -36,6 +36,9 @@ pub enum OoxmlError {
     NotAPresentation { content_type: String },
     /// A Compound File: a legacy `.ppt`, or an encrypted or rights-protected deck.
     CompoundFile,
+    /// A part declares a namespace must-understand, and it is not understood. The
+    /// author said the part cannot be read correctly without it (ECMA-376 Part 3).
+    MustUnderstand { part: String, namespace: String },
 }
 
 impl OoxmlError {
@@ -54,6 +57,7 @@ impl OoxmlError {
             OoxmlError::TooManyContentTypes { .. } => "CS-OPC-0003",
             OoxmlError::NotAPresentation { .. } => "CS-OPC-0004",
             OoxmlError::CompoundFile => "CS-OPC-0005",
+            OoxmlError::MustUnderstand { .. } => "CS-MCE-0001",
         }
     }
 }
@@ -96,6 +100,12 @@ impl fmt::Display for OoxmlError {
                 write!(
                     f,
                     "a Compound File: legacy .ppt, or encrypted or rights-protected"
+                )
+            }
+            OoxmlError::MustUnderstand { part, namespace } => {
+                write!(
+                    f,
+                    "{part:?} must be understood as {namespace:?}, which is not"
                 )
             }
         }

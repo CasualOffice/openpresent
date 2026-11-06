@@ -8,7 +8,11 @@
 - **Nothing external is followed.** Targets are classified after removing the whitespace browsers ignore, and reported.
 - **Findings do not stop a deck opening,** and everything they name is retained. Codes are in [20](20-ERROR-CODE-REGISTRY.md).
 - **Saving:** unedited returns the input bytes. Edited copies other entries raw, keeping their compressed bytes.
-- **Main part:** matched on exact relationship namespaces, so a look-alike type is not believed. Strict and Transitional are both **detected**; handling Strict is `STRICT-01`.
+- **Main part:** matched on exact relationship namespaces, so a look-alike type is not believed. Strict and Transitional are both read.
+- **Part names** compare by ECMA-376 Part 2: percent-decoded once, then ASCII case-insensitive over code points. So `É` and `é` differ, and NFC and NFD spellings differ. Anything decoding to traversal is refused, in any layer of encoding.
+- **Strict** is normalized at the read boundary (`to_transitional`, `XmlTree::normalized_namespace`), and written back as it came: the tree never rewrites a declaration, and new text uses `Conformance::spell`.
+- **Markup compatibility** is a pure answer over the tree (`resolve_compatibility`), which keeps every branch. The understood list is ECMA-376 alone, so a `Choice` requiring `p14` gives way to its `Fallback` until the importer maps that namespace. Extensions under `extLst` are application-defined in Part 3's sense, and left alone. `read_resolved` refuses an unknown must-understand namespace.
+- **F4** (`tools/f4/validate.py`) applies the same rules with the standard library, then `xmllint`. `the_engine_and_f4_resolve_markup_compatibility_alike` holds the two together.
 
 ## Editing inside a part: `XmlTree` (ADR-013)
 
