@@ -58,6 +58,7 @@ Industry-standard practice applies everywhere, with these specifics.
 - Public items have doc comments saying what and why. Keep public surfaces narrow; `pub(crate)` by default.
 - Pure functions where possible. Time and randomness are supplied, never sampled. Same input ⇒ same bytes: use ordered collections where order can reach output.
 - Layers depend downward only, per docs/19. No new crate without a first consumer.
+- **Clean room for copyleft competitors.** ONLYOFFICE and PPTist are AGPL, and LibreOffice is MPL. Take ideas from their documentation and behaviour; never copy or adapt their code. OpenCalc, ours, is the only code to copy from.
 - New dependencies need a reason, a licence that passes `deny.toml`, and an ADR for the engine.
 
 **Parsing and security** ([docs/07](docs/07-SECURITY-THREAT-MODEL.md))

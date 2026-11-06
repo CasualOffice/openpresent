@@ -59,6 +59,11 @@ sufficient. Most real fidelity bugs live in behaviour, so behaviours have their 
 | BEH-22 | Rounding: EMU to pixel, centipoint, angle precision on round-trip | 1D, 2 |
 | BEH-23 | Timing node semantics, restart, `fill`, sequence navigation | 8 |
 | BEH-24 | Round-trip: attribute order, prefixes, namespace declarations, `Ignorable` preserved on untouched elements | 1A |
+| BEH-25 | Stale derived content: SmartArt drawing, `mc:Fallback`, chart caches after an edit ([52](52-COMPETITOR-STUDY.md)) | 1N |
+| BEH-26 | Retention of 2016+ charts, when not rendered | 1J |
+| BEH-27 | 3D and effects shown or retained, never flattened on save | 1E, 2C |
+| BEH-28 | WordArt and text effects: transforms, gradient text, transparency, outline | 1F, 2D6 |
+| BEH-29 | Malformed but real input: `p:pos` with no `p:cm`, unknown table style GUID. Never crashes | every tier |
 
 Further rows are added whenever a fixture finds one. Before each tier, read the matching part of
 [MS-OI29500](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/1fd4a662-8623-49c0-82f0-18fa91b413b8)

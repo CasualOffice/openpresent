@@ -20,8 +20,7 @@ The cost is real, and `SPK-01` measures it before ADR-004 is Accepted.
 **Fonts.** OpenCalc already bundles Carlito (Calibri metrics), Caladea (Cambria metrics),
 Liberation (Arial, Times New Roman, Courier New metrics), Inter for UI and sliced CJK faces.
 Metric-compatible substitution keeps line breaks true to PowerPoint for those families.
-Others are the honest gap: **Aptos**, Office's current default, has no metric-compatible open
-face that we know of, so modern decks will reflow. Options, in order: the host supplies the
+Others are the honest gap: **Aptos**, Office's current default, is the largest risk: modern decks reflow without a compatible face. Akasia (OFL) claims metric compatibility with it, which is self-reported and unverified (`TXT-03`). Options, in order: the host supplies the
 real font through a font seam; a tuned substitute with stored advance overrides; report the
 substitution in the compatibility report. Embedded fonts in a `.pptx` are honoured only if their
 embedding rights allow it.
