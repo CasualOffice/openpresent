@@ -28,7 +28,7 @@
 | DOC-006 | Working rules and skills | Done | P1 | `CLAUDE.md` holds standards, one-roadmap-one-tracker, document updates. Six project skills in `.claude/skills`. `check-repo.py` refuses a second tracker or plan | Seeded second tracker seen failing |
 | ENG-01 | Enforce standards by lint | Open | P1 | Add `unwrap_used`, `expect_used`, `indexing_slicing`, `missing_docs` for non-test code. Waits for the parallel sessions to merge, since it touches their files. Copied `-text` needs a pass | Clippy passes with the lints on |
 | DOC-002 | ADR review | Done | P0 | All Accepted except ADR-004 and ADR-005, which wait on `SPK-01` | [08](08-ADR-REGISTER.md) |
-| UX-001 | PowerPoint UI and UX study | In progress | P1 | Online research running, for docs 49, 50 and 52. Pixel sizes stay unmeasured without a live session, so geometry starts from OpenCalc's measured ribbon | Shell prototype approved by owner |
+| UX-001 | PowerPoint UI and UX study | In progress | P1 | [49](49-POWERPOINT-COMMAND-INVENTORY.md) done: desktop commands from Microsoft's control-ID workbook, Current Channel 2402, so 32 months old; web mostly unknown (1470 of 1855 rows `?`). Docs 50 and 52 running. Pixel sizes stay unmeasured without a live session, so geometry starts from OpenCalc's measured ribbon | Shell prototype approved by owner |
 
 ## Phase 0
 

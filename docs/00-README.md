@@ -27,3 +27,4 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [48-POWERPOINT-FEATURE-STUDY](48-POWERPOINT-FEATURE-STUDY.md) | What PowerPoint offers, from three views, with conflicts | Draft for owner |
 | [51-SPEC-CHECKLIST-AND-FIDELITY](51-SPEC-CHECKLIST-AND-FIDELITY.md) | How fidelity is measured | Draft for owner |
 | [spec/](spec/README.md) | **Every tag, property and enum value (8730 rows)**, generated; parts and web shortcuts, recorded by hand | Live |
+| [49-POWERPOINT-COMMAND-INVENTORY](49-POWERPOINT-COMMAND-INVENTORY.md) | Every PowerPoint command, from Microsoft's control-ID workbook (2024) and public sources. Desktop strong; web thin | Live |
