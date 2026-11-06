@@ -195,6 +195,8 @@ enum Node {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XmlTree {
     nodes: Vec<Node>,
+    /// Each node's parent, by the same index as `nodes`.
+    parents: Vec<Option<usize>>,
     top: Vec<usize>,
     root: usize,
     bom: Bom,
@@ -231,6 +233,7 @@ impl XmlTree {
         let mut buf = Vec::new();
         let mut tree = Self {
             nodes: Vec::new(),
+            parents: Vec::new(),
             top: Vec::new(),
             root: 0,
             bom,
@@ -283,6 +286,7 @@ impl XmlTree {
             let is_open = matches!(event, Event::Start(_));
             let is_element = matches!(node, Node::Element { .. });
             tree.nodes.push(node);
+            tree.parents.push(stack.last().copied());
             match stack.last() {
                 Some(&parent) => {
                     if let Node::Element { children, .. } = &mut tree.nodes[parent] {
@@ -432,6 +436,7 @@ impl XmlTree {
     pub fn set_text(&mut self, id: ElementId, value: &str) {
         let new = self.nodes.len();
         self.nodes.push(Node::Text(escape(value)));
+        self.parents.push(Some(id.0));
         if let Node::Element {
             start,
             end,
@@ -457,11 +462,13 @@ impl XmlTree {
         let text = self.nodes.len();
         self.nodes.push(Node::Text(escape(value)));
         let id = self.nodes.len();
+        self.parents.push(Some(id));
         self.nodes.push(Node::Element {
             start: name.to_owned(),
             end: Some(name.to_owned()),
             children: vec![text],
         });
+        self.parents.push(Some(parent.0));
         if let Node::Element {
             start,
             end,
@@ -479,10 +486,272 @@ impl XmlTree {
         }
         ElementId(id)
     }
+
+    /// An element's parent element.
+    pub fn parent(&self, id: ElementId) -> Option<ElementId> {
+        self.parents.get(id.0).copied().flatten().map(ElementId)
+    }
+
+    /// The namespace URI an element's prefix is bound to, looking outward through
+    /// its ancestors. `None` if nothing binds it.
+    pub fn namespace_uri(&self, id: ElementId) -> Option<String> {
+        let name = self.qualified_name(id);
+        let key = match name.split_once(':') {
+            Some((prefix, _)) => format!("xmlns:{prefix}"),
+            None => "xmlns".to_owned(),
+        };
+        let mut at = Some(id);
+        while let Some(el) = at {
+            if let Some(value) = self.exact_attribute(el, &key) {
+                return Some(value);
+            }
+            at = self.parent(el);
+        }
+        None
+    }
+
+    /// The prefix bound to `uri` at this element, unshadowed: `Some("")` for the
+    /// default namespace, `None` if nothing here can name that namespace.
+    pub fn prefix_for_namespace(&self, id: ElementId, uri: &str) -> Option<String> {
+        let mut at = Some(id);
+        let mut seen: Vec<String> = Vec::new();
+        while let Some(el) = at {
+            let (start, _) = self.element(el);
+            for (key, _) in attribute_spans(start, self.qualified_name(el).len())? {
+                let Some(key) = start.get(key) else { continue };
+                let prefix = match key.strip_prefix("xmlns") {
+                    Some("") => "",
+                    Some(rest) => match rest.strip_prefix(':') {
+                        Some(p) => p,
+                        None => continue,
+                    },
+                    None => continue,
+                };
+                if !seen.iter().any(|s| s == prefix) {
+                    seen.push(prefix.to_owned());
+                    if self.exact_attribute(el, key).as_deref() == Some(uri) {
+                        return Some(prefix.to_owned());
+                    }
+                }
+            }
+            at = self.parent(el);
+        }
+        None
+    }
+
+    fn exact_attribute(&self, id: ElementId, qualified: &str) -> Option<String> {
+        let (start, _) = self.element(id);
+        let name_len = self.qualified_name(id).len();
+        BytesStart::from_content(start, name_len)
+            .attributes()
+            .flatten()
+            .find(|a| a.key.as_ref() == qualified.as_bytes())
+            .and_then(|a| {
+                a.normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                    .ok()
+                    .map(std::borrow::Cow::into_owned)
+            })
+    }
+
+    /// An attribute with no prefix, unescaped. Use this for the schema's own
+    /// attributes: [`XmlTree::attribute`] matches by local name in any namespace,
+    /// so a foreign `x:val` written first would be taken for `val`.
+    pub fn plain_attribute(&self, id: ElementId, name: &str) -> Option<String> {
+        self.exact_attribute(id, name)
+    }
+
+    /// Whether the start tag's attributes are well formed and unrepeated.
+    /// [`walk`] counts attributes without reading them, so a part can hold a
+    /// malformed one and still parse. Read nothing from an element that fails this.
+    pub fn attributes_valid(&self, id: ElementId) -> bool {
+        let (start, _) = self.element(id);
+        let name_len = self.qualified_name(id).len();
+        let tag = BytesStart::from_content(start, name_len);
+        tag.attributes().all(|a| {
+            a.is_ok_and(|a| {
+                a.normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                    .is_ok()
+            })
+        }) && attribute_spans(start, name_len).is_some()
+    }
+
+    /// Set an attribute by its name as written, patching only its value and
+    /// keeping its quotes. Adds it at the end of the start tag if absent. Returns
+    /// false, changing nothing, if the start tag's attributes are malformed.
+    pub fn set_attribute(&mut self, id: ElementId, name: &str, value: &str) -> bool {
+        let name_len = self.qualified_name(id).len();
+        let Node::Element { start, .. } = &mut self.nodes[id.0] else {
+            return false;
+        };
+        let Some(spans) = attribute_spans(start, name_len) else {
+            return false;
+        };
+        let escaped = escape_attribute(value);
+        let found = spans
+            .into_iter()
+            .find(|(key, _)| start.get(key.clone()) == Some(name));
+        if let Some((_, span)) = found {
+            start.replace_range(span, &escaped);
+        } else {
+            let trimmed = start.trim_end().len();
+            start.insert_str(trimmed, &format!(" {name}=\"{escaped}\""));
+        }
+        true
+    }
+
+    /// Remove an attribute by its name as written, with the space before it.
+    /// Returns whether it was there.
+    pub fn remove_attribute(&mut self, id: ElementId, name: &str) -> bool {
+        let name_len = self.qualified_name(id).len();
+        let Node::Element { start, .. } = &mut self.nodes[id.0] else {
+            return false;
+        };
+        let Some(spans) = attribute_spans(start, name_len) else {
+            return false;
+        };
+        let Some((key, value)) = spans
+            .into_iter()
+            .find(|(key, _)| start.get(key.clone()) == Some(name))
+        else {
+            return false;
+        };
+        let begin = start
+            .get(..key.start)
+            .map_or(key.start, |s| s.trim_end().len());
+        // The value's span excludes its closing quote.
+        start.replace_range(begin..value.end + 1, "");
+        true
+    }
+
+    /// Turn an element into a new one in the same place with the same handle,
+    /// dropping its attributes and content.
+    pub fn replace_element(&mut self, id: ElementId, name: &str, attributes: &[(&str, &str)]) {
+        if let Node::Element {
+            start,
+            end,
+            children,
+        } = &mut self.nodes[id.0]
+        {
+            *start = new_start_tag(name, attributes);
+            *end = None;
+            children.clear();
+        }
+    }
+
+    /// Add a new empty element under `parent`, before the child `before`, or last
+    /// if that is `None` or not a child of `parent`.
+    pub fn insert_element(
+        &mut self,
+        parent: ElementId,
+        before: Option<ElementId>,
+        name: &str,
+        attributes: &[(&str, &str)],
+    ) -> ElementId {
+        let id = self.nodes.len();
+        self.nodes.push(Node::Element {
+            start: new_start_tag(name, attributes),
+            end: None,
+            children: Vec::new(),
+        });
+        self.parents.push(Some(parent.0));
+        let parent_name = self.qualified_name(parent).to_owned();
+        if let Node::Element {
+            start,
+            end,
+            children,
+        } = &mut self.nodes[parent.0]
+        {
+            if end.is_none() {
+                *end = Some(parent_name);
+                let trimmed = start.trim_end().len();
+                start.truncate(trimmed);
+            }
+            let at = before.and_then(|b| children.iter().position(|&c| c == b.0));
+            children.insert(at.unwrap_or(children.len()), id);
+        }
+        ElementId(id)
+    }
+
+    /// Remove a child element, leaving the text around it. Returns whether it was
+    /// a child.
+    pub fn remove_element(&mut self, parent: ElementId, child: ElementId) -> bool {
+        if let Node::Element { children, .. } = &mut self.nodes[parent.0]
+            && let Some(at) = children.iter().position(|&c| c == child.0)
+        {
+            children.remove(at);
+            return true;
+        }
+        false
+    }
+}
+
+/// The byte ranges of each attribute's name and of its value without quotes.
+/// `None` if the start tag does not scan as attributes.
+fn attribute_spans(
+    start: &str,
+    name_len: usize,
+) -> Option<Vec<(core::ops::Range<usize>, core::ops::Range<usize>)>> {
+    let bytes = start.as_bytes();
+    let mut at = name_len;
+    let mut spans = Vec::new();
+    let skip_space = |mut i: usize| {
+        while bytes.get(i).is_some_and(u8::is_ascii_whitespace) {
+            i += 1;
+        }
+        i
+    };
+    loop {
+        at = skip_space(at);
+        if at >= bytes.len() {
+            return Some(spans);
+        }
+        let key_start = at;
+        while bytes
+            .get(at)
+            .is_some_and(|b| *b != b'=' && !b.is_ascii_whitespace())
+        {
+            at += 1;
+        }
+        let key_end = at;
+        at = skip_space(at);
+        if bytes.get(at) != Some(&b'=') || key_end == key_start {
+            return None;
+        }
+        at = skip_space(at + 1);
+        let quote = *bytes.get(at)?;
+        if quote != b'"' && quote != b'\'' {
+            return None;
+        }
+        let value_start = at + 1;
+        let len = bytes.get(value_start..)?.iter().position(|b| *b == quote)?;
+        spans.push((key_start..key_end, value_start..value_start + len));
+        at = value_start + len + 1;
+    }
+}
+
+fn new_start_tag(name: &str, attributes: &[(&str, &str)]) -> String {
+    let mut start = name.to_owned();
+    for (key, value) in attributes {
+        start.push(' ');
+        start.push_str(key);
+        start.push_str("=\"");
+        start.push_str(&escape_attribute(value));
+        start.push('"');
+    }
+    start
 }
 
 fn escape(s: &str) -> String {
     quick_xml::escape::escape(s).into_owned()
+}
+
+/// Escape for an attribute. Tab and line breaks go as references, since a literal
+/// one would come back as a space after attribute normalization.
+fn escape_attribute(s: &str) -> String {
+    escape(s)
+        .replace('\t', "&#9;")
+        .replace('\n', "&#10;")
+        .replace('\r', "&#13;")
 }
 
 #[cfg(test)]
@@ -538,6 +807,101 @@ mod tree_tests {
         assert_eq!(t.attribute(t.root(), "k").unwrap(), "a&b");
         assert_eq!(t.text(t.child(t.root(), "c").unwrap()).unwrap(), "1<2&");
         assert_eq!(t.text(t.child(t.root(), "d").unwrap()), None);
+    }
+
+    #[test]
+    fn set_attribute_patches_only_the_value() {
+        let mut t = parse("<r  a = 'x'\tb=\"y\" ><k/></r >");
+        assert!(t.set_attribute(t.root(), "b", "1<2\t"));
+        assert_eq!(t.to_bytes(), b"<r  a = 'x'\tb=\"1&lt;2&#9;\" ><k/></r >");
+        assert_eq!(t.plain_attribute(t.root(), "b").unwrap(), "1<2\t");
+        assert!(t.set_attribute(t.root(), "a", "it's"));
+        assert_eq!(t.plain_attribute(t.root(), "a").unwrap(), "it's");
+        assert!(t.set_attribute(t.root(), "c", "z"));
+        assert!(t.to_bytes().starts_with(b"<r  a = 'it&apos;s'\tb="));
+        assert_eq!(t.plain_attribute(t.root(), "c").unwrap(), "z");
+    }
+
+    #[test]
+    fn set_attribute_on_a_self_closed_tag_keeps_its_space() {
+        let mut t = parse("<r><k a=\"1\" /></r>");
+        let k = t.child(t.root(), "k").unwrap();
+        assert!(t.set_attribute(k, "b", "2"));
+        assert_eq!(t.to_bytes(), b"<r><k a=\"1\" b=\"2\" /></r>");
+    }
+
+    #[test]
+    fn remove_attribute_leaves_the_rest() {
+        let mut t = parse("<r a=\"1\"  b='2' c=\"3\"/>");
+        assert!(t.remove_attribute(t.root(), "b"));
+        assert_eq!(t.to_bytes(), b"<r a=\"1\" c=\"3\"/>");
+        assert!(!t.remove_attribute(t.root(), "b"));
+    }
+
+    /// A value holding the other quote must not move the span.
+    #[test]
+    fn the_scanner_is_not_fooled_by_values() {
+        let mut t = parse("<r a=\"it's b='9'\" b='two \"q\"'/>");
+        assert!(t.set_attribute(t.root(), "b", "n"));
+        assert_eq!(t.to_bytes(), b"<r a=\"it's b='9'\" b='n'/>");
+    }
+
+    #[test]
+    fn a_foreign_attribute_does_not_shadow_the_plain_one() {
+        let t = parse("<r xmlns:x=\"u\" x:val=\"bad\" val=\"good\"/>");
+        assert_eq!(t.attribute(t.root(), "val").unwrap(), "bad");
+        assert_eq!(t.plain_attribute(t.root(), "val").unwrap(), "good");
+    }
+
+    #[test]
+    fn bad_attributes_are_seen_and_block_edits() {
+        for s in [
+            "<r a/>",
+            "<r a=1/>",
+            "<r a=\"1\" a=\"2\"/>",
+            "<r a=\"&nope;\"/>",
+        ] {
+            let t = parse(s);
+            assert!(!t.attributes_valid(t.root()), "{s}");
+        }
+        let mut t = parse("<r a/>");
+        assert!(!t.set_attribute(t.root(), "a", "1"));
+        assert_eq!(t.to_bytes(), b"<r a/>");
+        let good = parse("<r a=\"1\" b='2'/>");
+        assert!(good.attributes_valid(good.root()));
+    }
+
+    #[test]
+    fn namespaces_resolve_outward_and_shadow() {
+        let t = parse("<a:r xmlns:a=\"one\" xmlns=\"dflt\"><b/><a:c xmlns:a=\"two\"/><z:d/></a:r>");
+        let kids = t.child_elements(t.root());
+        assert_eq!(t.namespace_uri(t.root()).unwrap(), "one");
+        assert_eq!(t.namespace_uri(kids[0]).unwrap(), "dflt");
+        assert_eq!(t.namespace_uri(kids[1]).unwrap(), "two");
+        assert_eq!(t.namespace_uri(kids[2]), None);
+        assert_eq!(t.parent(kids[0]), Some(t.root()));
+        assert_eq!(t.parent(t.root()), None);
+        assert_eq!(t.prefix_for_namespace(kids[0], "one").unwrap(), "a");
+        assert_eq!(t.prefix_for_namespace(kids[1], "one"), None, "shadowed");
+        assert_eq!(t.prefix_for_namespace(kids[1], "two").unwrap(), "a");
+        assert_eq!(t.prefix_for_namespace(kids[0], "dflt").unwrap(), "");
+    }
+
+    #[test]
+    fn structural_edits() {
+        let mut t = parse("<r><a x=\"1\"><i/></a> <b/></r>");
+        let a = t.child(t.root(), "a").unwrap();
+        let b = t.child(t.root(), "b").unwrap();
+        t.replace_element(a, "n:z", &[("v", "<")]);
+        assert_eq!(t.to_bytes(), b"<r><n:z v=\"&lt;\"/> <b/></r>");
+        let c = t.insert_element(a, None, "c", &[]);
+        assert_eq!(t.parent(c), Some(a));
+        assert_eq!(t.to_bytes(), b"<r><n:z v=\"&lt;\"><c/></n:z> <b/></r>");
+        t.insert_element(t.root(), Some(b), "m", &[]);
+        assert_eq!(t.to_bytes(), b"<r><n:z v=\"&lt;\"><c/></n:z> <m/><b/></r>");
+        assert!(t.remove_element(t.root(), b));
+        assert!(!t.remove_element(t.root(), b));
+        assert_eq!(t.to_bytes(), b"<r><n:z v=\"&lt;\"><c/></n:z> <m/></r>");
     }
 
     #[test]
