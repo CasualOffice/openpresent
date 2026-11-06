@@ -22,4 +22,4 @@ the WASM bundle; the fidelity contract; a new dependency in the engine.
 | ADR-010 | Fork the collaboration server behind an engine trait | Accepted | [24](24-OPERATIONS-AND-COLLABORATION.md) |
 | ADR-011 | Animations compile to a deterministic sampled timeline in the engine | Accepted | [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md) |
 | ADR-012 | Shell target: PowerPoint for the web; replace only what Microsoft owns | Accepted | [47](47-POWERPOINT-SHELL-AND-FEATURE-MAP.md) |
-| ADR-013 | Edited parts are patched as a byte-faithful XML tree; the typed model is a view over it, not a re-serialization | Accepted (engineering, reversible before Tier 1D) | [28](28-PACKAGE-AND-PART-GRAPH.md) |
+| ADR-013 | Edited parts are patched as a byte-faithful XML tree held by export. The model holds plain values; save writes dirty values to their nodes, and never re-serializes a part | Accepted (engineering, reversible before Tier 1D) | [28](28-PACKAGE-AND-PART-GRAPH.md) |

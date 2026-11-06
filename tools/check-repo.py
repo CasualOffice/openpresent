@@ -4,6 +4,7 @@ index, working relative links, and no Rust outside the XML walker reaching for a
 raw XML reader. Exits non-zero and names every failure."""
 import pathlib
 import re
+import subprocess
 import sys
 from collections import Counter
 
@@ -26,8 +27,10 @@ for rid, n in Counter(r for r, _ in rows).items():
 errors += [f"{r}: status {s!r}" for r, s in rows if s not in STATUS]
 
 index = (ROOT / "docs/00-README.md").read_text(encoding="utf8")
-for doc in (ROOT / "docs").glob("*.md"):
-    if doc.name != "00-README.md" and f"({doc.name})" not in index:
+# Tracked files only: a document another session is still writing is not yet in the repo.
+tracked = subprocess.run(["git", "ls-files", "docs/*.md"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+for doc in (pathlib.Path(t) for t in tracked):
+    if doc.parent.name == "docs" and doc.name != "00-README.md" and f"({doc.name})" not in index:
         errors.append(f"not in the doc index: {doc.name}")
 
 for md in [*ROOT.glob("*.md"), *(ROOT / "docs").glob("*.md"), ROOT / "schemas/README.md", ROOT / "docs/spec/README.md"]:

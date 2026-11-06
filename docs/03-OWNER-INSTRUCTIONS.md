@@ -29,4 +29,4 @@ by saying so.
 
 | Date | What | Status |
 | --- | --- | --- |
-| 2026-11-07 | Creating a GitHub remote and pushing was denied by the session's permission system | `DEC-09`: needs the owner to allow it or to do it. Not worked around |
+| 2026-11-07 | Creating a GitHub remote and pushing was denied by the session's permission system | Resolved: the owner created the repo and pushed. Not worked around |

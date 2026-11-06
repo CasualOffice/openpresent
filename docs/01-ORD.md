@@ -10,7 +10,7 @@ with nothing lost.
 ## The reference product
 
 **PowerPoint for the web sets the UI style and flows; desktop sets the feature bar
-and file semantics** (working position, `DEC-06`; [48](48-POWERPOINT-FEATURE-STUDY.md)).
+and file semantics** (`DEC-06`; [48](48-POWERPOINT-FEATURE-STUDY.md)).
 This is an enterprise product and not an MVP ([10](10-ENTERPRISE-REQUIREMENTS.md)). Fidelity
 is its most critical property ([51](51-SPEC-CHECKLIST-AND-FIDELITY.md)).
 
@@ -20,7 +20,7 @@ That gives three support levels, stated per feature in
 | Level | Meaning | Example |
 | --- | --- | --- |
 | **Edit** | Modelled, rendered, editable, written back | Shapes, text, tables |
-| **Render** | Modelled or resolved, drawn, retained on save | SmartArt through its stored drawing |
+| **Render** | Modelled or resolved, drawn, retained on save | 3D models through their fallback |
 | **Retain** | Not drawn, kept verbatim, named in the compatibility report | VBA project, OLE payloads |
 
 ## In scope
@@ -42,7 +42,7 @@ That gives three support levels, stated per feature in
 
 ## Quality targets
 
-Proposed, not measured; the Phase 1 spikes confirm or change them
+Proposed, not measured; `SPK-01` and Phase 2 confirm or change them
 ([42](42-TEXT-AND-RENDERING-ARCHITECTURE.md) §Budgets).
 
 - A corpus deck renders within a per-fixture pixel threshold of its reference.

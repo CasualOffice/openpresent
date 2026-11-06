@@ -69,7 +69,4 @@ Every task, none of it optional:
 
 ## Current state
 
-**Phase 0 (foundation).** The workspace holds `-package` and `-text`, copied from
-OpenCalc and hardened against the threat model; there is no presentation code yet. Open owner decisions are the `DEC-*`
-rows in [14](docs/14-EXECUTION-TRACKER.md). ADR-003 is Accepted and the rest are
-Proposed; Phase 1 needs the ADRs it depends on Accepted first.
+**Phases 0 and 1 are open, under waiver W-1** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Model, import and export are being built, and nothing renders yet. All ADRs are Accepted except ADR-004 and ADR-005, which wait on `SPK-01`.

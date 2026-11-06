@@ -4,8 +4,7 @@ A PowerPoint-compatible presentation editor you can run anywhere: a deterministi
 Rust engine that reads, lays out, renders and writes `.pptx`, under an editor that
 works like PowerPoint for the web, running client-side in WebAssembly.
 
-**Status: foundation.** Design docs and two crates copied from OpenCalc; nothing opens a deck yet. Sister project to
-[OpenCalc](../opencalc), whose architecture it follows.
+**Status: Phase 1 in progress.** The package reader admits and reports on decks. Nothing renders yet, and there is no editor. Sister project to OpenCalc, whose architecture it follows.
 
 Start at [docs/00-README.md](docs/00-README.md).
 

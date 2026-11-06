@@ -5,7 +5,7 @@ trying to reach the next person who opens it. Every threat here has a control an
 limit without a test seen to fail is not a control.
 
 Status: **Tested** means a test exists and was seen red without the fix. **Planned** names where it
-lands; nothing marked Planned exists yet.
+lands; some planned rows have partial code, and only Tested rows may be relied on. **Partial** means a control exists but no test proves all of it.
 
 ## Package
 
@@ -14,7 +14,7 @@ lands; nothing marked Planned exists yet.
 | SEC-P01 | Zip bomb by ratio or total size | Admission caps; `rejects_zip_bomb_by_expansion_ratio`, `rejects_expansion_over_total_cap` | Tested |
 | SEC-P02 | Forged sizes: part produces more than it declared | Bytes held to the declaration, whole-package budget charged on read | Tested |
 | SEC-P03 | Path traversal, absolute or drive paths | `is_safe_part_path` | Tested |
-| SEC-P04 | Declared size used to allocate; a padding entry satisfies the ratio; in WASM a failed allocation aborts the instance | Up-front capacity capped at 1 MiB; grows as bytes arrive | Tested |
+| SEC-P04 | Declared size used to allocate; a padding entry satisfies the ratio; in WASM a failed allocation aborts the instance | Up-front capacity capped at 1 MiB. The helper is tested; nothing proves `read_part` uses it (`SEC-017`) | Partial |
 | SEC-P05 | Duplicate entries: a scanner approves one, the editor opens another. The `zip` crate hides them | Raw walk of the central directory compared with the crate's count | Tested |
 | SEC-P06 | Part names differing only in case | Refused, per OPC equivalence | Tested |
 | SEC-P07 | Malformed names: `.`, empty segment, trailing dot, control characters, `%2e`, `%2f`, `%5c` | Refused | Tested |
@@ -32,9 +32,9 @@ lands; nothing marked Planned exists yet.
 | SEC-X01 | Billion laughs, entity expansion | **Any DOCTYPE is refused**; OOXML never needs one. Undeclared entity references also refused | Tested |
 | SEC-X02 | XXE, SSRF through external entities | Same, and the parser has no resolver | Tested |
 | SEC-X03 | Deep nesting exhausts the stack | Depth cap; parsers iterative where recursion follows input | Tested |
-| SEC-X04 | Element, attribute or text volume | Per-part caps on size, elements and attributes | Tested |
+| SEC-X04 | Element, attribute or text volume | Per-part caps on size, elements and attributes. **Controls exist; no test exercises them** (`SEC-016`) | Partial |
 | SEC-X05 | `mc:AlternateContent` used to hide content from a scanner | Choice resolved by a fixed rule; retained branch is never interpreted | Planned 1A |
-| SEC-X06 | Relationship cycles or a part reached many ways | Breadth-first walk with a visited set, relationship caps | Tested |
+| SEC-X06 | Relationship cycles or a part reached many ways | Visited set tested. Relationship and content-type caps exist with no test (`SEC-016`) | Partial |
 | SEC-X07 | Theme, master or layout chains that recurse | Fixed walk order; cycle refused | Planned 1D |
 
 ## Content

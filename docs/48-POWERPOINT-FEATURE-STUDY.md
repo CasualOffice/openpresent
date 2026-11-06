@@ -6,7 +6,7 @@ Studied 2026-11-07. Three independent views, because each alone misleads:
 | --- | --- | --- | --- |
 | **The file format** | What a deck can contain | Ecma schemas plus MS-PPTX and MS-ODRAWXML: [spec/](spec/README.md), 8730 rows | Generated, complete for what schemas express |
 | **The product** | What users can do | Microsoft support pages, below | **Partly stale; see Conflicts** |
-| **The running app** | What it looks and feels like | `UX-001`, needs `DEC-04` | Not yet done |
+| **The running app** | What it looks and feels like | `UX-001` by online research; live only through `PV-01` | Not yet done |
 
 ## The scope decision this exposes
 
@@ -14,7 +14,7 @@ Microsoft's pages describe **PowerPoint for the web as a subset**: slide masters
 custom shows, recording and more are listed as desktop-only. "PowerPoint online clone, same features"
 and "enterprise grade" point different ways on those.
 
-**Working position, pending `DEC-06`:** the **web product sets the UI style and flows**, and the
+**Decided (`DEC-06`), both web and desktop:** the **web product sets the UI style and flows**, and the
 **desktop product sets the feature bar**. A deck from desktop must be fully faithful, and an enterprise
 buyer expects masters and presenter view. Where the web has no UI for a desktop feature, we follow
 desktop behaviour in the web's visual language.
@@ -82,7 +82,7 @@ Microsoft's own pages disagree, and at least one is visibly old.
 | SmartArt | "Limited" against full editing |
 | Charts | Not supported on two pages, in a product that has likely moved on |
 | Video | Yes against "inserting from your PC needs desktop" |
-| Themes | "Add a theme" yes against "cannot modify themes" |
+| Themes | "Add a theme" yes against themes not being modifiable |
 | Transitions in show | "Eight transitions" against "only Fade and Wipe" |
 | Dates and age | The behaviour page requires **Silverlight and Flash**. The service description is dated 2023-04 |
 
@@ -114,7 +114,7 @@ Schema-derived, so complete where the pages are vague ([spec/](spec/README.md)):
 
 - **Modern comments are a different part** (`2018/8/main`) from legacy comments. Both must round-trip.
 - **Zoom objects carry a fallback** as a picture or group in `mc:AlternateContent`, which sets the render order.
-- **Sensitivity labels matter to enterprises** and now exist on the web
+- **Sensitivity labels matter to enterprises**, and applying them with user-defined permissions now exists on the web
   ([MC1208688](https://mc.merill.net/message/MC1208688)): see ENT-04.
 - **Ecma's geometry file has a defect:** `upDownArrow` appears twice and `upArrow` is absent, in the December 2016
   edition's `presetShapeDefinitions.xml`. A naive generator ships 186 shapes and silently loses a common arrow. `GEO-01`.

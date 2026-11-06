@@ -41,7 +41,7 @@ Each of these has already been paid for there; see its docs for the reasoning.
   (ADR-008, ADR-021). Its JS painter costs about 0.6 ms per frame for 1434 items
   across the WASM boundary (`webapp/editor.paintlist.js`), so this seam is proven.
 - Server-ordered OT with snapshot-plus-ops, resume, pipelining, leader per document
-  and relay from any node (ADR-011 to 017, 031).
+  and relay from any node (ADR-011, 012, 014 to 017, 031).
 - A vanilla-JS editor with no framework or bundler: data-driven ribbon, command
   registry, Fluent icons (MIT), `--oc-*`-style tokens, shadow-root custom element.
 - Time and randomness supplied, never sampled. Same gates and tracker discipline.

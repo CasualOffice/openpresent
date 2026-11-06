@@ -1,7 +1,7 @@
 //! Package inspection errors, each with a stable code (`docs/20-ERROR-CODE-REGISTRY.md`).
 //!
-//! Part names may appear in a message. Document text never does, so a diagnostic
-//! can be shipped to a log.
+//! Part names may appear in a message. Document text must not, so that a diagnostic
+//! can be shipped to a log; `MalformedXml` reasons do not yet hold to this (`SEC-015`).
 
 use core::fmt;
 

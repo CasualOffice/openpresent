@@ -75,7 +75,7 @@ PML = [
     (r"^CT_(Slide|Notes|Handout|Background|CommonSlide|HeaderFooter|Placeholder|SlideLayout|SlideMaster|Rel)|^EG_(TopLevelSlide|ChildSlide|Background)|^AG_ChildSlide|^ST_(Placeholder|SlideLayout|SlideId|SlideMaster|SlideLayoutId)", "SLIDE"),
     (r"^CT_(ApplicationNonVisual|Shape|Connector|Picture|GraphicalObjectFrame|GroupShape)", "SHAPE"),
     (r"^CT_Extension|^EG_ExtensionList|^CT_Empty|^CT_IndexRange", "PRES"),
-    (r".", "PRES"),
+    (r"^(CT_CustomShow|CT_CustomShowId|CT_CustomShowList|CT_EmbeddedFontDataId|CT_EmbeddedFontList|CT_EmbeddedFontListEntry|CT_HtmlPublishProperties|CT_Kinsoku|CT_ModifyVerifier|CT_PhotoAlbum|CT_Presentation|CT_PresentationProperties|CT_PrintProperties|CT_ShowInfoBrowse|CT_ShowInfoKiosk|CT_ShowProperties|CT_SmartTags|CT_WebProperties|EG_ShowType|EG_SlideListChoice|ST_BookmarkIdSeed|ST_Index|ST_Name|ST_PhotoAlbumFrameShape|ST_PhotoAlbumLayout|ST_PrintColorMode|ST_PrintWhat|ST_SlideSizeCoordinate|ST_SlideSizeType|ST_WebColorType|ST_WebEncoding|ST_WebScreenSize|cmAuthorLst|cmLst|handoutMaster|notes|notesMaster|oleObj|presentation|presentationPr|sld|sldLayout|sldMaster|sldSyncPr|tagLst|viewPr)$", "PRES"),
 ]
 DML = [
     (r"Audio|Video|QuickTime|EG_Media|WAV", "MEDIA"),
@@ -90,7 +90,7 @@ DML = [
     (r"^CT_(LineEnd|LineJoin|PresetLineDash|DashStop|LineProperties)|^EG_Line|^ST_(LineEnd|PresetLineDash|LineCap|PenAlignment|CompoundLine|LineWidth)", "LINE"),
     (r"Text|Autofit|^EG_Text|^CT_(RegularTextRun)|^ST_(Font|Anchor|Vertical|Horizontal)", "TEXT"),
     (r"Animation|Build|^ST_(Dgm|Chart|Animation)", "TIMING"),
-    (r".", "SHAPE"),
+    (r"^(AG_Locking|CT_Angle|CT_Boolean|CT_ConnectorLocking|CT_ContentPartLocking|CT_FixedPercentage|CT_GraphicalObject|CT_GraphicalObjectData|CT_GraphicalObjectFrameLocking|CT_GroupLocking|CT_GroupShapeProperties|CT_GroupTransform2D|CT_GvmlConnector|CT_GvmlConnectorNonVisual|CT_GvmlGraphicFrameNonVisual|CT_GvmlGraphicalObjectFrame|CT_GvmlGroupShape|CT_GvmlGroupShapeNonVisual|CT_GvmlShape|CT_GvmlShapeNonVisual|CT_GvmlUseShapeRectangle|CT_Hyperlink|CT_NonVisualConnectorProperties|CT_NonVisualContentPartProperties|CT_NonVisualDrawingProps|CT_NonVisualDrawingShapeProps|CT_NonVisualGraphicFrameProperties|CT_NonVisualGroupDrawingShapeProps|CT_OfficeArtExtension|CT_OfficeArtExtensionList|CT_Percentage|CT_Point2D|CT_PositiveFixedAngle|CT_PositiveFixedPercentage|CT_PositivePercentage|CT_PositiveSize2D|CT_Ratio|CT_Scale2D|CT_ShapeLocking|CT_ShapeProperties|CT_Transform2D|EG_OfficeArtExtensionList|ST_Angle|ST_BlackWhiteMode|ST_Coordinate|ST_Coordinate32|ST_Coordinate32Unqualified|ST_CoordinateUnqualified|ST_DrawingElementId|ST_FOVAngle|ST_FixedAngle|ST_FixedPercentage|ST_FixedPercentageDecimal|ST_Percentage|ST_PercentageDecimal|ST_PitchFamily|ST_PositiveCoordinate|ST_PositiveCoordinate32|ST_PositiveFixedAngle|ST_PositiveFixedPercentage|ST_PositiveFixedPercentageDecimal|ST_PositivePercentage|ST_PositivePercentageDecimal|ST_ShapeID|blip|graphic|tbl|tblStyleLst|theme|themeManager|themeOverride|videoFile)$", "SHAPE"),
 ]
 WHOLE_FILE = {
     "pic": "PIC", "lc": "SHAPE", "c": "CHART", "cdr": "CHART", "dgm": "DGM", "m": "MATH",

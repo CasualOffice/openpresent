@@ -1,6 +1,6 @@
 # 20 — Error code registry
 
-Stable, never reused. Messages carry part names and counts, never document text.
+Stable, never reused. **The contract:** messages carry part names and counts, never document text. Malformed-XML messages currently break it (`SEC-015`).
 
 | Code | Meaning | | Code | Meaning |
 | --- | --- | --- | --- | --- |

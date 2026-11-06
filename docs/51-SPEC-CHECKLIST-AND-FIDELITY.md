@@ -20,7 +20,7 @@ construct OpenCalc missed was missed by a checklist written from memory.
 
 **Checked against the raw schemas by separate counting:** types, simple types, elements, attributes and enum
 values all match. That check caught 74 missing global attributes (including `r:id` and `r:embed`) in the first
-version of the generator, which is why it is now a required step when the generator changes (`SPEC-03`).
+version of the generator, so it should run whenever the generator changes. It is manual until `SPEC-03`.
 
 **Gates:** an unassigned type or namespace fails generation (seen failing), and `--check` fails on stale
 output (seen failing). Status columns survive regeneration.
@@ -98,4 +98,4 @@ files. They cannot prove we match PowerPoint, and no claim saying so may be made
 Everything is checksummed in a manifest, and third-party material needs a rights review before commit. Confidential
 decks are never committed.
 
-**Coverage is a gate:** the audit reports which checklist rows no fixture exercises. A row with no fixture cannot be `y`.
+**Coverage is to be a gate (`SPEC-01`):** the audit reports which checklist rows no fixture exercises. A row with no fixture cannot be `y`.
