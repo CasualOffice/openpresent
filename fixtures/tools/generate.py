@@ -142,6 +142,8 @@ def fixtures():
     # Relationships spelled in a different case from the entries.
     cased = [(n.replace("ppt/slides/slide1", "ppt/Slides/Slide1"), d) for n, d in deck()]
     yield "generated/case-differs.pptx", zipped(cased), "open"
+    from generate_presets import fixtures as preset_fixtures  # imports this module, so not at the top
+    yield from preset_fixtures()
 
     hostile = {
         "doctype-billion-laughs": (zipped(replace(deck(), "ppt/presentation.xml", bomb_laughs)), "refuse:CS-XML-0005"),

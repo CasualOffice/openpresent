@@ -1,0 +1,1073 @@
+#!/usr/bin/env python3
+"""SPEC-01: audit the spec checklist against the Rust source and against the fixtures.
+
+Two independent questions, per row of docs/spec/checklist.tsv:
+
+  Code      Do crates/casual-slide-{import,export,model}/src name this construct?
+  Fixtures  Does any fixture contain it, by a schema-directed walk of every XML part?
+
+This reads source text, not behaviour. A reference means the code names the construct,
+not that it handles it correctly. Each reference says how much can be said about it:
+
+  context    named where the owning element is determinable, and it is an owner the
+             schema allows (reading `x` inside the arm for <a:off>, called from <a:xfrm>)
+  name       named, but no owning element can be determined from the source
+  ident      model crate only: an identifier normalises to the name. The weakest signal
+  elsewhere  named only under owners the schema does not allow: reading `ref` on
+             <mergeCell> does not cover `ref` on <hyperlink>. Not coverage
+  none       not named
+
+"Owning element" is a may-analysis over match arms, comparisons, element-like calls and
+call sites. It over-approximates: a helper called from two arms counts for both.
+
+Gates (--check): a row marked `y` in M, I or E needs a reference of at least `ident` in
+the matching crate (--strict: `context`), and a row marked `y` in any column needs a
+fixture (docs/51: "A row with no fixture cannot be y"). Also runs count.py (SPEC-03), and
+fails if this tool's own reading of the schemas yields different row ids from the
+checklist. Wildcards have no name to find, so they count only through a
+`// spec-audit: <row id>` comment. R and U name render and UI code outside these crates,
+so they get the fixture gate only and are listed as unaudited.
+
+    python3 tools/spec-audit/audit.py                # coverage table and gap summary
+    python3 tools/spec-audit/audit.py --check        # gates, non-zero on failure
+    python3 tools/spec-audit/audit.py --gaps FILE    # every row and its result, as TSV
+    python3 tools/spec-audit/audit.py --json FILE    # machine-readable summary
+"""
+import argparse
+import csv
+import json
+import pathlib
+import re
+import sys
+import xml.etree.ElementTree as ET
+import xml.parsers.expat
+import zipfile
+from collections import Counter, defaultdict
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import count as spec_count  # noqa: E402  (SPEC-03 lives beside this file)
+
+XS = "{http://www.w3.org/2001/XMLSchema}"
+MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+XML_NS = "http://www.w3.org/XML/1998/namespace"
+CRATES = {"I": "casual-slide-import", "E": "casual-slide-export", "M": "casual-slide-model"}
+RANK = {"none": 0, "elsewhere": 1, "ident": 2, "name": 3, "context": 4, "annotated": 4}
+FIXTURE_SETS = ("generated", "producers", "real", "hostile")
+COUNTED_SETS = ("generated", "producers", "real")  # a hostile deck is scanned, but proves nothing about coverage
+MAX_PART = 64 << 20
+MAX_READ = 512 << 20
+MAX_ENTRIES = 20000
+MAX_DEPTH = 256
+csv.field_size_limit(1 << 24)
+
+# Conventional prefixes, so a literal "p14:media" is held to its namespace. A prefix not
+# listed here compares by local name, which claims less rather than more.
+KNOWN_PREFIXES = {
+    "p": "http://schemas.openxmlformats.org/presentationml/2006/main",
+    "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
+    "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+    "c": "http://schemas.openxmlformats.org/drawingml/2006/chart",
+    "dgm": "http://schemas.openxmlformats.org/drawingml/2006/diagram",
+    "pic": "http://schemas.openxmlformats.org/drawingml/2006/picture",
+    "m": "http://schemas.openxmlformats.org/officeDocument/2006/math",
+    "p14": "http://schemas.microsoft.com/office/powerpoint/2010/main",
+    "p15": "http://schemas.microsoft.com/office/powerpoint/2012/main",
+    "a14": "http://schemas.microsoft.com/office/drawing/2010/main",
+    "a16": "http://schemas.microsoft.com/office/drawing/2014/main",
+}
+
+
+# ---------------------------------------------------------------- schema model
+
+class Schema:
+    """The vendored schemas, resolved by namespace, with row ids spelled as the generator spells them."""
+
+    def __init__(self, root):
+        self.types = {}       # (ns, name) -> {"key", "owner", "members", "row"}
+        self.simples = {}     # (ns, name) -> {"key", "name", "row", "values", "members", "list"}
+        self.elements = {}    # (ns, name) -> {"row", "type"}
+        self.attributes = {}  # (ns, name) -> {"row", "type"}
+        self.ids = set()
+        self.ns_of_key = {}
+        listed, _ = spec_count.sources(root)
+        for fname, key in sorted(listed.items()):
+            if (root / fname).exists():
+                self._load(root / fname, key)
+        self._flat = {}
+        self.hosts = defaultdict(set)  # (key, owner) -> {(ns, local)}
+        self.attrs_of_simple = defaultdict(set)  # simple (key, name) -> attribute local names
+        self.element_names = {n for _, n in self.elements}
+        self.attribute_names = {n for _, n in self.attributes}
+        self._link()
+
+    def _load(self, path, key):
+        prefixes = {}
+        for _, (pfx, uri) in ET.iterparse(path, events=("start-ns",)):
+            prefixes[pfx] = uri
+        root = ET.parse(path).getroot()
+        tns = root.get("targetNamespace") or ""
+        self.ns_of_key[key] = tns
+        qualified = root.get("elementFormDefault") == "qualified"
+        attr_qualified = root.get("attributeFormDefault") == "qualified"
+        seen = Counter()
+
+        def qname(text):
+            if not text:
+                return None
+            pfx, _, local = text.rpartition(":")
+            if pfx == "":
+                return (prefixes.get("", tns), local)
+            return (prefixes.get(pfx, pfx), local)
+
+        def row_id(owner, name):
+            base = f"{key}:{owner}/{name}" if owner else f"{key}:{name}"
+            seen[base] += 1
+            rid = base if seen[base] == 1 else f"{base}#{seen[base]}"
+            self.ids.add(rid)
+            return rid
+
+        def members(node, owner, out):
+            for ch in node:
+                tag = ch.tag.replace(XS, "")
+                if tag in ("sequence", "choice", "all", "complexContent", "simpleContent"):
+                    members(ch, owner, out)
+                elif tag in ("extension", "restriction"):
+                    base = ch.get("base")
+                    if base:
+                        out.append({"kind": "base", "row": row_id(owner, base.split(":")[-1]), "target": qname(base)})
+                    members(ch, owner, out)
+                elif tag == "element":
+                    raw = ch.get("name") or ch.get("ref")
+                    if ch.get("ref"):
+                        q = qname(ch.get("ref"))
+                    else:
+                        q = (tns if qualified or ch.get("form") == "qualified" else "", ch.get("name"))
+                    out.append({"kind": "element", "row": row_id(owner, raw), "q": q, "ref": bool(ch.get("ref")),
+                                "type": qname(ch.get("type"))})
+                elif tag == "group" and ch.get("ref"):
+                    out.append({"kind": "group", "row": row_id(owner, ch.get("ref").split(":")[-1]), "target": qname(ch.get("ref"))})
+                elif tag == "attribute":
+                    raw = ch.get("name") or ch.get("ref")
+                    if ch.get("ref"):
+                        q = qname(ch.get("ref"))
+                    else:
+                        q = (tns if attr_qualified or ch.get("form") == "qualified" else "", ch.get("name"))
+                    out.append({"kind": "attribute", "row": row_id(owner, "@" + raw), "q": q, "ref": bool(ch.get("ref")),
+                                "type": qname(ch.get("type")), "local": raw.split(":")[-1]})
+                elif tag == "attributeGroup" and ch.get("ref"):
+                    out.append({"kind": "attrgroup", "row": row_id(owner, ch.get("ref").split(":")[-1]), "target": qname(ch.get("ref"))})
+                elif tag == "any":
+                    out.append({"kind": "any", "row": row_id(owner, "xsd:any")})
+                elif tag == "anyAttribute":
+                    out.append({"kind": "anyattr", "row": row_id(owner, "@xsd:any")})
+
+        for node in root:
+            tag, name = node.tag.replace(XS, ""), node.get("name")
+            if not name:
+                continue
+            if tag == "element":
+                row = row_id("", f"<{name}>")
+                typ = qname(node.get("type"))
+                inner = node.find(f"{XS}complexType")
+                if inner is not None:
+                    typ = ("#element", tns, name)
+                    out = []
+                    members(inner, name, out)
+                    self.types[typ] = {"key": key, "owner": name, "members": out, "row": None}
+                self.elements[(tns, name)] = {"row": row, "type": typ}
+            elif tag == "attribute":
+                self.attributes[(tns, name)] = {"row": row_id("", "@" + name), "type": qname(node.get("type"))}
+            elif tag in ("complexType", "group", "attributeGroup"):
+                row = row_id("", name)
+                out = []
+                members(node, name, out)
+                self.types[(tns, name)] = {"key": key, "owner": name, "members": out, "row": row}
+            elif tag == "simpleType":
+                row = row_id("", name)
+                values = {e.get("value"): row_id(name, "=" + e.get("value")) for e in node.iter(f"{XS}enumeration")}
+                parts = []
+                for u in node.iter(f"{XS}union"):
+                    parts += [qname(m) for m in (u.get("memberTypes") or "").split()]
+                for r in node.iter(f"{XS}restriction"):
+                    if r.get("base"):
+                        parts.append(qname(r.get("base")))
+                lst = [qname(li.get("itemType")) for li in node.iter(f"{XS}list") if li.get("itemType")]
+                self.simples[(tns, name)] = {"key": key, "name": name, "row": row, "values": values,
+                                             "members": parts + lst, "list": bool(lst)}
+
+    def flat(self, tkey):
+        """Content of a type with groups and bases expanded. Each entry carries the use-rows on its path."""
+        if tkey in self._flat:
+            return self._flat[tkey]
+        result = {"children": defaultdict(list), "attrs": defaultdict(list), "any": [], "anyattr": [], "simple": []}
+        self._flat[tkey] = result
+        t = self.types.get(tkey)
+        if not t:
+            return result
+        for m in t["members"]:
+            kind = m["kind"]
+            if kind == "element":
+                result["children"][m["q"]].append(((m["row"],), m))
+            elif kind == "attribute":
+                result["attrs"][m["q"]].append(((m["row"],), m))
+            elif kind == "any":
+                result["any"].append(m["row"])
+            elif kind == "anyattr":
+                result["anyattr"].append(m["row"])
+            else:
+                target = m["target"]
+                if target in self.simples or target not in self.types:
+                    result["simple"].append((m["row"], target))
+                    continue
+                sub = self.flat(target)
+                extra = (m["row"],) + ((self.types[target]["row"],) if self.types[target]["row"] else ())
+                for q, entries in sub["children"].items():
+                    result["children"][q] += [(extra + path, d) for path, d in entries]
+                for q, entries in sub["attrs"].items():
+                    result["attrs"][q] += [(extra + path, d) for path, d in entries]
+                result["any"] += sub["any"]
+                result["anyattr"] += sub["anyattr"]
+                result["simple"] += sub["simple"]
+        return result
+
+    def _link(self):
+        """Which elements host each type's members, and which attributes carry each simple type."""
+        uses = defaultdict(set)  # included type -> including types
+        for tkey, t in self.types.items():
+            for m in t["members"]:
+                if m["kind"] in ("group", "attrgroup", "base") and m["target"] in self.types:
+                    uses[m["target"]].add(tkey)
+                if m["kind"] == "attribute":
+                    self._note_simple(m["type"], m["local"])
+                    if m["ref"] and m["q"] in self.attributes:
+                        self._note_simple(self.attributes[m["q"]]["type"], m["local"])
+        hosted = defaultdict(set)
+        for q, e in self.elements.items():
+            if e["type"]:
+                hosted[e["type"]].add(q)
+        for t in self.types.values():
+            for m in t["members"]:
+                if m["kind"] == "element":
+                    typ = m["type"]
+                    if m["ref"] and m["q"] in self.elements:
+                        typ = self.elements[m["q"]]["type"]
+                    if typ:
+                        hosted[typ].add(m["q"])
+        for tkey, t in self.types.items():
+            names, todo, seen = set(), [tkey], set()
+            while todo:
+                cur = todo.pop()
+                if cur in seen:
+                    continue
+                seen.add(cur)
+                names |= hosted[cur]
+                todo += uses[cur]
+            self.hosts[(t["key"], t["owner"])] |= names
+        # Local element names: a type's own elements are context too, not only global ones.
+        for t in self.types.values():
+            self.element_names |= {m["q"][1] for m in t["members"] if m["kind"] == "element"}
+            self.attribute_names |= {m["local"] for m in t["members"] if m["kind"] == "attribute"}
+
+    def _note_simple(self, typ, local, seen=None):
+        seen = seen if seen is not None else set()
+        if not typ or typ in seen or typ not in self.simples:
+            return
+        seen.add(typ)
+        s = self.simples[typ]
+        self.attrs_of_simple[(s["key"], s["name"])].add(local)
+        for member in s["members"]:
+            self._note_simple(member, local, seen)
+
+
+def read_checklist(path):
+    with open(path, encoding="utf8", newline="") as handle:
+        return list(csv.DictReader(handle, delimiter="\t", quoting=csv.QUOTE_NONE))
+
+
+# ---------------------------------------------------------------- Rust lexer
+
+def lex(text):
+    """Tokens of Rust source: (kind, value, line), kind one of id, str, p. Comments and char
+    literals vanish; `// spec-audit: id` comments come back as kind `note`."""
+    toks, i, n, line = [], 0, len(text), 1
+    while i < n:
+        c = text[i]
+        if c == "\n":
+            line += 1
+            i += 1
+        elif c.isspace():
+            i += 1
+        elif text.startswith("//", i):
+            end = text.find("\n", i)
+            end = n if end < 0 else end
+            m = re.match(r"//+!?\s*spec-audit:\s*(\S+)", text[i:end])
+            if m:
+                toks.append(("note", m.group(1), line))
+            i = end
+        elif text.startswith("/*", i):
+            depth, i = 1, i + 2
+            while i < n and depth:
+                if text.startswith("/*", i):
+                    depth, i = depth + 1, i + 2
+                elif text.startswith("*/", i):
+                    depth, i = depth - 1, i + 2
+                else:
+                    line += text[i] == "\n"
+                    i += 1
+        else:
+            m = re.match(r'(?:b|c)?r(#*)"', text[i:i + 300])
+            if m:
+                close = '"' + m.group(1)
+                start = i + m.end()
+                end = text.find(close, start)
+                end = n if end < 0 else end
+                body = text[start:end]
+                toks.append(("str", body, line))
+                line += body.count("\n")
+                i = end + len(close)
+            elif c == '"' or (c in "bc" and text[i + 1:i + 2] == '"'):
+                j = i + (1 if c == '"' else 2)
+                out = []
+                start_line = line
+                while j < n and text[j] != '"':
+                    if text[j] == "\\":
+                        nxt = text[j + 1:j + 2]
+                        if nxt == "\n":  # a line continuation swallows the following indent
+                            line += 1
+                            j += 2
+                            while j < n and text[j].isspace():
+                                line += text[j] == "\n"
+                                j += 1
+                            continue
+                        out.append({"n": "\n", "t": "\t", '"': '"', "\\": "\\"}.get(nxt, "\\" + nxt))
+                        j += 2
+                    else:
+                        line += text[j] == "\n"
+                        out.append(text[j])
+                        j += 1
+                toks.append(("str", "".join(out), start_line))
+                i = j + 1
+            elif c == "'" or (c == "b" and text[i + 1:i + 2] == "'"):
+                m = re.match(r"b?'(?:\\.[^']*|[^'\\])'", text[i:i + 16])
+                if m:
+                    i += m.end()
+                else:  # no closing quote: a lifetime
+                    i += 1
+            elif c.isalpha() or c == "_":
+                m = re.match(r"\w+", text[i:i + 300])
+                toks.append(("id", m.group(0), line))
+                i += m.end()
+            elif c.isdigit():
+                m = re.match(r"[\w.]+", text[i:i + 300])
+                i += m.end()
+            else:
+                two = text[i:i + 2]
+                if two in ("=>", "==", "!=", "::", "->"):
+                    toks.append(("p", two, line))
+                    i += 2
+                else:
+                    toks.append(("p", c, line))
+                    i += 1
+    return toks
+
+
+def strip_test_items(toks):
+    """Drop whatever follows #[cfg(test)]: a test naming a construct is not an implementation of it."""
+    out, i = [], 0
+    pat = ["#", "[", "cfg", "(", "test", ")", "]"]
+    while i < len(toks):
+        if [t[1] for t in toks[i:i + 7]] == pat:
+            i += 7
+            depth = 0
+            while i < len(toks):
+                v = toks[i][1] if toks[i][0] == "p" else None
+                i += 1
+                if v == "{":
+                    depth += 1
+                elif v == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                elif v == ";" and depth == 0:
+                    break
+        else:
+            out.append(toks[i])
+            i += 1
+    return out
+
+
+# ---------------------------------------------------------------- Rust scan
+
+ATTR_CALL = re.compile(r"attr", re.I)
+ELEM_CALL = re.compile(r"child|elem|start|open|tag|find|descend|empty|begin", re.I)
+NAME_RX = re.compile(r"^(?:([A-Za-z_][\w.-]*):)?([A-Za-z_][\w.-]*)$")
+VERBS = re.compile(r"^(?:read|parse|write|import|export|emit|load|save|to|from|build|serialize|deserialize)_")
+TAG_RX = re.compile(r"<(/?)(?:([A-Za-z_][\w.-]*):)?([A-Za-z_][\w.-]*)((?:[^<>]|\{[^{}]*\})*)")
+ATTR_RX = re.compile(r"""(?:([A-Za-z_][\w.-]*):)?([A-Za-z_][\w.-]*)=\\?["']([^"'{}]*)""")
+
+
+RUST_WORDS = frozenset("as async await break const continue crate dyn else enum extern false fn for if impl in let loop match "
+                       "mod move mut pub ref return self Self static struct super trait true type unsafe use where while".split())
+
+
+def normal(name):
+    return name.replace("_", "").replace("-", "").lower()
+
+
+class Ref:
+    """One string literal. ctx: elements that may own it. attr_ctx: attributes it may be a value of."""
+    __slots__ = ("file", "line", "value", "prefix", "role", "ctx", "attr_ctx", "fn")
+
+    def __init__(self, file, line, value, prefix, role, ctx, attr_ctx, fn):
+        self.file, self.line, self.value, self.prefix = file, line, value, prefix
+        self.role, self.ctx, self.attr_ctx, self.fn = role, ctx, attr_ctx, fn
+
+
+class Frame:
+    """A brace block: names established for everything inside it."""
+    __slots__ = ("ctx", "attr_ctx", "fn", "calls", "arm", "arm_at")
+
+    def __init__(self, fn):
+        self.ctx, self.attr_ctx, self.fn = set(), set(), fn
+        self.calls = []
+        self.arm, self.arm_at = set(), None
+
+
+class Scan:
+    """Every string literal naming something, with its possible owners, for one crate."""
+
+    def __init__(self, element_names):
+        self.norm_elements = {normal(n): n for n in element_names}
+        self.refs = []
+        self.notes = set()
+        self.idents = set()
+        self.callers = defaultdict(list)  # fn -> [(caller fn, ctx, attr_ctx)]
+
+    def hint(self, fn):
+        return self.norm_elements.get(normal(VERBS.sub("", fn)))
+
+    def scan_file(self, path, display, consts):
+        toks = strip_test_items(lex(path.read_text(encoding="utf8", errors="replace")))
+        frames = [Frame(None)]
+        pend, pend_attr, stick, arm_pat = set(), set(), set(), set()
+        pending_fn = None
+        prev = None
+
+        def visible():
+            c, a = set(pend), set(pend_attr)
+            for f in frames:
+                c |= f.ctx | f.arm
+                a |= f.attr_ctx | f.arm
+            return c, a
+
+        def record(value, prefix, role, line, ctx, attr_ctx):
+            self.refs.append(Ref(display, line, value, prefix, role, frozenset(ctx), frozenset(attr_ctx), frames[-1].fn))
+
+        def template(body, line):
+            """A literal holding markup is exact about what owns what."""
+            ctx, _ = visible()
+            opened = []
+            for m in TAG_RX.finditer(body):
+                closing, pfx, local, rest = m.groups()
+                if closing:
+                    if opened and opened[-1] == local:
+                        opened.pop()
+                    continue
+                record(local, pfx, "element", line, {opened[-1]} if opened else ctx, ())
+                for am in ATTR_RX.finditer(rest):
+                    apfx, aname, aval = am.groups()
+                    if apfx == "xmlns" or aname == "xmlns":
+                        continue
+                    record(aname, apfx, "attribute", line, {local}, ())
+                    if aval:
+                        record(aval, None, "value", line, {local}, {aname})
+                stick.add(local)
+                if not rest.rstrip().endswith("/"):
+                    opened.append(local)
+
+        def plain(value, line, i):
+            top = frames[-1]
+            call = top.calls[-1] if top.calls else None
+            direct = prev is not None and prev[1] in ("(", ",", "&")
+            role = None
+            if call and direct:
+                if ATTR_CALL.search(call):
+                    role = "attribute"
+                elif ELEM_CALL.search(call):
+                    role = "element"
+            ctx, attr_ctx = visible()
+            m = NAME_RX.match(value)
+            prefix, local = (m.group(1), m.group(2)) if m else (None, value)
+            record(local, prefix, role or "any", line, ctx, attr_ctx)
+            if not m:
+                return
+            arm = False
+            for t in toks[i + 1:i + 14]:
+                if t[0] == "p" and t[1] == "=>":
+                    arm = True
+                    break
+                if not (t[0] == "str" or (t[0] == "p" and t[1] in ("|", "(", ")")) or t[1] == "Some"):
+                    break
+            after = toks[i + 1][1] if i + 1 < len(toks) else ""
+            if arm:
+                arm_pat.add(local)
+            elif (prev is not None and prev[1] in ("==", "!=")) or after in ("==", "!="):
+                pend.add(local)
+                pend_attr.add(local)
+            elif role == "attribute":
+                pend_attr.add(local)
+            elif role == "element":
+                pend.add(local)
+                stick.add(local)
+
+        for i, (kind, value, line) in enumerate(toks):
+            nxt = toks[i + 1] if i + 1 < len(toks) else ("", "", 0)
+            literal = None
+            if kind == "note":
+                self.notes.add(value)
+            elif kind == "str":
+                literal = value
+            elif kind == "id":
+                if value not in RUST_WORDS and not (prev and prev[1] in RUST_WORDS - {"pub", "let", "ref"}):
+                    self.idents.add(normal(value))
+                if value == "fn" and nxt[0] == "id":
+                    pending_fn = nxt[1]
+                elif value in consts and not (prev and prev[1] in ("const", "static")):
+                    literal = consts[value]
+                elif nxt[0] == "p" and nxt[1] == "(":
+                    c, a = visible()
+                    self.callers[value].append((frames[-1].fn, frozenset(c), frozenset(a)))
+            elif kind == "p":
+                top = frames[-1]
+                if value == "(":
+                    top.calls.append(prev[1] if prev and prev[0] == "id" else None)
+                elif value == ")":
+                    if top.calls:
+                        top.calls.pop()
+                elif value == "=>":
+                    if nxt[0] == "p" and nxt[1] == "{":
+                        pend |= arm_pat
+                        pend_attr |= arm_pat
+                    else:
+                        top.arm, top.arm_at = set(arm_pat), len(top.calls)
+                    arm_pat = set()
+                elif value == "," and top.arm_at == len(top.calls):
+                    top.arm, top.arm_at = set(), None
+                    pend, pend_attr, stick, arm_pat = set(), set(), set(), set()
+                elif value == "{":
+                    frame = Frame(pending_fn or top.fn)
+                    if pending_fn:
+                        h = self.hint(pending_fn)
+                        if h:
+                            frame.ctx.add(h)
+                        pending_fn = None
+                    frame.ctx |= pend | stick
+                    frame.attr_ctx |= pend_attr
+                    frames.append(frame)
+                    pend, pend_attr, stick, arm_pat = set(), set(), set(), set()
+                elif value == "}":
+                    if len(frames) > 1:
+                        frames.pop()
+                    pend, pend_attr, stick, arm_pat = set(), set(), set(), set()
+                elif value == ";":
+                    top.ctx |= stick
+                    pend, pend_attr, stick, arm_pat = set(), set(), set(), set()
+                    pending_fn = None
+            if literal is not None and len(literal) < 4000:
+                if re.search(r"<[A-Za-z_]", literal):
+                    template(literal, line)
+                else:
+                    plain(literal, line, i)
+            prev = (kind, value, line)
+
+    def finish(self):
+        """A reference with no owner of its own takes the owners at its function's call sites."""
+        contexts, attr_contexts = defaultdict(set), defaultdict(set)
+        changed = True
+        while changed:
+            changed = False
+            for fn, sites in self.callers.items():
+                for caller, ctx, attr_ctx in sites:
+                    new = set(ctx) or (contexts[caller] if caller else set())
+                    new_attr = set(attr_ctx) or (attr_contexts[caller] if caller else set())
+                    if not new <= contexts[fn] or not new_attr <= attr_contexts[fn]:
+                        contexts[fn] |= new
+                        attr_contexts[fn] |= new_attr
+                        changed = True
+        for ref in self.refs:
+            if not ref.ctx and ref.fn in contexts:
+                ref.ctx = frozenset(contexts[ref.fn])
+            if not ref.attr_ctx and ref.fn in attr_contexts:
+                ref.attr_ctx = frozenset(attr_contexts[ref.fn])
+
+
+def find_consts(paths):
+    """`const NAME: &str = "x"` anywhere in the crate, so a named constant still counts as the name."""
+    consts = {}
+    for p in paths:
+        toks = strip_test_items(lex(p.read_text(encoding="utf8", errors="replace")))
+        for i, t in enumerate(toks):
+            if t[0] == "id" and t[1] in ("const", "static") and i + 1 < len(toks):
+                j = i + 2 if toks[i + 1][1] == "mut" else i + 1
+                for k in range(j + 1, min(j + 12, len(toks))):
+                    if toks[k][1] == ";":
+                        break
+                    if toks[k][0] == "str":
+                        consts[toks[j][1]] = toks[k][1]
+                        break
+    return consts
+
+
+def scan_crates(crates_dir, schema):
+    scans, files = {}, 0
+    for column, name in CRATES.items():
+        scan = Scan(schema.element_names)
+        paths = sorted((crates_dir / name / "src").rglob("*.rs"))
+        consts = find_consts(paths)
+        for p in paths:
+            scan.scan_file(p, str(p.relative_to(crates_dir)), consts)
+            files += 1
+        scan.finish()
+        scans[column] = scan
+    return scans, files
+
+
+def classify(row, key, schema, idx):
+    """How one leaf row is referenced in one crate's source; None for a structural row."""
+    kind, name = row["kind"], row["name"]
+    ns = schema.ns_of_key.get(key)
+    if kind in ("element", "attribute", "root", "rootattr"):
+        pfx, _, local = name.strip("<>").lstrip("@").rpartition(":")
+        row_ns = KNOWN_PREFIXES.get(pfx) if pfx else ns
+        want = "attribute" if kind in ("attribute", "rootattr") else "element"
+
+        def compatible(r):
+            known = KNOWN_PREFIXES.get(r.prefix) if r.prefix else None
+            return r.role in (want, "any") and (known is None or row_ns is None or known == row_ns)
+
+        refs = [r for r in idx.get(local, ()) if compatible(r)]
+        if not refs:
+            return "none"
+        if kind in ("root", "rootattr"):
+            # There is no owner to establish. A prefix pins the namespace, which is all there is to pin.
+            return "context" if any(r.prefix and KNOWN_PREFIXES.get(r.prefix) == ns for r in refs) else "name"
+        hosts = {n for _, n in schema.hosts.get((key, row["owner"]), ())}
+        best = "none"
+        for r in refs:
+            known = {c for c in r.ctx if c in schema.element_names}
+            if known & hosts:
+                return "context"
+            if not known:
+                best = "name"
+            elif best == "none":
+                best = "elsewhere"
+        return best
+    if kind == "value":
+        attrs = schema.attrs_of_simple.get((key, row["owner"]), set())
+        best = "none"
+        for r in idx.get(name[1:], ()):
+            named = {a for a in r.attr_ctx if a in schema.attribute_names}
+            if named & attrs:
+                return "context"
+            if not named:
+                best = "name"
+            elif best == "none":
+                best = "elsewhere"
+        return best
+    return None
+
+
+def code_coverage(rows, keys, schema, scans):
+    """{column: {row id: tier}}. Structural rows take the best tier among what they declare."""
+    leaf = ("element", "attribute", "value", "root", "rootattr")
+    by_owner = defaultdict(list)
+    by_owner_name = defaultdict(list)
+    users_of_type = defaultdict(list)
+    for r in rows:
+        if r["owner"] and r["kind"] in leaf:
+            by_owner[(keys[r["id"]], r["owner"])].append(r["id"])
+            by_owner_name[r["owner"]].append(r["id"])
+        if r["type"] and r["kind"] in leaf:
+            users_of_type[r["type"]].append(r["id"])
+    out = {}
+    for column, scan in scans.items():
+        idx = defaultdict(list)
+        for ref in scan.refs:
+            idx[ref.value].append(ref)
+        tiers = {}
+        for r in rows:
+            tier = classify(r, keys[r["id"]], schema, idx)
+            if tier is None:
+                continue
+            if tier == "none" and column == "M":
+                bare = r["name"].lstrip("=@").strip("<>").split(":")[-1]
+                if normal(bare) in scan.idents:
+                    tier = "ident"
+            tiers[r["id"]] = tier
+
+        def best(ids):
+            return max((tiers.get(i, "none") for i in ids), key=RANK.__getitem__, default="none")
+
+        for r in rows:
+            if r["kind"] in ("type", "simple"):
+                members = by_owner[(keys[r["id"]], r["name"])] or users_of_type[r["name"]]
+                tiers[r["id"]] = best(members)
+            elif r["kind"] in ("base", "group", "attrgroup"):
+                tiers[r["id"]] = best(by_owner[(keys[r["id"]], r["name"])] or by_owner_name[r["name"]])
+            elif r["kind"] == "any":
+                tiers[r["id"]] = "annotated" if r["id"] in scan.notes else "none"
+        out[column] = tiers
+    return out
+
+
+# ---------------------------------------------------------------- fixtures
+
+class Refused(Exception):
+    pass
+
+
+def refuse_dangerous(data, part):
+    """The defusedxml rule, applied before any tree is built: no DOCTYPE, no entity, bounded depth.
+    Expat sees the declaration whatever the encoding, and this stops there rather than expand anything."""
+    depth = [0]
+
+    def doctype(*_):
+        raise Refused(f"{part}: DOCTYPE")
+
+    def entity(*_):
+        raise Refused(f"{part}: entity declaration")
+
+    def start(*_):
+        depth[0] += 1
+        if depth[0] > MAX_DEPTH:
+            raise Refused(f"{part}: nesting deeper than {MAX_DEPTH}")
+
+    def end(*_):
+        depth[0] -= 1
+
+    parser = xml.parsers.expat.ParserCreate()
+    parser.StartDoctypeDeclHandler = doctype
+    parser.EntityDeclHandler = entity
+    parser.StartElementHandler = start
+    parser.EndElementHandler = end
+    try:
+        parser.Parse(data, True)
+    except xml.parsers.expat.ExpatError as err:
+        raise Refused(f"{part}: not well formed: {err}") from err
+
+
+class FixtureCoverage:
+    def __init__(self, schema):
+        self.schema = schema
+        self.hits = Counter()
+        self.first = {}
+        self.unmatched = Counter()
+        self.refused = []
+        self.parts = 0
+        self.decks = 0
+        self.current = ""
+        self.counting = True
+
+    def mark(self, row):
+        if row and self.counting:
+            self.hits[row] += 1
+            self.first.setdefault(row, self.current)
+
+    def note(self, what):
+        if self.counting:
+            self.unmatched[what] += 1
+
+    def mark_simple(self, typ, value, seen=None):
+        seen = seen if seen is not None else set()
+        s = self.schema.simples.get(typ)
+        if not s or typ in seen:
+            return
+        seen.add(typ)
+        self.mark(s["row"])
+        for token in (value.split() if s["list"] else [value]):
+            if token in s["values"]:
+                self.mark(s["values"][token])
+            for member in s["members"]:
+                self.mark_simple(member, token, seen)
+
+    def enter(self, typ):
+        t = self.schema.types.get(typ)
+        if t and t["row"]:
+            self.mark(t["row"])
+        if typ in self.schema.simples:
+            self.mark(self.schema.simples[typ]["row"])
+
+    def global_element(self, q):
+        e = self.schema.elements.get(q)
+        if not e:
+            return None
+        self.mark(e["row"])
+        return e["type"]
+
+    def attributes(self, elem, flat, local):
+        schema = self.schema
+        for name, value in elem.attrib.items():
+            ans, _, alocal = name[1:].rpartition("}") if name.startswith("{") else ("", "", name)
+            q = (ans, alocal)
+            entries = flat["attrs"].get(q)
+            if entries:
+                for path, decl in entries:
+                    for row in path:
+                        self.mark(row)
+                    atype = decl["type"]
+                    if decl["ref"] and q in schema.attributes:
+                        self.mark(schema.attributes[q]["row"])
+                        atype = atype or schema.attributes[q]["type"]
+                    self.mark_simple(atype, value)
+            elif flat["anyattr"]:
+                for row in flat["anyattr"]:
+                    self.mark(row)
+            elif q in schema.attributes:  # foreign but declared globally, such as p14:dur under mc:Ignorable
+                self.mark(schema.attributes[q]["row"])
+                self.mark_simple(schema.attributes[q]["type"], value)
+            elif ans not in (MC, XML_NS):
+                self.note(f"attribute {name} on {local}")
+
+    def walk(self, data):
+        """Schema-directed, so `x` on <a:off> marks CT_Point2D/@x and nothing else. Types come from
+        the declared content of the parent; mc: wrappers are transparent, and both branches count."""
+        schema = self.schema
+        stack = []
+        pull = ET.XMLPullParser(events=("start", "end"))
+        pull.feed(data)
+        pull.close()
+        for event, elem in pull.read_events():
+            ns, _, local = elem.tag[1:].rpartition("}") if elem.tag.startswith("{") else ("", "", elem.tag)
+            if event == "end":
+                typ, transparent = stack.pop()
+                if not transparent and typ:
+                    text = (elem.text or "").strip()
+                    if typ in schema.simples:
+                        self.mark_simple(typ, text)
+                    elif typ in schema.types:
+                        for row, base in schema.flat(typ)["simple"]:
+                            self.mark(row)
+                            self.mark_simple(base, text)
+                elem.clear()
+                continue
+            if ns == MC and local in ("AlternateContent", "Choice", "Fallback"):
+                stack.append((stack[-1][0] if stack else None, True))
+                continue
+            q = (ns, local)
+            parent = stack[-1][0] if stack else None
+            typ = None
+            if parent in schema.types:
+                flat = schema.flat(parent)
+                entries = flat["children"].get(q)
+                if entries:
+                    for path, decl in entries:
+                        for row in path:
+                            self.mark(row)
+                        if decl["ref"]:
+                            typ = self.global_element(q) or typ
+                        elif typ is None:
+                            typ = decl["type"]
+                else:
+                    for row in flat["any"]:
+                        self.mark(row)
+                    typ = self.global_element(q)
+                    if q not in schema.elements or not flat["any"]:
+                        self.note(f"element {{{ns}}}{local} under {parent[-1]}")
+            else:
+                typ = self.global_element(q)
+                if q not in schema.elements:
+                    self.note(f"element {{{ns}}}{local}, no schema type at this point")
+            self.enter(typ)
+            if typ in schema.types:
+                self.attributes(elem, schema.flat(typ), local)
+            stack.append((typ, False))
+
+    def scan_deck(self, path, rel, counting=True):
+        self.current = rel
+        self.counting = counting
+        self.decks += 1
+        try:
+            archive = zipfile.ZipFile(path)
+        except (zipfile.BadZipFile, OSError, ValueError) as err:
+            self.refused.append(f"{rel}: not a readable package: {err}")
+            return
+        total = 0
+        with archive:
+            infos = archive.infolist()
+            if len(infos) > MAX_ENTRIES:
+                self.refused.append(f"{rel}: {len(infos)} entries")
+                return
+            for info in infos:
+                if info.is_dir() or not info.filename.lower().endswith((".xml", ".rels", ".vml")):
+                    continue
+                label = f"{rel}!{info.filename}"
+                try:
+                    with archive.open(info) as handle:  # the declared size is not to be believed
+                        data = handle.read(MAX_PART + 1)
+                except (zipfile.BadZipFile, OSError, RuntimeError, NotImplementedError, EOFError) as err:
+                    self.refused.append(f"{label}: unreadable: {err}")
+                    continue
+                total += len(data)
+                if len(data) > MAX_PART or total > MAX_READ:
+                    self.refused.append(f"{label}: over the read limit")
+                    continue
+                self.parts += 1
+                try:
+                    refuse_dangerous(data, label)
+                    self.walk(data)
+                except Refused as err:
+                    self.refused.append(str(err))
+                except ET.ParseError as err:
+                    self.refused.append(f"{label}: {err}")
+
+
+def scan_fixtures(fixtures_dir, schema):
+    cov = FixtureCoverage(schema)
+    for name in FIXTURE_SETS:
+        folder = fixtures_dir / name
+        if not folder.is_dir():
+            continue
+        for path in sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() not in (".tsv", ".md")):
+            cov.scan_deck(path, str(path.relative_to(fixtures_dir)), counting=name in COUNTED_SETS)
+    return cov
+
+
+# ---------------------------------------------------------------- gates and report
+
+def gates(rows, tiers, cov, strict):
+    failures, warnings = [], []
+    floor = RANK["context"] if strict else RANK["ident"]
+    for r in rows:
+        rid = r["id"]
+        marked = [c for c in ("M", "I", "E", "R", "U") if r.get(c) == "y"]
+        for c in marked:
+            if c not in tiers:
+                warnings.append(f"{rid}: {c}=y is not auditable from these crates")
+                continue
+            tier = tiers[c].get(rid, "none")
+            if RANK[tier] < floor:
+                reason = {"none": "no reference", "elsewhere": "referenced only under other owners"}.get(tier, f"only `{tier}` precision")
+                failures.append(f"{rid}: {c}=y, {reason} in {CRATES[c]}")
+            elif tier in ("name", "ident"):
+                warnings.append(f"{rid}: {c}=y on `{tier}` precision only")
+        if marked and cov.hits[rid] == 0:
+            failures.append(f"{rid}: {','.join(marked)}=y, no fixture exercises it")
+    return failures, warnings
+
+
+def summary_table(rows, tiers, cov):
+    areas = defaultdict(Counter)
+    for r in rows:
+        a = areas[r["area"]]
+        a["rows"] += 1
+        for col in tiers:
+            a[f"{col}:{tiers[col].get(r['id'], 'none')}"] += 1
+        a["fixture"] += cov.hits[r["id"]] > 0
+        a["y"] += any(r.get(c) == "y" for c in ("M", "I", "E", "R", "U"))
+    return areas
+
+
+def print_report(rows, areas, tiers, cov, files, problems, failures, warnings, samples):
+    total = Counter()
+    for a in areas.values():
+        total.update(a)
+    print("# Spec audit (source text and fixtures; neither proves behaviour)\n")
+    print(f"Scanned {files} Rust files, {cov.decks} fixture files, {cov.parts} XML parts.")
+    print("String literals seen: " + ", ".join(f"{CRATES[c]} {n}" for c, n in samples.items()) + ".\n")
+    print("`ctx` owner determined and allowed; `name` no owner determinable; `else` only under other owners.")
+    print("`Fixture` counts generated, producers and real decks; hostile decks are scanned but do not count.\n")
+    print("| Area | Rows | I ctx | I name | I else | E ctx | E name | E else | M ctx | M name | M ident | Fixture | Marked y |")
+    print("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+
+    def line(label, a):
+        print(f"| {label} | {a['rows']} | {a['I:context'] + a['I:annotated']} | {a['I:name']} | {a['I:elsewhere']} | "
+              f"{a['E:context'] + a['E:annotated']} | {a['E:name']} | {a['E:elsewhere']} | "
+              f"{a['M:context'] + a['M:annotated']} | {a['M:name']} | {a['M:ident']} | {a['fixture']} | {a['y']} |")
+
+    for area in sorted(areas):
+        line(area, areas[area])
+    line("**All**", total)
+    print("\n## Gaps\n")
+    print(f"Rows no fixture exercises: {total['rows'] - total['fixture']} of {total['rows']}.")
+    for col in tiers:
+        print(f"Rows {CRATES[col]} does not name: {total[f'{col}:none']} of {total['rows']}.")
+    print("\n| Area | No fixture | Examples |")
+    print("| --- | ---: | --- |")
+    examples = defaultdict(list)
+    for r in rows:
+        if cov.hits[r["id"]] == 0 and r["kind"] in ("element", "attribute", "value", "root"):
+            examples[r["area"]].append(r["id"])
+    for area in sorted(areas):
+        a = areas[area]
+        print(f"| {area} | {a['rows'] - a['fixture']} | " + ", ".join(f"`{e}`" for e in examples[area][:3]) + " |")
+    print("\n`--gaps FILE` writes every row.")
+    if cov.unmatched:
+        print(f"\n## In fixtures but outside the checklist: {sum(cov.unmatched.values())} uses of {len(cov.unmatched)} names\n")
+        for what, n in cov.unmatched.most_common(15):
+            print(f"- {n} x {what}")
+    if cov.refused:
+        print(f"\n## Refused without building a tree: {len(cov.refused)}\n")
+        for what in cov.refused:
+            print(f"- {what}")
+    print("\n## Gates\n")
+    for p in problems + failures:
+        print(f"FAIL {p}")
+    print(f"{len(failures) + len(problems)} failures, {len(warnings)} warnings.")
+    for w in warnings[:30]:
+        print(f"warn {w}")
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    here = pathlib.Path(__file__).resolve().parents[2]
+    ap.add_argument("--root", type=pathlib.Path, default=here)
+    ap.add_argument("--checklist", type=pathlib.Path)
+    ap.add_argument("--crates", type=pathlib.Path)
+    ap.add_argument("--fixtures", type=pathlib.Path)
+    ap.add_argument("--check", action="store_true", help="fail on a `y` row without a reference or a fixture")
+    ap.add_argument("--strict", action="store_true", help="with --check, `name` precision is not enough either")
+    ap.add_argument("--gaps", type=pathlib.Path, help="write every row and its result, as TSV")
+    ap.add_argument("--json", type=pathlib.Path, help="write the summary as JSON")
+    args = ap.parse_args(argv)
+
+    checklist = args.checklist or args.root / "docs/spec/checklist.tsv"
+    all_rows = read_checklist(checklist)
+    schema = Schema(args.root)
+    ordered = sorted(schema.ns_of_key, key=len, reverse=True)
+    keys = {r["id"]: spec_count.row_key(r["id"], ordered) for r in all_rows}
+    in_list = {r["id"] for r in all_rows}
+    problems = [f"schema model: {i}: from the schemas, no checklist row" for i in sorted(schema.ids - in_list)[:20]]
+    problems += [f"schema model: {i}: a checklist row, not from the schemas" for i in sorted(in_list - schema.ids)[:20]]
+    rows = [r for r in all_rows if keys[r["id"]] is not None]
+
+    scans, files = scan_crates(args.crates or args.root / "crates", schema)
+    tiers = code_coverage(rows, keys, schema, scans)
+    cov = scan_fixtures(args.fixtures or args.root / "fixtures", schema)
+    _, _, count_problems = spec_count.compare(args.root, checklist)
+    problems += [f"count: {p}" for p in count_problems]
+    failures, warnings = gates(rows, tiers, cov, args.strict)
+    areas = summary_table(rows, tiers, cov)
+    samples = {c: len(s.refs) for c, s in scans.items()}
+    print_report(rows, areas, tiers, cov, files, problems, failures, warnings, samples)
+
+    if args.gaps:
+        with open(args.gaps, "w", encoding="utf8") as out:
+            out.write("id\tarea\tkind\timport\texport\tmodel\tfixture_hits\tfirst_fixture\n")
+            for r in rows:
+                rid = r["id"]
+                out.write(f"{rid}\t{r['area']}\t{r['kind']}\t{tiers['I'].get(rid, 'none')}\t{tiers['E'].get(rid, 'none')}\t"
+                          f"{tiers['M'].get(rid, 'none')}\t{cov.hits[rid]}\t{cov.first.get(rid, '')}\n")
+    if args.json:
+        args.json.write_text(json.dumps({
+            "rows": len(rows),
+            "areas": {a: dict(c) for a, c in areas.items()},
+            "failures": failures + problems,
+            "warnings": len(warnings),
+            "refused": cov.refused,
+            "unmatched": dict(cov.unmatched),
+        }, indent=1, sort_keys=True), encoding="utf8")
+    return 1 if args.check and (failures or problems) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
