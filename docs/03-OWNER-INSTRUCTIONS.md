@@ -23,6 +23,7 @@ by saying so.
 | 12 | 2026-11-07 | The goal is a clone. Make appropriate decisions without asking, thinking of the goal and the future, and do not regret them later | `DEC-*` in [14](14-EXECUTION-TRACKER.md) |
 | 13 | 2026-11-07 | LibreOffice is already installed: use it. Do the UI and UX study through online research | `DEC-04`, `UX-001` |
 | 14 | 2026-11-07 | Note everything instructed, and do not deviate | This page, [CLAUDE.md](../CLAUDE.md) |
+| 15 | 2026-11-07 | Use cyan as the colour | `DEC-03` |
 
 ## Boundaries set by the environment
 
