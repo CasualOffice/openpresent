@@ -18,4 +18,4 @@ pub use error::OoxmlError;
 pub use graph::{Conformance, Finding, FindingKind, PresentationKind, PresentationPackage};
 pub use limits::OoxmlLimits;
 pub use rels::{ExternalKind, Relationship, TargetMode, classify_external};
-pub use xml::walk;
+pub use xml::{ElementId, XmlTree, walk};

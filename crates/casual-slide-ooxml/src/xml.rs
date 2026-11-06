@@ -17,7 +17,7 @@ const PREDEFINED: [&[u8]; 5] = [b"lt", b"gt", b"amp", b"apos", b"quot"];
 /// UTF-8 bytes for a part, which OPC allows in UTF-8 or UTF-16, marked by a BOM.
 fn decode<'a>(bytes: &'a [u8], part: &str) -> Result<Cow<'a, [u8]>, OoxmlError> {
     let utf16 = |rest: &[u8], word: fn([u8; 2]) -> u16| -> Result<Cow<'a, [u8]>, OoxmlError> {
-        if rest.len() % 2 != 0 {
+        if rest.len() & 1 != 0 {
             return Err(malformed(part, "truncated UTF-16"));
         }
         let units = rest.chunks_exact(2).map(|c| word([c[0], c[1]]));
@@ -169,4 +169,380 @@ pub(crate) fn required(e: &BytesStart<'_>, local: &[u8], part: &str) -> Result<S
 
 pub(crate) fn wrong_root(part: &str, expected: &str) -> OoxmlError {
     malformed(part, format!("root element is not {expected}"))
+}
+
+/// One node of a [`XmlTree`], holding its source text exactly.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Node {
+    Element {
+        /// Everything between `<` and `>` or `/>`.
+        start: String,
+        /// `None` for a self-closed element; else what is between `</` and `>`.
+        end: Option<String>,
+        children: Vec<usize>,
+    },
+    /// Text, comments, declarations and the like, with their delimiters.
+    Verbatim(String),
+    /// Character data, still escaped, split from references as the source has it.
+    Text(String),
+}
+
+/// A part as a tree that writes back the bytes it read.
+///
+/// This is how the fidelity contract holds inside an edited part (ADR-013): an
+/// edit changes the nodes it names, so attribute order, prefixes, namespace
+/// declarations, whitespace and everything unmodelled stay as they were.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct XmlTree {
+    nodes: Vec<Node>,
+    top: Vec<usize>,
+    root: usize,
+    bom: Bom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Bom {
+    None,
+    Utf8,
+    Utf16Le,
+    Utf16Be,
+}
+
+/// A handle on an element of an [`XmlTree`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ElementId(usize);
+
+impl XmlTree {
+    /// Parse under the same refusals and bounds as [`walk`], which runs first.
+    pub fn parse(bytes: &[u8], part: &str, limits: &OoxmlLimits) -> Result<Self, OoxmlError> {
+        walk(bytes, part, limits, |_, _| Ok(()))?;
+        let bom = match bytes {
+            [0xEF, 0xBB, 0xBF, ..] => Bom::Utf8,
+            [0xFF, 0xFE, ..] => Bom::Utf16Le,
+            [0xFE, 0xFF, ..] => Bom::Utf16Be,
+            _ => Bom::None,
+        };
+        let xml = decode(bytes, part)?;
+        let mut reader = Reader::from_reader(xml.as_ref());
+        // `walk` has checked nesting. Keep `</a >` as written, which needs both.
+        let config = reader.config_mut();
+        config.trim_markup_names_in_closing_tags = false;
+        config.check_end_names = false;
+        let mut buf = Vec::new();
+        let mut tree = Self {
+            nodes: Vec::new(),
+            top: Vec::new(),
+            root: 0,
+            bom,
+        };
+        let mut stack: Vec<usize> = Vec::new();
+        let text = |b: &[u8]| {
+            std::str::from_utf8(b)
+                .map(str::to_owned)
+                .map_err(|_| malformed(part, "not valid UTF-8"))
+        };
+        loop {
+            let event = reader
+                .read_event_into(&mut buf)
+                .map_err(|err| malformed(part, err.to_string()))?;
+            let node = match &event {
+                Event::Eof => break,
+                Event::Start(e) => Node::Element {
+                    start: text(e)?,
+                    end: Some(String::new()),
+                    children: Vec::new(),
+                },
+                Event::Empty(e) => Node::Element {
+                    start: text(e)?,
+                    end: None,
+                    children: Vec::new(),
+                },
+                Event::End(e) => {
+                    let open = stack
+                        .pop()
+                        .ok_or_else(|| malformed(part, "stray end tag"))?;
+                    if let Node::Element { end, .. } = &mut tree.nodes[open] {
+                        *end = Some(text(e)?);
+                    }
+                    buf.clear();
+                    continue;
+                }
+                Event::Text(e) => Node::Text(text(e)?),
+                Event::GeneralRef(e) => Node::Text(format!("&{};", text(e)?)),
+                Event::CData(e) => Node::Verbatim(format!("<![CDATA[{}]]>", text(e)?)),
+                Event::Comment(e) => Node::Verbatim(format!("<!--{}-->", text(e)?)),
+                Event::Decl(e) => Node::Verbatim(format!("<?{}?>", text(e)?)),
+                Event::PI(e) => Node::Verbatim(format!("<?{}?>", text(e)?)),
+                Event::DocType(_) => {
+                    return Err(OoxmlError::DoctypeRefused {
+                        part: part.to_owned(),
+                    });
+                }
+            };
+            let id = tree.nodes.len();
+            let is_open = matches!(event, Event::Start(_));
+            let is_element = matches!(node, Node::Element { .. });
+            tree.nodes.push(node);
+            match stack.last() {
+                Some(&parent) => {
+                    if let Node::Element { children, .. } = &mut tree.nodes[parent] {
+                        children.push(id);
+                    }
+                }
+                None => {
+                    tree.top.push(id);
+                    if is_element {
+                        tree.root = id;
+                    }
+                }
+            }
+            if is_open {
+                stack.push(id);
+            }
+            buf.clear();
+        }
+        Ok(tree)
+    }
+
+    /// The bytes, identical to the input for an untouched tree.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = String::new();
+        for &id in &self.top {
+            self.write(id, &mut out);
+        }
+        let utf16 = |word: fn(u16) -> [u8; 2], mark: [u8; 2]| {
+            let mut b = mark.to_vec();
+            out.encode_utf16().for_each(|u| b.extend(word(u)));
+            b
+        };
+        match self.bom {
+            Bom::None => out.clone().into_bytes(),
+            Bom::Utf8 => [&[0xEF, 0xBB, 0xBF], out.as_bytes()].concat(),
+            Bom::Utf16Le => utf16(u16::to_le_bytes, [0xFF, 0xFE]),
+            Bom::Utf16Be => utf16(u16::to_be_bytes, [0xFE, 0xFF]),
+        }
+    }
+
+    fn write(&self, id: usize, out: &mut String) {
+        match &self.nodes[id] {
+            Node::Verbatim(s) | Node::Text(s) => out.push_str(s),
+            Node::Element {
+                start,
+                end,
+                children,
+            } => {
+                out.push('<');
+                out.push_str(start);
+                match end {
+                    None => out.push_str("/>"),
+                    Some(end) => {
+                        out.push('>');
+                        for &c in children {
+                            self.write(c, out);
+                        }
+                        out.push_str("</");
+                        out.push_str(end);
+                        out.push('>');
+                    }
+                }
+            }
+        }
+    }
+
+    /// The root element.
+    pub fn root(&self) -> ElementId {
+        ElementId(self.root)
+    }
+
+    fn element(&self, id: ElementId) -> (&str, &[usize]) {
+        match &self.nodes[id.0] {
+            Node::Element {
+                start, children, ..
+            } => (start, children),
+            _ => ("", &[]),
+        }
+    }
+
+    /// An element's local name.
+    pub fn local_name(&self, id: ElementId) -> &str {
+        let name = self.qualified_name(id);
+        name.rsplit(':').next().unwrap_or(name)
+    }
+
+    /// An element's name with its prefix, as written.
+    pub fn qualified_name(&self, id: ElementId) -> &str {
+        let (start, _) = self.element(id);
+        start
+            .split(|c: char| c.is_ascii_whitespace())
+            .next()
+            .unwrap_or("")
+    }
+
+    /// An element's child elements, in order.
+    pub fn child_elements(&self, id: ElementId) -> Vec<ElementId> {
+        self.element(id)
+            .1
+            .iter()
+            .filter(|&&c| matches!(self.nodes[c], Node::Element { .. }))
+            .map(|&c| ElementId(c))
+            .collect()
+    }
+
+    /// The first child with this local name.
+    pub fn child(&self, id: ElementId, local: &str) -> Option<ElementId> {
+        self.child_elements(id)
+            .into_iter()
+            .find(|&c| self.local_name(c) == local)
+    }
+
+    /// An attribute's value by local name, unescaped.
+    pub fn attribute(&self, id: ElementId, local: &str) -> Option<String> {
+        let (start, _) = self.element(id);
+        let name_len = self.qualified_name(id).len();
+        let tag = BytesStart::from_content(start, name_len);
+        tag.attributes().flatten().find_map(|a| {
+            (a.key.local_name().as_ref() == local.as_bytes())
+                .then(|| a.normalized_value(quick_xml::XmlVersion::Implicit1_0).ok())
+                .flatten()
+                .map(std::borrow::Cow::into_owned)
+        })
+    }
+
+    /// An element's direct text, unescaped. `None` if it has child elements.
+    pub fn text(&self, id: ElementId) -> Option<String> {
+        let (_, children) = self.element(id);
+        let mut raw = String::new();
+        for &c in children {
+            match &self.nodes[c] {
+                Node::Text(s) => raw.push_str(s),
+                Node::Verbatim(s) if s.starts_with("<![CDATA[") => {
+                    let inner = &s[9..s.len() - 3];
+                    raw.push_str(&escape(inner));
+                }
+                Node::Verbatim(_) => {}
+                Node::Element { .. } => return None,
+            }
+        }
+        quick_xml::escape::unescape(&raw)
+            .ok()
+            .map(std::borrow::Cow::into_owned)
+    }
+
+    /// Replace an element's content with `value`, escaped. Nothing else moves.
+    pub fn set_text(&mut self, id: ElementId, value: &str) {
+        let new = self.nodes.len();
+        self.nodes.push(Node::Text(escape(value)));
+        if let Node::Element {
+            start,
+            end,
+            children,
+        } = &mut self.nodes[id.0]
+        {
+            *children = vec![new];
+            if end.is_none() {
+                let name = start
+                    .split(|c: char| c.is_ascii_whitespace())
+                    .next()
+                    .unwrap_or("");
+                *end = Some(name.to_owned());
+                let trimmed = start.trim_end().len();
+                start.truncate(trimmed);
+            }
+        }
+    }
+
+    /// Append a new child element with text, after the last child, using `name`
+    /// as written, prefix included.
+    pub fn append_text_child(&mut self, parent: ElementId, name: &str, value: &str) -> ElementId {
+        let text = self.nodes.len();
+        self.nodes.push(Node::Text(escape(value)));
+        let id = self.nodes.len();
+        self.nodes.push(Node::Element {
+            start: name.to_owned(),
+            end: Some(name.to_owned()),
+            children: vec![text],
+        });
+        if let Node::Element {
+            start,
+            end,
+            children,
+        } = &mut self.nodes[parent.0]
+        {
+            if end.is_none() {
+                let tag = start
+                    .split(|c: char| c.is_ascii_whitespace())
+                    .next()
+                    .unwrap_or("");
+                *end = Some(tag.to_owned());
+            }
+            children.push(id);
+        }
+        ElementId(id)
+    }
+}
+
+fn escape(s: &str) -> String {
+    quick_xml::escape::escape(s).into_owned()
+}
+
+#[cfg(test)]
+mod tree_tests {
+    use super::*;
+
+    fn parse(s: &str) -> XmlTree {
+        XmlTree::parse(s.as_bytes(), "t", &OoxmlLimits::default()).unwrap()
+    }
+
+    #[test]
+    fn writes_back_exactly_what_it_read() {
+        for s in [
+            "<?xml version=\"1.0\"  encoding='UTF-8'?>\n<a:x  b = \"1\"\tc='2' xmlns:a=\"u\" >\n <!-- k --><y /><z>t&amp;u&#65;<![CDATA[<r>]]></z><?pi d?>\n</a:x >\n",
+            "<a/>",
+            "<a b=\"&lt;\"></a>",
+        ] {
+            assert_eq!(parse(s).to_bytes(), s.as_bytes(), "{s}");
+        }
+    }
+
+    #[test]
+    fn utf16_writes_back_as_utf16() {
+        let mut bytes = vec![0xFF, 0xFE];
+        "<a>é</a>"
+            .encode_utf16()
+            .for_each(|u| bytes.extend(u.to_le_bytes()));
+        let tree = XmlTree::parse(&bytes, "t", &OoxmlLimits::default()).unwrap();
+        assert_eq!(tree.to_bytes(), bytes);
+        assert_eq!(tree.text(tree.root()).unwrap(), "é");
+    }
+
+    #[test]
+    fn an_edit_changes_only_what_it_names() {
+        let mut t = parse("<r  z=\"1\"><!-- c --><p:a q='2'>old</p:a> <b/></r>");
+        let a = t.child(t.root(), "a").unwrap();
+        t.set_text(a, "new & <x>");
+        assert_eq!(
+            t.to_bytes(),
+            b"<r  z=\"1\"><!-- c --><p:a q='2'>new &amp; &lt;x&gt;</p:a> <b/></r>"
+        );
+        let b = t.child(t.root(), "b").unwrap();
+        t.set_text(b, "v");
+        assert_eq!(t.text(b).unwrap(), "v");
+        assert!(t.to_bytes().ends_with(b"<b>v</b></r>"));
+    }
+
+    #[test]
+    fn reads_names_attributes_and_text() {
+        let t = parse("<p:r x:k=\"a&amp;b\"><c>1&lt;2<![CDATA[&]]></c><d><e/></d></p:r>");
+        assert_eq!(t.local_name(t.root()), "r");
+        assert_eq!(t.qualified_name(t.root()), "p:r");
+        assert_eq!(t.attribute(t.root(), "k").unwrap(), "a&b");
+        assert_eq!(t.text(t.child(t.root(), "c").unwrap()).unwrap(), "1<2&");
+        assert_eq!(t.text(t.child(t.root(), "d").unwrap()), None);
+    }
+
+    #[test]
+    fn the_tree_inherits_the_walkers_refusals() {
+        let err = XmlTree::parse(b"<!DOCTYPE a><a/>", "t", &OoxmlLimits::default()).unwrap_err();
+        assert_eq!(err.code(), "CS-XML-0005");
+    }
 }

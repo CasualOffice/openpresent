@@ -60,6 +60,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "casual-slide-export"
+version = "0.0.0"
+dependencies = [
+ "casual-slide-model",
+ "casual-slide-ooxml",
+ "casual-slide-package",
+]
+
+[[package]]
+name = "casual-slide-geometry"
+version = "0.0.0"
+
+[[package]]
+name = "casual-slide-import"
+version = "0.0.0"
+dependencies = [
+ "casual-slide-model",
+ "casual-slide-ooxml",
+]
+
+[[package]]
+name = "casual-slide-model"
+version = "0.0.0"
+
+[[package]]
 name = "casual-slide-ooxml"
 version = "0.0.0"
 dependencies = [

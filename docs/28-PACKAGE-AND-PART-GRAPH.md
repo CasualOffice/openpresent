@@ -9,3 +9,9 @@
 - **Findings do not stop a deck opening,** and everything they name is retained. Codes are in [20](20-ERROR-CODE-REGISTRY.md).
 - **Saving:** unedited returns the input bytes. Edited copies other entries raw, keeping their compressed bytes.
 - **Main part:** matched on exact relationship namespaces, so a look-alike type is not believed. Strict and Transitional are both read.
+
+## Editing inside a part: `XmlTree` (ADR-013)
+
+Rebuilding XML from a typed model loses whatever the model does not hold: unknown attributes, `extLst`, ordering, prefixes, whitespace. Holding those as "retained fragments" beside the model is a long tail of special cases.
+
+So each part read for editing becomes a tree that keeps its source text, and writes back byte for byte. **The typed model is a view over the tree, and an edit patches only the nodes it names.** Every XML part in the corpus, third-party decks included, is tested to round-trip exactly. The cost is memory per open part, which lazy per-slide parsing bounds. `SPEC-01`'s audit still measures what the typed view covers.

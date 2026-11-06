@@ -1,0 +1,14 @@
+[package]
+name = "casual-slide-import"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+casual-slide-model = { path = "../casual-slide-model" }
+casual-slide-ooxml = { path = "../casual-slide-ooxml" }
+
+[lints]
+workspace = true

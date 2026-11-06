@@ -119,3 +119,23 @@ fn the_part_graph_finds_a_deck_structure() {
         Some("application/vnd.openxmlformats-officedocument.presentationml.slide+xml")
     );
 }
+
+/// Every XML part in every deck, including third-party ones, writes back byte for byte.
+#[test]
+fn every_xml_part_round_trips_through_the_tree() {
+    let mut parts = 0;
+    for path in opening_decks() {
+        let mut pkg = PresentationPackage::open(read(&path), OoxmlLimits::default()).unwrap();
+        for name in pkg.part_names() {
+            if !(name.ends_with(".xml") || name.ends_with(".rels")) {
+                continue;
+            }
+            let bytes = pkg.read_part(&name).unwrap();
+            let tree = casual_slide_ooxml::XmlTree::parse(&bytes, &name, &OoxmlLimits::default())
+                .unwrap_or_else(|e| panic!("{path}: {name}: {e}"));
+            assert_eq!(tree.to_bytes(), bytes, "{path}: {name}");
+            parts += 1;
+        }
+    }
+    assert!(parts > 200, "only {parts} parts");
+}
