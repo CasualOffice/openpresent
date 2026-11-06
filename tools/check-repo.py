@@ -12,7 +12,14 @@ STATUS = {"Open", "In progress", "Blocked", "Done"}
 errors = []
 
 tracker = (ROOT / "docs/14-EXECUTION-TRACKER.md").read_text(encoding="utf8")
-rows = re.findall(r"^\| ([A-Z]+-[0-9A-Z]+) \|[^|]*\| ([^|]*?) \|", tracker, re.M)
+ROW = re.compile(r"^\| ([A-Z0-9]+(?:-[0-9A-Z]+)+) \|[^|]*\| ([^|]*?) \|", re.M)
+# Self-test: a gate that cannot see a row passes without checking it (OpenCalc lost 47 rows this way).
+assert ROW.findall("| UX-SHELL-01 | x | Done | P1 |") == [("UX-SHELL-01", "Done")], "row pattern is broken"
+rows = ROW.findall(tracker)
+# Every line that starts like a row must parse as one.
+for line in tracker.splitlines():
+    if re.match(r"^\| [A-Z0-9]+-", line) and not ROW.match(line):
+        errors.append(f"unreadable tracker row: {line[:50]}")
 for rid, n in Counter(r for r, _ in rows).items():
     if n > 1:
         errors.append(f"tracker id used {n} times: {rid}")

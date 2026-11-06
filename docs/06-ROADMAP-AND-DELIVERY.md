@@ -75,13 +75,16 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | **1K** | SmartArt, equations, ink | 1263 | 1E, 1F |
 | **1L** | OLE, VML, 3D models, retained with fallback | 951 | 1H |
 | **1M** | Comments, review, sections, zoom, labels, tags, custom XML | 876 | 1D |
+| **1N** | **The writer:** part naming, rId allocation, content types, shared parts, id rules, app.xml, thumbnails, signature drop, save-as matrix (`docs/36`, in progress) | invariants | 1A; grows with each tier |
+
+**Walking skeleton (`SKEL-01`).** As soon as 1D closes, 5 real decks go through 2A, 2B and basic text, so that wrong semantics show up before the remaining tiers build on them. It adds to import-export-first; it does not reorder it.
 
 **A tier closes when:**
 1. Every in-scope row is `y` or `r` for model, import and export, or has a named reason, and the audit tool agrees.
 2. Each `y` row has a fixture exercising it.
-3. Unedited save is byte-identical. An edit changes only named nodes of named parts.
+3. Unedited save is byte-identical. An edit changes only named nodes of named parts. **A forced-rewrite run passes every check below, since an unedited save proves nothing about the writer (`WR-01`).**
 4. Import → export → import is a fixed point.
-5. Edited XML validates against the vendored schemas.
+5. Edited XML validates through F4: markup compatibility resolved, then schemas, then Microsoft's validator.
 6. The report names everything not modelled, and a silent drop fails a test.
 7. New limits have hostile fixtures; each new parser has a fuzz target.
 
@@ -103,10 +106,19 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | **2A** | Slide composition, master and layout, background, theme | 1D |
 | **2B** | Presets, custom paths, fills, lines, group transforms | 1E |
 | **2C** | Effects, flattened 3D | 1E |
-| **2D** | **Text engine:** fonts, shaping, bidi, line breaking, CJK, tabs, bullets, columns, vertical text, autofit, warps | 1F, `SPK-01` |
+| **2D1** | Fonts, fallback, the font contract (`TXT-01`) | 1F, `SPK-01` |
+| **2D2** | Shaping, bidi, line breaking | 2D1 |
+| **2D3** | Paragraph layout: spacing, tabs, bullets, numbering | 2D2 |
+| **2D4** | Body layout: anchoring, insets, columns, vertical text, rotated text | 2D3 |
+| **2D5** | CJK rules: kinsoku, hanging punctuation, East Asian line breaks | 2D3 |
+| **2D6** | Autofit, and WordArt warps | 2D4 |
 | **2E** | Tables, pictures, SVG, EMF | 1G, 1H |
-| **2F** | Charts, SmartArt, equations, ink, fallbacks | 1J, 1K, 1L |
-| **2G** | PDF, JPEG, print layouts | 2A to 2F |
+| **2F** | Classic charts | 1J |
+| **2H** | 2016+ charts | 1J |
+| **2I** | Ink, OLE and VML fallbacks | 1K, 1L |
+| **2J** | SmartArt: from its drawing, then the layout engine for decks with none (`DGM-01`) | 1K |
+| **2K** | Equations: math layout | 1K |
+| **2G** | PDF with tags, reading order, alt text, links; JPEG; print layouts | 2A to 2K |
 
 **Closes when:**
 - [ ] Each corpus deck is within its recorded threshold against its reference: a PowerPoint-exported PDF or image where the deck ships with one, else LibreOffice, labelled as such.
@@ -132,13 +144,13 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 
 ## Phases 4 to 7 — Editing
 
-**Common entry:** the previous editing phase closed, plus the prerequisites below. **Common exit:** the op set is inverse-tested,
+**Common entry:** the previous editing phase closed, plus the prerequisites below. **Common exit:** the op set is inverse-tested and **TP1 holds for every op added (`OP-02`)**,
 the UI status is filled for every in-scope checklist row, a task test by people who use PowerPoint passes for the phase's verbs, keyboard and screen
 reader work for every new verb, and the owner signs.
 
 | Phase | Gives | Opens after | In | Out | Extra exit criteria |
 | --- | --- | --- | --- | --- | --- |
-| **4 Objects** | Build a deck from shapes and pictures | 3 | Op set, undo, select, transform, guides, group, arrange, selection pane, insert shape and picture, slide ops, sections, format panes, Home, Insert, Shape Format, Picture Format | Text editing | Drag budget on adversarial slide |
+| **4 Objects** | Build a deck from shapes and pictures | 3 | Op set, undo, select, transform, guides, group, arrange, selection pane, insert shape and picture, slide ops, reuse slides, sections, format panes, Home, Insert, Shape Format, Picture Format, accessibility checker, **autosave and recovery** | Text editing | Drag budget on adversarial slide; a crash loses nothing (`SAVE-01`) |
 | **5 Text** | Type and format, in any script | 4 | Caret, selection, IME, formatting, lists, autofit on edit, find and replace, spell seam, links | Tables, charts | IME matrix; RTL and CJK; typing budget |
 | **6 Rich objects** | Tables, charts, SmartArt, equations, media, ink | 5, 2F | Each, with Format tabs; chart data through the OpenCalc SDK | Slide show | Round-trip per construct after edit |
 | **7 Design** | Themes, masters, layouts | 6 | Themes, variants, background, slide size, master and layout editing | — | Master edit propagates and round-trips |
@@ -146,7 +158,7 @@ reader work for every new verb, and the owner signs.
 ## Phase 8 — Slide show
 
 - **Gives:** a deck presents as it does in PowerPoint, with presenter view, on web and desktop.
-- **Opens:** 1I and Phase 7 closed.
+- **Opens:** playback (8A) after 1I and Phase 3; authoring (8B) after Phase 4. Theme editing is not a dependency.
 - **In:** timeline, all transitions, Morph, all animation classes, triggers, motion paths, animation pane, presenter view, custom shows, timings, kiosk, narration playback, zoom.
 - **Out:** recording new narration, unless the gap analysis adds it.
 - **Closes when:**

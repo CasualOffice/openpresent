@@ -23,7 +23,7 @@
 | --- | --- | --- | --- | --- | --- |
 | DOC-001 | Initial design set | Done | P0 | Written 2026-11-07 from a scan of `../opencalc` at `b23c67c` | Owner review, below |
 | DOC-003 | Fix doc audit findings | In progress | P0 | Independent audit running | P0 and P1 fixed; re-check |
-| DOC-004 | Disposition gap analysis | In progress | P0 | Independent analysis running | Each gap has a row, or a stated reason not to |
+| DOC-004 | Disposition gap analysis | Done | P0 | 51 gaps reviewed; each has a row below or was applied. Items its author marked unverified stay so in their rows | Rows exist |
 | DOC-005 | Phase and task rules | In progress | P0 | [05](05-PHASES-AND-TASKS.md), charters in [06](06-ROADMAP-AND-DELIVERY.md). Needs owner approval | Owner approves |
 | DOC-006 | Working rules and skills | Done | P1 | `CLAUDE.md` holds standards, one-roadmap-one-tracker, document updates. Six project skills in `.claude/skills`. `check-repo.py` refuses a second tracker or plan | Seeded second tracker seen failing |
 | ENG-01 | Enforce standards by lint | Open | P1 | Add `unwrap_used`, `expect_used`, `indexing_slicing`, `missing_docs` for non-test code. Waits for the parallel sessions to merge, since it touches their files. Copied `-text` needs a pass | Clippy passes with the lints on |
@@ -96,3 +96,52 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | P-8 | Slide show | Open | P0 | 06 | Exit gate |
 | P-9 | Collaboration | Open | P0 | 06 | Exit gate |
 | P-10 | Enterprise and hosts | Open | P0 | 06 | Exit gate |
+
+## Gap analysis, 2026-11-07 (`DOC-004`)
+
+From an independent review. The percent-encoding, tracker pattern, MCE and dead-reference claims were re-run by the main session and confirmed. Decisions taken under instruction 12 in [03](03-OWNER-INSTRUCTIONS.md).
+
+| ID | Title | St | Sev | Mechanism | Gate |
+| --- | --- | --- | --- | --- | --- |
+| WR-01 | Fidelity gates can pass without the writer running | In progress | P0 | Unedited save returns input bytes, so F1, F3 and F5 prove nothing about it. Forced-rewrite mode: touch every modelled part | F3 and validators run on forced-rewrite output |
+| WR-02 | Export and save design, Tier 1N | In progress | P0 | No rules for part naming, rId allocation, content-type updates, shared parts, id rules, app.xml, thumbnails, signature drop, format conversion. Design in docs/36 | One repair-risk fixture per invariant |
+| WR-03 | Fallbacks go stale on edit | In progress | P0 | Per-construct policy: regenerate, drop, or block edit. Render-on-save hosted in `-sdk`. In docs/36 | Phase 6 exit |
+| WR-04 | Signature dropped explicitly on edit | Open | P1 | Promised in 07, no owner until now. Tier 1N | Signed fixture |
+| WR-05 | Save-as matrix, including `.pptm` to `.pptx` and template to deck | Open | P1 | Tier 1N, in docs/36. `.ppsm`, `.potm`, `.thmx`, `.ppam`, `.xps`, outline, images each assigned or refused | Fixture per pair |
+| OPC-01 | Percent-encoded part names misread | In progress | P1 | **Confirmed by running:** space in a target against `%20` in the entry gives a false dangling and a false orphan | Fixture passes |
+| MCE-01 | Markup compatibility missing | In progress | P0 | **Confirmed:** 0 checklist rows and no code. Needs Part 3 rules: Ignorable, ProcessContent, MustUnderstand, Choice order, both branches kept on edit | Checklist area, tests, F4 preprocess |
+| F4-01 | F4 validation tool | In progress | P0 | Listed as unblocked but does not exist. `xmllint` likely rejects real parts without MCE preprocessing | Runs on corpus exports |
+| STRICT-01 | Strict is detected, not handled | In progress | P0 | **Decided:** normalise namespaces at the read boundary, write back in source form. Vendor Strict XSDs; PowerPoint-saved Strict fixture via `F-007` | Strict deck round-trips |
+| ARC-01 | ADR-013 wording contradicted the DAG | Done | P0 | **Decided:** `-model` stays plain values. The tree lives with `-export`; ops mark objects dirty, and save applies dirty values to the tree. See [28](28-PACKAGE-AND-PART-GRAPH.md) | Phase 1 tiers follow it |
+| ARC-02 | Prove ADR-013 end to end | In progress | P0 | One property through tree, model, edit, save, reopen | Row for each view follows it |
+| SKEL-01 | Walking skeleton | Open | P0 | **Decided:** 5 real decks through 2A, 2B and basic text right after 1D, so semantics errors appear early. Adds to, not replaces, import-export-first | 5 decks render |
+| TXT-01 | Font contract | Open | P0 | Session font manifest pinned for collaborators and export, reported on mismatch. Aptos has no substitute. Corpus split by font availability. After `SPK-01` | Design note; fixtures |
+| TXT-02 | Split 2D and 2F into smaller tiers | Done | P1 | Applied in [06](06-ROADMAP-AND-DELIVERY.md) | — |
+| SAVE-01 | Autosave, recovery, atomic save | Open | P0 | Nothing designed. docs/83, exit criterion of Phase 4 | Crash test loses nothing |
+| OP-01 | Op design: binary assets and retained XML | Open | P0 | Pasting or inserting has no wire form. Asset ops, subtree payload, deep-clone rules in 24 | Design before Phase 4 |
+| OP-02 | TP1 and inverse tests at each editing phase | Done | P0 | Applied in 06 rather than waiting for Phase 9 | — |
+| CAP-01 | Capacity targets | Open | P1 | docs/30: memory ceiling in wasm32 against 1 GiB input and 4 GiB expansion, media by range or Blob, save time, low-end device | `benchmark-smoke` with baselines |
+| API-01 | SDK async and worker-ready | Open | P1 | ADR before `-sdk`. OpenCalc measured 196 ms stalls on save | ADR Accepted |
+| VER-01 | Schema, snapshot and protocol versioning | Open | P1 | Version fields and golden-tested migrations in 22; mixed-version policy in 24 | Migration test |
+| I18N-01 | Localization seam from Phase 3 | Open | P1 | Pseudo-locale gate, RTL mirroring, date formats for fields | Phase 3 exit |
+| BRW-01 | Browser matrix and degraded modes | Open | P1 | Named browsers, Tauri webviews, per-browser thresholds | Multi-engine smoke |
+| DET-01 | Determinism across platforms | Open | P1 | Math library, float rules, native-vs-WASM display-list hash | CI job |
+| MODEL-01 | "No floats in the model" is false | Open | P1 | Charts and timing use doubles; coordinates admit units such as `1in`. Keep source lexemes | Fixtures; fix 22 |
+| THR-01 | Threshold ceilings | Open | P1 | Class ceilings, a ratchet, unwaivable structural checks | Applied in 51 |
+| DT-01 | Desktop plan | Open | P1 | Tauri notes, signing identities, updater, file associations. Fix 19's Phase 10 against 06's Phase 3 | Phase 3 |
+| GOV-01 | Gates, governance and release | Open | P1 | Port OpenCalc's self-test, doc-claims, doc-references, tracker-shape, fuzz-lock, host-seams and post-merge. Add SECURITY, CONTRIBUTING, CHANGELOG, NOTICE. docs/15 for test strategy and release | Phase 0 exit |
+| FIT-01 | Fit-gap for every PowerPoint feature | In progress | P1 | docs/96: Edit, Render, Retain or Refuse for each. Clone goal means Edit unless there is a stated reason | Every feature has a row |
+| ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
+| DGM-01 | SmartArt and equations are Edit | Done | P1 | **Decided**, clone goal. Needs a diagram layout engine and math layout, in 2J and 2K. Missing drawing part defined in docs/36 | Fixture |
+| PDF-01 | Tagged PDF | Done | P1 | Added to 2G | — |
+| A11Y-01 | Accessibility checker, reading order pane | Open | P1 | Phase 4, with a rule list | Phase 4 exit |
+| CROSS-01 | Chart data editor depends on OpenCalc's SDK | Open | P1 | Version policy, bundle cost, spike before Phase 6 | Spike |
+| FONT-01 | Embedded fonts decode path | Open | P1 | Spike and design: decode, rights, cache isolation, retain, default policy | Design note |
+| CFB-01 | Compound File reader tier | Open | P1 | Distinct codes for encrypted, IRM and `.ppt`; limits, fuzz, KDF iteration cap | Fixtures |
+| SEC-014 | Threat classes missing from 07 | Open | P1 | Stale thumbnails and orphan data, PDF output, Tauri IPC and updater, `.ppsx` auto-show, hover actions, fullscreen spoofing, web embeds, add-in parts, polyglot ZIPs, malicious client snapshots, MCP scope | Rows in 07 |
+| OPS-01 | Operations | Open | P1 | docs/65 before Phase 9: backup, restore, SLOs, RPO, RTO, alerts, content-free crash reports | Before Phase 9 |
+| CORP-01 | Corpus targets | Open | P1 | Counts by producer, version, language, script and size | Phase 1 exit |
+| UXT-01 | User test and UX sweep | Open | P1 | Defined separately from F8; scripted sweep and reachability audit, as OpenCalc | Each editing phase |
+| LEG-01 | Legal scope widened | Open | P1 | `DEC-07` covers UI imitation, trademark, codec patents; third-party inventory beyond Rust | Before public release |
+| DOC-008 | Doc drift named by review | Open | P2 | Dead `docs/21` and `docs/15` citations; AGENTS state; 48 pending against 14 Done; mobile undecided | `check-doc-references` |
+| MOB-01 | Mobile and touch | Open | P2 | **Decided in scope** as a responsive shell after Phase 7, as OpenCalc's phone shell | Phase 10 |
