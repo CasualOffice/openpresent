@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::error::OoxmlError;
 use crate::limits::OoxmlLimits;
+use crate::part_name::entry_key;
 use crate::xml::{required, walk, wrong_root};
 
 pub(crate) const CONTENT_TYPES_PART: &str = "[Content_Types].xml";
@@ -36,13 +37,11 @@ impl ContentTypes {
             let (map, key) = match name {
                 b"Override" => (
                     &mut out.overrides,
-                    required(e, b"PartName", part)?
-                        .trim_start_matches('/')
-                        .to_lowercase(),
+                    entry_key(required(e, b"PartName", part)?.trim_start_matches('/')),
                 ),
                 b"Default" => (
                     &mut out.defaults,
-                    required(e, b"Extension", part)?.to_lowercase(),
+                    required(e, b"Extension", part)?.to_ascii_lowercase(),
                 ),
                 _ => return Ok(()),
             };
@@ -65,14 +64,36 @@ impl ContentTypes {
         Ok(out)
     }
 
-    /// The content type of `part`, by OPC's rules. Case-insensitive.
+    /// The content type of `part`, by OPC's rules. Any spelling equivalent under
+    /// [`part_name_key`](crate::part_name_key) finds it.
     pub fn resolve(&self, part: &str) -> Option<&str> {
-        let key = part.trim_start_matches('/').to_lowercase();
+        let key = entry_key(part.trim_start_matches('/'));
         if let Some(ct) = self.overrides.get(&key) {
             return Some(ct);
         }
         let last = key.rsplit('/').next()?;
         let (_, ext) = last.rsplit_once('.')?;
         self.defaults.get(ext).map(String::as_str)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_override_matches_any_equivalent_spelling_of_its_part() {
+        let types = ContentTypes::parse(
+            b"<Types><Override PartName=\"/ppt/my%20slide.xml\" ContentType=\"a/b\"/>\
+              <Override PartName=\"/ppt/\xC3\xA9.xml\" ContentType=\"c/d\"/>\
+              <Default Extension=\"PNG\" ContentType=\"image/png\"/></Types>",
+            &OoxmlLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(types.resolve("ppt/my slide.xml"), Some("a/b"));
+        assert_eq!(types.resolve("/PPT/MY%20SLIDE.XML"), Some("a/b"));
+        assert_eq!(types.resolve("ppt/%C3%A9.xml"), Some("c/d"));
+        assert_eq!(types.resolve("ppt/%c3%89.xml"), None);
+        assert_eq!(types.resolve("ppt/my%20image.png"), Some("image/png"));
     }
 }

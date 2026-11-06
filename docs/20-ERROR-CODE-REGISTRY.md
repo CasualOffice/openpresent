@@ -15,5 +15,6 @@ Stable, never reused. Messages carry part names and counts, never document text.
 | CS-PKG-0009 | Part over reader's cap | | CS-OPC-0003 | Too many content types |
 | | | | CS-OPC-0004 | Not a presentation |
 | | | | CS-OPC-0005 | Compound file |
+| | | | CS-MCE-0001 | A must-understand namespace is not understood |
 
-Findings, which do not stop a deck opening: CS-FND-0001 external content; 0002 unsafe link; 0003 target escapes package; 0004 dangling target; 0005 orphan part; 0006 undeclared content type; 0007 unknown relationship type; 0008 macro project; 0009 signature; 0010 embedded object.
+Findings, which do not stop a deck opening: CS-FND-0001 external content; 0002 unsafe link; 0003 target escapes package; 0004 dangling target; 0005 orphan part; 0006 undeclared content type; 0007 unknown relationship type; 0008 macro project; 0009 signature; 0010 embedded object; 0011 target or entry name that decodes to traversal or to no valid name; 0012 markup compatibility non-conformance.

@@ -5,7 +5,7 @@ Rust engine that reads, lays out, renders and writes `.pptx`, under an editor th
 works like PowerPoint for the web, running client-side in WebAssembly.
 
 **Status: foundation.** Design docs and two crates copied from OpenCalc; nothing opens a deck yet. Sister project to
-[OpenCalc](../opencalc), whose architecture it follows.
+OpenCalc, whose architecture it follows.
 
 Start at [docs/00-README.md](docs/00-README.md).
 

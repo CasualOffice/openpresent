@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written for F4, not Dublin Core's own schema: what coreProperties references, and
+     the W3CDTF type OPC requires on it through xsi:type, as free text. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://purl.org/dc/terms/" elementFormDefault="qualified">
+  <xs:simpleType name="W3CDTF">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+  <xs:element name="created"/>
+  <xs:element name="modified"/>
+</xs:schema>

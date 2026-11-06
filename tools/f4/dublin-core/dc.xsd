@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written for F4, not Dublin Core's own schema: just the elements coreProperties
+     references, each as free text. So F4 checks which of them appear, not their values. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://purl.org/dc/elements/1.1/" elementFormDefault="qualified">
+  <xs:complexType name="SimpleLiteral" mixed="true">
+    <xs:anyAttribute namespace="##any" processContents="lax"/>
+  </xs:complexType>
+  <xs:element name="creator" type="dc:SimpleLiteral" xmlns:dc="http://purl.org/dc/elements/1.1/"/>
+  <xs:element name="description" type="dc:SimpleLiteral" xmlns:dc="http://purl.org/dc/elements/1.1/"/>
+  <xs:element name="identifier" type="dc:SimpleLiteral" xmlns:dc="http://purl.org/dc/elements/1.1/"/>
+  <xs:element name="language" type="dc:SimpleLiteral" xmlns:dc="http://purl.org/dc/elements/1.1/"/>
+  <xs:element name="subject" type="dc:SimpleLiteral" xmlns:dc="http://purl.org/dc/elements/1.1/"/>
+  <xs:element name="title" type="dc:SimpleLiteral" xmlns:dc="http://purl.org/dc/elements/1.1/"/>
+</xs:schema>

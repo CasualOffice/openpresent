@@ -195,6 +195,8 @@ enum Node {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XmlTree {
     nodes: Vec<Node>,
+    /// Each node's parent, parallel to `nodes`. `None` at the top.
+    parents: Vec<Option<usize>>,
     top: Vec<usize>,
     root: usize,
     bom: Bom,
@@ -231,6 +233,7 @@ impl XmlTree {
         let mut buf = Vec::new();
         let mut tree = Self {
             nodes: Vec::new(),
+            parents: Vec::new(),
             top: Vec::new(),
             root: 0,
             bom,
@@ -283,6 +286,7 @@ impl XmlTree {
             let is_open = matches!(event, Event::Start(_));
             let is_element = matches!(node, Node::Element { .. });
             tree.nodes.push(node);
+            tree.parents.push(stack.last().copied());
             match stack.last() {
                 Some(&parent) => {
                     if let Node::Element { children, .. } = &mut tree.nodes[parent] {
@@ -408,6 +412,59 @@ impl XmlTree {
         })
     }
 
+    /// Every attribute as written, declarations included: the qualified name, and
+    /// the value unescaped. A value that cannot be unescaped is left out.
+    pub fn attributes(&self, id: ElementId) -> Vec<(String, String)> {
+        let (start, _) = self.element(id);
+        let name_len = self.qualified_name(id).len();
+        let tag = BytesStart::from_content(start, name_len);
+        tag.attributes()
+            .flatten()
+            .filter_map(|a| {
+                let value = a
+                    .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                    .ok()?
+                    .into_owned();
+                let name = std::str::from_utf8(a.key.as_ref()).ok()?.to_owned();
+                Some((name, value))
+            })
+            .collect()
+    }
+
+    /// An element's parent element, if it has one.
+    pub fn parent_element(&self, id: ElementId) -> Option<ElementId> {
+        self.parents.get(id.0).copied().flatten().map(ElementId)
+    }
+
+    /// The namespace an element is in, as the file spells it. `None` for an element
+    /// in no namespace, or one whose prefix binds nothing. Declarations are read
+    /// nearest first, up a chain the parser's depth limit bounds.
+    pub fn namespace(&self, id: ElementId) -> Option<String> {
+        let wanted = match self.qualified_name(id).split_once(':') {
+            Some((prefix, _)) => format!("xmlns:{prefix}"),
+            None => "xmlns".to_owned(),
+        };
+        let mut at = Some(id);
+        while let Some(element) = at {
+            if let Some((_, uri)) = self
+                .attributes(element)
+                .into_iter()
+                .find(|(name, _)| *name == wanted)
+            {
+                return (!uri.is_empty()).then_some(uri);
+            }
+            at = self.parent_element(element);
+        }
+        None
+    }
+
+    /// The namespace an element is in, read through the Strict-to-Transitional map,
+    /// so code above this layer sees one vocabulary. The bytes keep the source form.
+    pub fn normalized_namespace(&self, id: ElementId) -> Option<String> {
+        self.namespace(id)
+            .map(|uri| crate::namespaces::to_transitional(&uri).to_owned())
+    }
+
     /// An element's direct text, unescaped. `None` if it has child elements.
     pub fn text(&self, id: ElementId) -> Option<String> {
         let (_, children) = self.element(id);
@@ -432,6 +489,7 @@ impl XmlTree {
     pub fn set_text(&mut self, id: ElementId, value: &str) {
         let new = self.nodes.len();
         self.nodes.push(Node::Text(escape(value)));
+        self.parents.push(Some(id.0));
         if let Node::Element {
             start,
             end,
@@ -455,13 +513,15 @@ impl XmlTree {
     /// as written, prefix included.
     pub fn append_text_child(&mut self, parent: ElementId, name: &str, value: &str) -> ElementId {
         let text = self.nodes.len();
+        let id = text + 1;
         self.nodes.push(Node::Text(escape(value)));
-        let id = self.nodes.len();
+        self.parents.push(Some(id));
         self.nodes.push(Node::Element {
             start: name.to_owned(),
             end: Some(name.to_owned()),
             children: vec![text],
         });
+        self.parents.push(Some(parent.0));
         if let Node::Element {
             start,
             end,
@@ -538,6 +598,63 @@ mod tree_tests {
         assert_eq!(t.attribute(t.root(), "k").unwrap(), "a&b");
         assert_eq!(t.text(t.child(t.root(), "c").unwrap()).unwrap(), "1<2&");
         assert_eq!(t.text(t.child(t.root(), "d").unwrap()), None);
+    }
+
+    #[test]
+    fn strict_reads_as_transitional_and_keeps_its_own_bytes() {
+        let source = "<p:sld xmlns:p=\"http://purl.oclc.org/ooxml/presentationml/main\">\
+                      <a:x xmlns:a=\"http://purl.oclc.org/ooxml/drawingml/main\"><p:y/></a:x>\
+                      <z xmlns=\"urn:other\"/><w xmlns=\"\"/></p:sld>";
+        let t = parse(source);
+        let root = t.root();
+        assert_eq!(
+            t.namespace(root).unwrap(),
+            "http://purl.oclc.org/ooxml/presentationml/main"
+        );
+        assert_eq!(
+            t.normalized_namespace(root).unwrap(),
+            "http://schemas.openxmlformats.org/presentationml/2006/main"
+        );
+        let x = t.child(root, "x").unwrap();
+        assert_eq!(
+            t.normalized_namespace(x).unwrap(),
+            "http://schemas.openxmlformats.org/drawingml/2006/main"
+        );
+        // Inherited from the root, past an element that declares another prefix.
+        assert_eq!(
+            t.normalized_namespace(t.child(x, "y").unwrap()).unwrap(),
+            "http://schemas.openxmlformats.org/presentationml/2006/main"
+        );
+        assert_eq!(
+            t.normalized_namespace(t.child(root, "z").unwrap()).unwrap(),
+            "urn:other"
+        );
+        assert_eq!(t.namespace(t.child(root, "w").unwrap()), None);
+        assert_eq!(t.to_bytes(), source.as_bytes());
+    }
+
+    #[test]
+    fn parents_survive_an_edit() {
+        let mut t = parse("<r><a/></r>");
+        let a = t.child(t.root(), "a").unwrap();
+        assert_eq!(t.parent_element(a), Some(t.root()));
+        assert_eq!(t.parent_element(t.root()), None);
+        t.set_text(a, "x");
+        let b = t.append_text_child(t.root(), "b", "y");
+        assert_eq!(t.parent_element(b), Some(t.root()));
+    }
+
+    #[test]
+    fn attributes_come_back_with_declarations_and_unescaped() {
+        let t = parse("<r xmlns:q=\"u\" q:k=\"a&amp;b\" z=\"1\"/>");
+        assert_eq!(
+            t.attributes(t.root()),
+            [
+                ("xmlns:q".to_owned(), "u".to_owned()),
+                ("q:k".to_owned(), "a&b".to_owned()),
+                ("z".to_owned(), "1".to_owned()),
+            ]
+        );
     }
 
     #[test]

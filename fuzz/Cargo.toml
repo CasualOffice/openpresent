@@ -31,6 +31,20 @@ doc = false
 bench = false
 
 [[bin]]
+name = "part_name"
+path = "fuzz_targets/part_name.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "markup_compatibility"
+path = "fuzz_targets/markup_compatibility.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "xml_walker"
 path = "fuzz_targets/xml_walker.rs"
 test = false

@@ -122,6 +122,20 @@ def vba_deck():
         ("http://schemas.microsoft.com/office/2006/relationships/vbaProject", "vbaProject.bin"))))
 
 
+def strict(entries):
+    """Transitional to Strict by namespace mapping alone. **Synthetic:** nothing here
+    was saved by PowerPoint, so it shows we follow the schema, not what Office writes."""
+    pairs = [(T, "http://purl.oclc.org/ooxml/officeDocument/relationships"),
+             ("http://schemas.openxmlformats.org/drawingml/2006/main", "http://purl.oclc.org/ooxml/drawingml/main"),
+             ("http://schemas.openxmlformats.org/presentationml/2006/main", "http://purl.oclc.org/ooxml/presentationml/main")]
+    out = []
+    for name, data in entries:
+        for transitional, mapped in pairs:
+            data = data.replace(transitional, mapped)
+        out.append((name, data))
+    return out
+
+
 def fixtures():
     bomb_laughs = (f'<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">'
                    f'<!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">]><p:presentation {NS}>&c;</p:presentation>')
@@ -142,6 +156,25 @@ def fixtures():
     # Relationships spelled in a different case from the entries.
     cased = [(n.replace("ppt/slides/slide1", "ppt/Slides/Slide1"), d) for n, d in deck()]
     yield "generated/case-differs.pptx", zipped(cased), "open"
+
+    # OPC-01: one part, spelled differently by its relationship and its ZIP item.
+    yield "generated/percent-encoded-names.pptx", zipped(deck(
+        slide_rels=[("image", "../media/my image.png"), ("image", "../media/é.png"), ("slide", "slide 2.xml")],
+        parts=[("ppt/media/my%20image.png", png), ("ppt/media/%C3%A9.png", png),
+               ("ppt/slides/slide%202.xml", f"{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}</p:spTree></p:cSld></p:sld>"),
+               ("ppt/slides/_rels/slide%202.xml.rels", rels(("image", "../media/my%20image.png")))])), "open"
+    yield "generated/percent-encoded-targets.pptx", zipped(deck(
+        slide_rels=[("image", "../media/my%20image.png"), ("image", "../media/%c3%a9.png")],
+        parts=[("ppt/media/my image.png", png), ("ppt/media/é.png", png)])), "open"
+    # MCE-01: a Choice this engine does not understand, in front of a valid Fallback.
+    mc_ns = ('xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+             'xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" mc:Ignorable="p14"')
+    alternate = (f'<mc:AlternateContent><mc:Choice Requires="p14"><p14:notInAnySchema/></mc:Choice>'
+                 f'<mc:Fallback>{TITLE % "Fallback"}</mc:Fallback></mc:AlternateContent>')
+    yield "generated/mce-alternate-content.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
+        f'{DECL}<p:sld {NS} {mc_ns}><p:cSld p14:ignored="1"><p:spTree>{TREE}{alternate}</p:spTree></p:cSld></p:sld>')), "open"
+    # STRICT-01: synthetic. The name says so, since no PowerPoint-saved Strict deck exists here yet.
+    yield "generated/strict-synthetic.pptx", zipped(strict(deck(2))), "open"
 
     hostile = {
         "doctype-billion-laughs": (zipped(replace(deck(), "ppt/presentation.xml", bomb_laughs)), "refuse:CS-XML-0005"),
@@ -165,6 +198,11 @@ def fixtures():
         "path-traversal": (zipped(deck(parts=[("../../etc/evil.xml", "<a/>")])), "refuse:CS-PKG-0004"),
         "case-colliding-parts": (zipped(deck(parts=[("PPT/PRESENTATION.XML", "<a/>")])), "refuse:CS-PKG-0007"),
         "zip-bomb": (zipped(deck(parts=[("ppt/media/bomb.bin", b"\0" * (64 << 20))])), "refuse:CS-PKG-0003"),
+        "percent-equivalent-parts": (zipped(deck(parts=[("ppt/media/a b.png", png), ("ppt/media/a%20b.png", b"other")])), "refuse:CS-PKG-0007"),
+        "mce-must-understand-unknown": (zipped(replace(deck(), "ppt/presentation.xml", f'{DECL}<p:presentation {NS} xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:unknown" mc:MustUnderstand="x"/>')), "refuse:CS-MCE-0001"),
+        "mce-nonconformant-main": (zipped(replace(deck(), "ppt/presentation.xml", f'{DECL}<p:presentation {NS} xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="undeclared"/>')), "open CS-FND-0012"),
+        "rel-percent-traversal": (zipped(deck(slide_rels=[("image", "../%2e%2e/%2e%2e/etc/passwd"), ("image", "..%2f..%2fetc%2fpasswd"), ("image", "%252e%252e/x.png"), ("image", "%c0%ae%c0%ae/x.png"), ("image", "..\\..\\x.png")])), "open CS-FND-0011"),
+        "part-name-undecodable": (zipped(deck(parts=[("ppt/media/%ff.png", png)])), "open CS-FND-0005 CS-FND-0011"),
         # These open: nothing is followed, and the report names them.
         "external-image-tracking": (zipped(deck(slide_rels=[("image", "https://tracker.example/pixel.png", "External")])), "open CS-FND-0001"),
         "external-image-unc-ntlm": (zipped(deck(slide_rels=[("image", "\\\\attacker.example\\share\\a.png", "External")])), "open CS-FND-0001"),

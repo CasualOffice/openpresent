@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- opc-coreProperties.xsd imports Dublin Core from the network, and F4 has none. -->
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+  <system systemId="http://dublincore.org/schemas/xmls/qdc/2003/04/02/dc.xsd" uri="dublin-core/dc.xsd"/>
+  <system systemId="http://dublincore.org/schemas/xmls/qdc/2003/04/02/dcterms.xsd" uri="dublin-core/dcterms.xsd"/>
+  <uri name="http://dublincore.org/schemas/xmls/qdc/2003/04/02/dc.xsd" uri="dublin-core/dc.xsd"/>
+  <uri name="http://dublincore.org/schemas/xmls/qdc/2003/04/02/dcterms.xsd" uri="dublin-core/dcterms.xsd"/>
+</catalog>

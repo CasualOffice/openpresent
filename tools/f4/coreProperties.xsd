@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- opc-coreProperties.xsd is vendored unmodified, and imports the xml: namespace with
+     no location. Importing that namespace first gives it one, without touching the file. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="dublin-core/xml.xsd"/>
+  <xs:import namespace="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+             schemaLocation="../../schemas/opc/opc-coreProperties.xsd"/>
+</xs:schema>
