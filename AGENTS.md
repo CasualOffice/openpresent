@@ -1,6 +1,6 @@
 # AGENTS.md — Agent contract for OpenSlide
 
-Read this in full before doing anything else. "OpenSlide" is a working name
+Read this in full before doing anything else. Working rules, engineering standards and skills are in [CLAUDE.md](CLAUDE.md). "OpenSlide" is a working name
 (`DEC-01`); crates use the prefix `casual-slide-`, which does not depend on it.
 
 ## Repository boundary

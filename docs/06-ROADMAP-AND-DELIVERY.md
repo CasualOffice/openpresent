@@ -1,131 +1,184 @@
 # 06 — Roadmap and delivery
 
-**This is an enterprise product, not an MVP.** There is no "good enough for a demo"
-milestone. A phase closes on its exit gate, never because code exists, and it does not
-close with a checklist row unaccounted for.
+**This is an enterprise product, not an MVP.** The rules for opening and closing are in
+[05](05-PHASES-AND-TASKS.md). Each phase below is a charter: what it gives, what opens it, what is in and
+out, and what closes it.
 
-**Order follows the owner's priority (2026-11-07):** fidelity is the most critical thing, so
-import, export and modelling come first, then layout and rendering, and only then the editor.
-An editor over a lossy engine would have to be rebuilt; the reverse never needs to happen.
+**Order follows the owner's priority (2026-11-07):** fidelity is the most critical thing, so import, export and
+modelling come first, then layout and rendering, then the editor. **Web and desktop are both first-class** (`DEC-06`).
 
-```
- 0 Foundation ─▶ 1 Model, import, export ─▶ 2 Layout and render ─▶ 3 Viewer
-                                                                    │
-      10 Enterprise and hosts ◀─ 9 Collaboration ◀─ 8 Slide show ◀─ 4–7 Editing
-```
+**No dates.** Row counts measure surface, not effort. Tiers 1A to 1D calibrate throughput, and the rest is sized from that.
 
-Security ([07](07-SECURITY-THREAT-MODEL.md)) and enterprise requirements
-([10](10-ENTERPRISE-REQUIREMENTS.md)) are not a phase at the end. Each phase's gate includes them.
+## Where things stand
 
-**No dates yet.** Row counts below measure surface, not effort, and an estimate today would be
-invented. Tiers 1A to 1D are the calibration: after them, the remaining tiers can be sized from
-measured throughput.
+| Phase | State | Note |
+| --- | --- | --- |
+| D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
+| 0 Foundation | **Open** | CI has never run, and a remote is needed (`DEC-09`) |
+| 1 Model, import, export | **Open under waiver W-1** | 1A, 1B, 1C, 1E started |
+| 2 to 10 | Not opened | `SPK-01` and the fidelity tools are Phase 0 work feeding Phase 2 |
+
+### Waivers
+
+| ID | Criterion not met | Risk | Accepted | If it fails |
+| --- | --- | --- | --- | --- |
+| W-1 | Phase 1 opened before Phase 0 closed: CI not run, no PowerPoint-written decks | Code written against decks only we and LibreOffice wrote; failures on other platforms found late | Owner's "proceed", 2026-11-07 | Fix in tier; Phase 1 still cannot close without these |
+
+## Phase D — Design
+
+- **Gives:** an agreed design, so that later phases need no do-over.
+- **Opens:** project start.
+- **In:** architecture, layering, model and op design, threat model, enterprise requirements, feature study, spec checklist, process.
+- **Out:** product code.
+- **Closes when:**
+  - [ ] Every ADR needed by Phases 0 to 2 is Accepted or has a named spike deciding it.
+  - [ ] Each `DEC-*` is answered, or the owner has marked it as not blocking and named the phase that needs it.
+  - [ ] The doc audit's P0 and P1 findings are fixed (`DOC-003`), and the gap analysis is dispositioned (`DOC-004`).
+  - [ ] Owner sign-off.
 
 ## Phase 0 — Foundation
 
-| Deliver | Gate |
-| --- | --- |
-| Workspace, `-package`, `-text` copied from OpenCalc | Done locally; see `F-001`, `F-002` |
-| Spec checklist generated from the schemas | Done; `--check` fails on staleness or an unassigned type |
-| Package threats closed | Done for `SEC-P01` to `SEC-P07`; each test seen red |
-| CI, `check-*` gates, pre-commit hook, `cargo deny`, `cargo audit` | Green on three platforms; a seeded violation fails each gate |
-| Fuzz targets ported from OpenCalc | Campaign with no crash |
-| Fixture corpus, with rights review and checksums | Manifest gate; see [51](51-SPEC-CHECKLIST-AND-FIDELITY.md) §Corpus |
-| Fidelity oracle pipeline (`SPK-02`) | 5 decks end to end |
-| WASM text cost (`SPK-01`) | Numbers recorded; ADR-004 and ADR-005 settled |
+- **Gives:** a repository where a broken change cannot land unnoticed.
+- **Opens:** Phase D's architecture ADRs Accepted.
+- **In:** workspace, copied crates, package security, fixtures, CI, fuzz, spikes.
+- **Out:** presentation semantics.
+- **Closes when:**
+  - [x] Package threats `SEC-P01`–`P07`, `P12`, `P13` have tests seen red. Evidence: `SEC-010`, `SEC-013`.
+  - [x] Spec checklist generated, and fails on an unassigned type. Evidence: `SPEC-05`.
+  - [ ] CI green on three platforms, with a seeded violation seen failing each job (`F-003`, `DEC-09`).
+  - [ ] Fixture corpus includes PowerPoint-written decks, with rights recorded (`F-004`, `DEC-04`).
+  - [ ] `SPK-01` reported; ADR-004 and ADR-005 settled.
+  - [ ] `SPK-02` runs 5 decks end to end, with at least one PowerPoint reference (`DEC-04`).
+  - [ ] Owner sign-off.
 
 ## Phase 1 — Model, import, export
 
-**The priority.** Everything in a `.pptx` is read into the model or retained, and written back.
-Nothing is drawn yet except by the debug dump. Tiers are ordered by dependency; rows are from
-[spec/README.md](spec/README.md).
+- **Gives:** any `.pptx` opens and saves with nothing lost, and every construct is accounted for. **No UI, and nothing drawn.**
+- **Opens:** Phase 0 closed, or a waiver. Currently W-1.
+- **In:** every row in [spec/](spec/README.md), by tier below; behaviours BEH-01 to 04, 18, 21, 22, 24 in [51](51-SPEC-CHECKLIST-AND-FIDELITY.md).
+- **Out:** rendering; UI; edit operations beyond what round-trip tests need. Legacy `.ppt` (`DEC-08`), `.odp` (Phase 10).
 
-| Tier | Scope | Rows | Needs |
+| Tier | Scope | Rows | Opens after |
 | --- | --- | ---: | --- |
-| **1A** | OPC: content types, relationships, part graph, core/app/custom properties, thumbnails, signatures (retained), shared value types, Strict and Transitional namespaces. Byte-identical repackager | 392 | — |
-| **1B** | Presentation part: slide and master lists, sizes, defaults, sections-ready lists, embedded fonts, custom shows, show and print properties, saved view state | 297 | 1A |
-| **1C** | Themes, 3 colour models, all colour transforms, colour maps and overrides, format schemes, object defaults | 473 | 1A |
-| **1D** | Masters, layouts, slides, notes, handouts, backgrounds, placeholders, shape tree, groups, connectors, locks, links, stable ids. `-style` inheritance resolver | 564 | 1B, 1C |
-| **1E** | Geometry (187 presets, custom paths, guides), fills, lines, effects, 3D properties | 1082 | 1D |
-| **1F** | Text bodies, paragraphs, runs, fields, lists, tabs, autofit properties | 317 | 1D |
-| **1G** | Tables and table styles | 113 | 1F |
-| **1H** | Pictures, SVG, crops, audio, video, external media references | 116 | 1E |
-| **1I** | Timing tree, transitions (base and extension), Morph, build lists | 522 | 1D |
-| **1J** | Charts, chart styles, 2016+ chart types, embedded workbooks retained | 1764 | 1E, 1F |
-| **1K** | SmartArt data and drawing parts, equations, ink | 1263 | 1E, 1F |
-| **1L** | OLE, ActiveX, VML, 3D models: retained with fallback images | 951 | 1H |
-| **1M** | Comments legacy and modern, change tracking, sections, zoom, classification, tags, custom XML | 876 | 1D |
-| | **Total** | **8730** | |
+| **1A** | OPC: content types, relationships, part graph, properties, signatures retained, Strict and Transitional, repackager | 392 | — |
+| **1B** | Presentation part, view state | 297 | 1A |
+| **1C** | Colour, themes | 473 | 1A |
+| **1D** | Masters, layouts, slides, notes, handouts, placeholders, shape tree, `-style` resolver | 564 | 1B, 1C |
+| **1E** | Geometry, fills, lines, effects, 3D | 1082 | 1D for import; the geometry engine itself is standalone |
+| **1F** | Text model | 317 | 1D |
+| **1G** | Tables | 113 | 1F |
+| **1H** | Pictures, SVG, media | 116 | 1E |
+| **1I** | Timing, transitions | 522 | 1D |
+| **1J** | Charts, 2016+ charts | 1764 | 1E, 1F |
+| **1K** | SmartArt, equations, ink | 1263 | 1E, 1F |
+| **1L** | OLE, VML, 3D models, retained with fallback | 951 | 1H |
+| **1M** | Comments, review, sections, zoom, labels, tags, custom XML | 876 | 1D |
 
-**Tiers 1E to 1M can run in parallel** once 1D holds, since each owns a separate area of the model.
+**A tier closes when:**
+1. Every in-scope row is `y` or `r` for model, import and export, or has a named reason, and the audit tool agrees.
+2. Each `y` row has a fixture exercising it.
+3. Unedited save is byte-identical. An edit changes only named nodes of named parts.
+4. Import → export → import is a fixed point.
+5. Edited XML validates against the vendored schemas.
+6. The report names everything not modelled, and a silent drop fails a test.
+7. New limits have hostile fixtures; each new parser has a fuzz target.
 
-**Per-tier gate, every tier:**
-1. Every row in scope is `y` or `r` for model, import and export, or carries a named reason.
-2. Unedited save is byte-identical. A one-edit save leaves all other parts byte-identical.
-3. Import → export → import is a fixed point.
-4. Exported XML validates against the vendored schemas.
-5. The compatibility report names everything not modelled. A silent drop fails CI.
-6. New limits have hostile fixtures; a fuzz target covers each new parser.
-
-**Phase 1 exit:** the corpus passes all of the above, and PowerPoint reopens every exported deck
-without a repair prompt. That last check needs PowerPoint (`DEC-04`), and the phase cannot close without it.
+**Phase 1 closes when:**
+- [ ] All tiers closed.
+- [ ] **PowerPoint reopens every exported corpus deck with no repair prompt** (F5, `DEC-04`).
+- [ ] Corpus includes real decks from PowerPoint on Windows and Mac, Keynote and Google Slides, with rights recorded.
+- [ ] A 500-slide deck opens within its budget, and a hostile corpus run shows no crash or hang.
+- [ ] Owner sign-off.
 
 ## Phase 2 — Layout and render
 
-Headless `deck → PNG` and `deck → PDF`. Fidelity is measured here, per
-[51](51-SPEC-CHECKLIST-AND-FIDELITY.md), before any UI hides it.
+- **Gives:** any deck renders headlessly to PNG and PDF, with fidelity measured, before a UI can hide problems.
+- **Opens:** 1D and the tier feeding each sub-tier closed; ADR-004 and ADR-005 settled.
+- **In:** tiers below; behaviours BEH-05 to 20. **Out:** UI, canvas, editing, animation playback.
 
-| Tier | Scope | Needs |
+| Tier | Scope | Opens after |
 | --- | --- | --- |
-| **2A** | Slide size, master and layout composition, background, theme resolution | 1D |
-| **2B** | All 187 presets, custom paths, fills, lines, arrowheads, group transforms, flips | 1E |
-| **2C** | Shadow, glow, soft edge, reflection, blur, blip effects, flattened 3D | 1E |
-| **2D** | **The text engine:** fonts and fallback, shaping, bidi, line breaking, CJK rules, spacing, tabs, bullets, columns, vertical text, autofit, WordArt warps | 1F |
-| **2E** | Tables, pictures, crops, SVG, poster frames | 1G, 1H |
-| **2F** | Charts, 2016+ charts, SmartArt from its drawing, equations, ink, fallback images | 1J–1L |
-| **2G** | PDF: real text, subset fonts, links, tagged structure; JPEG per slide; print layouts for slides, notes, handouts | 2A–2F |
+| **2A** | Slide composition, master and layout, background, theme | 1D |
+| **2B** | Presets, custom paths, fills, lines, group transforms | 1E |
+| **2C** | Effects, flattened 3D | 1E |
+| **2D** | **Text engine:** fonts, shaping, bidi, line breaking, CJK, tabs, bullets, columns, vertical text, autofit, warps | 1F, `SPK-01` |
+| **2E** | Tables, pictures, SVG, EMF | 1G, 1H |
+| **2F** | Charts, SmartArt, equations, ink, fallbacks | 1J, 1K, 1L |
+| **2G** | PDF, JPEG, print layouts | 2A to 2F |
 
-**Exit:** every corpus deck is within its pixel threshold, every behaviour row in 51 has a passing
-fixture, and the budgets in [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md) hold.
+**Closes when:**
+- [ ] Each corpus deck is within its threshold against a **PowerPoint** reference (F6), with thresholds recorded per fixture.
+- [ ] Each behaviour row has a passing fixture.
+- [ ] Budgets in [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md) replaced with measurements and asserted.
+- [ ] Output identical on Linux, macOS and Windows.
+- [ ] No network capability in the render path, shown by a test.
+- [ ] Owner sign-off.
 
 ## Phase 3 — Viewer
 
-WASM bridge; Canvas2D painter matching the PNG backend within threshold; shell, thumbnail rail,
-status bar, zoom; Normal, Sorter, Reading views; notes pane; accessible DOM of the slide; CSP.
-**Exit:** browser smoke on a real deck; painter-versus-PNG gate; 500-slide budget; WCAG 2.2 AA audit of the shell.
+- **Gives:** a browser and a Tauri desktop window open a real deck, with thumbnails, views and zoom, and no editing.
+- **Opens:** Phase 2 closed; `UX-001` measured and the shell prototype approved by the owner.
+- **In:** WASM bridge, Canvas2D painter, native desktop path, shell, rail, status bar, Normal, Sorter, Reading views, notes pane, accessible DOM, CSP.
+- **Out:** every edit.
+- **Closes when:**
+  - [ ] Painter matches the PNG backend within threshold; web and desktop agree.
+  - [ ] Browser smoke in CI on the published matrix; desktop bundles on three platforms.
+  - [ ] 500-slide budget met.
+  - [ ] WCAG 2.2 AA audit of the shell, with screen reader and keyboard-only passes.
+  - [ ] XSS and link threats (`SEC-E01`, `SEC-E03`, `SEC-N03`) tested.
+  - [ ] Owner sign-off.
 
 ## Phases 4 to 7 — Editing
 
-| Phase | Scope | Exit |
-| --- | --- | --- |
-| **4 Objects** | Op set and undo; select, move, resize, rotate, adjust handles; smart guides; group; arrange; selection pane; insert shape and picture; slide operations; sections; format panes; ribbon Home, Insert, Shape Format, Picture Format; context menus | Every op inverse-tested; drag budget on the adversarial slide; UI status filled for every in-scope row |
-| **5 Text** | Caret, selection, IME, rich formatting, lists, autofit on edit, find and replace, spell-check seam, links | IME matrix; RTL and CJK fixtures; typing budget |
-| **6 Rich objects** | Tables including merge and split; charts with data editing through the OpenCalc SDK; SmartArt; equations; WordArt; audio and video with trim; ink | Round-trip per construct after editing |
-| **7 Design** | Themes, variants, background, slide size, **master and layout editing** | Master edit propagates and round-trips; theme swap fixtures |
+**Common entry:** the previous editing phase closed, plus the prerequisites below. **Common exit:** the op set is inverse-tested,
+the UI status is filled for every in-scope checklist row, a PowerPoint user test passes (F8) for the phase's verbs, keyboard and screen
+reader work for every new verb, and the owner signs.
+
+| Phase | Gives | Opens after | In | Out | Extra exit criteria |
+| --- | --- | --- | --- | --- | --- |
+| **4 Objects** | Build a deck from shapes and pictures | 3 | Op set, undo, select, transform, guides, group, arrange, selection pane, insert shape and picture, slide ops, sections, format panes, Home, Insert, Shape Format, Picture Format | Text editing | Drag budget on adversarial slide |
+| **5 Text** | Type and format, in any script | 4 | Caret, selection, IME, formatting, lists, autofit on edit, find and replace, spell seam, links | Tables, charts | IME matrix; RTL and CJK; typing budget |
+| **6 Rich objects** | Tables, charts, SmartArt, equations, media, ink | 5, 2F | Each, with Format tabs; chart data through the OpenCalc SDK | Slide show | Round-trip per construct after edit |
+| **7 Design** | Themes, masters, layouts | 6 | Themes, variants, background, slide size, master and layout editing | — | Master edit propagates and round-trips |
 
 ## Phase 8 — Slide show
 
-Timeline compiler; all transitions in the checklist including the extension set and Morph; all
-animation classes, triggers, motion paths; animation pane; presenter view; custom shows;
-rehearsed timings; self-running and kiosk; narration playback; zoom objects. **Exit:** deterministic
-timeline goldens; 60 fps on the animation corpus; presenter sync test.
+- **Gives:** a deck presents as it does in PowerPoint, with presenter view, on web and desktop.
+- **Opens:** 1I and Phase 7 closed.
+- **In:** timeline, all transitions, Morph, all animation classes, triggers, motion paths, animation pane, presenter view, custom shows, timings, kiosk, narration playback, zoom.
+- **Out:** recording new narration, unless the gap analysis adds it.
+- **Closes when:**
+  - [ ] Deterministic timeline goldens for each timing construct, compared with PowerPoint video or stepwise references.
+  - [ ] 60 fps on the animation corpus on a named device.
+  - [ ] Presenter sync test; owner sign-off.
 
 ## Phase 9 — Collaboration
 
-Forked server behind an engine trait, opening with a read-only audit; OT per
-[24](24-OPERATIONS-AND-COLLABORATION.md); presence; modern comments, mentions, reactions, tasks;
-version history; revision highlighting. **Exit:** two real browsers in CI; TP1 property tests; resume with no lost edit; load test.
+- **Gives:** people co-edit one deck reliably.
+- **Opens:** Phases 4 to 7 op sets stable; read-only audit of OpenCalc's server done.
+- **In:** forked server, OT per [24](24-OPERATIONS-AND-COLLABORATION.md), presence, modern comments, version history.
+- **Out:** WOPI and hosting product work.
+- **Closes when:**
+  - [ ] TP1 property tests over every op; a fuzz target on the wire format.
+  - [ ] Two real browsers in CI; resume with no lost edit; leader failover tested.
+  - [ ] Published load-test numbers on a named environment.
+  - [ ] `SEC-S01`, `S02`, `S03`, `S05`, `S06` tested; owner sign-off.
 
 ## Phase 10 — Enterprise and hosts
 
-Everything in [10](10-ENTERPRISE-REQUIREMENTS.md) not already delivered: SSO, audit logs, sensitivity
-labels, encrypted files, WOPI, admin, observability, Helm; `<openslide-deck>` SDK; desktop; MCP;
-`.odp`; legacy `.ppt` if `DEC-06` says so. **Exit:** third-party penetration test; WOPI validator; published SBOM; first stable release.
+- **Gives:** an enterprise can deploy and support it. **First stable release.**
+- **Opens:** Phases 8 and 9 closed.
+- **In:** all remaining [10](10-ENTERPRISE-REQUIREMENTS.md) rows, SDK, WOPI, MCP, `.odp`, Helm, release process.
+- **Closes when:**
+  - [ ] Each `ENT-*` row closed with evidence.
+  - [ ] Third-party penetration test; findings closed.
+  - [ ] WOPI validator passes; SBOM and signed releases published.
+  - [ ] No P0 or P1 open; legal review complete (`DEC-07`); owner sign-off.
 
-## What a phase closing means
+## Claims
 
 | Claim | Requires |
 | --- | --- |
-| "Supported" | The row is `y` with a test seen to fail without the code |
-| "Retained" | Bytes compared on a fixture, not assumed |
-| "Matches PowerPoint" | Compared against a PowerPoint-produced reference, not against LibreOffice |
+| "Supported" | A row at `y`, with a test seen to fail without the code |
+| "Retained" | Bytes compared on a fixture |
+| "Matches PowerPoint" | Compared against a PowerPoint-produced reference, never LibreOffice |

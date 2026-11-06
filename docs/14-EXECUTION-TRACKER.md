@@ -1,7 +1,7 @@
 # 14 — Execution tracker
 
-**The only tracker.** Every unit of work has one row. Ids are stable and never
-reused. Status: `Open`, `In progress`, `Blocked`, `Done`.
+**The only tracker.** Ids are stable and never reused. Status: `Open`, `In progress`,
+`Blocked`, `Done`, as defined with Definition of Done in [05](05-PHASES-AND-TASKS.md). Phase state and waivers are in [06](06-ROADMAP-AND-DELIVERY.md).
 
 ## Owner decisions
 
@@ -14,6 +14,7 @@ reused. Status: `Open`, `In progress`, `Blocked`, `Done`.
 | DEC-05 | Build our own Designer and Copilot equivalents? | Open | Not now; keep the seam | Large, separate product decision |
 | DEC-06 | Feature bar where web and desktop differ | Done | Owner, 2026-11-07: **both web and desktop, as OpenCalc.** Full desktop feature bar, web and Tauri desktop hosts. Legacy `.ppt` is `DEC-08` | [48](48-POWERPOINT-FEATURE-STUDY.md) |
 | DEC-08 | Read legacy `.ppt`? | Open | Decide after Phase 2. Large binary format; refused cleanly for now as `CS-OPC-0005` | Microsoft's web converts it |
+| DEC-09 | Create a remote so CI can run | Open | Private repo under `CasualOffice`, name per `DEC-01` | CI has never run. Phase 0 cannot close without it |
 | DEC-07 | Legal review of bundled schemas, fonts, and Microsoft's patent notice | Open | Have counsel read [schemas/README](../schemas/README.md) before the first release | Enterprise buyers will ask; ENT-24 |
 
 ## Phase D
@@ -21,6 +22,11 @@ reused. Status: `Open`, `In progress`, `Blocked`, `Done`.
 | ID | Title | St | Sev | Mechanism | Gate |
 | --- | --- | --- | --- | --- | --- |
 | DOC-001 | Initial design set | Done | P0 | Written 2026-11-07 from a scan of `../opencalc` at `b23c67c` | Owner review, below |
+| DOC-003 | Fix doc audit findings | In progress | P0 | Independent audit running | P0 and P1 fixed; re-check |
+| DOC-004 | Disposition gap analysis | In progress | P0 | Independent analysis running | Each gap has a row, or a stated reason not to |
+| DOC-005 | Phase and task rules | In progress | P0 | [05](05-PHASES-AND-TASKS.md), charters in [06](06-ROADMAP-AND-DELIVERY.md). Needs owner approval | Owner approves |
+| DOC-006 | Working rules and skills | Done | P1 | `CLAUDE.md` holds standards, one-roadmap-one-tracker, document updates. Six project skills in `.claude/skills`. `check-repo.py` refuses a second tracker or plan | Seeded second tracker seen failing |
+| ENG-01 | Enforce standards by lint | Open | P1 | Add `unwrap_used`, `expect_used`, `indexing_slicing`, `missing_docs` for non-test code. Waits for the parallel sessions to merge, since it touches their files. Copied `-text` needs a pass | Clippy passes with the lints on |
 | DOC-002 | Owner review of the remaining ADRs | Open | P0 | ADR-003 Accepted; the rest Proposed | ADRs Accepted or changed |
 | UX-001 | Measure PowerPoint for the web and turn 47 into a measured target | Blocked | P1 | Needs `DEC-04` | Shell prototype approved by owner, as OpenCalc's docs/95 was |
 

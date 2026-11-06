@@ -9,4 +9,5 @@
 .vscode/
 /webapp/pkg/
 node_modules/
-.claude/
+.claude/*
+!.claude/skills/

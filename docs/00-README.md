@@ -4,12 +4,13 @@
 OpenCalc's where a document plays the same role, so the siblings read alike, and
 are never reused.
 
-Read in this order: 01 → 02 → 06 → 51 → 07. Then the pillar you are working on.
+Read in this order: 01 → 02 → 05 → 06 → 51 → 07. Then the pillar you are working on.
 
 | Doc | What it is | Status |
 | --- | --- | --- |
 | [01-ORD](01-ORD.md) | What and why; scope; targets | Draft for owner |
 | [02-ARCHITECTURE](02-ARCHITECTURE.md) | The shape; what is inherited from OpenCalc and what must differ | Draft for owner |
+| [05-PHASES-AND-TASKS](05-PHASES-AND-TASKS.md) | **What a phase, tier and task are; how each opens and closes** | Draft for owner |
 | [06-ROADMAP-AND-DELIVERY](06-ROADMAP-AND-DELIVERY.md) | The full roadmap: phases, tiers, exit gates | Draft for owner |
 | [07-SECURITY-THREAT-MODEL](07-SECURITY-THREAT-MODEL.md) | Every threat, its control, its test | Live |
 | [08-ADR-REGISTER](08-ADR-REGISTER.md) | Decisions | Draft for owner |
