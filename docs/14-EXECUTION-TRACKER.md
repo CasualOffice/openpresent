@@ -161,8 +161,10 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | XML-01 | `XmlTree::attribute` ignores namespace | Open | P1 | A foreign `x:val` shadows `val`, a parser differential. `plain_attribute` added and used by import; the old one remains for others to misuse | Removed or renamed; test |
 | XML-02 | Walker accepts malformed and duplicate attributes | Open | P0 | `<r a/>` passes `walk` and `XmlTree::parse`. `attributes_valid` guards colour reads only, and other readers can disagree about the same bytes | Refused in `walk`; hostile fixture |
 | SPEC-07 | Standard's internal inconsistencies recorded | Done | P2 | `dkSeaGreen` differs from `darkSeaGreen`, `ltGoldenrodYellow` from `lightGoldenrodYellow`, followed as written. Worked examples for `hslClr` 240/100/50, `lumMod` and `blueOff` contradict computation or themselves | Tests pin each |
+| GEOM-01 | Path boolean engine for merge shapes | Open | P1 | In `-geometry`, Phase 4. Must be deterministic like the rest | Golden shapes |
+| D3-01 | 3D model rendering and editing | Open | P2 | **Decided, clone goal:** Edit in Phase 10, Retain with fallback until then. Spec level changed to match | Phase 10 |
 | GOV-01 | Gates, governance and release | Open | P1 | Port OpenCalc's self-test, doc-claims, doc-references, tracker-shape, fuzz-lock, host-seams and post-merge. Add SECURITY, CONTRIBUTING, CHANGELOG, NOTICE. docs/15 for test strategy and release | Phase 0 exit |
-| FIT-01 | Fit-gap for every PowerPoint feature | In progress | P1 | docs/96: Edit, Render, Retain or Refuse for each. Clone goal means Edit unless there is a stated reason | Every feature has a row |
+| FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
 | DGM-01 | SmartArt and equations are Edit | Done | P1 | **Decided**, clone goal. Needs a diagram layout engine and math layout, in 2J and 2K. Missing drawing part defined in docs/36 | Fixture |
 | PDF-01 | Tagged PDF | Done | P1 | Added to 2G | — |

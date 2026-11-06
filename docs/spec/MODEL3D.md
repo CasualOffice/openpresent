@@ -1,6 +1,6 @@
 # MODEL3D: 3D models
 
-Generated. Tier 1L; render 2F; edit -; level Retain. 97 rows.
+Generated. Tier 1L; render 2F; edit 10; level Edit. 97 rows.
 
 
 ## `x:drawing/2017/model3d:CT_PositiveRatio`

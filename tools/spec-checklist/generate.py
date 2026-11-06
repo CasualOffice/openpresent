@@ -55,7 +55,7 @@ AREAS = {
     "INK": ("Ink", "1K", "2F", "6", "Edit"),
     "OLE": ("OLE, ActiveX, embedded objects", "1L", "2F", "-", "Retain"),
     "VML": ("Legacy VML", "1L", "2F", "-", "Retain"),
-    "MODEL3D": ("3D models", "1L", "2F", "-", "Retain"),
+    "MODEL3D": ("3D models", "1L", "2F", "10", "Edit"),
     "COMMENT": ("Comments, legacy and modern", "1M", "-", "9", "Edit"),
     "REVIEW": ("Change tracking and revision info", "1M", "-", "9", "Retain"),
     "EXT": ("PowerPoint extensions: sections, zoom, classification", "1M", "2F", "8", "Edit"),

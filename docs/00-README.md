@@ -30,3 +30,4 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [49-POWERPOINT-COMMAND-INVENTORY](49-POWERPOINT-COMMAND-INVENTORY.md) | Every PowerPoint command, from Microsoft's control-ID workbook (2024) and public sources. Desktop strong; web thin | Live |
 | [50-POWERPOINT-UX-STUDY](50-POWERPOINT-UX-STUDY.md) | How PowerPoint behaves, and 24 rules for our shell. From public sources; no live session | Live |
 | [52-COMPETITOR-STUDY](52-COMPETITOR-STUDY.md) | What other editors learned; 17 ranked fidelity problems as fixture candidates | Live |
+| [96-POWERPOINT-FIT-GAP](96-POWERPOINT-FIT-GAP.md) | Every PowerPoint feature (318) with a disposition, phase and reason | Live |

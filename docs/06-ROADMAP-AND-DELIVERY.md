@@ -150,8 +150,8 @@ reader work for every new verb, and the owner signs.
 
 | Phase | Gives | Opens after | In | Out | Extra exit criteria |
 | --- | --- | --- | --- | --- | --- |
-| **4 Objects** | Build a deck from shapes and pictures | 3 | Op set, undo, select, transform, guides, group, arrange, selection pane, insert shape and picture, slide ops, reuse slides, sections, format panes, Home, Insert, Shape Format, Picture Format, accessibility checker, **autosave and recovery** | Text editing | Drag budget on adversarial slide; a crash loses nothing (`SAVE-01`) |
-| **5 Text** | Type and format, in any script | 4 | Caret, selection, IME, formatting, lists, autofit on edit, find and replace, spell seam, links | Tables, charts | IME matrix; RTL and CJK; typing budget |
+| **4 Objects** | Build a deck from shapes and pictures | 3 | Op set, undo, select, transform, guides, group, arrange, selection pane, insert shape and picture, slide ops, reuse slides, merge shapes, eyedropper, sections, format panes, Home, Insert, Shape Format, Picture Format, accessibility checker, **autosave and recovery** | Text editing | Drag budget on adversarial slide; a crash loses nothing (`SAVE-01`) |
+| **5 Text** | Type and format, in any script | 4 | Caret, selection, IME, formatting, lists, autofit on edit, find and replace, spell seam, links, outline view, notes page view | Tables, charts | IME matrix; RTL and CJK; typing budget |
 | **6 Rich objects** | Tables, charts, SmartArt, equations, media, ink | 5, 2F | Each, with Format tabs; chart data through the OpenCalc SDK | Slide show | Round-trip per construct after edit |
 | **7 Design** | Themes, masters, layouts | 6 | Themes, variants, background, slide size, master and layout editing | — | Master edit propagates and round-trips |
 
@@ -160,7 +160,7 @@ reader work for every new verb, and the owner signs.
 - **Gives:** a deck presents as it does in PowerPoint, with presenter view, on web and desktop.
 - **Opens:** playback (8A) after 1I and Phase 3; authoring (8B) after Phase 4. Theme editing is not a dependency.
 - **In:** timeline, all transitions, Morph, all animation classes, triggers, motion paths, animation pane, presenter view, custom shows, timings, kiosk, narration playback, zoom.
-- **Out:** recording new narration, unless the gap analysis adds it.
+- **Out:** nothing recordable: narration, timings, screen recording and video or GIF export are in 8B ([96](96-POWERPOINT-FIT-GAP.md)).
 - **Closes when:**
   - [ ] Deterministic timeline goldens for each timing construct, against the documented semantics in BEH-23.
   - [ ] 60 fps on the animation corpus on a named device.
@@ -182,7 +182,7 @@ reader work for every new verb, and the owner signs.
 
 - **Gives:** an enterprise can deploy and support it. **First stable release.**
 - **Opens:** Phases 8 and 9 closed.
-- **In:** all remaining [10](10-ENTERPRISE-REQUIREMENTS.md) rows, SDK, WOPI, MCP, `.odp`, import of legacy `.ppt` (`PPT-01`), Helm, release process.
+- **In:** all remaining [10](10-ENTERPRISE-REQUIREMENTS.md) rows, SDK, WOPI, MCP, `.odp`, import of legacy `.ppt` (`PPT-01`), 3D model rendering and editing (`D3-01`), Helm, release process.
 - **Closes when:**
   - [ ] Each `ENT-*` row closed with evidence.
   - [ ] Third-party penetration test; findings closed.
