@@ -487,7 +487,11 @@ def run_xmllint(schema, jobs, workdir):
     """Validate many files against one schema, in one process: compiling is the slow part.
     Returns {path: (status, [messages])}."""
     environment = {"PATH": os.environ.get("PATH", ""), "XML_CATALOG_FILES": str(CATALOG)}
-    paths = [str(p) for p in jobs]
+    # Bare names, run in the directory that holds them. xmllint reports a file under the
+    # name it parsed, and on Windows it writes a full path with `/` for `\`, so a full
+    # path given here matched its verdict but none of its messages.
+    paths = [pathlib.Path(p).name for p in jobs]
+    assert all(pathlib.Path(workdir) / name == pathlib.Path(p) for name, p in zip(paths, jobs))
     done = subprocess.run(
         ["xmllint", "--noout", "--nonet", "--schema", str(SCHEMAS / schema), *paths],
         capture_output=True, text=True, errors="replace", env=environment, cwd=workdir, timeout=600, check=False)
@@ -510,7 +514,7 @@ def run_xmllint(schema, jobs, workdir):
             break
     for p in paths:
         results.setdefault(p, ("schema-error", [f"xmllint gave no verdict, exit {done.returncode}"]))
-    return results
+    return {str(pathlib.Path(workdir) / name): result for name, result in results.items()}
 
 
 def is_xml_part(name):
