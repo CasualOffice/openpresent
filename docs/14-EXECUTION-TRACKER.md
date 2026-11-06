@@ -95,7 +95,7 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | --- | --- | --- | --- | --- | --- |
 | T-1A | Package, part graph, repackager | In progress | P0 | Structure, findings and repackager built ([28](28-PACKAGE-AND-PART-GRAPH.md)). Properties parts not modelled yet | Per-tier gate in 06 |
 | T-1B | Presentation part, view state | Open | P0 | 297 rows | Per-tier gate |
-| T-1C | Colour and theme | Open | P0 | 473 rows | Per-tier gate |
+| T-1C | Colour and theme | In progress | P0 | Model, import and export built and merged; 236 workspace tests pass. Audit: code references 314 COLOR and 159 THEME rows partly. Remaining: `COLOR-01`, `COLOR-02`, `COLOR-03`, effect reference, format scheme internals, object defaults, `themeManager` | Per-tier gate in 06 |
 | T-1D | Slides, masters, layouts, shape tree, `-style` | Open | P0 | 564 rows | Per-tier gate |
 | T-1E | Geometry, fills, lines, effects, 3D | Open | P0 | 1082 rows | Per-tier gate |
 | T-1F | Text model | Open | P0 | 317 rows | Per-tier gate |
@@ -155,6 +155,12 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | THR-01 | Threshold ceilings | Open | P1 | Class ceilings, a ratchet, unwaivable structural checks | Applied in 51 |
 | DT-01 | Desktop plan | Open | P1 | Tauri notes, signing identities, updater, file associations. Fix 19's Phase 10 against 06's Phase 3 | Phase 3 |
 | PROC-01 | Check worker gate workarounds | Done | P1 | A worker met the README link failure and temporarily symlinked a sibling in a shared directory. It used no `--no-verify`, but was not authorised to, and it worked around a gate. Root cause fixed in `77354d1`, link removed and checked gone. Worker brief now says a failing gate is reported, never routed around | `openslide-worker` skill |
+| COLOR-01 | Finish Tier 1C security | Open | P1 | Skill requires a fuzz target, hostile fixtures and limits in `OoxmlLimits`; caps are constants so far (64 transforms). In-test byte mutation is no substitute | Target runs clean; fixtures seen red |
+| COLOR-02 | Colour arithmetic left open by the standard | Open | P1 | `inv` encoded against LibreOffice's linear, `gray` weights, gamma transfer, `hueMod` clamp, half-up rounding, HSL state, `sysClr` fallback from Windows defaults recalled from memory, `masterClrMapping` chain. Each pinned by an `open_*` test. BEH-03, BEH-04 | Settled by `PV-01` or `F-007` |
+| COLOR-03 | Four `lumMod` 50% values differ by one step from recalled PowerPoint palette | Open | P2 | `ED7D31`, `A5A5A5`, `FFC000`, `70AD47`. The PowerPoint values are from memory. The standard's own examples contradict each other on rounding | A real Office theme via `F-007` |
+| XML-01 | `XmlTree::attribute` ignores namespace | Open | P1 | A foreign `x:val` shadows `val`, a parser differential. `plain_attribute` added and used by import; the old one remains for others to misuse | Removed or renamed; test |
+| XML-02 | Walker accepts malformed and duplicate attributes | Open | P0 | `<r a/>` passes `walk` and `XmlTree::parse`. `attributes_valid` guards colour reads only, and other readers can disagree about the same bytes | Refused in `walk`; hostile fixture |
+| SPEC-07 | Standard's internal inconsistencies recorded | Done | P2 | `dkSeaGreen` differs from `darkSeaGreen`, `ltGoldenrodYellow` from `lightGoldenrodYellow`, followed as written. Worked examples for `hslClr` 240/100/50, `lumMod` and `blueOff` contradict computation or themselves | Tests pin each |
 | GOV-01 | Gates, governance and release | Open | P1 | Port OpenCalc's self-test, doc-claims, doc-references, tracker-shape, fuzz-lock, host-seams and post-merge. Add SECURITY, CONTRIBUTING, CHANGELOG, NOTICE. docs/15 for test strategy and release | Phase 0 exit |
 | FIT-01 | Fit-gap for every PowerPoint feature | In progress | P1 | docs/96: Edit, Render, Retain or Refuse for each. Clone goal means Edit unless there is a stated reason | Every feature has a row |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
