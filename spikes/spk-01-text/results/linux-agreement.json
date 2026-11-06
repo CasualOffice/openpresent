@@ -1,0 +1,223 @@
+[
+ {
+  "name": "Latin (Carlito)",
+  "clusters": 1910,
+  "engine_width": 13171.5546875,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": 60.4453125,
+   "kerning=normal textRendering=auto": 60.4453125,
+   "kerning=auto textRendering=optimizeLegibility": 60.4453125,
+   "kerning=auto textRendering=geometricPrecision": 0
+  },
+  "first_divergence": {
+   "at_char": 1,
+   "context": "mar"
+  },
+  "cluster_adv_differs_gt_0_01px": 1910,
+  "cluster_adv_mean_abs": 0.335221695026178,
+  "cluster_adv_max": 1.625,
+  "words": 288,
+  "word_adv_differs_gt_0_05px": 284,
+  "word_adv_max": 1.859375,
+  "shape": {
+   "plain": {
+    "distinct": 48,
+    "distinct_wrong_form": 0,
+    "occurrences": 1623,
+    "occurrences_wrong_form": 0,
+    "min_coverage": {
+     "n": 48,
+     "median": 1,
+     "p95": 1,
+     "min": 1,
+     "max": 1
+    },
+    "examples": []
+   }
+  }
+ },
+ {
+  "name": "Latin (Liberation Sans)",
+  "clusters": 2000,
+  "engine_width": 14280.9921875,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": -86.9921875,
+   "kerning=normal textRendering=auto": -92.9921875,
+   "kerning=auto textRendering=optimizeLegibility": -92.9921875,
+   "kerning=auto textRendering=geometricPrecision": 0
+  },
+  "first_divergence": {
+   "at_char": 1,
+   "context": "mar"
+  },
+  "cluster_adv_differs_gt_0_01px": 1801,
+  "cluster_adv_mean_abs": 0.27008984375,
+  "cluster_adv_max": 2,
+  "words": 288,
+  "word_adv_differs_gt_0_05px": 263,
+  "word_adv_max": 2.734375,
+  "shape": {
+   "plain": {
+    "distinct": 42,
+    "distinct_wrong_form": 0,
+    "occurrences": 1713,
+    "occurrences_wrong_form": 0,
+    "min_coverage": {
+     "n": 42,
+     "median": 1,
+     "p95": 1,
+     "min": 1,
+     "max": 1
+    },
+    "examples": []
+   }
+  }
+ },
+ {
+  "name": "Arabic (Noto Sans Arabic)",
+  "clusters": 1934,
+  "engine_width": 12601.2294921875,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": -11.2294921875,
+   "kerning=normal textRendering=auto": -11.2294921875,
+   "kerning=auto textRendering=optimizeLegibility": -11.2294921875,
+   "kerning=auto textRendering=geometricPrecision": 0.0126953125
+  },
+  "first_divergence": {
+   "at_char": 1,
+   "context": "الأ"
+  },
+  "cluster_adv_differs_gt_0_01px": 1934,
+  "cluster_adv_mean_abs": 2.5336504390592287,
+  "cluster_adv_max": 11.69599962234497,
+  "words": 332,
+  "word_adv_differs_gt_0_05px": 332,
+  "word_adv_max": 1.3999977111816406,
+  "shape": {
+   "plain": {
+    "distinct": 81,
+    "distinct_wrong_form": 60,
+    "occurrences": 1602,
+    "occurrences_wrong_form": 1249,
+    "min_coverage": {
+     "n": 81,
+     "median": 0.624031007751938,
+     "p95": 1,
+     "min": 0.10787671232876712,
+     "max": 1
+    },
+    "examples": [
+     "ي",
+     "ن",
+     "ا",
+     "ي",
+     "ب",
+     "ل",
+     "م",
+     "ي",
+     "د",
+     "ق",
+     "ت",
+     "و"
+    ]
+   },
+   "zwj_both": {
+    "distinct": 81,
+    "distinct_wrong_form": 58,
+    "occurrences": 1602,
+    "occurrences_wrong_form": 1151,
+    "min_coverage": {
+     "n": 81,
+     "median": 0.7061900610287707,
+     "p95": 1,
+     "min": 0.09692307692307692,
+     "max": 1
+    },
+    "examples": [
+     "ن",
+     "ي",
+     "ب",
+     "ل",
+     "ا",
+     "م",
+     "ي",
+     "ق",
+     "ت",
+     "ط",
+     "ط",
+     "خ"
+    ]
+   },
+   "best_of_4_zwj": {
+    "distinct": 81,
+    "distinct_wrong_form": 44,
+    "occurrences": 1602,
+    "occurrences_wrong_form": 860,
+    "min_coverage": {
+     "n": 81,
+     "median": 0.7061900610287707,
+     "p95": 1,
+     "min": 0.10787671232876712,
+     "max": 1
+    },
+    "examples": [
+     "ن",
+     "ي",
+     "ب",
+     "ل",
+     "م",
+     "ي",
+     "ق",
+     "ت",
+     "ط",
+     "خ",
+     "ن",
+     "س"
+    ]
+   }
+  }
+ },
+ {
+  "name": "CJK (Noto Sans SC)",
+  "clusters": 2000,
+  "engine_width": 31565.236328125,
+  "whole_text_width_diff_px": {
+   "kerning=auto textRendering=auto": -23.236328125,
+   "kerning=normal textRendering=auto": -23.236328125,
+   "kerning=auto textRendering=optimizeLegibility": -23.236328125,
+   "kerning=auto textRendering=geometricPrecision": -31.970703125
+  },
+  "first_divergence": {
+   "at_char": 17,
+   "context": "安全今年，，こん"
+  },
+  "cluster_adv_differs_gt_0_01px": 66,
+  "cluster_adv_mean_abs": 0.004391993522644043,
+  "cluster_adv_max": 0.26399898529052734,
+  "words": 1,
+  "word_adv_differs_gt_0_05px": 1,
+  "word_adv_max": 23.216012954711914,
+  "shape": {
+   "plain": {
+    "distinct": 140,
+    "distinct_wrong_form": 5,
+    "occurrences": 2000,
+    "occurrences_wrong_form": 85,
+    "min_coverage": {
+     "n": 140,
+     "median": 1,
+     "p95": 1,
+     "min": 0.2898957497995188,
+     "max": 1
+    },
+    "examples": [
+     "한",
+     "국",
+     "어",
+     "세",
+     "계"
+    ]
+   }
+  }
+ }
+]

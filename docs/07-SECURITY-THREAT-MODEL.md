@@ -5,7 +5,7 @@ trying to reach the next person who opens it. Every threat here has a control an
 limit without a test seen to fail is not a control.
 
 Status: **Tested** means a test exists and was seen red without the fix. **Planned** names where it
-lands; nothing marked Planned exists yet.
+lands; some planned rows have partial code, and only Tested rows may be relied on. **Partial** means a control exists but no test proves all of it.
 
 ## Package
 
@@ -14,10 +14,13 @@ lands; nothing marked Planned exists yet.
 | SEC-P01 | Zip bomb by ratio or total size | Admission caps; `rejects_zip_bomb_by_expansion_ratio`, `rejects_expansion_over_total_cap` | Tested |
 | SEC-P02 | Forged sizes: part produces more than it declared | Bytes held to the declaration, whole-package budget charged on read | Tested |
 | SEC-P03 | Path traversal, absolute or drive paths | `is_safe_part_path` | Tested |
-| SEC-P04 | Declared size used to allocate; a padding entry satisfies the ratio; in WASM a failed allocation aborts the instance | Up-front capacity capped at 1 MiB; grows as bytes arrive | Tested |
+| SEC-P04 | Declared size used to allocate; a padding entry satisfies the ratio; in WASM a failed allocation aborts the instance | Up-front capacity capped at 1 MiB. The helper is tested; nothing proves `read_part` uses it (`SEC-017`) | Partial |
 | SEC-P05 | Duplicate entries: a scanner approves one, the editor opens another. The `zip` crate hides them | Raw walk of the central directory compared with the crate's count | Tested |
 | SEC-P06 | Part names differing only in case | Refused, per OPC equivalence | Tested |
 | SEC-P07 | Malformed names: `.`, empty segment, trailing dot, control characters, `%2e`, `%2f`, `%5c` | Refused | Tested |
+| SEC-P12 | Zip bomb diluted by ordinary parts, so the overall ratio passes | Ratio also checked per entry. Found by the corpus: a 64 MiB run of zeros was admitted | Tested |
+| SEC-P13 | Part decompressed before its size is judged | XML reads refuse on the declaration, with nothing decompressed | Tested |
+| SEC-P14 | One part under two spellings (`a b.png`, `a%20b.png`): a scanner approves one, the editor opens the other. A target that decodes to traversal: `%2e%2e`, `%252e`, overlong `%c0%ae`, `..\`, look-alike dots and slashes | ECMA-376 Part 2 equivalence in `part_name_key`. Two entries for one part refused as `CS-PKG-0007`; a disguised target or entry reported as `CS-FND-0011`, and not followed; `two_entries_naming_one_part_are_refused`, `what_decodes_to_traversal_is_refused`, `a_target_that_decodes_to_traversal_is_reported_and_not_followed` | Tested |
 | SEC-P08 | Encrypted or unusual compression methods in entries | Refuse cleanly on read; hostile fixture | Planned 0 |
 | SEC-P09 | Recursive bomb: embedded `.xlsx` or `.pptx` inside a deck | Embedded parts are retained, never auto-opened; opening one is a separate bounded admission with an inherited budget | Planned 1J, 1L |
 | SEC-P10 | Slow decompression within the size budget | Time budget, cancellable; host-supplied predicate | Planned 1A |
@@ -27,12 +30,12 @@ lands; nothing marked Planned exists yet.
 
 | ID | Threat | Control | Status |
 | --- | --- | --- | --- |
-| SEC-X01 | Billion laughs, entity expansion | **Any DOCTYPE is refused**; OOXML never needs one | Planned 1A |
-| SEC-X02 | XXE, SSRF through external entities | Same, and the parser has no resolver | Planned 1A |
-| SEC-X03 | Deep nesting exhausts the stack | Depth cap; parsers iterative where recursion follows input | Planned 1A |
-| SEC-X04 | Element, attribute or text volume | Per-part caps, as OpenCalc's `-ooxml` limits | Planned 1A |
-| SEC-X05 | `mc:AlternateContent` used to hide content from a scanner | Choice resolved by a fixed rule; retained branch is never interpreted | Planned 1A |
-| SEC-X06 | Relationship cycles or a part reached many ways | Graph walk with a visited set and a depth cap | Planned 1A |
+| SEC-X01 | Billion laughs, entity expansion | **Any DOCTYPE is refused**; OOXML never needs one. Undeclared entity references also refused | Tested |
+| SEC-X02 | XXE, SSRF through external entities | Same, and the parser has no resolver | Tested |
+| SEC-X03 | Deep nesting exhausts the stack | Depth cap; parsers iterative where recursion follows input | Tested |
+| SEC-X04 | Element, attribute or text volume | Per-part caps on size, elements and attributes. **Controls exist; no test exercises them** (`SEC-016`) | Partial |
+| SEC-X05 | `mc:AlternateContent` used to hide content from a scanner | Choice resolved by a fixed rule over namespace URIs, never prefixes; retained branch is never interpreted, and is named in the report; a malformed construct is never selected. A must-understand namespace we do not know refuses as `CS-MCE-0001` where it is read. `the_first_choice_whose_requirements_are_understood_wins`, `prefixes_are_not_believed`, `a_branch_not_taken_is_retained_and_never_interpreted`, `broken_constructs_are_reported_and_not_guessed_at`. Applied to the main part on open, and to other parts by `read_resolved` | Tested |
+| SEC-X06 | Relationship cycles or a part reached many ways | Visited set tested. Relationship and content-type caps exist with no test (`SEC-016`) | Partial |
 | SEC-X07 | Theme, master or layout chains that recurse | Fixed walk order; cycle refused | Planned 1D |
 
 ## Content
@@ -46,7 +49,7 @@ lands; nothing marked Planned exists yet.
 | SEC-C05 | Font files: malformed tables; embedded `.fntdata` | Embedded fonts off by default for rendering; embedding rights honoured; `skrifa` only, fuzzed | Planned 2D |
 | SEC-C06 | Media: video and audio parsers | Browser plays in a sandbox; the engine never parses media | Planned 3 |
 | SEC-C07 | VBA, ActiveX, OLE | **Never executed.** Retained as bytes; `.pptm` opens with a visible notice; fallback image only | Planned 1L |
-| SEC-C08 | Geometry guide formulas: cycles, huge values, division by zero | Evaluated in document order with no recursion; saturating arithmetic; cap on guides and path points | Planned 1E |
+| SEC-C08 | Geometry guide formulas: cycles, huge values, division by zero | Evaluated in document order with no recursion; saturating arithmetic; cap on guides and path points. A seeded test exists; no fuzz target yet (`GEO-04`) | Partial |
 | SEC-C09 | Pathological text: combining floods, huge runs, deep lists | Per-body caps; layout time budget | Planned 2D |
 | SEC-C10 | Animation or transition trees that never end or explode | Depth and node caps; timeline compile time budget; infinite repeat bounded per show | Planned 1I, 8 |
 | SEC-C11 | Effects costing unbounded CPU, such as huge blur radii | Radius and rasterized-area caps per object | Planned 2C |
@@ -56,8 +59,8 @@ lands; nothing marked Planned exists yet.
 
 | ID | Threat | Control | Status |
 | --- | --- | --- | --- |
-| SEC-N01 | **Tracking and SSRF:** `TargetMode="External"` images, media, OLE links, remote templates | **Never fetched automatically**, on the server especially. Host policy decides; placeholder otherwise | Planned 1A, 3 |
-| SEC-N02 | NTLM credential theft through UNC paths such as `\\host\share` | UNC and `file:` targets refused for automatic use, and shown as inert | Planned 1A |
+| SEC-N01 | **Tracking and SSRF:** `TargetMode="External"` images, media, OLE links, remote templates | **Never fetched automatically**, on the server especially; every one reported. Host policy and placeholder come in Phase 3 | Tested for 1A |
+| SEC-N02 | NTLM credential theft through UNC paths such as `\\host\share` | UNC and `file:` targets classified, reported, never followed; inert display comes in Phase 3 | Tested for 1A |
 | SEC-N03 | Link schemes: `javascript:`, `data:`, `vbscript:`, `file:` | Allowlist: `http`, `https`, `mailto`, `tel`, and in-deck jumps. Confirmation before leaving | Planned 3 |
 | SEC-N04 | `ppaction://` program launch and macro actions | Parsed and retained; program and macro actions never run | Planned 1D, 8 |
 | SEC-N05 | Link text that lies about its target | Tooltip shows the real target | Planned 3 |

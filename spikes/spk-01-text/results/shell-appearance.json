@@ -1,0 +1,1846 @@
+{
+ "metrics": {
+  "opaque": [
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 15.19770114942532,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 29.879310344827587,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 17.341379310344802,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 32.93103448275862,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 17.341108857336025,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 33.258620689655174,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1410527908032027,
+    "ink_ratio_line_over_path": 1.1410349951506813,
+    "mean_abs_lum_diff_cluster": 5.934627635370848,
+    "mean_abs_lum_diff_line": 6.070225997269832
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 21.787829614604455,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 38.93103448275862,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 25.101622718052667,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 42.793103448275865,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 25.101622718052667,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 42.793103448275865,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.152093768037683,
+    "ink_ratio_line_over_path": 1.152093768037683,
+    "mean_abs_lum_diff_cluster": 5.853012048192771,
+    "mean_abs_lum_diff_line": 5.853012048192771
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 49.24942528735637,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 76.63793103448276,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 56.980121703854074,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 83.89655172413794,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 56.980121703854074,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 83.89655172413794,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1569702868894671,
+    "ink_ratio_line_over_path": 1.1569702868894671,
+    "mean_abs_lum_diff_cluster": 5.79207779886148,
+    "mean_abs_lum_diff_line": 5.79207779886148
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 60.606085192697655,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 89,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 70.4899256254227,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 101,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 70.51115618661264,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 100.70689655172414,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1630833009804094,
+    "ink_ratio_line_over_path": 1.1634336050979321,
+    "mean_abs_lum_diff_cluster": 5.933847681613322,
+    "mean_abs_lum_diff_line": 6.293025742876786
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 87.57545638945227,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 123.75862068965517,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 101.66734279918835,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 137.06896551724137,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 101.66734279918835,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 137.06896551724137,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1609113670737699,
+    "ink_ratio_line_over_path": 1.1609113670737699,
+    "mean_abs_lum_diff_cluster": 5.997175141242938,
+    "mean_abs_lum_diff_line": 5.997175141242938
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 196.8149425287341,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 248.74137931034483,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 230.31061528059584,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 286.0344827586207,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 230.31061528059584,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 286.0344827586207,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1701886671890858,
+    "ink_ratio_line_over_path": 1.1701886671890858,
+    "mean_abs_lum_diff_cluster": 6.006531981724729,
+    "mean_abs_lum_diff_line": 6.006531981724729
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 3.7340094658553147,
+     "peak_contrast": 0.8470588235294118,
+     "touched_px_per_glyph": 10.741379310344827,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 4.15138607167005,
+     "peak_contrast": 0.9137254901960784,
+     "touched_px_per_glyph": 11.53448275862069,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 4.154699121027726,
+     "peak_contrast": 0.9137254901960784,
+     "touched_px_per_glyph": 11.482758620689655,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1117770615289886,
+    "ink_ratio_line_over_path": 1.112664324774562,
+    "mean_abs_lum_diff_cluster": 5.8017045454545455,
+    "mean_abs_lum_diff_line": 5.8375
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 16.00337858220211,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 30.046153846153846,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 18.16506787330312,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 34.03076923076923,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 18.165912518853673,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 33.676923076923075,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1350770576348856,
+    "ink_ratio_line_over_path": 1.1351298368368659,
+    "mean_abs_lum_diff_cluster": 6.449382030273573,
+    "mean_abs_lum_diff_line": 23.767810026385224
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 22.873785822021137,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 40.76923076923077,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 26.478190045248848,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 44.90769230769231,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 26.479638009049765,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 44.86153846153846,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1575779475803987,
+    "ink_ratio_line_over_path": 1.1576412499043858,
+    "mean_abs_lum_diff_cluster": 7.334514460831258,
+    "mean_abs_lum_diff_line": 26.7085807316606
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 51.666365007541636,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 77.1076923076923,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 59.86811463046711,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 86.44615384615385,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 59.87306184012018,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 87.75384615384615,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1587444679285699,
+    "ink_ratio_line_over_path": 1.158840220932528,
+    "mean_abs_lum_diff_cluster": 6.290825608593953,
+    "mean_abs_lum_diff_line": 27.704496231482285
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 63.37393665158389,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 92.56923076923077,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 73.73423831070886,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 105.47692307692307,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 73.79239819004542,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 104.70769230769231,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.163478903260873,
+    "ink_ratio_line_over_path": 1.1643966287866883,
+    "mean_abs_lum_diff_cluster": 6.527083624179813,
+    "mean_abs_lum_diff_line": 26.079366187351667
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 92.19993966817543,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 127.6923076923077,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 106.63457013574617,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 147.2923076923077,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 106.59800904977327,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 147.6,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1565579166268494,
+    "ink_ratio_line_over_path": 1.1561613753047564,
+    "mean_abs_lum_diff_cluster": 6.280940076288913,
+    "mean_abs_lum_diff_line": 28.396357819613634
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 207.14395173453727,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 260.5692307692308,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 241.69472096531166,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 295.55384615384617,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 241.62503770739175,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 297.10769230769233,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1667959355871154,
+    "ink_ratio_line_over_path": 1.1664595354299472,
+    "mean_abs_lum_diff_cluster": 6.403036824485892,
+    "mean_abs_lum_diff_line": 28.2069257858354
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 3.8299245852187087,
+     "peak_contrast": 0.796078431372549,
+     "touched_px_per_glyph": 10.507692307692308,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 4.258280542986424,
+     "peak_contrast": 0.9137254901960784,
+     "touched_px_per_glyph": 11.215384615384615,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 4.262383107088987,
+     "peak_contrast": 0.8901960784313725,
+     "touched_px_per_glyph": 11.092307692307692,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1118444889021892,
+    "ink_ratio_line_over_path": 1.1129156755564635,
+    "mean_abs_lum_diff_cluster": 6.451041666666667,
+    "mean_abs_lum_diff_line": 15.397916666666667
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 14.12657200811353,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 29.775862068965516,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 20.512440838404157,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 33.53448275862069,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 20.474306964164796,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 33.91379310344828,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.452046598893414,
+    "ink_ratio_line_over_path": 1.449347156012476,
+    "mean_abs_lum_diff_cluster": 14.346883057788563,
+    "mean_abs_lum_diff_line": 14.273168512058243
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 20.267478025692945,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 38.6551724137931,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 28.592224475997316,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 43.775862068965516,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 28.592224475997316,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 43.775862068965516,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.410744071845108,
+    "ink_ratio_line_over_path": 1.410744071845108,
+    "mean_abs_lum_diff_cluster": 12.907805133577789,
+    "mean_abs_lum_diff_line": 12.907805133577789
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 45.857809330629095,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 76.39655172413794,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 61.02014874915636,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 85.13793103448276,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 61.02014874915636,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 85.13793103448276,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.330638110277111,
+    "ink_ratio_line_over_path": 1.330638110277111,
+    "mean_abs_lum_diff_cluster": 10.676138519924098,
+    "mean_abs_lum_diff_line": 10.676138519924098
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 56.44584178499062,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 88.56896551724138,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 74.23204868154421,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 102.63793103448276,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 74.18722109533705,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 102.51724137931035,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.3151021640230562,
+    "ink_ratio_line_over_path": 1.3143079941641334,
+    "mean_abs_lum_diff_cluster": 10.082652203804141,
+    "mean_abs_lum_diff_line": 10.079787640363609
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 81.59472616633057,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 123.3103448275862,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 105.42751859364928,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 138.48275862068965,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 105.42751859364928,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 138.48275862068965,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2920874123498576,
+    "ink_ratio_line_over_path": 1.2920874123498576,
+    "mean_abs_lum_diff_cluster": 9.524912563895615,
+    "mean_abs_lum_diff_line": 9.524912563895615
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 183.48715348206036,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 248.1551724137931,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 231.03941852597595,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 288.05172413793105,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 231.03941852597595,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 288.05172413793105,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2591585522011206,
+    "ink_ratio_line_over_path": 1.2591585522011206,
+    "mean_abs_lum_diff_cluster": 8.374976204073862,
+    "mean_abs_lum_diff_line": 8.374976204073862
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 3.4624746450304285,
+     "peak_contrast": 0.788235294117647,
+     "touched_px_per_glyph": 10.655172413793103,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 5.828194726166325,
+     "peak_contrast": 0.9254901960784314,
+     "touched_px_per_glyph": 11.89655172413793,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 5.82170385395537,
+     "peak_contrast": 0.9254901960784314,
+     "touched_px_per_glyph": 11.844827586206897,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.6832454598711166,
+    "ink_ratio_line_over_path": 1.681370826010542,
+    "mean_abs_lum_diff_cluster": 19.933522727272727,
+    "mean_abs_lum_diff_line": 19.90625
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 14.879577677224702,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 29.907692307692308,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 21.10298642533934,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 34.61538461538461,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 21.13755656108592,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 34.33846153846154,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.418251706003756,
+    "ink_ratio_line_over_path": 1.4205750337551541,
+    "mean_abs_lum_diff_cluster": 14.48562699625052,
+    "mean_abs_lum_diff_line": 26.736008887654492
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 21.277828054298663,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 40.63076923076923,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 29.923680241327457,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 45.676923076923075,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 29.889170437405927,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 45.47692307692308,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.4063315186571457,
+    "ink_ratio_line_over_path": 1.4047096518090132,
+    "mean_abs_lum_diff_cluster": 13.847251484389963,
+    "mean_abs_lum_diff_line": 28.8531890442444
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 48.1169834087488,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 76.73846153846154,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 63.31384615384813,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 88.35384615384615,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 63.19517345399895,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 89.66153846153846,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.3158315768884252,
+    "ink_ratio_line_over_path": 1.3133652398190152,
+    "mean_abs_lum_diff_cluster": 10.954517889630079,
+    "mean_abs_lum_diff_line": 28.037988391232783
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 59.0311312217206,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 92.29230769230769,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 78.0444042232304,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 106.72307692307692,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 78.01532428356236,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 106.07692307692308,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.322088914916708,
+    "ink_ratio_line_over_path": 1.3215962945134363,
+    "mean_abs_lum_diff_cluster": 11.049595141700404,
+    "mean_abs_lum_diff_line": 26.833275164037413
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 85.91481146304882,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 127.3076923076923,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 110.33984917044222,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 148.8153846153846,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 110.33140271493697,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 149.30769230769232,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2842936775563825,
+    "ink_ratio_line_over_path": 1.2841953655731353,
+    "mean_abs_lum_diff_cluster": 10.01749723145072,
+    "mean_abs_lum_diff_line": 28.596259382305895
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 193.1180693815602,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 259.55384615384617,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 241.2995475112393,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 297.87692307692305,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 241.6776470587506,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 299.2153846153846,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2494923353571994,
+    "ink_ratio_line_over_path": 1.251450202628357,
+    "mean_abs_lum_diff_cluster": 8.684383287683143,
+    "mean_abs_lum_diff_line": 27.53463979826964
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 3.5543891402715,
+     "peak_contrast": 0.7411764705882353,
+     "touched_px_per_glyph": 10.415384615384616,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 5.9681447963800816,
+     "peak_contrast": 0.9254901960784314,
+     "touched_px_per_glyph": 11.553846153846154,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 5.9505882352941075,
+     "peak_contrast": 0.9176470588235293,
+     "touched_px_per_glyph": 11.6,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.6790915571850435,
+    "ink_ratio_line_over_path": 1.6741521539871616,
+    "mean_abs_lum_diff_cluster": 20.880208333333332,
+    "mean_abs_lum_diff_line": 25.9015625
+   }
+  ],
+  "alpha": [
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 15.19770114942532,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 29.879310344827587,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 17.341379310344802,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 32.93103448275862,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 17.341108857336025,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 33.258620689655174,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1410527908032027,
+    "ink_ratio_line_over_path": 1.1410349951506813,
+    "mean_abs_lum_diff_cluster": 5.934627635370848,
+    "mean_abs_lum_diff_line": 6.070225997269832
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 21.787829614604455,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 38.93103448275862,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 25.101622718052667,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 42.793103448275865,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 25.101622718052667,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 42.793103448275865,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.152093768037683,
+    "ink_ratio_line_over_path": 1.152093768037683,
+    "mean_abs_lum_diff_cluster": 5.853012048192771,
+    "mean_abs_lum_diff_line": 5.853012048192771
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 49.24942528735637,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 76.63793103448276,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 56.980121703854074,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 83.89655172413794,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 56.980121703854074,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 83.89655172413794,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1569702868894671,
+    "ink_ratio_line_over_path": 1.1569702868894671,
+    "mean_abs_lum_diff_cluster": 5.79207779886148,
+    "mean_abs_lum_diff_line": 5.79207779886148
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 60.606085192697655,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 89,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 70.4899256254227,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 101,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 70.51115618661264,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 100.70689655172414,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1630833009804094,
+    "ink_ratio_line_over_path": 1.1634336050979321,
+    "mean_abs_lum_diff_cluster": 5.933847681613322,
+    "mean_abs_lum_diff_line": 6.293025742876786
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 87.57545638945227,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 123.75862068965517,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 101.66734279918835,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 137.06896551724137,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 101.66734279918835,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 137.06896551724137,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1609113670737699,
+    "ink_ratio_line_over_path": 1.1609113670737699,
+    "mean_abs_lum_diff_cluster": 5.997175141242938,
+    "mean_abs_lum_diff_line": 5.997175141242938
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 196.8149425287341,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 248.74137931034483,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 230.31061528059584,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 286.0344827586207,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 230.31061528059584,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 286.0344827586207,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1701886671890858,
+    "ink_ratio_line_over_path": 1.1701886671890858,
+    "mean_abs_lum_diff_cluster": 6.006531981724729,
+    "mean_abs_lum_diff_line": 6.006531981724729
+   },
+   {
+    "panel": "light",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 3.7340094658553147,
+     "peak_contrast": 0.8470588235294118,
+     "touched_px_per_glyph": 10.741379310344827,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 4.15138607167005,
+     "peak_contrast": 0.9137254901960784,
+     "touched_px_per_glyph": 11.53448275862069,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 4.154699121027726,
+     "peak_contrast": 0.9137254901960784,
+     "touched_px_per_glyph": 11.482758620689655,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1117770615289886,
+    "ink_ratio_line_over_path": 1.112664324774562,
+    "mean_abs_lum_diff_cluster": 5.8017045454545455,
+    "mean_abs_lum_diff_line": 5.8375
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 16.00337858220211,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 30.046153846153846,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 18.16506787330312,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 34.03076923076923,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 18.165912518853673,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 33.676923076923075,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1350770576348856,
+    "ink_ratio_line_over_path": 1.1351298368368659,
+    "mean_abs_lum_diff_cluster": 6.449382030273573,
+    "mean_abs_lum_diff_line": 23.767810026385224
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 22.873785822021137,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 40.76923076923077,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 26.478190045248848,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 44.90769230769231,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 26.479638009049765,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 44.86153846153846,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1575779475803987,
+    "ink_ratio_line_over_path": 1.1576412499043858,
+    "mean_abs_lum_diff_cluster": 7.334514460831258,
+    "mean_abs_lum_diff_line": 26.7085807316606
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 51.666365007541636,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 77.1076923076923,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 59.86811463046711,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 86.44615384615385,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 59.87306184012018,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 87.75384615384615,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1587444679285699,
+    "ink_ratio_line_over_path": 1.158840220932528,
+    "mean_abs_lum_diff_cluster": 6.290825608593953,
+    "mean_abs_lum_diff_line": 27.704496231482285
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 63.37393665158389,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 92.56923076923077,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 73.73423831070886,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 105.47692307692307,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 73.79239819004542,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 104.70769230769231,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.163478903260873,
+    "ink_ratio_line_over_path": 1.1643966287866883,
+    "mean_abs_lum_diff_cluster": 6.527083624179813,
+    "mean_abs_lum_diff_line": 26.079366187351667
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 92.19993966817543,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 127.6923076923077,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 106.63457013574617,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 147.2923076923077,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 106.59800904977327,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 147.6,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1565579166268494,
+    "ink_ratio_line_over_path": 1.1561613753047564,
+    "mean_abs_lum_diff_cluster": 6.280940076288913,
+    "mean_abs_lum_diff_line": 28.396357819613634
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 207.14395173453727,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 260.5692307692308,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 241.69472096531166,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 295.55384615384617,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 241.62503770739175,
+     "peak_contrast": 1,
+     "touched_px_per_glyph": 297.10769230769233,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1667959355871154,
+    "ink_ratio_line_over_path": 1.1664595354299472,
+    "mean_abs_lum_diff_cluster": 6.403036824485892,
+    "mean_abs_lum_diff_line": 28.2069257858354
+   },
+   {
+    "panel": "light",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 3.8299245852187087,
+     "peak_contrast": 0.796078431372549,
+     "touched_px_per_glyph": 10.507692307692308,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 4.258280542986424,
+     "peak_contrast": 0.9137254901960784,
+     "touched_px_per_glyph": 11.215384615384615,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 4.262383107088987,
+     "peak_contrast": 0.8901960784313725,
+     "touched_px_per_glyph": 11.092307692307692,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.1118444889021892,
+    "ink_ratio_line_over_path": 1.1129156755564635,
+    "mean_abs_lum_diff_cluster": 6.451041666666667,
+    "mean_abs_lum_diff_line": 15.397916666666667
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 14.12657200811353,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 29.775862068965516,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 20.512440838404157,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 33.53448275862069,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 20.474306964164796,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 33.91379310344828,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.452046598893414,
+    "ink_ratio_line_over_path": 1.449347156012476,
+    "mean_abs_lum_diff_cluster": 14.346883057788563,
+    "mean_abs_lum_diff_line": 14.273168512058243
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 20.267478025692945,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 38.6551724137931,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 28.592224475997316,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 43.775862068965516,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 28.592224475997316,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 43.775862068965516,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.410744071845108,
+    "ink_ratio_line_over_path": 1.410744071845108,
+    "mean_abs_lum_diff_cluster": 12.907805133577789,
+    "mean_abs_lum_diff_line": 12.907805133577789
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 45.857809330629095,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 76.39655172413794,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 61.02014874915636,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 85.13793103448276,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 61.02014874915636,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 85.13793103448276,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.330638110277111,
+    "ink_ratio_line_over_path": 1.330638110277111,
+    "mean_abs_lum_diff_cluster": 10.676138519924098,
+    "mean_abs_lum_diff_line": 10.676138519924098
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 56.44584178499062,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 88.56896551724138,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 74.23204868154421,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 102.63793103448276,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 74.18722109533705,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 102.51724137931035,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.3151021640230562,
+    "ink_ratio_line_over_path": 1.3143079941641334,
+    "mean_abs_lum_diff_cluster": 10.082652203804141,
+    "mean_abs_lum_diff_line": 10.079787640363609
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 410.5390625,
+    "path": {
+     "ink_per_glyph": 81.59472616633057,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 123.3103448275862,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 105.42751859364928,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 138.48275862068965,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 105.42751859364928,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 138.48275862068965,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2920874123498576,
+    "ink_ratio_line_over_path": 1.2920874123498576,
+    "mean_abs_lum_diff_cluster": 9.524912563895615,
+    "mean_abs_lum_diff_line": 9.524912563895615
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 615.80859375,
+    "path": {
+     "ink_per_glyph": 183.48715348206036,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 248.1551724137931,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 231.03941852597595,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 288.05172413793105,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 231.03941852597595,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 288.05172413793105,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2591585522011206,
+    "ink_ratio_line_over_path": 1.2591585522011206,
+    "mean_abs_lum_diff_cluster": 8.374976204073862,
+    "mean_abs_lum_diff_line": 8.374976204073862
+   },
+   {
+    "panel": "dark",
+    "font": "Carlito",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 342.11590576171875,
+    "path": {
+     "ink_per_glyph": 3.4624746450304285,
+     "peak_contrast": 0.788235294117647,
+     "touched_px_per_glyph": 10.655172413793103,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 5.828194726166325,
+     "peak_contrast": 0.9254901960784314,
+     "touched_px_per_glyph": 11.89655172413793,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 5.82170385395537,
+     "peak_contrast": 0.9254901960784314,
+     "touched_px_per_glyph": 11.844827586206897,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.6832454598711166,
+    "ink_ratio_line_over_path": 1.681370826010542,
+    "mean_abs_lum_diff_cluster": 19.933522727272727,
+    "mean_abs_lum_diff_line": 19.90625
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 1,
+    "device_px": 13.333333333333334,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 14.879577677224702,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 29.907692307692308,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 21.10298642533934,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 34.61538461538461,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 21.13755656108592,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 34.33846153846154,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.418251706003756,
+    "ink_ratio_line_over_path": 1.4205750337551541,
+    "mean_abs_lum_diff_cluster": 14.48562699625052,
+    "mean_abs_lum_diff_line": 26.736008887654492
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 1,
+    "device_px": 16,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 21.277828054298663,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 40.63076923076923,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 29.923680241327457,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 45.676923076923075,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 29.889170437405927,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 45.47692307692308,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.4063315186571457,
+    "ink_ratio_line_over_path": 1.4047096518090132,
+    "mean_abs_lum_diff_cluster": 13.847251484389963,
+    "mean_abs_lum_diff_line": 28.8531890442444
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 1,
+    "device_px": 24,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 48.1169834087488,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 76.73846153846154,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 63.31384615384813,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 88.35384615384615,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 63.19517345399895,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 89.66153846153846,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.3158315768884252,
+    "ink_ratio_line_over_path": 1.3133652398190152,
+    "mean_abs_lum_diff_cluster": 10.954517889630079,
+    "mean_abs_lum_diff_line": 28.037988391232783
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 2,
+    "device_px": 26.666666666666668,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 59.0311312217206,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 92.29230769230769,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 78.0444042232304,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 106.72307692307692,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 78.01532428356236,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 106.07692307692308,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.322088914916708,
+    "ink_ratio_line_over_path": 1.3215962945134363,
+    "mean_abs_lum_diff_cluster": 11.049595141700404,
+    "mean_abs_lum_diff_line": 26.833275164037413
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 12,
+    "scale": 2,
+    "device_px": 32,
+    "engine_w": 449.4140625,
+    "path": {
+     "ink_per_glyph": 85.91481146304882,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 127.3076923076923,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 110.33984917044222,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 148.8153846153846,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 110.33140271493697,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 149.30769230769232,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2842936775563825,
+    "ink_ratio_line_over_path": 1.2841953655731353,
+    "mean_abs_lum_diff_cluster": 10.01749723145072,
+    "mean_abs_lum_diff_line": 28.596259382305895
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 18,
+    "scale": 2,
+    "device_px": 48,
+    "engine_w": 674.12109375,
+    "path": {
+     "ink_per_glyph": 193.1180693815602,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 259.55384615384617,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 241.2995475112393,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 297.87692307692305,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 241.6776470587506,
+     "peak_contrast": 0.9333333333333332,
+     "touched_px_per_glyph": 299.2153846153846,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.2494923353571994,
+    "ink_ratio_line_over_path": 1.251450202628357,
+    "mean_abs_lum_diff_cluster": 8.684383287683143,
+    "mean_abs_lum_diff_line": 27.53463979826964
+   },
+   {
+    "panel": "dark",
+    "font": "Liberation Sans",
+    "pt": 10,
+    "scale": 0.5,
+    "device_px": 6.666666666666667,
+    "engine_w": 374.5117492675781,
+    "path": {
+     "ink_per_glyph": 3.5543891402715,
+     "peak_contrast": 0.7411764705882353,
+     "touched_px_per_glyph": 10.415384615384616,
+     "chroma_px": 0
+    },
+    "cluster": {
+     "ink_per_glyph": 5.9681447963800816,
+     "peak_contrast": 0.9254901960784314,
+     "touched_px_per_glyph": 11.553846153846154,
+     "chroma_px": 0
+    },
+    "line": {
+     "ink_per_glyph": 5.9505882352941075,
+     "peak_contrast": 0.9176470588235293,
+     "touched_px_per_glyph": 11.6,
+     "chroma_px": 0
+    },
+    "ink_ratio_cluster_over_path": 1.6790915571850435,
+    "ink_ratio_line_over_path": 1.6741521539871616,
+    "mean_abs_lum_diff_cluster": 20.880208333333332,
+    "mean_abs_lum_diff_line": 25.9015625
+   }
+  ]
+ },
+ "probe": [
+  {
+   "font": "Carlito",
+   "method": "path",
+   "axis": "x",
+   "shifts": [
+    0,
+    0.14413471109375742,
+    0.25335980334467934,
+    0.36258489559560303,
+    0.47022877766196913,
+    0.5777140468871149,
+    0.6869391391380386,
+    0.7961642313889605
+   ]
+  },
+  {
+   "font": "Carlito",
+   "method": "path",
+   "axis": "y",
+   "shifts": [
+    0,
+    0.23853759289450593,
+    0.4871593570364041,
+    0.7483200713221194
+   ]
+  },
+  {
+   "font": "Carlito",
+   "method": "fillText",
+   "axis": "x",
+   "shifts": [
+    0,
+    0.26795063624454585,
+    0.26795063624454585,
+    0.47910257229575137,
+    0.47910257229575137,
+    0.6929418738419599,
+    0.6929418738419599,
+    1
+   ]
+  },
+  {
+   "font": "Carlito",
+   "method": "fillText",
+   "axis": "y",
+   "shifts": [
+    0,
+    0,
+    1,
+    1
+   ]
+  },
+  {
+   "font": "Carlito",
+   "method": "fillText geometricPrecision",
+   "axis": "x",
+   "shifts": [
+    0,
+    0.255804269932403,
+    0.255804269932403,
+    0.47417387524409627,
+    0.47417387524409627,
+    0.6925434805557895,
+    0.6925434805557895,
+    1
+   ]
+  },
+  {
+   "font": "Carlito",
+   "method": "fillText geometricPrecision",
+   "axis": "y",
+   "shifts": [
+    0,
+    0,
+    1,
+    1
+   ]
+  },
+  {
+   "font": "Liberation Sans",
+   "method": "path",
+   "axis": "x",
+   "shifts": [
+    0,
+    0.19111035567279266,
+    0.2981062404464545,
+    0.40488871697037077,
+    0.5103255077114763,
+    0.615866418514111,
+    0.7228990085655678,
+    0.8299315986170264
+   ]
+  },
+  {
+   "font": "Liberation Sans",
+   "method": "path",
+   "axis": "y",
+   "shifts": [
+    0,
+    0.2521087486929261,
+    0.5268323455214166,
+    0.7663211088616393
+   ]
+  },
+  {
+   "font": "Liberation Sans",
+   "method": "fillText",
+   "axis": "x",
+   "shifts": [
+    0,
+    0.2978536741799527,
+    0.2978536741799527,
+    0.5081056412088021,
+    0.5081056412088021,
+    0.7157726470207297,
+    0.7157726470207297,
+    1
+   ]
+  },
+  {
+   "font": "Liberation Sans",
+   "method": "fillText",
+   "axis": "y",
+   "shifts": [
+    0,
+    0,
+    1,
+    1
+   ]
+  },
+  {
+   "font": "Liberation Sans",
+   "method": "fillText geometricPrecision",
+   "axis": "x",
+   "shifts": [
+    0,
+    0.30109874053802876,
+    0.30109874053802876,
+    0.515340129244878,
+    0.515340129244878,
+    0.7293290489124686,
+    0.7293290489124686,
+    1
+   ]
+  },
+  {
+   "font": "Liberation Sans",
+   "method": "fillText geometricPrecision",
+   "axis": "y",
+   "shifts": [
+    0,
+    0,
+    1,
+    1
+   ]
+  }
+ ]
+}

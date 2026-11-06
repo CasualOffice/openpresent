@@ -1,0 +1,10 @@
+{
+  "name": "spk-01-text-harness",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "playwright": "1.65.0"
+  }
+}

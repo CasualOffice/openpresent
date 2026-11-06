@@ -1,10 +1,12 @@
 //! Bounded ZIP/OPC package admission and on-demand part reads.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt;
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Read, Write};
+use std::sync::Arc;
 
-use zip::ZipArchive;
+use zip::write::{SimpleFileOptions, ZipWriter};
+use zip::{CompressionMethod, ZipArchive};
 
 use crate::directory::record_count;
 use crate::error::PackageError;
@@ -29,7 +31,12 @@ pub struct EntryInfo {
 /// the same size ceiling via [`Package::read_part`]. This substrate is
 /// format-neutral: it backs `.pptx` and any later OPC format, as it backed `.xlsx` and `.ods` admission.
 pub struct Package {
-    archive: ZipArchive<Cursor<Vec<u8>>>,
+    archive: ZipArchive<Cursor<Arc<[u8]>>>,
+    /// The bytes as they arrived, kept so an unedited save can return them.
+    source: Arc<[u8]>,
+    /// Lower-cased part name to the name the archive actually uses. OPC compares
+    /// part names case-insensitively, so a relationship may spell one differently.
+    names: HashMap<String, String>,
     limits: PackageLimits,
     /// Bytes actually handed out by [`Package::read_part`] so far.
     ///
@@ -78,8 +85,9 @@ impl Package {
             });
         }
 
-        let mut archive =
-            ZipArchive::new(Cursor::new(bytes)).map_err(|_| PackageError::NotAPackage)?;
+        let source: Arc<[u8]> = Arc::from(bytes);
+        let mut archive = ZipArchive::new(Cursor::new(Arc::clone(&source)))
+            .map_err(|_| PackageError::NotAPackage)?;
 
         let count = archive.len();
         if count != records {
@@ -94,7 +102,7 @@ impl Package {
         let mut total_uncompressed: u64 = 0;
         let mut total_compressed: u64 = 0;
         // Bounded by `max_entries`, checked above.
-        let mut seen = HashSet::with_capacity(count);
+        let mut names = HashMap::with_capacity(count);
 
         for i in 0..count {
             // Reading metadata does not decompress the entry.
@@ -119,8 +127,20 @@ impl Package {
             // Which of two same-named entries a reader returns differs between
             // ZIP implementations, so what a scanner approved need not be what
             // opens here. OPC compares part names case-insensitively.
-            if !entry.is_dir() && !seen.insert(name.to_lowercase()) {
+            if !entry.is_dir() && names.insert(name.to_lowercase(), name.clone()).is_some() {
                 return Err(PackageError::DuplicatePart { path: name });
+            }
+
+            // Per entry as well as overall, because ordinary parts dilute the
+            // overall ratio: a run of zeros at 1030:1 passes in a package with a
+            // few percent of anything else.
+            if let Some(ratio) = entry.size().checked_div(entry.compressed_size())
+                && ratio > limits.max_expansion_ratio
+            {
+                return Err(PackageError::ExpansionRatioExceeded {
+                    ratio,
+                    limit: limits.max_expansion_ratio,
+                });
             }
 
             total_uncompressed = total_uncompressed.saturating_add(entry.size());
@@ -145,9 +165,68 @@ impl Package {
 
         Ok(Package {
             archive,
+            source,
+            names,
             limits,
             consumed: 0,
         })
+    }
+
+    /// The package's bytes exactly as they arrived.
+    pub fn source_bytes(&self) -> &[u8] {
+        &self.source
+    }
+
+    /// The name a part actually has in the archive, matched case-insensitively.
+    pub fn find_part(&self, name: &str) -> Option<&str> {
+        self.names.get(&name.to_lowercase()).map(String::as_str)
+    }
+
+    /// Write a new package with `edits` applied.
+    ///
+    /// **An untouched part keeps its compressed bytes:** it is copied raw, never
+    /// recompressed. With no edits the source comes back byte for byte. Entries
+    /// keep their order, and new parts follow in name order, so the same edits
+    /// always produce the same bytes.
+    pub fn rewrite(&mut self, edits: &PartEdits) -> Result<Vec<u8>, PackageError> {
+        if edits.is_empty() {
+            return Ok(self.source.to_vec());
+        }
+        for name in edits.replace.keys() {
+            if !is_safe_part_path(name) {
+                return Err(PackageError::UnsafePath { path: name.clone() });
+            }
+        }
+        // A fixed timestamp and method: determinism is a contract.
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+        let failed = |_| PackageError::RewriteFailed;
+        let mut out = ZipWriter::new(Cursor::new(Vec::new()));
+        let mut written = BTreeSet::new();
+        for i in 0..self.archive.len() {
+            let raw = self.archive.by_index_raw(i).map_err(failed)?;
+            let name = raw.name().map_err(failed)?.into_owned();
+            let key = name.to_lowercase();
+            if edits.remove.contains(&key) {
+                continue;
+            }
+            if let Some((_, bytes)) = edits.replace.iter().find(|(n, _)| n.to_lowercase() == key) {
+                drop(raw);
+                out.start_file(name.as_str(), options).map_err(failed)?;
+                out.write_all(bytes)
+                    .map_err(|_| PackageError::RewriteFailed)?;
+                written.insert(key);
+            } else {
+                out.raw_copy_file(raw).map_err(failed)?;
+            }
+        }
+        for (name, bytes) in &edits.replace {
+            if !written.contains(&name.to_lowercase()) {
+                out.start_file(name.as_str(), options).map_err(failed)?;
+                out.write_all(bytes)
+                    .map_err(|_| PackageError::RewriteFailed)?;
+            }
+        }
+        Ok(out.finish().map_err(failed)?.into_inner())
     }
 
     /// The number of entries in the package.
@@ -197,6 +276,32 @@ impl Package {
         self.archive
             .file_names()
             .any(|n| n.is_ok_and(|n| n == name))
+    }
+
+    /// Bytes handed out by reads so far.
+    pub fn consumed(&self) -> u64 {
+        self.consumed
+    }
+
+    /// Read a part only if it declares at most `max` bytes, without decompressing
+    /// anything otherwise. [`Package::read_part`] holds the bytes to the
+    /// declaration, so the declaration bounds this too.
+    pub fn read_part_capped(&mut self, name: &str, max: u64) -> Result<Vec<u8>, PackageError> {
+        let declared = self
+            .archive
+            .by_name(name)
+            .map_err(|_| PackageError::PartNotFound {
+                name: name.to_owned(),
+            })?
+            .size();
+        if declared > max {
+            return Err(PackageError::PartTooLarge {
+                name: name.to_owned(),
+                size: declared,
+                limit: max,
+            });
+        }
+        self.read_part(name)
     }
 
     /// Read a part's decompressed bytes, bounded by what it declared and by
@@ -269,6 +374,34 @@ impl Package {
         }
         self.consumed = self.consumed.saturating_add(produced);
         Ok(buf)
+    }
+}
+
+/// Changes to apply when writing a package. Everything not named here is carried
+/// over untouched.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PartEdits {
+    replace: BTreeMap<String, Vec<u8>>,
+    remove: BTreeSet<String>,
+}
+
+impl PartEdits {
+    /// Set a part's bytes, adding it if it does not exist.
+    pub fn replace(&mut self, name: impl Into<String>, bytes: Vec<u8>) {
+        let name = name.into();
+        self.remove.remove(&name.to_lowercase());
+        self.replace.insert(name, bytes);
+    }
+
+    /// Remove a part. OPC names compare case-insensitively.
+    pub fn remove(&mut self, name: &str) {
+        self.replace.retain(|n, _| !n.eq_ignore_ascii_case(name));
+        self.remove.insert(name.to_lowercase());
+    }
+
+    /// Whether nothing would change.
+    pub fn is_empty(&self) -> bool {
+        self.replace.is_empty() && self.remove.is_empty()
     }
 }
 

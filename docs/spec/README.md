@@ -38,7 +38,7 @@ Status letters: `M` model, `I` import, `E` export, `R` render, `U` UI. Values: `
 | [DGM](DGM.md) | SmartArt diagrams | 785 | Tier 1K | 2F | 6 | Edit |
 | [INK](INK.md) | Ink | 152 | Tier 1K | 2F | 6 | Edit |
 | [MATH](MATH.md) | Equations (OMML) | 326 | Tier 1K | 2F | 6 | Edit |
-| [MODEL3D](MODEL3D.md) | 3D models | 97 | Tier 1L | 2F | - | Retain |
+| [MODEL3D](MODEL3D.md) | 3D models | 97 | Tier 1L | 2F | 10 | Edit |
 | [OLE](OLE.md) | OLE, ActiveX, embedded objects | 30 | Tier 1L | 2F | - | Retain |
 | [VML](VML.md) | Legacy VML | 824 | Tier 1L | 2F | - | Retain |
 | [COMMENT](COMMENT.md) | Comments, legacy and modern | 155 | Tier 1M | - | 9 | Edit |

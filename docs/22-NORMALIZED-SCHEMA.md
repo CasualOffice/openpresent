@@ -19,8 +19,7 @@ A **shape tree** holds these node kinds: `Shape`, `Picture`, `Group`, `Connector
 **text body** holds properties and paragraphs; a paragraph holds properties and runs,
 breaks, and fields.
 
-Units stay EMU (integers) and sizes stay centipoints, as in the file. No floats in the
-model, so round-trip and determinism cost nothing.
+Units stay as the file has them, usually EMU and centipoints. Charts and timing carry doubles and coordinates admit units such as `1in`, so source lexemes are kept (`MODEL-01`).
 
 ## Inheritance is resolved, never stored
 
@@ -70,9 +69,9 @@ is fine and is documented, so the part-hash gate has an explicit allow-list per 
 
 | Construct | Plan |
 | --- | --- |
-| SmartArt | Render the stored drawing part; retain the data parts; editing is later |
+| SmartArt | Edit (`DGM-01`): render the stored drawing part; layout engine in 2J; data parts retained until then |
 | Charts | Model and plot; embedded workbook retained verbatim; edit its data through OpenCalc's SDK |
-| Equations (OMML) | Render through a math layout; fallback image retained; editing later |
+| Equations (OMML) | Edit (`DGM-01`): math layout in 2K; fallback image retained until then |
 | OLE, VBA, ActiveX | Retain; draw the fallback image; never execute |
 | Linked media and images | Never fetched automatically; the host decides |
 | 3D models, Zoom slides, Morph | Render fallback where one exists; named in the report |

@@ -12,15 +12,14 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
  layout ───────────▶ style, geometry, text, chart
  anim ─────────────▶ model
  transaction ──────▶ model
- export ───────────▶ import (retained source), model
+ export ───────────▶ ooxml, model, package
  import ───────────▶ ooxml, model
- style, geometry, chart ─▶ model
+ style, chart ─▶ model
  ooxml ────────────▶ package
- model, text, package: no internal dependencies
+ model, text, package, geometry: no internal dependencies
 ```
 
-`server/*` depends on `crates/*`; nothing in `crates/` depends on a server. CI checks
-it, as OpenCalc's does.
+`server/*` depends on `crates/*`; nothing in `crates/` depends on a server. CI does not check this yet (`CI-01`).
 
 ## Crates
 
@@ -37,13 +36,13 @@ it, as OpenCalc's does.
 | `-anim` | Timing tree to timeline; sampling at time *t* | Painting, wall clock | New |
 | `-transaction` | Ops, inverses, transform, session, wire protocol | Layout, transport | New; protocol and session pattern from calc |
 | `-import` | PresentationML to model, report, retained source | Export | New |
-| `-export` | Verbatim repackager and semantic writer | Parsing | New |
+| `-export` | Applying dirty model values to the part tree, and package bookkeeping. The byte repackager itself is `Package::rewrite` | Parsing | New |
 | `-render` | PNG (tiny-skia) and PDF backends | Layout decisions | New; backend pattern from calc |
 | `-sdk` | Host-facing session API and format dispatch | Internals exposure | New |
 | `-wasm` | `wasm-bindgen` transport over the SDK | Logic | New |
 
 Not created: `-selection` (lives in `-transaction`, since presence must map it through
-ops), and `-odp` until Phase 10. No crate exists without a first consumer.
+ops), and `-odp` until Phase 10. No crate exists without a first consumer, except skeletons created to let parallel tiers start, which must gain one when their tier lands.
 
 ```
 server/    casual-slide-collab-server, -host, -wopi, -mcp, -secrets

@@ -1,7 +1,6 @@
 # AGENTS.md — Agent contract for OpenSlide
 
-Read this in full before doing anything else. "OpenSlide" is a working name
-(`DEC-01`); crates use the prefix `casual-slide-`, which does not depend on it.
+Read this in full before doing anything else. Owner instructions are in [docs/03](docs/03-OWNER-INSTRUCTIONS.md) and come first. Working rules, engineering standards and skills are in [CLAUDE.md](CLAUDE.md). The product is being renamed OpenPresent (`DEC-01`, `NAME-01`); crates use the prefix `casual-slide-`, which does not depend on it.
 
 ## Repository boundary
 
@@ -70,7 +69,4 @@ Every task, none of it optional:
 
 ## Current state
 
-**Phase 0 (foundation).** The workspace holds `-package` and `-text`, copied from
-OpenCalc and hardened against the threat model; there is no presentation code yet. Open owner decisions are the `DEC-*`
-rows in [14](docs/14-EXECUTION-TRACKER.md). ADR-003 is Accepted and the rest are
-Proposed; Phase 1 needs the ADRs it depends on Accepted first.
+**Phases 0 and 1 are open, under waiver W-1** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Tiers 1A, 1B and 1C are built but not closed, and nothing renders yet. All ADRs are Accepted.

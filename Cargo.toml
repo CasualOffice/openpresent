@@ -4,7 +4,12 @@ resolver = "3"
 # a first consumer, so this list grows with the phases.
 members = [
     "crates/casual-slide-package",
+    "crates/casual-slide-ooxml",
     "crates/casual-slide-text",
+    "crates/casual-slide-model",
+    "crates/casual-slide-import",
+    "crates/casual-slide-export",
+    "crates/casual-slide-geometry",
 ]
 
 [workspace.package]

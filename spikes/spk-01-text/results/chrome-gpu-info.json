@@ -1,0 +1,16 @@
+{
+ "version": "156.0.8078.80",
+ "isolated": true,
+ "webgl_renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+ "chrome_gpu": {
+  "canvas": "Canvas: Hardware accelerated*   Direct Rendering Display Compositor: Disabled*   Composi",
+  "raster": "Rasterization: Hardware accelerated on all pages*   Raw Draw: Disabled*   Skia Graphite: Enable"
+ },
+ "idle_raf_ms": {
+  "n": 60,
+  "median": 16.664999999999964,
+  "p95": 16.670000000000073,
+  "min": 16.659999999999854,
+  "max": 16.670000000000073
+ }
+}

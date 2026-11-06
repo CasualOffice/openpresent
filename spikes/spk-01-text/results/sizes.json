@@ -1,0 +1,426 @@
+{
+ "rows": [
+  {
+   "row": "baseline (bindgen only)",
+   "features": "",
+   "opt": "release, no wasm-opt",
+   "raw": 17345,
+   "gzip": 7898,
+   "brotli": 6735,
+   "glue_js_raw": 8230,
+   "glue_js_brotli": 2047
+  },
+  {
+   "row": "baseline (bindgen only)",
+   "features": "",
+   "opt": "release, wasm-opt -O",
+   "raw": 16438,
+   "gzip": 7459,
+   "brotli": 6312,
+   "glue_js_raw": 8230,
+   "glue_js_brotli": 2047
+  },
+  {
+   "row": "baseline (bindgen only)",
+   "features": "",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 17141,
+   "gzip": 7960,
+   "brotli": 6784,
+   "glue_js_raw": 8374,
+   "glue_js_brotli": 2086
+  },
+  {
+   "row": "baseline (bindgen only)",
+   "features": "",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 17124,
+   "gzip": 7928,
+   "brotli": 6827,
+   "glue_js_raw": 8374,
+   "glue_js_brotli": 2086
+  },
+  {
+   "row": "+ skrifa (outlines)",
+   "features": "outline",
+   "opt": "release, no wasm-opt",
+   "raw": 406989,
+   "gzip": 133234,
+   "brotli": 106796,
+   "glue_js_raw": 9051,
+   "glue_js_brotli": 2126
+  },
+  {
+   "row": "+ skrifa (outlines)",
+   "features": "outline",
+   "opt": "release, wasm-opt -O",
+   "raw": 331325,
+   "gzip": 124372,
+   "brotli": 101558,
+   "glue_js_raw": 9051,
+   "glue_js_brotli": 2126
+  },
+  {
+   "row": "+ skrifa (outlines)",
+   "features": "outline",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 469426,
+   "gzip": 184937,
+   "brotli": 147869,
+   "glue_js_raw": 9195,
+   "glue_js_brotli": 2166
+  },
+  {
+   "row": "+ skrifa (outlines)",
+   "features": "outline",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 428770,
+   "gzip": 170063,
+   "brotli": 136932,
+   "glue_js_raw": 9195,
+   "glue_js_brotli": 2166
+  },
+  {
+   "row": "+ harfrust (shaping)",
+   "features": "shape",
+   "opt": "release, no wasm-opt",
+   "raw": 809053,
+   "gzip": 275617,
+   "brotli": 212530,
+   "glue_js_raw": 9776,
+   "glue_js_brotli": 2202
+  },
+  {
+   "row": "+ harfrust (shaping)",
+   "features": "shape",
+   "opt": "release, wasm-opt -O",
+   "raw": 757151,
+   "gzip": 282528,
+   "brotli": 220155,
+   "glue_js_raw": 9776,
+   "glue_js_brotli": 2202
+  },
+  {
+   "row": "+ harfrust (shaping)",
+   "features": "shape",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 668650,
+   "gzip": 263162,
+   "brotli": 208461,
+   "glue_js_raw": 9920,
+   "glue_js_brotli": 2239
+  },
+  {
+   "row": "+ harfrust (shaping)",
+   "features": "shape",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 576864,
+   "gzip": 234233,
+   "brotli": 188496,
+   "glue_js_raw": 9920,
+   "glue_js_brotli": 2239
+  },
+  {
+   "row": "+ unicode-bidi, unicode-script",
+   "features": "shape,itemize",
+   "opt": "release, no wasm-opt",
+   "raw": 884012,
+   "gzip": 304499,
+   "brotli": 230772,
+   "glue_js_raw": 10067,
+   "glue_js_brotli": 2233
+  },
+  {
+   "row": "+ unicode-bidi, unicode-script",
+   "features": "shape,itemize",
+   "opt": "release, wasm-opt -O",
+   "raw": 829481,
+   "gzip": 310543,
+   "brotli": 238477,
+   "glue_js_raw": 10067,
+   "glue_js_brotli": 2233
+  },
+  {
+   "row": "+ unicode-bidi, unicode-script",
+   "features": "shape,itemize",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 742055,
+   "gzip": 292865,
+   "brotli": 227670,
+   "glue_js_raw": 10211,
+   "glue_js_brotli": 2273
+  },
+  {
+   "row": "+ unicode-bidi, unicode-script",
+   "features": "shape,itemize",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 647386,
+   "gzip": 263130,
+   "brotli": 207246,
+   "glue_js_raw": 10211,
+   "glue_js_brotli": 2273
+  },
+  {
+   "row": "+ unicode-linebreak = full stack",
+   "features": "layout,lb-uax14",
+   "opt": "release, no wasm-opt",
+   "raw": 1257355,
+   "gzip": 424010,
+   "brotli": 320073,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "+ unicode-linebreak = full stack",
+   "features": "layout,lb-uax14",
+   "opt": "release, wasm-opt -O",
+   "raw": 1129264,
+   "gzip": 419133,
+   "brotli": 323012,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "+ unicode-linebreak = full stack",
+   "features": "layout,lb-uax14",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 1161356,
+   "gzip": 460047,
+   "brotli": 351665,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "+ unicode-linebreak = full stack",
+   "features": "layout,lb-uax14",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 1022252,
+   "gzip": 414466,
+   "brotli": 320233,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (no complex scripts)",
+   "features": "layout,lb-icu",
+   "opt": "release, no wasm-opt",
+   "raw": 1298036,
+   "gzip": 441604,
+   "brotli": 333745,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (no complex scripts)",
+   "features": "layout,lb-icu",
+   "opt": "release, wasm-opt -O",
+   "raw": 1166745,
+   "gzip": 437031,
+   "brotli": 337370,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (no complex scripts)",
+   "features": "layout,lb-icu",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 1194725,
+   "gzip": 476321,
+   "brotli": 365053,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (no complex scripts)",
+   "features": "layout,lb-icu",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 1051612,
+   "gzip": 428236,
+   "brotli": 332457,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (auto: Thai etc.)",
+   "features": "layout,lb-icu,lb-icu-auto",
+   "opt": "release, no wasm-opt",
+   "raw": 1624095,
+   "gzip": 738484,
+   "brotli": 624520,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (auto: Thai etc.)",
+   "features": "layout,lb-icu,lb-icu-auto",
+   "opt": "release, wasm-opt -O",
+   "raw": 1491118,
+   "gzip": 734280,
+   "brotli": 627525,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (auto: Thai etc.)",
+   "features": "layout,lb-icu,lb-icu-auto",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 1517333,
+   "gzip": 773345,
+   "brotli": 657556,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack, icu_segmenter instead (auto: Thai etc.)",
+   "features": "layout,lb-icu,lb-icu-auto",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 1374334,
+   "gzip": 725777,
+   "brotli": 624085,
+   "glue_js_raw": 24253,
+   "glue_js_brotli": 3136
+  },
+  {
+   "row": "full stack + Carlito Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito",
+   "opt": "release, no wasm-opt",
+   "raw": 1885473,
+   "gzip": 692854,
+   "brotli": 536221,
+   "glue_js_raw": 24780,
+   "glue_js_brotli": 3185
+  },
+  {
+   "row": "full stack + Carlito Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito",
+   "opt": "release, wasm-opt -O",
+   "raw": 1695822,
+   "gzip": 688519,
+   "brotli": 542184,
+   "glue_js_raw": 24780,
+   "glue_js_brotli": 3185
+  },
+  {
+   "row": "full stack + Carlito Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 1728008,
+   "gzip": 729253,
+   "brotli": 570176,
+   "glue_js_raw": 24780,
+   "glue_js_brotli": 3185
+  },
+  {
+   "row": "full stack + Carlito Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 1588815,
+   "gzip": 683514,
+   "brotli": 538084,
+   "glue_js_raw": 24780,
+   "glue_js_brotli": 3185
+  },
+  {
+   "row": "full stack + Carlito and Liberation Sans Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito,embed-liberation",
+   "opt": "release, no wasm-opt",
+   "raw": 2296851,
+   "gzip": 903764,
+   "brotli": 708504,
+   "glue_js_raw": 25313,
+   "glue_js_brotli": 3198
+  },
+  {
+   "row": "full stack + Carlito and Liberation Sans Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito,embed-liberation",
+   "opt": "release, wasm-opt -O",
+   "raw": 2106416,
+   "gzip": 899365,
+   "brotli": 715482,
+   "glue_js_raw": 25313,
+   "glue_js_brotli": 3198
+  },
+  {
+   "row": "full stack + Carlito and Liberation Sans Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito,embed-liberation",
+   "opt": "small (opt-level s, fat LTO), wasm-opt -Oz",
+   "raw": 2138475,
+   "gzip": 940761,
+   "brotli": 743124,
+   "glue_js_raw": 25313,
+   "glue_js_brotli": 3198
+  },
+  {
+   "row": "full stack + Carlito and Liberation Sans Regular embedded",
+   "features": "layout,lb-uax14,embed-carlito,embed-liberation",
+   "opt": "smallest (opt-level z, fat LTO, overflow checks off), wasm-opt -Oz",
+   "raw": 1999271,
+   "gzip": 894412,
+   "brotli": 711186,
+   "glue_js_raw": 25313,
+   "glue_js_brotli": 3198
+  }
+ ],
+ "fonts": [
+  {
+   "font": "Carlito-Bold.ttf",
+   "raw": 682468,
+   "gzip": 279345,
+   "brotli": 220643
+  },
+  {
+   "font": "Carlito-BoldItalic.ttf",
+   "raw": 808508,
+   "gzip": 321946,
+   "brotli": 243761
+  },
+  {
+   "font": "Carlito-Italic.ttf",
+   "raw": 615236,
+   "gzip": 280876,
+   "brotli": 227686
+  },
+  {
+   "font": "Carlito-Regular.ttf",
+   "raw": 628032,
+   "gzip": 268221,
+   "brotli": 212193
+  },
+  {
+   "font": "LiberationSans-Bold.ttf",
+   "raw": 414456,
+   "gzip": 211902,
+   "brotli": 170316
+  },
+  {
+   "font": "LiberationSans-BoldItalic.ttf",
+   "raw": 408996,
+   "gzip": 213608,
+   "brotli": 174207
+  },
+  {
+   "font": "LiberationSans-Italic.ttf",
+   "raw": 415816,
+   "gzip": 217209,
+   "brotli": 176566
+  },
+  {
+   "font": "LiberationSans-Regular.ttf",
+   "raw": 410712,
+   "gzip": 210721,
+   "brotli": 169061
+  },
+  {
+   "font": "NotoSansArabic.ttf",
+   "raw": 844676,
+   "gzip": 453570,
+   "brotli": 369868
+  },
+  {
+   "font": "NotoSansSC.otf",
+   "raw": 8331336,
+   "gzip": 7202350,
+   "brotli": 6005933
+  }
+ ]
+}

@@ -1,0 +1,6 @@
+register 4 faces: 1.31 ms
+latin-carlito: chars 2000 bytes 2023 glyphs 1910 lines 23 first 0.516 ms warm 0.195 ms
+latin-liberation: chars 2000 bytes 2023 glyphs 2000 lines 25 first 0.237 ms warm 0.156 ms
+arabic: chars 2000 bytes 3668 glyphs 2478 lines 22 first 0.671 ms warm 0.393 ms
+cjk: chars 2000 bytes 5868 glyphs 2000 lines 54 first 0.354 ms warm 0.223 ms
+mixed: chars 2000 bytes 3249 glyphs 2146 lines 27 first 0.487 ms warm 0.324 ms

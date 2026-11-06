@@ -44,7 +44,7 @@ which is the most common collaboration in a slide deck.
 ## Undo
 
 Local undo reverts my own last step, rebased over what others have done since, following
-OpenCalc's collaborative undo policy (its docs/69) and owner ruling that clients rebase
+OpenCalc's collaborative undo policy (its docs/69) and its decision that clients rebase
 rather than merge (its ADR-031). If the object is gone the step is skipped and reported.
 
 ## The server

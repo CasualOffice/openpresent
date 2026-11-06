@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Written for F4: the xml: attributes, since opc-coreProperties.xsd imports their
+     namespace with no location, and F4 has no network. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.w3.org/XML/1998/namespace">
+  <xs:attribute name="lang" type="xs:string"/>
+  <xs:attribute name="space" type="xs:NCName"/>
+  <xs:attribute name="base" type="xs:anyURI"/>
+  <xs:attribute name="id" type="xs:ID"/>
+</xs:schema>

@@ -1,6 +1,8 @@
 # 47 — The PowerPoint shell and feature map
 
-**Superseded on scope by [48](48-POWERPOINT-FEATURE-STUDY.md), and phases by [06](06-ROADMAP-AND-DELIVERY.md); the phase numbers on this page predate them.** This page remains the UI sketch.
+Behaviour and rules are in [50](50-POWERPOINT-UX-STUDY.md) and commands in [49](49-POWERPOINT-COMMAND-INVENTORY.md), which win over this page.
+
+**Superseded on scope by [48](48-POWERPOINT-FEATURE-STUDY.md), and phases by [06](06-ROADMAP-AND-DELIVERY.md).** This page remains the UI sketch.
 
 **Provenance warning.** This inventory is written from recall of PowerPoint for the web, not
 measured from the running product, and Microsoft changes it regularly. It is good enough to plan
@@ -23,8 +25,7 @@ Same structure, behaviour, keyboard, dialogs and wording, so a PowerPoint user n
 Microsoft's themes, templates, stock content and icon artwork are **not** copied. We author our own.
 
 The shell reuses OpenCalc's `ribbon.js`, `ribbon.model.js` pattern, `commands.js` registry and token
-spine. Classic and Simplified ribbon both exist, and phones get the bottom command bar. Web
-PowerPoint defaults to Simplified, and that default is one thing `UX-001` should confirm.
+spine. Classic and Simplified ribbon both exist, and phones get the bottom command bar. **Classic is our default** (`DEC-10`). Which default the web uses is unconfirmed (`UX-002`).
 
 ## Main window
 
@@ -80,7 +81,7 @@ destination formatting. Tab cycles objects. Right-click menus per object kind wi
 
 ## Shortcuts to hold exactly
 
-Ctrl+M new slide; Ctrl+D duplicate; Ctrl+G and Ctrl+Shift+G group and ungroup; Ctrl+Shift+C and V format
+Recalled from desktop. **The web's recorded list is [spec/web-shortcuts.md](spec/web-shortcuts.md) and differs: Ctrl+[ sends back there, for one.** Ctrl+M new slide; Ctrl+D duplicate; Ctrl+G and Ctrl+Shift+G group and ungroup; Ctrl+Shift+C and V format
 painter; F5 and Shift+F5 present; Ctrl+[ and ] font size; Ctrl+B, I, U; Ctrl+L, E, R, J align; Ctrl+K link;
 Ctrl+F, Ctrl+H find and replace. In show: Space, N, Enter, arrows advance; P and Backspace go back; B and W
 blank; number + Enter jump; Esc ends. Browsers reserve some of these. How the web product handles that

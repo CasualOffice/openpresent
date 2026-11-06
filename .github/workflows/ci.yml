@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A superseded PR run is thrown away; a run on main is the record, so it never is.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
+      - run: cargo check --target wasm32-unknown-unknown --workspace --locked
+      - run: python3 tools/check-repo.py
+      - run: python3 tools/spec-checklist/generate.py --check
+      - run: python3 fixtures/tools/generate.py --check
+      - run: python3 tools/spec-audit/count.py
+      - run: python3 tools/spec-audit/audit.py --check
+      - run: python3 tools/spec-audit/test_audit.py
+      - run: python3 tools/fidelity/test_fidelity.py
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # F4 needs xmllint. On Linux a missing tool fails the run; elsewhere the test skips, and says so.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get install -y libxml2-utils
+      - if: runner.os == 'Linux'
+        run: echo "F4_REQUIRED=1" >> "$GITHUB_ENV"
+      - run: cargo test --workspace --all-features --locked
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo +1.88.0 check --workspace --locked
+
+  dependency-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: cargo install cargo-deny cargo-audit --locked
+      - run: cargo deny check bans licenses sources
+      - run: cargo audit --deny warnings
+
+  fuzz-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: rustup toolchain install nightly --profile minimal
+      - run: cargo install cargo-fuzz --locked
+      - run: cd fuzz && cargo +nightly fuzz build

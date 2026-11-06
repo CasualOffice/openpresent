@@ -1,0 +1,32 @@
+# SPK-01 spike. Its own workspace: nothing here is a product crate, and the root
+# workspace lists its members explicitly, so `cargo` at the repository root never
+# sees this. The `[workspace]` table below stops cargo's upward search.
+[workspace]
+resolver = "3"
+members = ["crates/core", "crates/wasm", "crates/native"]
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+# The product's release profile, copied (root Cargo.toml), so the numbers are for
+# what would ship: overflow checks stay on.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+overflow-checks = true
+
+# The size-tuned alternative, to bound what tuning can buy.
+[profile.small]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+
+# The floor: smallest settings, with the product's overflow checks off. Priced, not proposed.
+[profile.smallest]
+inherits = "release"
+opt-level = "z"
+lto = "fat"
+overflow-checks = false
