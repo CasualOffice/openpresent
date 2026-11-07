@@ -780,20 +780,22 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
                 .items
                 .push(TextItem::Retained("x".to_owned()))
         },
-        |s| {
-            named_mut(s, "Equation")
-                .text_body
-                .as_mut()
-                .unwrap()
-                .paragraphs[0]
-                .items
-                .truncate(1)
-        },
         // A new body with nothing the schema requires.
         |s| named_mut(s, "Whitespace").text_body = Some(Box::default()),
     ] {
         assert_eq!(refused(change), "CS-EXP-0009");
     }
+    // An equation is in the model since `T1K-02`, so taking it away is an edit like another.
+    edit_slide(&source, |s| {
+        named_mut(s, "Equation")
+            .text_body
+            .as_mut()
+            .unwrap()
+            .paragraphs[0]
+            .items
+            .truncate(1)
+    })
+    .unwrap();
     // Over a type's range: not written, and the read-back says so.
     let code = edit_slide(&source, |s| {
         first_run_of_mut(named_mut(s, "No Autofit")).properties =
