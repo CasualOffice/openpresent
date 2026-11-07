@@ -4,23 +4,29 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use casual_slide_export::color::{ExportError, set_color};
+use casual_slide_export::properties::ExportError as PartError;
 use casual_slide_export::theme::{
     FontRole, FontSlot, add_custom_color, part_edit, set_color_map_override, set_color_map_slot,
     set_color_scheme_name, set_custom_color, set_effect_reference, set_extra_scheme_color,
     set_font_charset, set_font_panose, set_font_pitch_family, set_font_reference_index,
-    set_font_scheme_name, set_format_scheme_name, set_override_scheme_color, set_scheme_color,
+    set_font_scheme_name, set_format_scheme, set_format_scheme_name, set_object_defaults,
+    set_override_format_scheme, set_override_scheme_color, set_scheme_color,
     set_style_matrix_index, set_supplemental_font, set_theme_name, set_typeface,
 };
 use casual_slide_import::color::Findings;
-use casual_slide_import::theme::{import_theme, read_color_map, read_theme_parts};
+use casual_slide_import::theme::{
+    import_theme, import_theme_override, read_color_map, read_theme_parts,
+};
 use casual_slide_model::color::{
     Angle, Color, ColorTransform, ColorValue, MAX_COLOR_TRANSFORMS, Percentage, Rgb, SchemeColor,
     SystemColor, TransformKind as K,
 };
+use casual_slide_model::fill::{Blip, BlipFill, Fill};
 use casual_slide_model::theme::{
-    ColorMapOverride, ColorMapSlot, ColorSchemeIndex as I, FontCollectionIndex, Theme,
+    ColorMapOverride, ColorMapSlot, ColorSchemeIndex as I, FontCollectionIndex, FormatScheme,
+    ObjectDefaults, ShapeDefinition, Theme,
 };
-use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
+use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, Relationship, TargetMode, XmlTree};
 use casual_slide_package::PartEdits;
 
 const RICH: &str = include_str!("../../casual-slide-import/tests/data/rich-theme.xml");
@@ -864,4 +870,297 @@ fn an_extra_scheme_colour_can_be_set() {
     let extra = &reread.extra_color_schemes.unwrap()[0];
     let scheme = extra.color_scheme.as_ref().unwrap();
     assert_eq!(scheme.slots[I::Accent1 as usize], Some(color));
+}
+
+/// The one relationship `RICH` names, from its format scheme's picture.
+fn rich_rels() -> Vec<Relationship> {
+    vec![Relationship {
+        id: "rId1".to_owned(),
+        rel_type: String::new(),
+        target: "x.png".to_owned(),
+        mode: TargetMode::Internal,
+    }]
+}
+
+fn rich_scheme(tree: &XmlTree) -> FormatScheme {
+    model(tree).elements.unwrap().format_scheme.unwrap()
+}
+
+fn rich_defaults(tree: &XmlTree) -> ObjectDefaults {
+    model(tree).object_defaults.unwrap()
+}
+
+fn put_scheme(tree: &mut XmlTree, after: &FormatScheme) -> Result<bool, PartError> {
+    set_format_scheme(
+        tree,
+        THEME_PART,
+        false,
+        &rich_rels(),
+        after,
+        &OoxmlLimits::default(),
+    )
+}
+
+fn put_defaults(tree: &mut XmlTree, after: Option<&ObjectDefaults>) -> Result<bool, PartError> {
+    set_object_defaults(
+        tree,
+        THEME_PART,
+        false,
+        &rich_rels(),
+        after,
+        &OoxmlLimits::default(),
+    )
+}
+
+/// A tree with the format scheme's lists and the object defaults taken out.
+fn stripped(xml: &str) -> XmlTree {
+    let mut tree = parse(xml);
+    let root = tree.root();
+    for kid in tree.child_elements(root) {
+        match tree.local_name(kid) {
+            "objectDefaults" => {
+                tree.remove_child(root, kid);
+            }
+            "themeElements" => {
+                for scheme in tree.child_elements(kid) {
+                    if tree.local_name(scheme) == "fmtScheme" {
+                        for list in tree.child_elements(scheme) {
+                            tree.remove_child(scheme, list);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    tree
+}
+
+#[test]
+fn a_format_scheme_and_defaults_with_nothing_changed_touch_nothing() {
+    let mut tree = parse(RICH);
+    let (scheme, defaults) = (rich_scheme(&tree), rich_defaults(&tree));
+    assert!(!put_scheme(&mut tree, &scheme).unwrap());
+    assert!(!put_defaults(&mut tree, Some(&defaults)).unwrap());
+    assert_eq!(text(&tree), RICH);
+}
+
+#[test]
+fn a_fill_in_the_format_scheme_edited_changes_that_node_alone() {
+    let mut tree = parse(RICH);
+    let mut scheme = rich_scheme(&tree);
+    scheme.fills.as_mut().unwrap()[0] = Fill::Solid(Some(Color::srgb(1, 2, 3)));
+    assert!(put_scheme(&mut tree, &scheme).unwrap());
+    assert_eq!(
+        text(&tree),
+        rich_with(
+            "<a:fillStyleLst>\n        <a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill>",
+            "<a:fillStyleLst>\n        <a:solidFill><a:srgbClr val=\"010203\"/></a:solidFill>",
+        )
+    );
+}
+
+#[test]
+fn a_line_and_an_effect_in_the_format_scheme_edited_change_those_nodes_alone() {
+    let mut tree = parse(RICH);
+    let mut scheme = rich_scheme(&tree);
+    scheme.lines.as_mut().unwrap()[2].width = Some(25_400);
+    scheme.effects.as_mut().unwrap()[0].effects = None;
+    assert!(put_scheme(&mut tree, &scheme).unwrap());
+    let want = rich_with(r#"<a:ln w="19050"/>"#, r#"<a:ln w="25400"/>"#).replacen(
+        "<a:effectStyle><a:effectLst/></a:effectStyle>",
+        "<a:effectStyle></a:effectStyle>",
+        1,
+    );
+    assert_eq!(text(&tree), want);
+}
+
+#[test]
+fn a_format_scheme_written_from_nothing_reads_back_in_schema_order() {
+    let wanted = rich_scheme(&parse(RICH));
+    let mut tree = stripped(RICH);
+    assert!(put_scheme(&mut tree, &wanted).unwrap());
+    assert_eq!(rich_scheme(&tree), wanted);
+    let out = text(&tree);
+    let at = |needle: &str| out.find(needle).unwrap_or_else(|| panic!("{needle}"));
+    assert!(at("<a:fillStyleLst") < at("<a:lnStyleLst"));
+    assert!(at("<a:lnStyleLst") < at("<a:effectStyleLst"));
+    assert!(at("<a:effectStyleLst") < at("<a:bgFillStyleLst"));
+}
+
+#[test]
+fn a_picture_in_the_format_scheme_naming_no_relationship_is_refused() {
+    let mut tree = parse(RICH);
+    let mut scheme = rich_scheme(&tree);
+    scheme.fills.as_mut().unwrap()[0] = Fill::Blip(Box::new(BlipFill {
+        blip: Some(Blip {
+            embed: Some("rId9".to_owned()),
+            ..Blip::default()
+        }),
+        ..BlipFill::default()
+    }));
+    let err = put_scheme(&mut tree, &scheme).unwrap_err();
+    assert!(
+        matches!(err, PartError::UnknownRelationship { .. }),
+        "{err:?}"
+    );
+}
+
+#[test]
+fn an_override_format_scheme_is_written_too() {
+    let xml = format!(
+        r#"<a:themeOverride {A}><a:fmtScheme name="o"><a:fillStyleLst><a:noFill/></a:fillStyleLst></a:fmtScheme></a:themeOverride>"#
+    );
+    let mut tree = parse(&xml);
+    let mut scheme = import_theme_override(&tree)
+        .unwrap()
+        .value
+        .format_scheme
+        .unwrap();
+    scheme.fills.as_mut().unwrap()[0] = Fill::Group;
+    let limits = OoxmlLimits::default();
+    let changed = set_override_format_scheme(&mut tree, "o", false, &[], &scheme, &limits).unwrap();
+    assert!(changed);
+    assert!(text(&tree).contains("<a:fillStyleLst><a:grpFill/></a:fillStyleLst>"));
+}
+
+#[test]
+fn an_object_default_edited_changes_those_nodes_alone() {
+    let mut tree = parse(RICH);
+    let mut defaults = rich_defaults(&tree);
+    let shape = defaults.shape.as_mut().unwrap();
+    shape.shape_properties.as_mut().unwrap().fill = Some(Fill::Solid(Some(Color::srgb(1, 2, 3))));
+    shape.body_properties.as_mut().unwrap().rotation = Some(60_000);
+    shape.style.as_mut().unwrap().line.as_mut().unwrap().idx = Some(3);
+    assert!(put_defaults(&mut tree, Some(&defaults)).unwrap());
+    let want = rich_with(
+        r#"<a:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:spPr>"#,
+        r#"<a:spPr><a:solidFill><a:srgbClr val="010203"/></a:solidFill></a:spPr>"#,
+    )
+    .replacen(
+        r#"<a:bodyPr rtlCol="0" anchor="ctr"/>"#,
+        r#"<a:bodyPr rtlCol="0" anchor="ctr" rot="60000"/>"#,
+        1,
+    )
+    .replacen(r#"<a:lnRef idx="2">"#, r#"<a:lnRef idx="3">"#, 1);
+    assert_eq!(text(&tree), want);
+}
+
+#[test]
+fn object_defaults_written_from_nothing_read_back_in_schema_order() {
+    let mut wanted = rich_defaults(&parse(RICH));
+    wanted.extensions.clear();
+    wanted.text = Some(ShapeDefinition {
+        body_properties: Some(Default::default()),
+        ..ShapeDefinition::default()
+    });
+    let mut tree = stripped(RICH);
+    assert!(put_defaults(&mut tree, Some(&wanted)).unwrap());
+    assert_eq!(rich_defaults(&tree), wanted);
+    let out = text(&tree);
+    let at = |needle: &str| out.find(needle).unwrap_or_else(|| panic!("{needle}"));
+    assert!(at("</a:themeElements>") < at("<a:objectDefaults"));
+    assert!(at("<a:objectDefaults") < at("<a:extraClrSchemeLst"));
+    assert!(at("<a:spDef") < at("<a:lnDef"));
+    assert!(at("<a:lnDef") < at("<a:txDef"));
+    assert!(at("<a:spPr") < at("<a:bodyPr"));
+    assert!(at("<a:bodyPr") < at("<a:lstStyle"));
+    assert!(at("<a:lstStyle") < at("<a:style"));
+}
+
+#[test]
+fn object_defaults_taken_away_are_absent_and_a_default_too() {
+    let mut tree = parse(RICH);
+    let mut defaults = rich_defaults(&tree);
+    defaults.line = None;
+    assert!(put_defaults(&mut tree, Some(&defaults)).unwrap());
+    assert!(!text(&tree).contains("<a:lnDef"));
+    assert!(text(&tree).contains("<a:spDef"));
+    assert!(put_defaults(&mut tree, None).unwrap());
+    assert!(!text(&tree).contains("objectDefaults"));
+    assert_eq!(model(&tree).object_defaults, None);
+}
+
+/// A change to what stays in the part cannot be made, and does not pass as made.
+#[test]
+fn a_default_extension_changed_in_the_model_does_not_read_back() {
+    let mut tree = parse(RICH);
+    let mut defaults = rich_defaults(&tree);
+    defaults.extensions.clear();
+    assert!(matches!(
+        put_defaults(&mut tree, Some(&defaults)),
+        Err(PartError::RoundTrip { .. })
+    ));
+}
+
+/// Every theme in the generated decks: unchanged, it is a fixed point; written from nothing, it
+/// reads back as its model.
+#[test]
+fn every_generated_theme_is_a_fixed_point_and_writes_from_nothing() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/generated");
+    let limits = OoxmlLimits::default();
+    let mut themes = 0;
+    let mut decks: Vec<_> = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|x| x == "pptx"))
+        .collect();
+    decks.sort();
+    for deck in decks {
+        let Ok(mut pkg) = PresentationPackage::open(std::fs::read(&deck).unwrap(), limits) else {
+            continue;
+        };
+        let Ok(parts) = read_theme_parts(&mut pkg) else {
+            continue;
+        };
+        for (name, source) in parts {
+            if source.local_name(source.root()) != "theme" {
+                continue;
+            }
+            let rels = pkg.relationships_of(&name).to_vec();
+            let read = model(&source);
+            let scheme = read
+                .elements
+                .as_ref()
+                .and_then(|e| e.format_scheme.as_ref());
+            let Some(scheme) = scheme else { continue };
+            let mut tree = source.clone();
+            assert!(
+                !set_format_scheme(&mut tree, &name, false, &rels, scheme, &limits).unwrap(),
+                "{deck:?} {name}"
+            );
+            assert!(
+                !set_object_defaults(
+                    &mut tree,
+                    &name,
+                    false,
+                    &rels,
+                    read.object_defaults.as_ref(),
+                    &limits
+                )
+                .unwrap(),
+                "{deck:?} {name}"
+            );
+            assert_eq!(tree.to_bytes(), source.to_bytes(), "{deck:?} {name}");
+
+            let mut bare = stripped(&String::from_utf8(source.to_bytes()).unwrap());
+            set_format_scheme(&mut bare, &name, false, &rels, scheme, &limits)
+                .unwrap_or_else(|e| panic!("{deck:?} {name}: {e:?}"));
+            let wanted = read.object_defaults.clone().map(|mut d| {
+                // `extLst` stays in the part, and was taken with it here.
+                d.extensions.clear();
+                for def in [&mut d.shape, &mut d.line, &mut d.text]
+                    .into_iter()
+                    .flatten()
+                {
+                    def.extensions.clear();
+                }
+                d
+            });
+            set_object_defaults(&mut bare, &name, false, &rels, wanted.as_ref(), &limits)
+                .unwrap_or_else(|e| panic!("{deck:?} {name}: {e:?}"));
+            themes += 1;
+        }
+    }
+    assert!(themes >= 50, "only {themes}");
 }

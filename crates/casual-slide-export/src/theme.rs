@@ -2,14 +2,27 @@
 //! names the node it changes and leaves all else as read. Each returns whether
 //! anything changed, so a no-op edit can leave the part out of the save.
 
+use casual_slide_import::drawing::is_fill_name;
+use casual_slide_import::properties::{Elem, ns};
+use casual_slide_import::theme::{
+    ThemeImportError, import_theme_override_with_rels, import_theme_with_rels,
+};
 use casual_slide_model::color::Color;
 use casual_slide_model::theme::{
-    ColorMapOverride, ColorMapSlot, ColorSchemeIndex, FontCollectionIndex,
+    ColorMapOverride, ColorMapSlot, ColorSchemeIndex, FontCollectionIndex, FormatScheme,
+    ObjectDefaults, ShapeDefinition, StyleEffect,
 };
-use casual_slide_ooxml::{ElementId, XmlTree};
+use casual_slide_ooxml::{ElementId, OoxmlLimits, Relationship, XmlTree};
 use casual_slide_package::PartEdits;
 
 use crate::color::{ExportError, dml_child, dml_name, is_dml, set_color, validate};
+use crate::d3::{scene3d_node, sp3d_node};
+use crate::drawing::{Node, Space, check_svg_fallback, patch, patch_style, properties_node};
+use crate::effect::effect_properties_node;
+use crate::fill::fill_node;
+use crate::line::line_node;
+use crate::properties::{ExportError as PartError, Writer};
+use crate::text::{patch_body_properties, patch_list_style};
 
 /// Which font collection of a font scheme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -446,6 +459,354 @@ pub fn set_color_map_override(
             Ok(changed)
         }
     }
+}
+
+fn effect_style_node(e: &StyleEffect) -> Node {
+    Node::a("effectStyle")
+        .opt(e.effects.as_ref().map(effect_properties_node))
+        .opt(
+            e.scene3d
+                .as_ref()
+                .map(|s| scene3d_node(s, Space::Dml, "scene3d")),
+        )
+        .opt(e.sp3d.as_ref().map(|s| sp3d_node(s, Space::Dml, "sp3d")))
+}
+
+// spec-audit: owner=fmtScheme,fillStyleLst,lnStyleLst,effectStyleLst,bgFillStyleLst
+fn format_scheme_node(f: &FormatScheme) -> Node {
+    let fills = |local, list: &Vec<_>| Node::a(local).list(list.iter().map(fill_node));
+    Node::a("fmtScheme")
+        .lex("name", f.name.as_ref())
+        .opt(f.fills.as_ref().map(|l| fills("fillStyleLst", l)))
+        .opt(f.lines.as_ref().map(|l| {
+            Node::a("lnStyleLst").list(l.iter().map(|line| line_node(line, Space::Dml, "ln")))
+        }))
+        .opt(
+            f.effects
+                .as_ref()
+                .map(|l| Node::a("effectStyleLst").list(l.iter().map(effect_style_node))),
+        )
+        .opt(
+            f.background_fills
+                .as_ref()
+                .map(|l| fills("bgFillStyleLst", l)),
+        )
+}
+
+fn from_import(err: ThemeImportError, part: &str) -> PartError {
+    match err {
+        ThemeImportError::Xml(err) => err.into(),
+        ThemeImportError::WrongRoot { expected } => PartError::UnsupportedEdit {
+            what: expected,
+            part: part.to_owned(),
+        },
+    }
+}
+
+fn parsed_again(tree: &XmlTree, part: &str, limits: &OoxmlLimits) -> Result<XmlTree, PartError> {
+    Ok(XmlTree::parse(&tree.to_bytes(), part, limits)?)
+}
+
+/// A list entry past a bound is reported and not in the model, so the model's entries no
+/// longer pair with the part's by place. Nothing is patched on that footing.
+fn check_lists_pair(w: &Writer<'_>, el: &Elem, before: &FormatScheme) -> Result<(), PartError> {
+    for list in el.children(w.tree, w.part)? {
+        if !list.in_namespace(ns::DML) {
+            continue;
+        }
+        let in_part = |pick: fn(&Elem) -> bool| -> Result<usize, PartError> {
+            let kids = list.children(w.tree, w.part)?;
+            Ok(kids.iter().filter(|k| pick(k)).count())
+        };
+        let (held, there) = match list.local.as_str() {
+            "fillStyleLst" => (
+                before.fills.as_ref().map(Vec::len),
+                in_part(|k| k.in_namespace(ns::DML) && is_fill_name(&k.local))?,
+            ),
+            "bgFillStyleLst" => (
+                before.background_fills.as_ref().map(Vec::len),
+                in_part(|k| k.in_namespace(ns::DML) && is_fill_name(&k.local))?,
+            ),
+            "lnStyleLst" => (
+                before.lines.as_ref().map(Vec::len),
+                in_part(|k| k.is(ns::DML, "ln"))?,
+            ),
+            "effectStyleLst" => (
+                before.effects.as_ref().map(Vec::len),
+                in_part(|k| k.is(ns::DML, "effectStyle"))?,
+            ),
+            _ => continue,
+        };
+        if held != Some(there) {
+            return Err(PartError::UnsupportedEdit {
+                what: "a format scheme list with entries the model does not hold",
+                part: w.part.to_owned(),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn patch_format_scheme(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    before: Option<&FormatScheme>,
+    after: &FormatScheme,
+) -> Result<(), PartError> {
+    if let Some(before) = before {
+        check_lists_pair(w, el, before)?;
+    }
+    patch(
+        w,
+        el,
+        before.map(format_scheme_node).as_ref(),
+        &format_scheme_node(after),
+    )
+}
+
+/// Bring a theme part's `fmtScheme` to this, its fills, lines and effects patched node by node.
+/// Returns whether anything changed. What was asked is read back before returning.
+// spec-audit: owner=themeElements
+pub fn set_format_scheme(
+    tree: &mut XmlTree,
+    part: &str,
+    strict: bool,
+    rels: &[Relationship],
+    after: &FormatScheme,
+    limits: &OoxmlLimits,
+) -> Result<bool, PartError> {
+    let read = |tree: &XmlTree| {
+        import_theme_with_rels(tree, rels, limits)
+            .map(|i| i.value.elements.and_then(|e| e.format_scheme))
+            .map_err(|e| from_import(e, part))
+    };
+    let before = read(tree)?;
+    if before.as_ref() == Some(after) {
+        return Ok(false);
+    }
+    let root = Elem::root(tree, part)?;
+    let Some(holder) = root.first_child(tree, part, ns::DML, "themeElements")? else {
+        return Err(PartError::UnsupportedEdit {
+            what: "a format scheme where the theme has no themeElements",
+            part: part.to_owned(),
+        });
+    };
+    let mut w = Writer {
+        tree,
+        part,
+        strict,
+        known_rels: Some(rels.iter().map(|r| r.id.clone()).collect()),
+        changes: 0,
+    };
+    w.sync_child(
+        &holder,
+        ns::DML,
+        "a",
+        &["clrScheme", "fontScheme", "fmtScheme", "extLst"],
+        "fmtScheme",
+        before.as_ref(),
+        Some(after),
+        patch_format_scheme,
+    )?;
+    if read(&parsed_again(tree, part, limits)?)?.as_ref() != Some(after) {
+        return Err(PartError::RoundTrip {
+            part: part.to_owned(),
+        });
+    }
+    Ok(true)
+}
+
+/// Bring a `themeOverride` part's `fmtScheme` to this. As [`set_format_scheme`].
+// spec-audit: owner=themeOverride
+pub fn set_override_format_scheme(
+    tree: &mut XmlTree,
+    part: &str,
+    strict: bool,
+    rels: &[Relationship],
+    after: &FormatScheme,
+    limits: &OoxmlLimits,
+) -> Result<bool, PartError> {
+    let read = |tree: &XmlTree| {
+        import_theme_override_with_rels(tree, rels)
+            .map(|i| i.value.format_scheme)
+            .map_err(|e| from_import(e, part))
+    };
+    let before = read(tree)?;
+    if before.as_ref() == Some(after) {
+        return Ok(false);
+    }
+    let root = Elem::root(tree, part)?;
+    let mut w = Writer {
+        tree,
+        part,
+        strict,
+        known_rels: Some(rels.iter().map(|r| r.id.clone()).collect()),
+        changes: 0,
+    };
+    w.sync_child(
+        &root,
+        ns::DML,
+        "a",
+        &["clrScheme", "fontScheme", "fmtScheme"],
+        "fmtScheme",
+        before.as_ref(),
+        Some(after),
+        patch_format_scheme,
+    )?;
+    if read(&parsed_again(tree, part, limits)?)?.as_ref() != Some(after) {
+        return Err(PartError::RoundTrip {
+            part: part.to_owned(),
+        });
+    }
+    Ok(true)
+}
+
+fn blip_of(
+    p: Option<&casual_slide_model::drawing::ShapeProperties>,
+) -> Option<&casual_slide_model::fill::Blip> {
+    match p?.fill.as_ref()? {
+        casual_slide_model::fill::Fill::Blip(f) => f.blip.as_ref(),
+        _ => None,
+    }
+}
+
+// spec-audit: owner=spDef,lnDef,txDef,spPr,bodyPr,lstStyle
+fn patch_definition(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&ShapeDefinition>,
+    a: &ShapeDefinition,
+) -> Result<(), PartError> {
+    const ORDER: &[&str] = &["spPr", "bodyPr", "lstStyle", "style", "extLst"];
+    let before = b.and_then(|b| b.shape_properties.as_ref());
+    check_svg_fallback(w, blip_of(before), blip_of(a.shape_properties.as_ref()))?;
+    w.sync_child(
+        el,
+        ns::DML,
+        "a",
+        ORDER,
+        "spPr",
+        before,
+        a.shape_properties.as_ref(),
+        |w, el, b, a| {
+            patch(
+                w,
+                el,
+                b.map(|b| properties_node(b, "spPr")).as_ref(),
+                &properties_node(a, "spPr"),
+            )
+        },
+    )?;
+    w.sync_child(
+        el,
+        ns::DML,
+        "a",
+        ORDER,
+        "bodyPr",
+        b.and_then(|b| b.body_properties.as_ref()),
+        a.body_properties.as_ref(),
+        patch_body_properties,
+    )?;
+    w.sync_child(
+        el,
+        ns::DML,
+        "a",
+        ORDER,
+        "lstStyle",
+        b.and_then(|b| b.list_style.as_ref()),
+        a.list_style.as_ref(),
+        patch_list_style,
+    )?;
+    w.sync_child(
+        el,
+        ns::DML,
+        "a",
+        ORDER,
+        "style",
+        b.and_then(|b| b.style.as_ref()),
+        a.style.as_ref(),
+        patch_style,
+    )
+}
+
+// spec-audit: owner=objectDefaults
+fn patch_object_defaults(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&ObjectDefaults>,
+    a: &ObjectDefaults,
+) -> Result<(), PartError> {
+    const ORDER: &[&str] = &["spDef", "lnDef", "txDef", "extLst"];
+    let slots: [(&str, fn(&ObjectDefaults) -> Option<&ShapeDefinition>); 3] = [
+        ("spDef", |d| d.shape.as_ref()),
+        ("lnDef", |d| d.line.as_ref()),
+        ("txDef", |d| d.text.as_ref()),
+    ];
+    for (local, slot) in slots {
+        w.sync_child(
+            el,
+            ns::DML,
+            "a",
+            ORDER,
+            local,
+            b.and_then(slot),
+            slot(a),
+            patch_definition,
+        )?;
+    }
+    Ok(())
+}
+
+/// Bring a theme part's `objectDefaults` to this, or take it away. Each default's `spPr`,
+/// `bodyPr`, `lstStyle` and `style` are patched node by node; `extLst` stays in the part, and
+/// a change to it does not read back. Returns whether anything changed.
+pub fn set_object_defaults(
+    tree: &mut XmlTree,
+    part: &str,
+    strict: bool,
+    rels: &[Relationship],
+    after: Option<&ObjectDefaults>,
+    limits: &OoxmlLimits,
+) -> Result<bool, PartError> {
+    let read = |tree: &XmlTree| {
+        import_theme_with_rels(tree, rels, limits)
+            .map(|i| i.value.object_defaults)
+            .map_err(|e| from_import(e, part))
+    };
+    let before = read(tree)?;
+    if before.as_ref() == after {
+        return Ok(false);
+    }
+    let root = Elem::root(tree, part)?;
+    let mut w = Writer {
+        tree,
+        part,
+        strict,
+        known_rels: Some(rels.iter().map(|r| r.id.clone()).collect()),
+        changes: 0,
+    };
+    w.sync_child(
+        &root,
+        ns::DML,
+        "a",
+        &[
+            "themeElements",
+            "objectDefaults",
+            "extraClrSchemeLst",
+            "custClrLst",
+            "extLst",
+        ],
+        "objectDefaults",
+        before.as_ref(),
+        after,
+        patch_object_defaults,
+    )?;
+    if read(&parsed_again(tree, part, limits)?)?.as_ref() != after {
+        return Err(PartError::RoundTrip {
+            part: part.to_owned(),
+        });
+    }
+    Ok(true)
 }
 
 /// The edit for saving a part, or none if its bytes did not change.

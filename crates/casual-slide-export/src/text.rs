@@ -283,7 +283,7 @@ pub(crate) fn patch_text_body(
 
 /// `a:CT_TextBodyProperties`.
 // spec-audit: owner=bodyPr,normAutofit
-fn patch_body_properties(
+pub(crate) fn patch_body_properties(
     w: &mut Writer<'_>,
     el: &Elem,
     b: Option<&BodyProperties>,

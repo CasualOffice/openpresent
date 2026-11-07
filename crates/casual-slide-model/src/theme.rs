@@ -2,11 +2,15 @@
 //! defaults, extra schemes, custom colours, colour maps and overrides.
 //!
 //! Absent stays absent, schema-required items included, because a hostile or
-//! damaged part may lack them. Fills, lines and effects inside a format scheme
-//! are shown here only as far as theme colours are concerned: the rest belongs to
-//! their own areas and stays in the part's tree, preserved but not modelled.
+//! damaged part may lack them. A format scheme's fills, lines and effects, and an
+//! object default's `spPr`, are the types their own areas use for a shape.
 
 use crate::color::{Color, xml_enum};
+use crate::d3::{Scene3D, Shape3D};
+use crate::drawing::ShapeProperties;
+use crate::effect::EffectProperties;
+use crate::fill::Fill;
+use crate::line::Line;
 use crate::text::{BodyProperties, TextListStyle};
 
 xml_enum! {
@@ -172,56 +176,15 @@ pub struct FontScheme {
     pub extensions: Vec<String>,
 }
 
-/// One gradient stop.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GradientStop {
-    /// `@pos` in thousandths of a percent.
-    pub position: Option<i32>,
-    /// The stop's colour.
-    pub color: Option<Color>,
-}
-
-/// A fill in a format scheme. Colours are shown; the rest of each fill (angles,
-/// tiling, the picture) stays in the part, preserved but not modelled.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum StyleFill {
-    /// `noFill`.
-    None,
-    /// `solidFill`.
-    Solid(Option<Color>),
-    /// `gradFill`.
-    Gradient(Vec<GradientStop>),
-    /// `blipFill`.
-    Picture,
-    /// `pattFill`.
-    Pattern {
-        /// `fgClr`.
-        foreground: Option<Color>,
-        /// `bgClr`.
-        background: Option<Color>,
-    },
-    /// `grpFill`.
-    Group,
-}
-
-/// A line in a format scheme.
+/// `CT_EffectStyleItem`, one entry of `effectStyleLst`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct StyleLine {
-    /// `@w` in EMU.
-    pub width: Option<i32>,
-    /// Its fill.
-    pub fill: Option<StyleFill>,
-}
-
-/// An effect style. Its content stays in the part.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct StyleEffect {
-    /// `effectLst` or `effectDag` is present.
-    pub has_effects: bool,
-    /// `scene3d` is present.
-    pub has_scene3d: bool,
-    /// `sp3d` is present.
-    pub has_sp3d: bool,
+    /// `effectLst` or `effectDag`.
+    pub effects: Option<EffectProperties>,
+    /// `scene3d`.
+    pub scene3d: Option<Box<Scene3D>>,
+    /// `sp3d`.
+    pub sp3d: Option<Box<Shape3D>>,
 }
 
 /// `CT_StyleMatrix`.
@@ -230,20 +193,20 @@ pub struct FormatScheme {
     /// `@name`.
     pub name: Option<String>,
     /// `fillStyleLst`.
-    pub fills: Option<Vec<StyleFill>>,
+    pub fills: Option<Vec<Fill>>,
     /// `lnStyleLst`.
-    pub lines: Option<Vec<StyleLine>>,
+    pub lines: Option<Vec<Line>>,
     /// `effectStyleLst`.
     pub effects: Option<Vec<StyleEffect>>,
     /// `bgFillStyleLst`.
-    pub background_fills: Option<Vec<StyleFill>>,
+    pub background_fills: Option<Vec<Fill>>,
 }
 
 impl FormatScheme {
     /// A style matrix fill reference: 1 to 999 is `fillStyleLst`, 1001 and up is
     /// `bgFillStyleLst`, and 0 or 1000 is no fill. `None` also for an index past
     /// the end of its list.
-    pub fn fill(&self, idx: u32) -> Option<&StyleFill> {
+    pub fn fill(&self, idx: u32) -> Option<&Fill> {
         let (list, at) = match idx {
             0 | 1000 => return None,
             1..=999 => (&self.fills, idx - 1),
@@ -253,7 +216,7 @@ impl FormatScheme {
     }
 
     /// A style matrix line reference, 1-based; 0 is no line.
-    pub fn line(&self, idx: u32) -> Option<&StyleLine> {
+    pub fn line(&self, idx: u32) -> Option<&Line> {
         self.lines.as_ref()?.get(idx.checked_sub(1)? as usize)
     }
 
@@ -351,12 +314,11 @@ pub enum ThemeableFont {
 }
 
 /// `CT_DefaultShapeDefinition`. `bodyPr` and `lstStyle` take part in a shape's text
-/// inheritance (`MS-OI29500` 2.1.1379, 2.1.1388, 2.1.1399). `spPr` stays in the part,
-/// preserved but not modelled here (`T1C-02`).
+/// inheritance (`MS-OI29500` 2.1.1379, 2.1.1388, 2.1.1399).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ShapeDefinition {
-    /// `spPr` is present.
-    pub has_shape_properties: bool,
+    /// `spPr`. `xfrm` and `@bwMode` stay in the part, and are reported.
+    pub shape_properties: Option<ShapeProperties>,
     /// `bodyPr`.
     pub body_properties: Option<BodyProperties>,
     /// `lstStyle`.
