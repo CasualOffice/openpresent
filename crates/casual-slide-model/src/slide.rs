@@ -392,3 +392,24 @@ impl SlideParts {
         (layout, master)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::SlideKind;
+
+    /// The import's cycle guard (`SEC-X07`) rests on this: a part's content type
+    /// names exactly one kind.
+    #[test]
+    fn every_slide_kind_has_its_own_content_type() {
+        let kinds = [
+            SlideKind::Master,
+            SlideKind::Layout,
+            SlideKind::Slide,
+            SlideKind::Notes,
+            SlideKind::NotesMaster,
+            SlideKind::HandoutMaster,
+        ];
+        let types: std::collections::BTreeSet<_> = kinds.iter().map(|k| k.content_type()).collect();
+        assert_eq!(types.len(), kinds.len());
+    }
+}

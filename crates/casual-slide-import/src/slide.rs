@@ -700,15 +700,9 @@ impl Indexer<'_> {
             findings.note_role(K::WrongRelationship, source, kind.rel_type());
             return Ok(None);
         }
+        // Each kind has its own content type, so a part already indexed was indexed
+        // as this kind: the check above is the whole cycle guard (`SEC-X07`).
         if let Some(&ordinal) = self.by_name.get(part) {
-            let same = self
-                .structure
-                .entry(ordinal)
-                .is_some_and(|e| e.kind == kind);
-            if !same {
-                findings.note_role(K::WrongRelationship, source, kind.rel_type());
-                return Ok(None);
-            }
             return Ok(Some(ordinal));
         }
         if self.structure.parts.len() >= self.limits.max_parts {
