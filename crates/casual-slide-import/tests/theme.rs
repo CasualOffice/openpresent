@@ -178,7 +178,7 @@ fn object_defaults_extra_schemes_custom_colours_and_family() {
     let d = t.object_defaults.as_ref().unwrap();
     assert_eq!(d.extensions, ["{DEFAULTS-EXT}"]);
     let sp = d.shape.as_ref().unwrap();
-    assert!(sp.has_shape_properties && sp.has_body_properties && sp.has_list_style);
+    assert!(sp.has_shape_properties && sp.body_properties.is_some() && sp.list_style.is_some());
     let style = sp.style.as_ref().unwrap();
     assert_eq!(style.line.as_ref().unwrap().idx, Some(2));
     assert_eq!(style.fill.as_ref().unwrap().idx, Some(1001));

@@ -10,6 +10,7 @@ use crate::properties::{Elem, ImportFindingKind as K, ns};
 
 impl Ctx<'_, '_> {
     /// `a:CT_LineProperties`, under any name.
+    // spec-audit: owner=ln,hiddenLine,prstDash,miter
     pub(crate) fn line(&mut self, el: &Elem) -> Res<Line> {
         let mut e = el.clone();
         let mut l = Line {
@@ -82,6 +83,7 @@ impl Ctx<'_, '_> {
         Ok(l)
     }
 
+    // spec-audit: owner=headEnd,tailEnd
     fn line_end(&mut self, el: &Elem) -> Res<LineEnd> {
         let mut e = el.clone();
         let end = LineEnd {
@@ -94,6 +96,7 @@ impl Ctx<'_, '_> {
         Ok(end)
     }
 
+    // spec-audit: owner=custDash,ds
     fn dash_stops(&mut self, el: &Elem) -> Res<Vec<DashStop>> {
         self.r.finish(el);
         let mut stops = Vec::new();
@@ -119,6 +122,7 @@ impl Ctx<'_, '_> {
         Ok(stops)
     }
 
+    // spec-audit: owner=lineSketchStyleProps,type
     fn sketch(&mut self, el: &Elem) -> Res<LineSketch> {
         let mut e = el.clone();
         let mut s = LineSketch {

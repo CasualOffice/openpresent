@@ -160,7 +160,7 @@ pub enum Effect {
     AlphaFloor,
     /// `alphaInv`.
     AlphaInverse(Option<Color>),
-    /// `alphaMod`, with its `cont`.
+    /// `alphaMod/cont`.
     AlphaModulate(Option<EffectContainer>),
     /// `alphaModFix/@amt`.
     AlphaModulateFixed(Option<Percentage>),

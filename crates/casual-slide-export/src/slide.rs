@@ -24,7 +24,8 @@ use casual_slide_import::slide::{
 };
 use casual_slide_model::presentation::{Point, PositiveSize};
 use casual_slide_model::shape::{
-    AppNonVisual, Hyperlink, Locks, NodeKind, NonVisualDrawing, Placeholder, ShapeNode, Transform,
+    AppNonVisual, Connection, Hyperlink, Locks, NodeKind, NonVisualDrawing, Placeholder, ShapeNode,
+    Transform,
 };
 use casual_slide_model::slide::{
     DeckStructure, HeaderFooter, MasterTextStyles, SlideKind, SlidePart,
@@ -382,7 +383,8 @@ impl Patch<'_, '_> {
             || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
             || b.rel_id != a.rel_id
-            || b.text_body != a.text_body;
+            || b.text_body != a.text_body
+            || b.style != a.style;
         if own_changed {
             let mapped = self
                 .map
@@ -409,9 +411,6 @@ impl Patch<'_, '_> {
         if b.rel_id != a.rel_id {
             return Err(self.unsupported("a content part's target"));
         }
-        if b.start_connection != a.start_connection || b.end_connection != a.end_connection {
-            return Err(self.unsupported("a connector's ends"));
-        }
         self.w.attr(
             el,
             "useBgFill",
@@ -421,6 +420,8 @@ impl Patch<'_, '_> {
         let changed_nv = b.non_visual != a.non_visual
             || b.locks != a.locks
             || b.text_box != a.text_box
+            || b.start_connection != a.start_connection
+            || b.end_connection != a.end_connection
             || b.app != a.app;
         if changed_nv {
             let container = self.child(el, ns::PML, a.kind.non_visual_container())?;
@@ -444,6 +445,25 @@ impl Patch<'_, '_> {
             a.text_body.as_ref(),
             |w, el, before, after| patch_text_body(w, el, before.map(|b| &**b), after),
         )?;
+        if a.style.is_some()
+            && !matches!(
+                a.kind,
+                NodeKind::Shape | NodeKind::Connector | NodeKind::Picture
+            )
+        {
+            return Err(self.unsupported("a shape style on a node that holds none"));
+        }
+        sync_ordered(
+            &mut self.w,
+            el,
+            ns::PML,
+            "p",
+            SHAPE_ORDER,
+            "style",
+            b.style.as_ref(),
+            a.style.as_ref(),
+            |w, el, before, after| crate::drawing::patch_style(w, el, before.map(|b| &**b), after),
+        )?;
         if b.properties != a.properties {
             crate::drawing::patch_properties(
                 &mut self.w,
@@ -464,6 +484,30 @@ impl Patch<'_, '_> {
             let el = self.child(container, ns::PML, "cNvPr")?;
             let el = self.need(el, "cNvPr")?;
             self.drawing(&el, bn, an)?;
+        }
+        if b.start_connection != a.start_connection || b.end_connection != a.end_connection {
+            if a.kind != NodeKind::Connector {
+                return Err(self.unsupported("a connection on a node that is no connector"));
+            }
+            let el = self.child(container, ns::PML, a.kind.non_visual_properties())?;
+            let el = self.need(el, "the connector's non-visual properties")?;
+            let order = [a.kind.lock_element(), "stCxn", "endCxn", "extLst"];
+            for (local, before, after) in [
+                ("stCxn", &b.start_connection, &a.start_connection),
+                ("endCxn", &b.end_connection, &a.end_connection),
+            ] {
+                sync_ordered(
+                    &mut self.w,
+                    &el,
+                    ns::DML,
+                    "a",
+                    &order,
+                    local,
+                    before.as_ref(),
+                    after.as_ref(),
+                    patch_connection,
+                )?;
+            }
         }
         if b.locks != a.locks || b.text_box != a.text_box {
             let el = self.child(container, ns::PML, a.kind.non_visual_properties())?;
@@ -595,6 +639,18 @@ impl Patch<'_, '_> {
         )?;
         Ok(())
     }
+}
+
+/// `a:CT_Connection`, a connector's end.
+// spec-audit: owner=stCxn,endCxn
+fn patch_connection(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&Connection>,
+    a: &Connection,
+) -> std::result::Result<(), ExportError> {
+    w.attr(el, "id", b.map(|b| &b.spid), Some(&a.spid))?;
+    w.attr(el, "idx", b.map(|b| &b.site), Some(&a.site))
 }
 
 /// As `Writer::sync_child`, but placing a new child among siblings of any
@@ -820,6 +876,17 @@ fn patch_size(
     {
         return Err(ExportError::ValueOutOfRange {
             what: "extent",
+            part: w.part.to_owned(),
+        });
+    }
+    // `DRAW-01`: what a file holds stays, and a new value stays within what PowerPoint
+    // accepts (`MS-OI29500` 2.1.1330).
+    let max = crate::drawing::POWERPOINT_COORDINATE_MAX;
+    if (a.cx > max && b.is_none_or(|b| b.cx != a.cx))
+        || (a.cy > max && b.is_none_or(|b| b.cy != a.cy))
+    {
+        return Err(ExportError::ValueOutOfRange {
+            what: "an extent past what PowerPoint accepts",
             part: w.part.to_owned(),
         });
     }

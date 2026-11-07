@@ -570,6 +570,8 @@ pub struct ShapeNode {
     pub rel_id: Option<String>,
     /// `txBody`, shapes only. A table cell's text is Tier 1G's.
     pub text_body: Option<Box<TextBody>>,
+    /// `p:style` on a shape, connector or picture: references into the theme.
+    pub style: Option<Box<crate::theme::ShapeStyle>>,
     /// A group's children, in document order, which is z-order.
     pub children: Vec<ShapeNode>,
 }
@@ -593,6 +595,7 @@ impl ShapeNode {
             graphic_uri: None,
             rel_id: None,
             text_body: None,
+            style: None,
             children: Vec::new(),
         }
     }

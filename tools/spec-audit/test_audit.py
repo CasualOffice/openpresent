@@ -294,6 +294,49 @@ fn f() { let invalid_end_chars = 1; let vert_bar_state = 2; }
         self.assertEqual(code, 1)
         self.assertIn("a:ST_BlackWhiteMode/=gray: M=y, no declaration", out)
 
+    def test_a_doc_comment_declares_only_for_the_owner_it_names(self):
+        model = audit.ModelDeclarations.__new__(audit.ModelDeclarations)
+        model.enums, model.structs, model.documented = {}, {}, set()
+        model.read_docs(
+            "/// `a:CT_Thing`.\npub struct Thing {\n    /// `@wide` and `child/@deep`.\n    pub a: u8,\n}\n"
+            "pub enum Choice {\n    /// `glow`.\n    Glow {\n        /// `@rad`.\n        radius: u8,\n    },\n}\n"
+        )
+        row = lambda kind, name, owner: {"kind": kind, "name": name, "owner": owner}
+        self.assertTrue(model.declares(row("attribute", "@wide", "CT_Thing")))
+        self.assertTrue(model.declares(row("attribute", "@deep", "CT_Child"), ("child",)))
+        self.assertIsNone(model.declares(row("attribute", "@wide", "CT_Other")))
+        self.assertIsNone(model.declares(row("attribute", "@rad", "CT_Other")))
+        self.assertTrue(model.declares(row("attribute", "@rad", "CT_GlowEffect"), ("glow",)))
+        self.assertIsNone(model.declares(row("attribute", "@rad", "CT_BlurEffect"), ("blur",)))
+
+    def test_an_owner_note_places_a_helper_and_only_that_helper(self):
+        scan = audit.Scan({"bevelT"})
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "x.rs"
+            path.write_text('// spec-audit: owner=bevelT\nfn bevel(e: &E) {\n    e.lex("w", 1);\n}\nfn other(e: &E) {\n    e.lex("h", 1);\n}\n')
+            scan.scan_file(path, "x.rs", {})
+        refs = {r.value: r.ctx for r in scan.refs}
+        self.assertIn("bevelT", refs["w"])
+        self.assertNotIn("bevelT", refs["h"])
+
+    def test_the_builder_names_its_element_for_the_chain(self):
+        scan = audit.Scan({"glow"})
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "x.rs"
+            path.write_text('fn make() -> Node {\n    Node::a("glow").lex("rad", 1);\n    Node::a("blur").lex("grow", 1)\n}\n')
+            scan.scan_file(path, "x.rs", {})
+        refs = {r.value: r.ctx for r in scan.refs}
+        self.assertIn("glow", refs["rad"])
+        self.assertNotIn("glow", refs["grow"])
+
+    def test_a_value_needs_its_enum_and_an_attribute_placed_in_that_crate(self):
+        # In the enum, but no attribute of its type is read with a known owner in this tree.
+        code, out = self.audit({"a:ST_BlackWhiteMode/=auto": {"I": "y"}})
+        self.assertIn("a:ST_BlackWhiteMode/=auto", out if code else "a:ST_BlackWhiteMode/=auto")
+        code, out = self.audit({"a:ST_BlackWhiteMode/=gray": {"I": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("a:ST_BlackWhiteMode/=gray: I=y", out)
+
     def test_a_simple_type_needs_all_its_values(self):
         code, out = self.audit({"a:ST_BlackWhiteMode": {"M": "y"}})
         self.assertEqual(code, 1)
@@ -378,7 +421,7 @@ class Marks(unittest.TestCase):
             # Import names it, but not where the audit can place an owner.
             "p:CT_SlideSize/@cx": ("E", "casual-slide-export"),
             # In code and in a fixture, and no model struct field holds it under that name.
-            "a:CT_Point2D/@x": ("M", "M=y, no declaration"),
+            "x:drawing/2010/main:CT_PictureEffectBlur/@radius": ("M", "M=y, no declaration"),
             # Half of the type is not done.
             "p:CT_Presentation": ("I", "not all it declares is done"),
         }

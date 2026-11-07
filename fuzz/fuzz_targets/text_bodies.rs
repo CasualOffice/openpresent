@@ -1,16 +1,22 @@
 #![no_main]
 //! Any bytes as what a shape's `p:txBody` holds, and as a list style in a presentation's
 //! `defaultTextStyle`. Import never panics; a patch of an unchanged model changes nothing;
-//! an edit the exporter accepts reads back as it was asked; resolving never panics.
+//! an edit the exporter accepts reads back as it was asked; resolving never panics. The
+//! same bytes as a theme object default's content, resolved with the chain, and a body's
+//! warp and 3D, edited.
 
 use casual_slide_export::slide::patch_slide_part;
 use casual_slide_import::color::Findings as ColorFindings;
 use casual_slide_import::presentation::import_presentation;
 use casual_slide_import::properties::{Findings, ImportLimits};
+use casual_slide_import::theme::import_theme;
 use casual_slide_import::slide::{import_slide_part, SlideLimits};
 use casual_slide_model::slide::{SlideKind, SlidePart};
-use casual_slide_model::text::{CharacterProperties, TextItem, TextRun};
+use casual_slide_model::d3::FlatText;
+use casual_slide_model::presentation::Coordinate;
+use casual_slide_model::text::{BodyProperties, CharacterProperties, Text3D, TextItem, TextRun};
 use casual_slide_ooxml::{OoxmlLimits, XmlTree};
+use casual_slide_style::text::FontScript;
 use casual_slide_style::Chain;
 use libfuzzer_sys::fuzz_target;
 
@@ -38,6 +44,14 @@ fuzz_target!(|data: &[u8]| {
     let limits = SlideLimits::default();
     let import = ImportLimits::default();
 
+    let theme = format!(
+        r#"<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="t"><a:themeElements/><a:objectDefaults><a:txDef>{text}</a:txDef></a:objectDefaults></a:theme>"#
+    );
+    let defaults = XmlTree::parse(theme.as_bytes(), "theme", &xml)
+        .ok()
+        .and_then(|tree| import_theme(&tree).ok())
+        .and_then(|imported| imported.value.object_defaults);
+
     let slide = format!(
         r#"<p:sld {NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2" name="s"/><p:cNvSpPr/><p:nvPr><p:ph idx="1"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody>{text}</p:txBody></p:sp></p:spTree></p:cSld></p:sld>"#
     );
@@ -58,7 +72,11 @@ fuzz_target!(|data: &[u8]| {
                     layout: None,
                     master: None,
                 };
-                let text_chain = chain.text_chain(node, node.text_body.as_ref().and_then(|b| b.list_style.as_ref()));
+                let text_chain = chain.text_chain(
+                    node,
+                    node.text_body.as_ref().and_then(|b| b.list_style.as_ref()),
+                    defaults.as_ref(),
+                );
                 if let Some(body) = &node.text_body {
                     let _ = text_chain.body(body.properties.as_ref(), |b| b.anchor);
                     for p in &body.paragraphs {
@@ -68,9 +86,42 @@ fuzz_target!(|data: &[u8]| {
                             if let TextItem::Run(r) = item {
                                 let _ = text_chain.font_size(r.properties.as_deref(), own);
                                 let _ = text_chain.run_fill(r.properties.as_deref(), own);
+                                let _ = text_chain.run_font(
+                                    r.properties.as_deref(),
+                                    own,
+                                    FontScript::Latin,
+                                );
                             }
                         }
                     }
+                }
+            }
+
+            // A body's warp and 3D, each way: refused, or read back as asked.
+            for change in [
+                (|b| b.warp = None) as fn(&mut BodyProperties),
+                |b| b.scene3d = Some(Box::default()),
+                |b| b.scene3d = None,
+                |b| b.text_3d = Some(Text3D::Flat(FlatText { z: Some(Coordinate(3)) })),
+                |b| b.text_3d = Some(Text3D::Shape(Box::default())),
+                |b| b.text_3d = None,
+            ] {
+                let mut wanted = before.clone();
+                let Some(props) = wanted
+                    .shape_tree_mut()
+                    .and_then(|t| t.children.first_mut())
+                    .and_then(|n| n.text_body.as_mut())
+                    .and_then(|b| b.properties.as_mut())
+                else {
+                    break;
+                };
+                change(props);
+                let mut edited = tree.clone();
+                if patch_slide_part(&mut edited, PART, false, &[], &wanted, &limits, &import, &xml)
+                    .is_ok()
+                {
+                    let again = XmlTree::parse(&edited.to_bytes(), PART, &xml).unwrap();
+                    assert_eq!(read(&again, &limits, &import).as_ref(), Some(&wanted));
                 }
             }
 

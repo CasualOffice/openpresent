@@ -7,9 +7,12 @@
 //! entries stay where they are. Replacing a choice (a solid fill by a gradient) replaces
 //! that element, and whatever was in it went with the edit that named it.
 //!
-//! Nothing is checked for range here. `patch_slide_part` reads every patched part back
-//! and refuses the save if it does not read as asked, so a value the reader would not
-//! believe is refused by the reader's own rule, as `CS-EXP-0007`.
+//! Range is the reader's: `patch_slide_part` reads every patched part back and refuses
+//! the save if it does not read as asked, so a value the reader would not believe is
+//! refused by the reader's own rule, as `CS-EXP-0007`. One check is the writer's own
+//! (`DRAW-01`): a file may hold more than PowerPoint accepts, and keeps it, but a new
+//! `ST_PositiveCoordinate` past 2147483647 (`MS-OI29500` 2.1.1330) or a new dash stop of
+//! zero or less (2.1.1292) is refused as `CS-EXP-0002`, with nothing saved.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -17,8 +20,10 @@ use casual_slide_import::drawing::{A14, ASK};
 use casual_slide_import::properties::{Elem, ns};
 use casual_slide_model::color::{Angle, Color, ColorValue, Percentage, format_percentage};
 use casual_slide_model::drawing::{HiddenProperties, ShapeProperties};
+use casual_slide_model::presentation::Coordinate;
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::NodeKind;
+use casual_slide_model::theme::{FontRef, ShapeStyle, StyleMatrixRef};
 
 use crate::effect::effect_properties_node;
 use crate::fill::{blip_fill_node, fill_node};
@@ -66,7 +71,14 @@ enum Value {
     Percent(i32),
     /// A relationship id: the attribute is in the relationships namespace.
     Rel(String),
+    /// `ST_PositiveCoordinate`, which PowerPoint stops short of the schema's maximum of.
+    PositiveCoordinate(i64),
+    /// A dash stop, which PowerPoint wants above zero.
+    DashStop(i32),
 }
+
+/// The largest `ST_PositiveCoordinate` PowerPoint accepts (`MS-OI29500` 2.1.1330).
+pub(crate) const POWERPOINT_COORDINATE_MAX: i64 = 2_147_483_647;
 
 /// An element, as the model says it should be.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,6 +112,22 @@ impl Node {
     pub fn lex<T: Lexical>(mut self, name: &'static str, value: Option<&T>) -> Self {
         if let Some(value) = value {
             self.attrs.push((name, Value::Text(value.to_lexical())));
+        }
+        self
+    }
+
+    /// An `ST_PositiveCoordinate`.
+    pub fn pos(mut self, name: &'static str, value: Option<&Coordinate>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::PositiveCoordinate(value.0)));
+        }
+        self
+    }
+
+    /// A dash stop's length.
+    pub fn dash(mut self, name: &'static str, value: Option<Percentage>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::DashStop(value.0)));
         }
         self
     }
@@ -255,6 +283,7 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
         "gradFill" => &["gsLst", "lin", "path", "tileRect"],
         "blipFill" => &["blip", "srcRect", "tile", "stretch"],
         "pattFill" => &["fgClr", "bgClr"],
+        "style" => &["lnRef", "fillRef", "effectRef", "fontRef"],
         "clrChange" => &["clrFrom", "clrTo"],
         "ln" | "hiddenLine" => &[
             "noFill",
@@ -330,6 +359,24 @@ fn insert_new(
 fn write_attr(w: &mut Writer<'_>, el: &Elem, name: &str, value: &Value) -> Result<(), ExportError> {
     let (name, text) = match value {
         Value::Text(text) => (name.to_owned(), text.clone()),
+        Value::PositiveCoordinate(v) => {
+            if *v > POWERPOINT_COORDINATE_MAX {
+                return Err(out_of_range(w, "a coordinate past what PowerPoint accepts"));
+            }
+            (name.to_owned(), v.to_string())
+        }
+        Value::DashStop(v) => {
+            if *v <= 0 {
+                return Err(out_of_range(w, "a dash stop of zero or less"));
+            }
+            let spelled = w.strict || el.get(name).is_some_and(|old| old.contains('%'));
+            let text = if spelled {
+                format_percentage(*v)
+            } else {
+                v.to_string()
+            };
+            (name.to_owned(), text)
+        }
         Value::Percent(v) => {
             let spelled = w.strict || el.get(name).is_some_and(|old| old.contains('%'));
             let text = if spelled {
@@ -722,6 +769,46 @@ fn properties_node(p: &ShapeProperties, holder: &'static str) -> Node {
         }
     }
     n
+}
+
+fn matrix_ref(local: &'static str, r: &StyleMatrixRef) -> Node {
+    Node::a(local)
+        .lex("idx", r.idx.as_ref())
+        .color(r.color.as_ref())
+}
+
+fn font_ref(r: &FontRef) -> Node {
+    Node::a("fontRef")
+        .lex("idx", r.idx.map(|i| i.as_xml().to_owned()).as_ref())
+        .color(r.color.as_ref())
+}
+
+fn style_node(s: &ShapeStyle) -> Node {
+    Node::new(Space::Pml, "style")
+        .opt(s.line.as_ref().map(|r| matrix_ref("lnRef", r)))
+        .opt(s.fill.as_ref().map(|r| matrix_ref("fillRef", r)))
+        .opt(s.effect.as_ref().map(|r| matrix_ref("effectRef", r)))
+        .opt(s.font.as_ref().map(font_ref))
+}
+
+/// `p:style`. The schema requires all four references, so a style short of one is
+/// refused here, unless it came that way and that part did not change.
+pub(crate) fn patch_style(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    before: Option<&ShapeStyle>,
+    after: &ShapeStyle,
+) -> Result<(), ExportError> {
+    let short = |s: &ShapeStyle| {
+        s.line.is_none() || s.fill.is_none() || s.effect.is_none() || s.font.is_none()
+    };
+    if short(after) && !before.is_some_and(short) {
+        return Err(ExportError::UnsupportedEdit {
+            what: "a shape style short of a reference",
+            part: w.part.to_owned(),
+        });
+    }
+    patch(w, el, before.map(style_node).as_ref(), &style_node(after))
 }
 
 /// Bring a node's properties from `before` to `after`.

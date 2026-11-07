@@ -21,7 +21,7 @@ pub const DML_STRICT: &str = "http://purl.oclc.org/ooxml/drawingml/main";
 pub const MAX_LIST_ENTRIES: usize = 4096;
 
 /// What was noticed. Codes are stable; none of these stops a deck opening.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FindingKind {
     /// A colour's required attribute is absent or unreadable; the colour is absent.
     BadColorValue,
@@ -138,6 +138,18 @@ impl Findings {
                 kind,
                 element,
                 detail,
+            });
+        }
+    }
+
+    /// Carry over one another reader noticed, by the name it reported.
+    pub(crate) fn carry(&mut self, kind: FindingKind, element: &str) {
+        self.total = self.total.saturating_add(1);
+        if self.items.len() < self.bounds.findings {
+            self.items.push(Finding {
+                kind,
+                element: reportable_name(element).to_owned(),
+                detail: "",
             });
         }
     }
