@@ -33,13 +33,13 @@ fn fixtures() -> PathBuf {
 
 fn with(parts: &[(&str, String)]) -> PresentationPackage {
     let bytes = std::fs::read(fixtures().join("generated/minimal.pptx")).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let mut edits = PartEdits::default();
     for (name, xml) in parts {
         edits.replace(*name, xml.clone().into_bytes());
     }
     let saved = pkg.save_with(&edits).unwrap();
-    PresentationPackage::open(saved, OoxmlLimits::default()).unwrap()
+    PresentationPackage::open_strict(saved, OoxmlLimits::default()).unwrap()
 }
 
 /// The minimal deck's main relationships, and these after them.

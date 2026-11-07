@@ -15,12 +15,17 @@ mod limits;
 mod package;
 mod part_name;
 mod path;
+mod salvage;
 
 pub use error::PackageError;
 pub use limits::PackageLimits;
 pub use package::{EntryInfo, Package, PartEdits};
 pub use part_name::{part_entry_key, part_name_key, part_names_equivalent};
 pub use path::is_safe_part_path;
+pub use salvage::{
+    ContainerFault, ContainerFaultKind, RETAINED_DIR, RETAINED_EXTENSION, RetainedEntry, Salvaged,
+    retained_name, salvage, scrub_name,
+};
 
 #[cfg(test)]
 mod tests;

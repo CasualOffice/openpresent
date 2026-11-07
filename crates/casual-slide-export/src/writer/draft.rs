@@ -843,7 +843,8 @@ impl<'p> Draft<'p> {
             .iter()
             .any(|f| f.kind == FindingKind::Signature);
         let new_slides = std::mem::take(&mut self.new_slides);
-        let source = self.package.save_unedited();
+        // What everything here has read: the repaired image, for a repaired deck.
+        let source = self.package.base_bytes().to_vec();
 
         let mut edits = PartEdits::default();
         for name in &self.log.removed {
@@ -858,7 +859,8 @@ impl<'p> Draft<'p> {
         zipcheck::check_zip(&source, &bytes, &changed)?;
         // What was written must open, and say what was asked. The first reader of a new
         // file is this check, never the user.
-        let mut reopened = PresentationPackage::open(bytes.clone(), self.xml)?;
+        // Strictly: what is written is clean, and a repair is not how it gets that way.
+        let mut reopened = PresentationPackage::open_strict(bytes.clone(), self.xml)?;
         for (name, wanted) in &self.overlay {
             if reopened.read_part(name)? != *wanted {
                 return Err(WriterError::Emission {

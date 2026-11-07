@@ -72,6 +72,11 @@ impl Package {
     /// length, cumulative uncompressed size, and overall expansion ratio. On any
     /// breach the package is rejected — never partially admitted.
     pub fn open(bytes: Vec<u8>, limits: PackageLimits) -> Result<Package, PackageError> {
+        Self::open_shared(Arc::from(bytes), limits)
+    }
+
+    /// As [`Package::open`], over bytes someone else also keeps.
+    pub fn open_shared(bytes: Arc<[u8]>, limits: PackageLimits) -> Result<Package, PackageError> {
         let input_len = bytes.len() as u64;
         if input_len > limits.max_input_bytes {
             return Err(PackageError::InputTooLarge {
@@ -90,7 +95,7 @@ impl Package {
             });
         }
 
-        let source: Arc<[u8]> = Arc::from(bytes);
+        let source = bytes;
         let mut archive = ZipArchive::new(Cursor::new(Arc::clone(&source)))
             .map_err(|_| PackageError::NotAPackage)?;
 
@@ -184,6 +189,38 @@ impl Package {
         &self.source
     }
 
+    /// Whether every entry's stream reads to its end, and matches its checksum. Admission
+    /// looks only at the directory, so this is how a flipped byte is found before a raw copy
+    /// would carry it into a new file. Each stream goes to a sink, held to what its entry
+    /// declared; nothing is retained or charged.
+    pub fn verify_entries(&mut self) -> bool {
+        for i in 0..self.archive.len() {
+            let Ok(mut entry) = self.archive.by_index(i) else {
+                return false;
+            };
+            if entry.is_dir() {
+                continue;
+            }
+            if std::io::copy(&mut entry, &mut std::io::sink()).is_err() {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// A part's bytes as they are stored, not decompressed. For keeping a part too large
+    /// to open.
+    pub fn compressed_bytes(&mut self, name: &str) -> Result<Vec<u8>, PackageError> {
+        let not_found = || PackageError::PartNotFound {
+            name: name.to_owned(),
+        };
+        let index = self.archive.index_for_name(name).ok_or_else(not_found)?;
+        let mut raw = self.archive.by_index_raw(index).map_err(|_| not_found())?;
+        let mut out = Vec::with_capacity(initial_capacity(raw.compressed_size()));
+        raw.read_to_end(&mut out).map_err(|_| not_found())?;
+        Ok(out)
+    }
+
     /// The name a part actually has in the archive, matched by OPC's equivalence:
     /// percent-encoding decoded once, and ASCII letters in either case.
     pub fn find_part(&self, name: &str) -> Option<&str> {
@@ -200,13 +237,17 @@ impl Package {
         if edits.is_empty() {
             return Ok(self.source.to_vec());
         }
-        let mut replacing = HashSet::new();
-        for name in edits.replace.keys() {
+        // By key, so that many edits over many entries cost their sum and not their product.
+        let mut replacing = HashMap::with_capacity(edits.replace.len());
+        for (name, bytes) in &edits.replace {
             if !is_safe_part_path(name) {
                 return Err(PackageError::UnsafePath { path: name.clone() });
             }
             // Two spellings of one part would write a package this crate refuses.
-            if !replacing.insert(part_entry_key(name)) {
+            if replacing
+                .insert(part_entry_key(name), bytes.as_slice())
+                .is_some()
+            {
                 return Err(PackageError::DuplicatePart { path: name.clone() });
             }
         }
@@ -226,7 +267,7 @@ impl Package {
             if edits.remove.contains(&key) {
                 continue;
             }
-            if let Some((_, bytes)) = edits.replace.iter().find(|(n, _)| part_entry_key(n) == key) {
+            if let Some(bytes) = replacing.get(&key) {
                 drop(raw);
                 out.start_file(name.as_str(), options).map_err(failed)?;
                 out.write_all(bytes)
@@ -422,6 +463,9 @@ impl Package {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PartEdits {
     replace: BTreeMap<String, Vec<u8>>,
+    /// Which name in `replace` holds each key, so a later spelling of one part finds the
+    /// earlier without a search: a repair may edit every part of a hostile deck.
+    spelled: HashMap<String, String>,
     remove: BTreeSet<String>,
 }
 
@@ -432,14 +476,18 @@ impl PartEdits {
         let name = name.into();
         let key = part_entry_key(&name);
         self.remove.remove(&key);
-        self.replace.retain(|n, _| part_entry_key(n) != key);
+        if let Some(earlier) = self.spelled.insert(key, name.clone()) {
+            self.replace.remove(&earlier);
+        }
         self.replace.insert(name, bytes);
     }
 
     /// Remove a part, named in any spelling equivalent under OPC's rules.
     pub fn remove(&mut self, name: &str) {
         let key = part_entry_key(name);
-        self.replace.retain(|n, _| part_entry_key(n) != key);
+        if let Some(earlier) = self.spelled.remove(&key) {
+            self.replace.remove(&earlier);
+        }
         self.remove.insert(key);
     }
 

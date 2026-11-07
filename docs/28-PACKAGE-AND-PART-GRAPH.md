@@ -3,12 +3,13 @@
 `casual-slide-ooxml` admits a package and reports its structure. It maps nothing into the model.
 
 - **One XML path.** `xml::walk` is the only way in; `XmlTree::parse` runs it first, then reads a second time. It refuses any DOCTYPE and undeclared entities, and bounds size, elements, depth and attributes. `tools/check-repo.py` fails if `quick_xml` appears elsewhere.
-- **What `walk` refuses** beyond its bounds: any DOCTYPE, undeclared entities, malformed or repeated attributes, control characters in names, undeclared prefixes, and more than one root. A fault in the main part refuses the deck.
+- **What `walk` refuses** beyond its bounds: any DOCTYPE, undeclared entities, malformed or repeated attributes, control characters in names, undeclared prefixes, and more than one root.
+- **Strict first, then recovery ([29](29-RECOVERY.md)).** A part `walk` refuses goes to `recover_xml`, whose output `walk` admits, so nothing above has a second reader to disagree with. A fault anywhere repairs the whole package into one clean image in memory, which every reader and the writer see, while the bytes as they arrived are kept for an unedited save. `open_strict` is the refusal this page describes.
 - **Opening reads structure only:** content types, `.rels`, and the main part, which is walked in full. Media is never read, so no decoder is reachable by opening a file.
 - **The graph** is a breadth-first walk with a visited set. A cycle costs one visit.
 - **Nothing external is followed.** Targets are classified after removing the whitespace browsers ignore, and reported.
 - **Findings do not stop a deck opening,** and everything they name is retained. Codes are in [20](20-ERROR-CODE-REGISTRY.md).
-- **Saving:** unedited returns the input bytes. Edited copies other entries raw, keeping their compressed bytes.
+- **Saving:** unedited returns the input bytes, damage included. Edited copies other entries raw, keeping their compressed bytes, from the image if there is one; every stream and XML part is seen to be sound first (`prepare_for_edit`), so damage no reader had reached is not carried into a new file.
 - **Main part:** matched on exact relationship namespaces, so a look-alike type is not believed. Strict and Transitional are both read.
 - **Part names** compare by ECMA-376 Part 2: percent-decoded once, then ASCII case-insensitive over code points. So `É` and `é` differ, and NFC and NFD spellings differ. Anything decoding to traversal is refused, in any layer of encoding.
 - **Strict** is normalized at the read boundary (`to_transitional`, `XmlTree::normalized_namespace`), and written back as it came: the tree never rewrites a declaration, and new text uses `Conformance::spell`.

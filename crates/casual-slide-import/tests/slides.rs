@@ -22,7 +22,7 @@ fn fixtures() -> PathBuf {
 }
 
 fn slides_of(bytes: Vec<u8>) -> ImportedSlides {
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let deck = import_deck(&mut pkg, &ImportLimits::default())
         .unwrap()
         .deck;
@@ -70,7 +70,7 @@ fn every_generated_and_producer_deck_imports() {
 const RICH: &str = "generated/slides-masters-layouts.pptx";
 
 fn open(path: &str) -> PresentationPackage {
-    PresentationPackage::open(
+    PresentationPackage::open_strict(
         std::fs::read(fixtures().join(path)).unwrap(),
         OoxmlLimits::default(),
     )
@@ -434,7 +434,7 @@ fn a_500_slide_deck_is_indexed_without_reading_a_slide() {
         edits.replace(format!("ppt/slides/slide{i}.xml"), b"<not xml".to_vec());
     }
     let broken = pkg.save_with(&edits).unwrap();
-    let mut pkg = PresentationPackage::open(broken, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(broken, OoxmlLimits::default()).unwrap();
     let deck = import_deck(&mut pkg, &ImportLimits::default())
         .unwrap()
         .deck;
@@ -706,7 +706,7 @@ fn the_default_part_bound_is_behind_the_package_entry_bound() {
 #[test]
 fn a_background_references_colour_finding_keeps_its_code() {
     let bytes = std::fs::read(fixtures().join("generated/minimal.pptx")).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let slide = String::from_utf8(pkg.read_part("ppt/slides/slide1.xml").unwrap()).unwrap();
     let edited = slide.replace(
         "<p:cSld>",

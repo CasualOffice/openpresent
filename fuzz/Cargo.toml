@@ -134,8 +134,29 @@ doc = false
 bench = false
 
 [[bin]]
+name = "xml_recover"
+path = "fuzz_targets/xml_recover.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "review_parts"
 path = "fuzz_targets/review_parts.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "package_salvage"
+path = "fuzz_targets/package_salvage.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "deck_recover"
+path = "fuzz_targets/deck_recover.rs"
 test = false
 doc = false
 bench = false

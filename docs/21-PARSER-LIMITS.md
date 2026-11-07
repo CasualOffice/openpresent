@@ -26,8 +26,8 @@ the one beneath it.
 2. **Reading a part**, `casual-slide-package`: decompression held to the declared size
    and to the whole-package budget.
 3. **XML**, `casual-slide-ooxml`: one bounded walker and one tree, which every XML part
-   goes through. DOCTYPE is refused outright (`CS-XML-0005`), so entity expansion never
-   arises.
+   goes through. Under `strict`, DOCTYPE is refused outright (`CS-XML-0005`). By default the
+   recovering reader skips it uninterpreted, so entity expansion never arises either way.
 4. **Graph**, `casual-slide-ooxml`: relationships and content types.
 5. **Import**, `casual-slide-import`: counts the model would allocate for.
 6. **Values**: per-construct caps in the model, geometry and export.
@@ -55,6 +55,18 @@ the central directory, before anything is inflated.
 | Whole-package budget | `max_total_uncompressed` | Every read is charged; once spent, reads refuse. **Cumulative over the package's life**, so a long editing session can exhaust it on a legitimate deck (`PKG-01`) | CS-PKG-0003 | Tested |
 | `MAX_UP_FRONT` | `1 << 20` | Capacity allocated before decompressing, whatever the entry declares, so a forged size cannot abort a WebAssembly instance (`SEC-P04`). Nothing proves `read_part` uses it (`SEC-017`) | none: allocation only | Partial |
 | `read_part_capped` | caller's `max` | A caller-chosen ceiling for one part, refused on the declaration with nothing inflated. `PresentationPackage::read_part_capped` exposes it for binary parts. `PresentationPackage::read_part` does not use it, so optional parts are bounded only by the budget (`PKG-04`) | CS-PKG-0009 | Tested |
+
+## The recovering reader
+
+`crates/casual-slide-package/src/salvage.rs` (`REC-01`), which reads what `Package::open` refuses. It holds to `PackageLimits`: `max_input_bytes` still refuses (the one limit that does, since it protects the machine); `max_entries` stops the scan and says so (`CS-REC-0109`); `max_total_uncompressed` is one budget for everything inflated, however many entries point at one stream; `max_expansion_ratio` and `max_path_bytes` set an entry aside as an opaque blob (`CS-REC-0107`, `CS-REC-0106`). Nothing allocates from a number in the file, and a scan only moves forward.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `MAX_SCRUBBED_NAME` | `200` | Characters of a damaged entry's name repeated in a report or a retained name | none: text only | Tested by `an_unsafe_name_never_becomes_a_part` |
+| `MAX_CHOOSING_BYTES` | `256 << 20` | The most of one entry inflated into memory to choose between entries naming one part | none: that entry is not chosen on its content | Untested |
+| `MAX_REFERENCE` | `32` | How far the recovering XML reader looks for a reference's `;`. Past it, the `&` is literal text | none: text only | Tested by `broken_nesting_is_closed` |
+
+The recovering XML reader, `crates/casual-slide-ooxml/src/recover_xml.rs` (`REC-03`), holds to `OoxmlLimits` as `walk` does, with one difference: `max_xml_elements`, `max_xml_depth` and `max_xml_attributes` stop the reading of that part and keep what was read (`CS-REC-0307`), and a reading over `max_xml_part_bytes` is given up, so the part is set aside. `max_part_relationships`, `max_total_relationships` and `max_content_types` keep what fits.
 
 ## XML and graph: `OoxmlLimits`
 
