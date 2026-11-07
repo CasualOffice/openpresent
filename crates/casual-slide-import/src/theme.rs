@@ -1,25 +1,33 @@
 //! Reads theme parts, and colour maps wherever they live, into the model.
 //!
-//! What a theme holds beyond the model (the rest of a fill, an effect, a shape
-//! default's `spPr`, an unknown extension) stays in the tree. Elements unknown to the
-//! schema are reported as `CS-CLR-0009`. Those the schema has but another area
-//! owns are expected to be retained, and are not reported.
+//! What a theme holds beyond the model stays in the tree. A format scheme's fills, lines
+//! and effects, and an object default's `spPr`, `bodyPr` and `lstStyle`, go through the
+//! readers a shape's do, and report what they notice here. Elements unknown to the schema
+//! are reported as `CS-CLR-0009`.
 
+use std::collections::HashSet;
+
+use casual_slide_model::drawing::ShapeProperties;
+use casual_slide_model::fill::Fill;
+use casual_slide_model::line::Line;
 use casual_slide_model::theme::{
     BaseStyles, ClipboardStyleSheet, ColorMap, ColorMapOverride, ColorMapSlot, ColorScheme,
     ColorSchemeIndex, CustomColor, EffectReference, ExtraColorScheme, FontCollection,
-    FontCollectionIndex, FontRef, FontScheme, FormatScheme, GradientStop, ObjectDefaults,
-    ShapeDefinition, ShapeStyle, StyleEffect, StyleFill, StyleLine, StyleMatrixRef,
-    SupplementalFont, TextFont, Theme, ThemeFamily, ThemeManager, ThemeOverride, ThemeableFont,
-    ThemeableStyle,
+    FontCollectionIndex, FontRef, FontScheme, FormatScheme, ObjectDefaults, ShapeDefinition,
+    ShapeStyle, StyleEffect, StyleMatrixRef, SupplementalFont, TextFont, Theme, ThemeFamily,
+    ThemeManager, ThemeOverride, ThemeableFont, ThemeableStyle,
 };
-use casual_slide_ooxml::{ElementId, OoxmlError, OoxmlLimits, PresentationPackage, XmlTree};
+use casual_slide_ooxml::{
+    ElementId, OoxmlError, OoxmlLimits, PresentationPackage, Relationship, XmlTree,
+};
 
 use crate::color::{
     FindingKind, Findings, bounded_children, dml_name, is_color_element, read_color_choice,
     read_optional_color, report_unread_attributes, report_unread_children,
 };
-use crate::drawing::{DrawingFinding, DrawingLimits};
+use crate::drawing::{
+    Ctx, DrawingFinding, DrawingLimits, is_fill_element, note_dag_siblings, read_fill, read_line,
+};
 use crate::properties::{
     Elem, Findings as PropertyFindings, ImportError, ImportFindingKind as K, ImportLimits,
     Reader as PropertyReader, ns,
@@ -112,9 +120,28 @@ pub fn import_theme(tree: &XmlTree) -> Result<Imported<Theme>, ThemeImportError>
     import_theme_limited(tree, &OoxmlLimits::default())
 }
 
-/// Read a `theme` part under these limits.
+/// Read a `theme` part under these limits, with its relationships not to hand: a picture
+/// in a format scheme is read, and what it names is not checked.
 pub fn import_theme_limited(
     tree: &XmlTree,
+    limits: &OoxmlLimits,
+) -> Result<Imported<Theme>, ThemeImportError> {
+    read_theme(tree, None, limits)
+}
+
+/// Read a `theme` part with its relationships, so a picture in a format scheme that names
+/// none of them is reported.
+pub fn import_theme_with_rels(
+    tree: &XmlTree,
+    rels: &[Relationship],
+    limits: &OoxmlLimits,
+) -> Result<Imported<Theme>, ThemeImportError> {
+    read_theme(tree, Some(rels), limits)
+}
+
+fn read_theme(
+    tree: &XmlTree,
+    rels: Option<&[Relationship]>,
     limits: &OoxmlLimits,
 ) -> Result<Imported<Theme>, ThemeImportError> {
     // spec-audit: a:<theme>
@@ -125,15 +152,38 @@ pub fn import_theme_limited(
         findings: &mut findings,
     }
     .theme(root);
-    if let Some(defaults) = value.object_defaults.as_mut() {
-        read_definition_text(tree, defaults, &mut findings);
-    }
+    let scheme = value
+        .elements
+        .as_mut()
+        .and_then(|e| e.format_scheme.as_mut());
+    read_by_other_tiers(
+        tree,
+        rels,
+        scheme,
+        value.object_defaults.as_mut(),
+        &mut findings,
+    );
     Ok(Imported { value, findings })
 }
 
 /// Read a `themeOverride` part.
-// spec-audit: owner=themeOverride
 pub fn import_theme_override(tree: &XmlTree) -> Result<Imported<ThemeOverride>, ThemeImportError> {
+    read_theme_override(tree, None)
+}
+
+/// Read a `themeOverride` part with its relationships.
+pub fn import_theme_override_with_rels(
+    tree: &XmlTree,
+    rels: &[Relationship],
+) -> Result<Imported<ThemeOverride>, ThemeImportError> {
+    read_theme_override(tree, Some(rels))
+}
+
+// spec-audit: owner=themeOverride
+fn read_theme_override(
+    tree: &XmlTree,
+    rels: Option<&[Relationship]>,
+) -> Result<Imported<ThemeOverride>, ThemeImportError> {
     // spec-audit: a:<themeOverride>
     let root = expect_root(tree, "themeOverride")?;
     let mut findings = Findings::default();
@@ -157,6 +207,13 @@ pub fn import_theme_override(tree: &XmlTree) -> Result<Imported<ThemeOverride>, 
             _ => r.unknown(child),
         }
     }
+    read_by_other_tiers(
+        tree,
+        rels,
+        value.format_scheme.as_mut(),
+        None,
+        &mut findings,
+    );
     Ok(Imported { value, findings })
 }
 
@@ -213,6 +270,11 @@ pub fn import_clipboard_style_sheet(tree: &XmlTree) -> Imported<ClipboardStyleSh
             _ => r.unknown(child),
         }
     }
+    let scheme = value
+        .elements
+        .as_mut()
+        .and_then(|e| e.format_scheme.as_mut());
+    read_by_other_tiers(tree, None, scheme, None, &mut findings);
     Imported { value, findings }
 }
 
@@ -630,172 +692,24 @@ impl Reader<'_> {
     // spec-audit: owner=fmtScheme
     fn format_scheme(&mut self, el: ElementId) -> FormatScheme {
         let mut out = FormatScheme::default();
+        self.strangers(el, &["name"]);
         if self.readable(el) {
             out.name = self.attr(el, "name");
         }
         for child in self.children(el) {
             match dml_name(self.tree, child) {
-                Some("fillStyleLst") => self.once(&mut out.fills, child, Self::fill_list),
-                Some("lnStyleLst") => self.once(&mut out.lines, child, Self::line_list),
-                Some("effectStyleLst") => self.once(&mut out.effects, child, Self::effect_list),
-                Some("bgFillStyleLst") => {
-                    self.once(&mut out.background_fills, child, Self::fill_list);
-                }
+                // Read by `read_by_other_tiers`, which has what their readers need.
+                Some("fillStyleLst" | "lnStyleLst" | "effectStyleLst" | "bgFillStyleLst") => {}
                 _ => self.unknown(child),
             }
         }
         out
     }
 
-    // spec-audit: owner=fillStyleLst,bgFillStyleLst
-    fn fill_list(&mut self, el: ElementId) -> Vec<StyleFill> {
-        let mut out = Vec::new();
-        for child in self.children(el) {
-            if out.len() >= self.findings.bounds.list_entries {
-                self.note(FindingKind::ListCapped, el, "");
-                break;
-            }
-            match self.fill(child) {
-                Some(fill) => out.push(fill),
-                None => self.unknown(child),
-            }
-        }
-        self.at_least_three(el, out.len());
-        out
-    }
-
-    fn at_least_three(&mut self, el: ElementId, len: usize) {
-        if len < 3 {
-            self.note(FindingKind::MissingRequired, el, "three entries");
-        }
-    }
-
-    fn fill(&mut self, el: ElementId) -> Option<StyleFill> {
-        Some(match dml_name(self.tree, el)? {
-            "noFill" => StyleFill::None,
-            "solidFill" => StyleFill::Solid(read_optional_color(self.tree, el, self.findings)),
-            "gradFill" => StyleFill::Gradient(self.gradient_stops(el)),
-            "blipFill" => StyleFill::Picture,
-            "pattFill" => {
-                let (mut foreground, mut background) = (None, None);
-                for child in self.children(el) {
-                    match dml_name(self.tree, child) {
-                        Some("fgClr") => {
-                            foreground = read_color_choice(self.tree, child, self.findings);
-                        }
-                        Some("bgClr") => {
-                            background = read_color_choice(self.tree, child, self.findings);
-                        }
-                        _ => {}
-                    }
-                }
-                StyleFill::Pattern {
-                    foreground,
-                    background,
-                }
-            }
-            "grpFill" => StyleFill::Group,
-            _ => return None,
-        })
-    }
-
-    fn gradient_stops(&mut self, el: ElementId) -> Vec<GradientStop> {
-        let mut out = Vec::new();
-        for child in self.children(el) {
-            if dml_name(self.tree, child) != Some("gsLst") {
-                continue;
-            }
-            for stop in self.children(child) {
-                if dml_name(self.tree, stop) != Some("gs") {
-                    self.unknown(stop);
-                    continue;
-                }
-                if out.len() >= self.findings.bounds.list_entries {
-                    self.note(FindingKind::ListCapped, child, "gs");
-                    break;
-                }
-                let mut position = None;
-                if self.readable(stop) {
-                    let text = self.required(stop, "pos");
-                    if let Some(text) = text {
-                        let read = casual_slide_model::color::parse_percentage(&text);
-                        if read.is_none() {
-                            self.note(FindingKind::BadValue, stop, "pos");
-                        }
-                        position = read.map(|r| r.value);
-                    }
-                }
-                let color = read_color_choice(self.tree, stop, self.findings);
-                out.push(GradientStop { position, color });
-            }
-        }
-        out
-    }
-
-    // spec-audit: owner=lnStyleLst
-    fn line_list(&mut self, el: ElementId) -> Vec<StyleLine> {
-        let mut out = Vec::new();
-        for child in self.children(el) {
-            if out.len() >= self.findings.bounds.list_entries {
-                self.note(FindingKind::ListCapped, el, "");
-                break;
-            }
-            if dml_name(self.tree, child) != Some("ln") {
-                self.unknown(child);
-                continue;
-            }
-            let mut line = StyleLine::default();
-            if self.readable(child)
-                && let Some(text) = self.attr(child, "w")
-            {
-                line.width = casual_slide_model::color::parse_int(&text);
-                if line.width.is_none() {
-                    self.note(FindingKind::BadValue, child, "w");
-                }
-            }
-            for part in self.children(child) {
-                // The other children of a line belong to LINE, and stay.
-                if let Some(fill) = self.fill(part) {
-                    line.fill = Some(fill);
-                    break;
-                }
-            }
-            out.push(line);
-        }
-        self.at_least_three(el, out.len());
-        out
-    }
-
-    // spec-audit: owner=effectStyleLst
-    fn effect_list(&mut self, el: ElementId) -> Vec<StyleEffect> {
-        let mut out = Vec::new();
-        for child in self.children(el) {
-            if out.len() >= self.findings.bounds.list_entries {
-                self.note(FindingKind::ListCapped, el, "");
-                break;
-            }
-            if dml_name(self.tree, child) != Some("effectStyle") {
-                self.unknown(child);
-                continue;
-            }
-            let mut effect = StyleEffect::default();
-            for part in self.children(child) {
-                match dml_name(self.tree, part) {
-                    Some("effectLst" | "effectDag") => effect.has_effects = true,
-                    Some("scene3d") => effect.has_scene3d = true,
-                    Some("sp3d") => effect.has_sp3d = true,
-                    _ => self.unknown(part),
-                }
-            }
-            out.push(effect);
-        }
-        self.at_least_three(el, out.len());
-        out
-    }
-
     // spec-audit: owner=objectDefaults
     fn object_defaults(&mut self, el: ElementId) -> ObjectDefaults {
         let mut out = ObjectDefaults::default();
+        self.strangers(el, &[]);
         for child in self.children(el) {
             match dml_name(self.tree, child) {
                 Some("spDef") => self.once(&mut out.shape, child, Self::shape_definition),
@@ -811,11 +725,11 @@ impl Reader<'_> {
     // spec-audit: owner=spDef,lnDef,txDef
     fn shape_definition(&mut self, el: ElementId) -> ShapeDefinition {
         let mut out = ShapeDefinition::default();
+        self.strangers(el, &[]);
         for child in self.children(el) {
             match dml_name(self.tree, child) {
-                Some("spPr") => out.has_shape_properties = true,
-                // Read by `read_definition_text`, which has what a text reader needs.
-                Some("bodyPr" | "lstStyle") => {}
+                // Read by `read_by_other_tiers`, which has what their readers need.
+                Some("spPr" | "bodyPr" | "lstStyle") => {}
                 Some("style") => self.once(&mut out.style, child, Self::shape_style),
                 Some("extLst") => out.extensions = self.extensions(child),
                 _ => self.unknown(child),
@@ -929,19 +843,27 @@ impl Reader<'_> {
     }
 }
 
-/// Fill in each object default's `bodyPr` and `lstStyle` with the text readers. A theme
-/// reports in its own list, so what they notice is carried over; a theme that crosses a
-/// text bound keeps what was read before it, reported, and the deck opens.
-fn read_definition_text(tree: &XmlTree, defaults: &mut ObjectDefaults, findings: &mut Findings) {
+/// Fill in a format scheme's lists, and each object default's `spPr`, `bodyPr` and `lstStyle`,
+/// with the readers a shape's go through. A theme reports in its own list, so what they notice
+/// is carried over; a theme that crosses a bound keeps what was read before it, reported, and
+/// the deck opens. With `rels` not to hand, what a picture names is not judged.
+fn read_by_other_tiers(
+    tree: &XmlTree,
+    rels: Option<&[Relationship]>,
+    scheme: Option<&mut FormatScheme>,
+    defaults: Option<&mut ObjectDefaults>,
+    findings: &mut Findings,
+) {
     const PART: &str = "theme";
     let limits = ImportLimits::default();
     let mut noticed = PropertyFindings::new(limits.max_findings);
     let capped = {
         let mut r = PropertyReader::new(tree, PART, &limits, &mut noticed);
-        definition_text(&mut r, defaults, findings).is_err()
+        other_tiers(&mut r, rels.unwrap_or(&[]), scheme, defaults, findings).is_err()
     };
     for f in noticed.iter() {
         let kind = match f.kind {
+            K::DanglingRelationship if rels.is_none() => continue,
             K::MissingRequired => FindingKind::MissingRequired,
             K::DuplicateElement => FindingKind::Duplicate,
             K::RetainedElement | K::RetainedAttribute => FindingKind::Unmodelled,
@@ -953,46 +875,234 @@ fn read_definition_text(tree: &XmlTree, defaults: &mut ObjectDefaults, findings:
         findings.carry(kind, &f.element);
     }
     if capped {
-        findings.carry(FindingKind::ListCapped, "objectDefaults");
+        findings.carry(FindingKind::ListCapped, "theme");
     }
 }
 
-fn definition_text(
+fn other_tiers(
     r: &mut PropertyReader<'_>,
-    defaults: &mut ObjectDefaults,
+    rels: &[Relationship],
+    mut scheme: Option<&mut FormatScheme>,
+    mut defaults: Option<&mut ObjectDefaults>,
     findings: &mut Findings,
 ) -> Result<(), ImportError> {
     let root = Elem::root(r.tree, r.part)?;
     for holder in r.children(&root)? {
-        if !holder.is(ns::DML, "objectDefaults") {
+        if holder.is(ns::DML, "objectDefaults") {
+            // A second is reported already, and stays in the part.
+            if let Some(defaults) = defaults.take() {
+                object_defaults(r, rels, &holder, defaults, findings)?;
+            }
+        } else if holder.is(ns::DML, "fmtScheme") {
+            if let Some(scheme) = scheme.take() {
+                format_lists(r, rels, &holder, scheme, findings)?;
+            }
+        } else if holder.is(ns::DML, "themeElements") {
+            for kid in r.children(&holder)? {
+                if kid.is(ns::DML, "fmtScheme")
+                    && let Some(scheme) = scheme.take()
+                {
+                    format_lists(r, rels, &kid, scheme, findings)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn format_lists(
+    r: &mut PropertyReader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+    scheme: &mut FormatScheme,
+    findings: &Findings,
+) -> Result<(), ImportError> {
+    let cap = findings.bounds.list_entries;
+    for list in r.children(el)? {
+        if !list.in_namespace(ns::DML) {
             continue;
         }
-        for definition in r.children(&holder)? {
-            if !definition.in_namespace(ns::DML) {
-                continue;
+        let taken = match list.local.as_str() {
+            "fillStyleLst" => scheme.fills.is_some(),
+            "lnStyleLst" => scheme.lines.is_some(),
+            "effectStyleLst" => scheme.effects.is_some(),
+            "bgFillStyleLst" => scheme.background_fills.is_some(),
+            _ => continue,
+        };
+        if taken {
+            r.note(K::DuplicateElement, &list, None);
+            continue;
+        }
+        r.finish(&list);
+        match list.local.as_str() {
+            "fillStyleLst" => scheme.fills = Some(fill_list(r, rels, &list, cap)?),
+            "lnStyleLst" => scheme.lines = Some(line_list(r, rels, &list, cap)?),
+            "effectStyleLst" => scheme.effects = Some(effect_list(r, rels, &list, cap)?),
+            _ => scheme.background_fills = Some(fill_list(r, rels, &list, cap)?),
+        }
+    }
+    Ok(())
+}
+
+/// Each style list has at least three entries by its schema, which a style reference counts on.
+fn at_least_three(r: &mut PropertyReader<'_>, list: &Elem, len: usize) {
+    if len < 3 {
+        r.note(K::MissingRequired, list, None);
+    }
+}
+
+// spec-audit: owner=fillStyleLst,bgFillStyleLst
+fn fill_list(
+    r: &mut PropertyReader<'_>,
+    rels: &[Relationship],
+    list: &Elem,
+    cap: usize,
+) -> Result<Vec<Fill>, ImportError> {
+    let mut out = Vec::new();
+    for child in r.children(list)? {
+        if out.len() >= cap {
+            r.note(K::Drawing(DrawingFinding::OverLimit), list, None);
+            break;
+        }
+        if !is_fill_element(&child) {
+            r.retained(&child);
+            continue;
+        }
+        out.extend(read_fill(r, rels, DrawingLimits::default(), &child)?);
+    }
+    at_least_three(r, list, out.len());
+    Ok(out)
+}
+
+// spec-audit: owner=lnStyleLst
+fn line_list(
+    r: &mut PropertyReader<'_>,
+    rels: &[Relationship],
+    list: &Elem,
+    cap: usize,
+) -> Result<Vec<Line>, ImportError> {
+    let mut out = Vec::new();
+    for child in r.children(list)? {
+        if out.len() >= cap {
+            r.note(K::Drawing(DrawingFinding::OverLimit), list, None);
+            break;
+        }
+        if !child.is(ns::DML, "ln") {
+            r.retained(&child);
+            continue;
+        }
+        out.extend(read_line(r, rels, DrawingLimits::default(), &child)?);
+    }
+    at_least_three(r, list, out.len());
+    Ok(out)
+}
+
+// spec-audit: owner=effectStyleLst
+fn effect_list(
+    r: &mut PropertyReader<'_>,
+    rels: &[Relationship],
+    list: &Elem,
+    cap: usize,
+) -> Result<Vec<StyleEffect>, ImportError> {
+    let mut out = Vec::new();
+    for child in r.children(list)? {
+        if out.len() >= cap {
+            r.note(K::Drawing(DrawingFinding::OverLimit), list, None);
+            break;
+        }
+        if !child.is(ns::DML, "effectStyle") {
+            r.retained(&child);
+            continue;
+        }
+        r.finish(&child);
+        let mut props = ShapeProperties::default();
+        let mut seen = HashSet::new();
+        let mut ctx = Ctx::new(&mut *r, rels, DrawingLimits::default());
+        for part in ctx.r.children(&child)? {
+            let fits = part.in_namespace(ns::DML)
+                && matches!(
+                    part.local.as_str(),
+                    "effectLst" | "effectDag" | "scene3d" | "sp3d"
+                );
+            if !fits || !ctx.property(&part, &mut props, false, &mut seen)? {
+                ctx.r.retained(&part);
             }
-            let slot = match definition.local.as_str() {
-                "spDef" => defaults.shape.as_mut(),
-                "lnDef" => defaults.line.as_mut(),
-                "txDef" => defaults.text.as_mut(),
-                _ => None,
-            };
-            let Some(slot) = slot else { continue };
-            for child in r.children(&definition)? {
+        }
+        out.push(StyleEffect {
+            effects: props.effects,
+            scene3d: props.scene3d,
+            sp3d: props.sp3d,
+        });
+    }
+    at_least_three(r, list, out.len());
+    Ok(out)
+}
+
+fn object_defaults(
+    r: &mut PropertyReader<'_>,
+    rels: &[Relationship],
+    holder: &Elem,
+    defaults: &mut ObjectDefaults,
+    findings: &mut Findings,
+) -> Result<(), ImportError> {
+    let mut seen = HashSet::new();
+    for definition in r.children(holder)? {
+        if !definition.in_namespace(ns::DML) {
+            continue;
+        }
+        let slot = match definition.local.as_str() {
+            "spDef" => defaults.shape.as_mut(),
+            "lnDef" => defaults.line.as_mut(),
+            "txDef" => defaults.text.as_mut(),
+            _ => None,
+        };
+        // A second of a name is reported already, and stays in the part.
+        let Some(slot) = slot.filter(|_| seen.insert(definition.local.clone())) else {
+            continue;
+        };
+        for child in r.children(&definition)? {
+            let taken = (child.is(ns::DML, "spPr") && slot.shape_properties.is_some())
+                || (child.is(ns::DML, "bodyPr") && slot.body_properties.is_some())
+                || (child.is(ns::DML, "lstStyle") && slot.list_style.is_some());
+            if taken {
+                r.note(K::DuplicateElement, &child, None);
+            } else if child.is(ns::DML, "spPr") {
+                slot.shape_properties = Some(definition_properties(r, rels, &child)?);
+            } else if child.is(ns::DML, "bodyPr") || child.is(ns::DML, "lstStyle") {
                 let mut text = TextReader {
                     r: &mut *r,
-                    rels: &[],
+                    rels,
                     color: &mut *findings,
                     counts: &mut TextCounts::default(),
                     drawing: DrawingLimits::default(),
                 };
-                if child.is(ns::DML, "bodyPr") && slot.body_properties.is_none() {
+                if child.is(ns::DML, "bodyPr") {
                     slot.body_properties = Some(text.body_properties(&child)?);
-                } else if child.is(ns::DML, "lstStyle") && slot.list_style.is_none() {
+                } else {
                     slot.list_style = Some(text.list_style(&child)?);
                 }
             }
         }
     }
     Ok(())
+}
+
+/// An object default's `a:spPr`, by Tier 1E's reader.
+// spec-audit: owner=spPr
+fn definition_properties(
+    r: &mut PropertyReader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<ShapeProperties, ImportError> {
+    r.finish(el);
+    let mut props = ShapeProperties::default();
+    let mut seen = HashSet::new();
+    let mut ctx = Ctx::new(&mut *r, rels, DrawingLimits::default());
+    for child in ctx.r.children(el)? {
+        if !ctx.property(&child, &mut props, false, &mut seen)? {
+            ctx.r.retained(&child);
+        }
+    }
+    note_dag_siblings(r, el, &props);
+    Ok(props)
 }

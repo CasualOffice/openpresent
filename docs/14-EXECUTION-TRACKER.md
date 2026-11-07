@@ -181,7 +181,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | SEC-018 | Marker test for import codes | Done | P1 | Made-up names reached findings; now `(unknown)` | Marker finds none |
 | DOC-009 | Relationship ids in messages | Done | P2 | Checked | Test |
 | F4-03 | F4 against what Office writes | Done | P1 | 6 recorded XSD allowances on a private copy. 60 of 66 real decks pass with none; other 6 are not PowerPoint-saved | Seeded error still fails |
-| T1J-04 | Signed chart axis ids | Open | P1 | Mac PowerPoint writes negative `c:axId` and `c:crossAx`. Importer must accept and keep them. Both validators reject it | `poi-bar-chart-mac` round-trips |
+| T1J-04 | Signed chart axis ids | Done | P1 | Mac PowerPoint writes negative `c:axId` and `c:crossAx`. Importer must accept and keep them. Both validators reject it | `poi-bar-chart-mac` round-trips |
 | STRICT-02 | Genuine PowerPoint-saved Strict deck | Open | P1 | `sdk-strict-*` decks report PowerPoint 14 with numeric values and look converted by a tool (inferred) | One real Strict deck |
 | F-008 | `vt:array` bounds | Open | P2 | SDK and vendored XSD disagree on `lBound` and `lBounds`; export writes Ecma's form; no real deck uses it | Real deck, or `PV-01` |
 | SEC-019 | Geometry diagnostics | Done | P1 | No file text; codes CS-GEO, CS-GEF | Marker test |
@@ -195,7 +195,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | STYLE-01 | Inheritance gaps | Done | P0 | `p:style`, `txDef`, `lnDef`, `spDef`, `fontRef` in the chain. The layout's and `fontRef`'s places are Inferred; whether defaults narrow by shape kind is open until `PV-01` | BEH-02 cases seen red |
 | COLOR-04 | One rule for colour finding codes | Open | P2 | **Decided:** colour findings keep `CS-CLR` everywhere. Today 1E folds them to `CS-IMF` while `highlight` keeps `CS-CLR` | Same bad colour gives one code |
 | CLOSE-01 | Close Tiers 1E and 1F | In progress | P0 | Gate items 2 to 7 met. Item 1 not: of 1,399 rows, 1,128 `y y y`, 9 retained, 86 partly marked, 176 blank. 257 marks are `a14` picture effects the audit cannot place. Audit rules were made more generous; main session planted 40 false marks in unbuilt tiers and all were caught | Every row marked or with a named reason |
-| FID-04 | LibreOffice crashed on the owner's Mac | Open | P1 | 8 crash reports 2026-11-07. Of 184 writer results, 6 aborted, all from `rich-properties` and `strict-properties`, decks invalid on purpose; no baseline on unedited inputs, and a second run has no log. Tools refuse without `OPENPRESENT_ALLOW_SOFFICE=1`. F7 off here; run in a Linux container | One run with the cause recorded |
+| FID-04 | LibreOffice crashed on the owner's Mac | In progress | P1 | Instruction 33: keep validating, never on the desktop. Linux container `openpresent-lo` (LibreOffice 25.2.3, no network) reopened 112 of 112 `.pptx` in `fixtures/rr/good`, `fixtures/rr/sa`, `fixtures/real`, to non-empty PDF. Not yet: other save-as extensions, edited real decks, and the cause of the 6 earlier aborts | One run with the cause recorded |
 | CLOSE-02 | Close Tiers 1A to 1D | In progress | P0 | Owner instruction 22. Export marks are low (27); many rows have no fixture | Per-tier gate, item by item |
 | F-010 | SDK refuses 6 real decks as written | Open | P2 | **Decided: `check.py` stays a report.** Signed `c:axId`, `mod` on `extLst`, `showLeaderLines`, `showDLblsOverMax`. The SDK is no stand-in for what PowerPoint writes in charts | Reviewed at `PV-01` |
 | REC-01 | Recovery: container | In progress | P0 | [29](29-RECOVERY.md). Rebuild from local headers; prepended bytes; oversized part retained, not decompressed; unsafe or duplicate names kept and reported | Damage corpus |
@@ -207,7 +207,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | T1N-07 | Writer leftovers | Open | P1 | `check_zip` call in `emit` not proven by any test; 7 seeded decks do not open, save and report as docs/36 says; `fixtures/rr` not in CI's SDK job | Per-tier gate |
 | CLOSE-03 | Finish 1E and 1F marks | Open | P0 | Annotate `a14` effects for the audit; record reasons for rows left unmarked (`SPEC-09`) | Gate item 1 |
 | SPEC-09 | A place for named reasons | Open | P0 | Checklist has no column for why a row is unmarked, so "or carries a named reason" cannot be gated | `audit.py --check` fails on an unaccounted row |
-| T1C-03 | Theme default `spPr` not reported, no writer for object defaults | Open | P1 | Part of `T1C-02` | Silent-drop test covers themes |
+| T1C-03 | Theme default `spPr` not reported, no writer for object defaults | Done | P1 | Part of `T1C-02` | Silent-drop test covers themes |
 | T2E-01 | Built-in table style definitions | Open | P1 | Real decks name built-in GUIDs with an empty `tableStyles.xml`, so tables would look unstyled when rendered. Phase 2. Definitions must be ours, not copied | Styled tables render |
 | T1N-08 | Wire `replace_media` to the writer | In progress | P1 | Only plans today; a replacement needing a new relationship cannot be saved. No real deck holds audio or video, so MEDIA rests on synthetic decks until `PV-01` | Saved deck holds the new image |
 | WR-11 | `Writer::uri` takes the second URI in Strict | Open | P1 | A new `a14` element would get the pre-release namespace. Seen in code, not run | Failing test first |
@@ -239,7 +239,7 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1A-02 | Close Tier 1A | Open | P0 | `SPEC-08`, `PKG-02`, `XML-04`, `SEC-018`, `DOC-009`, `F4-02` | Per-tier gate |
 | T1B-02 | Close Tier 1B | Open | P1 | Whole-part removal rule; `defaultTextStyle` follows `T1F-01`; app counts follow `T1N-05` | Per-tier gate |
 | T1C-01 | Tier 1C leftovers | Done | P1 | Effect reference, `themeManager`, setters | Seen red |
-| T1C-02 | Close Tier 1C | Open | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
+| T1C-02 | Close Tier 1C | Done | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
 | T1D-02 | Merge Tier 1D | Done | P0 | Merged onto the parser fixes; 372 tests pass | Gates pass |
 | SKEL-02 | Skeleton: minimal layout and PNG | Blocked | P1 | Waits with `SKEL-01` | Phase 1 closed |
 | T1E-01 | Geometry binding | Done | P0 | `prstGeom`, `custGeom`, `avLst`; compiled, not evaluated. `GEO-04` is separate | Enum values read from the checklist; edits change only named nodes |

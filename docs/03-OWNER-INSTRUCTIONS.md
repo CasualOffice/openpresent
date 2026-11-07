@@ -41,6 +41,7 @@ by saying so.
 | 30 | 2026-11-07 | Sessions do not run all the gates: they finish their work. Stop wasting system resources, money and time | [CLAUDE.md](../CLAUDE.md), `openslide-worker` skill |
 | 31 | 2026-11-07 | Stop writing gates for every little thing. No new gate without the owner asking for it | [CLAUDE.md](../CLAUDE.md) |
 | 32 | 2026-11-07 | Run one broad gate, not a gate for every small thing and test. CI on `main` is that gate; a merge only has to compile | [CLAUDE.md](../CLAUDE.md) |
+| 33 | 2026-11-08 | Corrects how instruction 23 was read: do not crash LibreOffice, but keep using it to validate. The owner never said to stop | `FID-04`, F7 |
 
 ## Boundaries set by the environment
 

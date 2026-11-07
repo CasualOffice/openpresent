@@ -13,7 +13,7 @@ use super::error::WriterError;
 use super::names::key;
 use super::notes::check_text;
 use super::preflight::{Found, add};
-use super::view::{AppFacts, CoreFacts, View};
+use super::view::{AppFacts, CoreFacts, SlideFacts, View, counts_of};
 
 const ORIGIN: &str = "/digital-signature/origin";
 const SIGNATURE: &str = "/digital-signature/signature";
@@ -245,26 +245,35 @@ impl Draft<'_> {
                 tree.remove_child(root, el);
             }
         }
-        if self.model_owns_app(&now.part) {
-            return Ok(());
-        }
+        // A `Deck` patch answers for the slide list it wrote and for an `app.xml` it wrote.
+        // What moved the slides after it, an operation or a slide patch, this follows.
+        let stated = self.log.model_patched.contains(&key(&now.part));
         let was = before.app.clone().unwrap_or_default();
         let part = now.part.clone();
-        let (old, new) = (before.counts(), after.counts());
+        let base = self.log.deck_slides.as_ref().unwrap_or(&before.slides);
+        let (old, new) = (counts_of(base), after.counts());
         let wanted = [
-            ("Slides", old.0 != new.0 || now.slides != was.slides, new.0),
+            (
+                "Slides",
+                old.0 != new.0 || (!stated && now.slides != was.slides),
+                new.0,
+            ),
             (
                 "HiddenSlides",
-                old.1 != new.1 || now.hidden_slides != was.hidden_slides,
+                old.1 != new.1 || (!stated && now.hidden_slides != was.hidden_slides),
                 new.1,
             ),
-            ("Notes", old.2 != new.2 || now.notes != was.notes, new.2),
+            (
+                "Notes",
+                old.2 != new.2 || (!stated && now.notes != was.notes),
+                new.2,
+            ),
         ];
         let application = host.and_then(|h| h.application.as_deref());
         if let Some(name) = application {
             check_text(name, &part)?;
         }
-        let titles = title_plan(&before, &after, &now, &was);
+        let titles = title_plan(&before, base, &after, &now, &was);
         let tree = self.tree(&part)?;
         let root = tree.root();
         for (local, changed, value) in wanted {
@@ -297,8 +306,8 @@ impl Draft<'_> {
         Ok(())
     }
 
-    /// A `Deck` patch states `app.xml` and the slide list itself, so what it wrote stands,
-    /// as `INV-ID-02` stands aside for it. File-level operations are what this follows.
+    /// A `Deck` patch states `app.xml` and the slide list itself, so a count it leaves out of
+    /// step is reported rather than refused, as `INV-ID-02` stands aside for it.
     pub(crate) fn model_owns_app(&self, part: &str) -> bool {
         self.log.model_edited_main || self.log.model_patched.contains(&key(part))
     }
@@ -371,17 +380,22 @@ enum TitlePlan {
     },
 }
 
-/// `INV-AP-03`: nothing unless the slides or a title changed. Then the slide group is
-/// brought up to date in place, or both lists go, never one, and never stale.
-fn title_plan(before: &View, after: &View, now: &AppFacts, was: &AppFacts) -> TitlePlan {
-    let keys = |v: &View| v.slides.iter().map(|s| s.key.clone()).collect::<Vec<_>>();
-    let changed = keys(before) != keys(after)
-        || after.slides.iter().any(|s| {
-            before
-                .slides
-                .iter()
-                .any(|b| b.key == s.key && b.title != s.title)
-        });
+/// `INV-AP-03`: nothing unless the slides or a title changed since `base`, what a `Deck`
+/// patch left or else the input. Then the slide group is brought up to date in place, or
+/// both lists go, never one, and never stale.
+fn title_plan(
+    before: &View,
+    base: &[SlideFacts],
+    after: &View,
+    now: &AppFacts,
+    was: &AppFacts,
+) -> TitlePlan {
+    let keys = |slides: &[SlideFacts]| slides.iter().map(|s| s.key.clone()).collect::<Vec<_>>();
+    let changed = keys(base) != keys(&after.slides)
+        || after
+            .slides
+            .iter()
+            .any(|s| base.iter().any(|b| b.key == s.key && b.title != s.title));
     let (Some(groups), Some(stored)) = (&now.groups, &now.titles) else {
         return TitlePlan::Leave;
     };

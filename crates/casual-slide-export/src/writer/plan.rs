@@ -188,7 +188,13 @@ impl<'a> SavePlan<'a> {
             None => Vec::new(),
         };
         let mut draft = Draft::new(package, self.limits);
-        for (name, bytes) in deck_edits.into_iter().chain(slide_edits) {
+        for (name, bytes) in deck_edits {
+            draft.apply_patched(&name, bytes);
+        }
+        if draft.log.model_edited_main {
+            draft.log.deck_slides = Some(draft.build_views()?.1.slides);
+        }
+        for (name, bytes) in slide_edits {
             draft.apply_patched(&name, bytes);
         }
         for (name, bytes) in &self.replacements {

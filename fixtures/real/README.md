@@ -35,6 +35,23 @@ row below and refuses a file whose SHA-256 differs.
 Licence-restricted decks found and **not downloaded**: Zenodo 15731976, 15731955, 15731802
 (CC BY-NC-SA 4.0), 18224131 (CC BY-NC-ND 4.0), 19297439 (CC BY-NC 4.0).
 
+## Keynote and Google Slides (`CORP-01`, `F-009`)
+
+Surveyed 2026-11-08: 537 openly licensed decks under 5 MB, from part of Zenodo and 13 permissively
+licensed GitHub repositories. **No deck named Keynote in `docProps/app.xml`, so none is
+committed as Keynote's.** 128 report `Microsoft Macintosh PowerPoint`, and nothing here tells
+whether any of those came from Keynote, so they are not counted as Keynote's.
+
+The Google Slides test is structural, because these exports carry no writer name: no
+`docProps/app.xml`, and shapes named `Google Shape;N;pN`. 23 decks met it. Another 15 have those
+names but also an app.xml naming PowerPoint, which reads as a later PowerPoint save, so they
+do not count. Google did not state any of this, so it is strong evidence and not proof.
+
+The `gs-` and `z17301875` decks were not run through `tools/real-decks/check.py`, so they have
+no row under Results yet. Their images were not looked at; `gs-z11091145` has one and
+`z17301875` six small ones. A Morph search matched only the word, without checking for a
+Morph transition, so no deck is recorded as Morph. No Zoom marker was found.
+
 ## Provenance
 
 | File | Committed | URL | Licence | Attribution | Date | SHA-256 | Writer, from app.xml | Platform | `lang` values, most used first |
@@ -105,6 +122,10 @@ Licence-restricted decks found and **not downloaded**: Zenodo 15731976, 15731955
 | `z7572574-oatipps-de.pptx` | No. Not needed yet; rights look clear | [source](https://zenodo.org/records/7572574/files/OAUnterstuetzen_PraxistippsFuerVerlageUndJournale_neuesLogo_2023-01-26.pptx?download=1) | CC-BY-4.0 | Strauß, Helene, *Open Access unterstützen - Praxistipps für Verlage und Journale*, doi:10.5281/zenodo.7572574 | 2026-11-07 | `d535448b1cd1b082b7326a6770be668b5818acca46ca106d839caff9f3267ccc` | Microsoft Office PowerPoint 14.0000 | Windows | de-DE |
 | `z7773451-adbu-fr.pptx` | No. Not needed yet; rights look clear | [source](https://zenodo.org/records/7773451/files/2023_01_19_ADBU_webinaire_memoire.pptx?download=1) | Etalab-2.0 | Tom Richard, *Webinaire : Construire des indicateurs avec d'autres services de l'uni*, doi:10.5281/zenodo.7773451 | 2026-11-07 | `1d156c59d1f061ccd70723ed68fac678ef0f7c4e0a0c3bd39737d67c61994f5b` | Microsoft Office PowerPoint 16.0000 | Windows | fr-FR en-US |
 | `z8181282-copyright-en.pptx` | No. Carries a copyright mark and an address; not reviewed further | [source](https://zenodo.org/records/8181282/files/Copyright%20in%20the%20scientific%20publishing%20process.pptx?download=1) | CC-BY-4.0 | Brizioli, Sabrina, *Copyright in the scientific publishing process - module 1.2*, doi:10.5281/zenodo.8181282 | 2026-11-07 | `4fe2de5553360b6c39c650107deef9fdfbd1c860cbcda167e3b56a0b64388d36` | Microsoft Macintosh PowerPoint 16.0000 | Mac | it-IT it mr-IN |
+| `gs-z11091145-curation-en.pptx` | **Yes** | [source](https://zenodo.org/records/11091145/files/2024-04-30-DataverseNO-curation-workflow.pptx?download=1) | CC-BY-4.0 | Rekand, Illimar, *DataverseNO curation workflow used by the Research data team at the University Library of Bergen*, doi:10.5281/zenodo.11091145 | 2026-11-08 | `9ef3ac587f6875808a3cbc7ab1dcf072f6e7c8fe025458a886f6c411def1a012` | Google Slides, by test below: no app.xml, `Google Shape;` names | Google Slides | en |
+| `gs-shapecrawler-074-ru.pptx` | **Yes** | [source](https://raw.githubusercontent.com/ShapeCrawler/ShapeCrawler/e4fc9defdb5ab7d194f6a1d5369da3a5a209d308/ShapeCrawler.Tests/Assets/074%20google%20slides.pptx) | MIT | [ShapeCrawler](https://github.com/ShapeCrawler/ShapeCrawler) | 2026-11-08 | `c6f50aa118f853203fb450241468d2baadde6ff9aa87d18c90e76fa75f2bd37b` | Google Slides, by test below: no app.xml, `Google Shape;` names; source names it google slides | Google Slides | ru |
+| `gs-unstructured-fake-en.pptx` | **Yes** | [source](https://raw.githubusercontent.com/Unstructured-IO/unstructured/293d235cfcd5f5e89c3cc5ff85562005e182ae33/example-docs/fake-power-point.pptx) | Apache-2.0 | [unstructured](https://github.com/Unstructured-IO/unstructured) | 2026-11-08 | `a51aba9c0f5f5615047b0a65e2ca8e8c434e2213986914bc71e30bd6a243901f` | Google Slides, by test below: no app.xml, `Google Shape;` names, `ppt/metadata`, Google's schema | Google Slides | en-US |
+| `z17301875-diagnostic-de.pptx` | **Yes** | [source](https://zenodo.org/records/17301875/files/251008-Quality%20criterias_diagnostic%20test.pptx?download=1) | CC-BY-4.0 | Röhrig, Bernd; Schmitt, Andrea, *Quality criterias for a diagnostic test*, doi:10.5281/zenodo.17301875 | 2026-11-08 | `3e1e8bd0533d3f17d9a53019ae4e1ca49768bf58fa9a42dabca0355607781cf8` | Microsoft Office PowerPoint (equation deck) | Not determined | de-DE |
 
 ## Results
 

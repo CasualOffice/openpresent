@@ -154,6 +154,162 @@ fn one_save_combines_properties_theme_and_slides() {
     f4(&outcome.bytes);
 }
 
+/// `T1B-02`, by way of `T1N-05`: a deck with counts and titles in `app.xml`.
+const RR_APP: &str = "generated/rr-app.pptx";
+const APP: &str = "docProps/app.xml";
+
+fn app_of(bytes: &[u8]) -> String {
+    String::from_utf8(parts(bytes)[APP].clone()).unwrap()
+}
+
+fn add_slide() -> Op {
+    Op::AddSlide {
+        position: None,
+        layout: None,
+    }
+}
+
+/// A model patch that rewrites only the main part states nothing about `app.xml`, so the
+/// counts and titles still follow the slides the same save added and deleted.
+#[test]
+fn app_counts_follow_the_slides_when_a_deck_patch_also_rewrote_the_main_part() {
+    let mut pkg = open(&read(RR_APP));
+    let mut deck = import_deck(&mut pkg, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    deck.presentation.server_zoom = Some(Percentage(50_000));
+    let outcome = SavePlan::new()
+        .deck(&deck)
+        .op(add_slide())
+        .op(add_slide())
+        .save(&mut pkg)
+        .unwrap();
+    let app = app_of(&outcome.bytes);
+    assert!(app.contains("<Slides>5</Slides>"), "{app}");
+    assert!(app.contains("<vt:i4>5</vt:i4>"), "{app}");
+    assert!(app.contains("size=\"6\""), "{app}");
+}
+
+/// Even a patch that states `app.xml` does not get to leave the count behind slides this
+/// same save changed: that would write a file whose `Slides` is known to be wrong.
+#[test]
+fn app_counts_win_over_a_stated_count_only_when_the_slides_changed() {
+    let mut pkg = open(&read(RR_APP));
+    let mut deck = import_deck(&mut pkg, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    deck.properties.app.as_mut().unwrap().company = Some("Acme".to_owned());
+    let added = SavePlan::new()
+        .deck(&deck)
+        .op(add_slide())
+        .save(&mut pkg)
+        .unwrap();
+    let app = app_of(&added.bytes);
+    assert!(app.contains("<Slides>4</Slides>"), "{app}");
+    assert!(app.contains("<Company>Acme</Company>"), "{app}");
+
+    let mut pkg = open(&read(RR_APP));
+    let mut deck = import_deck(&mut pkg, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    deck.properties.app.as_mut().unwrap().slides = Some(7);
+    let stated = SavePlan::new().deck(&deck).save(&mut pkg).unwrap();
+    let app = app_of(&stated.bytes);
+    assert!(
+        app.contains("<Slides>7</Slides>"),
+        "what it states stands: {app}"
+    );
+}
+
+/// A patch alone that changes the slide list answers for the count too: what it says reads
+/// back. It is reported, not silent. Whatever moves the slides after it is followed.
+#[test]
+fn a_deck_patch_that_changes_the_list_answers_for_the_count_and_is_reported() {
+    let mut pkg = open(&read(RR_APP));
+    let mut deck = import_deck(&mut pkg, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    deck.presentation.slides.as_mut().unwrap().remove(2);
+    let alone = SavePlan::new().deck(&deck).save(&mut pkg).unwrap();
+    let app = app_of(&alone.bytes);
+    assert!(app.contains("<Slides>3</Slides>"), "{app}");
+    assert!(
+        alone.report.iter().any(|e| e.rule == "INV-AP-01"),
+        "{:?}",
+        alone.report
+    );
+
+    let mut pkg = open(&read(RR_APP));
+    let then_added = SavePlan::new()
+        .deck(&deck)
+        .op(add_slide())
+        .save(&mut pkg)
+        .unwrap();
+    let model = import_deck(&mut open(&then_added.bytes), &ImportLimits::default())
+        .unwrap()
+        .deck;
+    assert_eq!(model.presentation.slides.as_ref().unwrap().len(), 3);
+    let app = app_of(&then_added.bytes);
+    assert!(app.contains("<Slides>3</Slides>"), "{app}");
+}
+
+#[test]
+fn app_notes_count_follows_adding_and_removing_notes() {
+    let mut pkg = open(&read(RR_APP));
+    let added = SavePlan::new()
+        .op(Op::AddNotes {
+            slide: SlideRef::Index(2),
+            text: "A note".to_owned(),
+        })
+        .save(&mut pkg)
+        .unwrap();
+    let app = app_of(&added.bytes);
+    assert!(app.contains("<Notes>2</Notes>"), "{app}");
+    let mut pkg = open(&added.bytes);
+    let removed = SavePlan::new()
+        .op(Op::RemoveNotes {
+            slide: SlideRef::Index(2),
+        })
+        .save(&mut pkg)
+        .unwrap();
+    let app = app_of(&removed.bytes);
+    assert!(app.contains("<Notes>1</Notes>"), "{app}");
+}
+
+#[test]
+fn app_hidden_count_follows_a_slide_patch_alongside_a_deck_patch() {
+    let mut pkg = open(&read(RR_APP));
+    let mut deck = import_deck(&mut pkg, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    deck.presentation.server_zoom = Some(Percentage(50_000));
+    let slides = import_slide_parts(
+        &mut pkg,
+        &deck.presentation,
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    let structure = &slides.parts.structure;
+    let shown = structure
+        .slides
+        .iter()
+        .map(|&id| slides.parts.get(id).unwrap())
+        .find(|p| p.show != Some(false))
+        .unwrap();
+    let mut edited = shown.clone();
+    edited.show = Some(false);
+    let wanted = [&edited];
+    let limits = SlideLimits::default();
+    let outcome = SavePlan::new()
+        .deck(&deck)
+        .slide_parts(structure, &wanted, &limits)
+        .save(&mut pkg)
+        .unwrap();
+    let app = app_of(&outcome.bytes);
+    assert!(app.contains("<HiddenSlides>2</HiddenSlides>"), "{app}");
+}
+
 #[test]
 fn a_plan_that_fails_part_way_writes_nothing_and_a_second_try_works() {
     let source = read(THREE);

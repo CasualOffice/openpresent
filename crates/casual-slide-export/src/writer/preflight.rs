@@ -41,7 +41,8 @@ pub struct Violation {
 /// What preflight found, having refused nothing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Preflight {
-    /// Violations the input already had, which are left alone.
+    /// Violations the input already had, which are left alone, and `app.xml` counts a
+    /// `Deck` patch left out of step, which it answers for. Reported either way.
     pub arrived: Vec<Violation>,
 }
 
@@ -1706,17 +1707,23 @@ pub(crate) fn run(
     introduced.extend(changes);
     introduced.sort();
     introduced.dedup();
+    let mut stated = Vec::new();
     if let Some(app) = &after.app
         && draft.model_owns_app(&app.part)
     {
-        introduced.retain(|v| !APP_COUNT_RULES.contains(&v.rule));
+        let (counts, others) = introduced
+            .into_iter()
+            .partition(|v| APP_COUNT_RULES.contains(&v.rule));
+        stated = counts;
+        introduced = others;
     }
     if !introduced.is_empty() {
         return Err(WriterError::Preflight {
             violations: introduced,
         });
     }
-    let arrived = now.intersection(&was).cloned().collect();
+    let mut arrived: Vec<Violation> = now.intersection(&was).cloned().collect();
+    arrived.extend(stated);
     Ok(Preflight { arrived })
 }
 
