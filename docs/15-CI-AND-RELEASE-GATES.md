@@ -4,7 +4,7 @@ CI is part of the architecture. The jobs below are a **contract**: stable names,
 change is not mergeable until they pass. Adapted from OpenCalc's docs/15 at `b23c67c`,
 keeping its number. Owner: `GOV-01`.
 
-**Current state:** Phase 0. Nine jobs run in three workflows, listed below. Nothing is
+**Current state:** Phase 0. Fourteen jobs run in four workflows, listed below. Nothing is
 released, and no release workflow exists yet.
 
 ## Test levels
@@ -21,7 +21,7 @@ Each level answers a question the one below it cannot.
 | Schema validity (F4) | `tools/f4/validate.py`, xmllint and Ecma's XSDs, with what PowerPoint writes allowed in Transitional and recorded in `tools/f4/allowances.tsv` (`F4-02`, `F4-03`) | Every XML part we read or write is valid against the standard, or against those recorded allowances | `test` on Linux, where it is required |
 | Office validity (`F-006`) | `tools/ooxml-sdk/`, Microsoft's Open XML SDK | The same parts against Office's reading of the schemas. Disagreements with F4 are recorded in `false-positives.tsv`, never silenced | `ooxml-sdk` |
 | Real decks (`F-007`) | `fixtures/real/`, `tools/real-decks/` | Decks written by PowerPoint, not by us, import and survive a forced rewrite | `test` for committed decks; `tools/real-decks/check.py` locally for the rest |
-| Second opinion (F7) | `tools/fidelity/` | LibreOffice's rendering, where it differs; a question, never a verdict | By hand until a job exists |
+| Second opinion (F7) | `tools/fidelity/`; `tools/phase1-evidence.py export` | LibreOffice's rendering, where it differs; a question, never a verdict. The export run reopens every edited corpus deck in it | `p1-export`; the rest by hand until a job exists |
 | Repository | `tools/check-*.py` | The documents, tracker, workflows and dependency graph keep their own rules | `checks`, `gates`, pre-commit hook |
 
 The fidelity ladder F1 to F8 is defined in [51](51-SPEC-CHECKLIST-AND-FIDELITY.md). F5, F6 and F8
@@ -44,6 +44,11 @@ reached its workflow and not its table.
 | `fuzz-build` | `ci.yml` | `cargo +nightly fuzz build` | Fuzz targets compile |
 | `gates` | `post-merge.yml` | `check-repo.py`, `check-gate-selftest.py`, fixture manifest, on every push to main | The merge commit itself, which no branch run saw |
 | `fuzz-campaign` | `fuzz.yml` | Every target from `cargo fuzz list`, seven minutes each, weekly and on demand; crashing inputs kept as an artifact | Parsers against new inputs |
+| `p1-budget-hostile` | `phase1-exit.yml` | `tools/phase1-evidence.py budget`, then `hostile`, on every push to main and on demand | `P1X-01`: the 500-slide budget; every hostile file opened and edited, or refused, with no crash or hang |
+| `p1-damage` | `phase1-exit.yml` | `tools/phase1-evidence.py damage`: the damage corpus with `DAMAGE_FULL=1 F4_REQUIRED=1` | `P1X-01`: every damaged deck opens or is refused by code, and what it writes passes F4 |
+| `p1-export` | `phase1-exit.yml` | `tools/phase1-evidence.py export` with `PHASE1_LO=host`: every corpus deck written edited, then F4, the SDK, and LibreOffice from apt, headless under `unshare --net` | `P1X-01`: exported decks valid and reopened by LibreOffice; the only place it runs (instructions 23, 33, 38) |
+| `p1-gates` | `phase1-exit.yml` | The gates in CLAUDE.md, exactly as listed, with F4 and the SDK required | `P1X-01`: the closing list's gates item |
+| `p1-evidence` | `phase1-exit.yml` | `phase1-evidence.py merge` of each job's record into `tools/phase1-evidence.json`, kept as the `phase1-evidence` artifact, then `tools/phase1-exit.py --quick` | The closing list, read from evidence made on GitHub |
 
 **Every job is read-only** (`permissions: contents: read`), **every action is pinned to a full
 commit SHA** with its tag in a comment, and a superseded pull-request run is cancelled while a
