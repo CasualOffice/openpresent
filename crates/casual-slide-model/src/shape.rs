@@ -256,8 +256,10 @@ pub struct NonVisualDrawing {
     /// `hlinkHover`.
     pub hyperlink_hover: Option<Hyperlink>,
     /// `extLst/ext/a16:creationId/@id`, PowerPoint's persistent id for a shape.
+    // spec-audit: x:drawing/2014/main:<creationId>
     pub creation_id: Option<String>,
     /// `extLst/ext/adec:decorative/@val`.
+    // spec-audit: x:drawing/2017/decorative:<decorative>
     pub decorative: Option<bool>,
 }
 
@@ -548,8 +550,18 @@ pub struct ShapeNode {
     /// Which element.
     pub kind: NodeKind,
     /// `cNvPr`.
+    // spec-audit: p:CT_ShapeNonVisual/cNvPr
+    // spec-audit: p:CT_ConnectorNonVisual/cNvPr
+    // spec-audit: p:CT_PictureNonVisual/cNvPr
+    // spec-audit: p:CT_GraphicalObjectFrameNonVisual/cNvPr
+    // spec-audit: p:CT_GroupShapeNonVisual/cNvPr
     pub non_visual: Option<NonVisualDrawing>,
     /// The kind's locking element in its `cNv…Pr`.
+    // spec-audit: p:CT_ShapeNonVisual/cNvSpPr
+    // spec-audit: p:CT_ConnectorNonVisual/cNvCxnSpPr
+    // spec-audit: p:CT_PictureNonVisual/cNvPicPr
+    // spec-audit: p:CT_GraphicalObjectFrameNonVisual/cNvGraphicFramePr
+    // spec-audit: p:CT_GroupShapeNonVisual/cNvGrpSpPr
     pub locks: Option<Locks>,
     /// `cNvSpPr/@txBox`, shapes only.
     pub text_box: Option<bool>,
@@ -558,28 +570,56 @@ pub struct ShapeNode {
     /// `cNvCxnSpPr/endCxn`, connectors only.
     pub end_connection: Option<Connection>,
     /// `nvPr`.
+    // spec-audit: p:CT_ShapeNonVisual/nvPr
+    // spec-audit: p:CT_ConnectorNonVisual/nvPr
+    // spec-audit: p:CT_PictureNonVisual/nvPr
+    // spec-audit: p:CT_GraphicalObjectFrameNonVisual/nvPr
+    // spec-audit: p:CT_GroupShapeNonVisual/nvPr
     pub app: Option<AppNonVisual>,
     /// `spPr/xfrm`, `grpSpPr/xfrm`, or a graphic frame's `p:xfrm`.
+    // spec-audit: p:CT_GraphicalObjectFrame/xfrm
     pub transform: Option<Transform>,
     /// `spPr/@bwMode`, `grpSpPr/@bwMode`, or the graphic frame's own.
+    // spec-audit: p:CT_GraphicalObjectFrame/@bwMode
     pub bw_mode: Option<BlackWhiteMode>,
     /// `@useBgFill`, shapes only.
+    // spec-audit: p:CT_Shape/@useBgFill
     pub use_bg_fill: Option<bool>,
     /// `cNvPicPr/@preferRelativeResize`, pictures only.
     pub prefer_relative_resize: Option<bool>,
     /// Geometry, fill, line, effects and 3D: Tier 1E.
+    // spec-audit: p:CT_Shape/spPr
+    // spec-audit: p:CT_Connector/spPr
+    // spec-audit: p:CT_Picture/spPr
+    // spec-audit: p:CT_GroupShape/grpSpPr
     pub properties: crate::drawing::ShapeProperties,
     /// `a:graphic/a:graphicData/@uri`, graphic frames only: what the frame holds.
+    // spec-audit: p:CT_GraphicalObjectFrame/a:graphic
+    // spec-audit: a:CT_GraphicalObject/graphicData
+    // spec-audit: a:<graphic>
     pub graphic_uri: Option<String>,
     /// `@r:id`, content parts only.
+    // spec-audit: p:CT_Rel/@r:id
     pub rel_id: Option<String>,
     /// `txBody`, shapes only. A table cell's text is in [`Self::table`].
+    // spec-audit: p:CT_Shape/txBody
     pub text_body: Option<Box<TextBody>>,
     /// `a:tbl` in the frame's `graphicData`, graphic frames only.
     pub table: Option<Box<crate::table::Table>>,
+    /// An OLE object or 3D model this node stands for: identity and fallback only.
+    pub retained: Option<Box<crate::retained::RetainedObject>>,
     /// `p:style` on a shape, connector or picture: references into the theme.
+    // spec-audit: p:CT_Shape/style
+    // spec-audit: p:CT_Connector/style
+    // spec-audit: p:CT_Picture/style
     pub style: Option<Box<crate::theme::ShapeStyle>>,
     /// A group's children, in document order, which is z-order.
+    // spec-audit: p:CT_GroupShape/sp
+    // spec-audit: p:CT_GroupShape/grpSp
+    // spec-audit: p:CT_GroupShape/graphicFrame
+    // spec-audit: p:CT_GroupShape/cxnSp
+    // spec-audit: p:CT_GroupShape/pic
+    // spec-audit: p:CT_GroupShape/contentPart
     pub children: Vec<ShapeNode>,
 }
 
@@ -604,6 +644,7 @@ impl ShapeNode {
             rel_id: None,
             text_body: None,
             table: None,
+            retained: None,
             style: None,
             children: Vec::new(),
         }

@@ -4,14 +4,16 @@
 //!
 //! The six part kinds share most of their shape, so one [`SlidePart`] holds them,
 //! with a field per attribute and child; a field a kind does not have stays `None`.
-//! Transitions, timing, fills and effects stay in the part's tree, preserved but
-//! not modelled. Inheritance between these parts is resolved
+//! Transitions and timing are Tier 1I's, in [`crate::transition`] and [`crate::timing`].
+//! Inheritance between these parts is resolved
 //! by `casual-slide-style` at read time, never stored here (ADR-006).
 
 use crate::properties::token_enum;
 use crate::shape::{BlackWhiteMode, ObjectId, ShapeNode};
 use crate::text::TextListStyle;
 use crate::theme::{ColorMap, ColorMapOverride, StyleMatrixRef};
+use crate::timing::{SlideTiming, Slot};
+use crate::transition::SlideTransition;
 
 /// Smallest `ST_SlideLayoutId`. Layout and master ids share one pool (`INV-ID-03`).
 pub const SLIDE_LAYOUT_ID_MIN: u32 = 2_147_483_648;
@@ -171,7 +173,7 @@ pub struct Background {
     pub fill: Option<BackgroundFill>,
 }
 
-/// `p:CT_CommonSlideData`, `cSld`. `custDataLst`, `controls` and `extLst` stay in
+/// `p:CT_CommonSlideData`, `cSld`. `custDataLst` and `extLst` stay in
 /// the tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommonSlideData {
@@ -181,6 +183,9 @@ pub struct CommonSlideData {
     pub background: Option<Background>,
     /// `spTree`, a group whose id is node 1 of the part.
     pub shape_tree: Option<ShapeNode>,
+    /// `p:controls`: identity and fallback of each ActiveX control, which has no node of its
+    /// own in the shape tree. Never instantiated.
+    pub controls: Vec<crate::retained::RetainedObject>,
 }
 
 /// `p:CT_SlideLayoutIdListEntry`. An id out of range is kept and reported, as the
@@ -235,11 +240,16 @@ pub struct SlidePart {
     /// `hf`: layouts and every master.
     pub header_footer: Option<HeaderFooter>,
     /// `sldLayoutIdLst`: masters.
+    // spec-audit: p:CT_SlideLayoutIdList/sldLayoutId
     pub layout_ids: Option<Vec<SlideLayoutId>>,
     /// `txStyles`: masters.
     pub text_styles: Option<MasterTextStyles>,
     /// `notesStyle`: the notes master.
     pub notes_style: Option<TextListStyle>,
+    /// `transition`, on a slide, layout or master. Tier 1I.
+    pub transition: Option<Slot<SlideTransition>>,
+    /// `timing`, on a slide, layout or master. Tier 1I.
+    pub timing: Option<Slot<SlideTiming>>,
 }
 
 impl SlidePart {
@@ -262,6 +272,8 @@ impl SlidePart {
             layout_ids: None,
             text_styles: None,
             notes_style: None,
+            transition: None,
+            timing: None,
         }
     }
 

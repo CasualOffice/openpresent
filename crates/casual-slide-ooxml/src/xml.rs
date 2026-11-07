@@ -581,7 +581,7 @@ enum Bom {
 }
 
 /// A handle on an element of an [`XmlTree`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ElementId(usize);
 
 impl XmlTree {

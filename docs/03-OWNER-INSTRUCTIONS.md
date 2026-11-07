@@ -35,6 +35,9 @@ by saying so.
 | 24 | 2026-11-07 | We must open even malformed files, and edit them, including ones Microsoft discards or fails to open. That is an advantage, not a fault. Supersedes refusing malformed input | [29](29-RECOVERY.md), ADR-015, `REC-*` |
 | 25 | 2026-11-07 | Keep the list of known disagreements with Microsoft's validator: keep testing everything the standard allows, write down each disagreement with its reason, and recheck all of them against real PowerPoint before release. Editing `tools/ooxml-sdk/false-positives.tsv` is approved for this | `F-010`, `PV-01` |
 | 26 | 2026-11-07 | Write down your mistakes and their solutions, so they do not happen again | [04](04-MISTAKES-AND-RULES.md), [CLAUDE.md](../CLAUDE.md) |
+| 27 | 2026-11-07 | Complete Phase 1 soon | [06](06-ROADMAP-AND-DELIVERY.md), [14](14-EXECUTION-TRACKER.md) |
+| 28 | 2026-11-07 | Write the rule for not overloading the machine and keep it in memory, so the owner need not repeat it | [04](04-MISTAKES-AND-RULES.md) rule 22, [CLAUDE.md](../CLAUDE.md) |
+| 29 | 2026-11-07 | Waste no time and no tokens | [04](04-MISTAKES-AND-RULES.md) rule 23 |
 
 ## Boundaries set by the environment
 
