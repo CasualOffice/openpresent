@@ -1,4 +1,4 @@
-//! Read `p:timing` from an [`XmlTree`](casual_slide_ooxml::XmlTree) (Tier 1I, `T1I-01`):
+//! Read `p:timing` from an [`XmlTree`] (Tier 1I, `T1I-01`):
 //! every time node, behaviour, condition, target and build list, in the part or in
 //! `mc:AlternateContent`, whose every branch is read and whose choice is the resolver's.
 //!

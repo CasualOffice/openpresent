@@ -1036,7 +1036,10 @@ fn something_unknown_anywhere_in_timing_or_a_transition_is_reported() {
     let mut tried = HashSet::new();
     for (deck, part) in [
         ("generated/timing-every-node.pptx", PART),
-        ("generated/transition-every-effect.pptx", "ppt/slides/slide62.xml"),
+        (
+            "generated/transition-every-effect.pptx",
+            "ppt/slides/slide62.xml",
+        ),
         ("generated/transition-every-effect.pptx", PART),
     ] {
         let xml = part_of(deck, part);
@@ -1056,7 +1059,10 @@ fn something_unknown_anywhere_in_timing_or_a_transition_is_reported() {
         while let Some(id) = stack.pop() {
             let name = local(whole.qualified_name(id));
             let qualified = whole.qualified_name(id);
-            if name == "extLst" || (qualified.starts_with("a:") && !matches!(name, "dgm" | "chart" | "bldDgm" | "bldChart")) {
+            if name == "extLst"
+                || (qualified.starts_with("a:")
+                    && !matches!(name, "dgm" | "chart" | "bldDgm" | "bldChart"))
+            {
                 continue;
             }
             held.push(id);
@@ -1083,7 +1089,12 @@ fn something_unknown_anywhere_in_timing_or_a_transition_is_reported() {
         }
     }
     assert!(tried.len() >= 80, "{}", tried.len());
-    assert!(silent.is_empty(), "{} read past:\n{}", silent.len(), silent.join("\n"));
+    assert!(
+        silent.is_empty(),
+        "{} read past:\n{}",
+        silent.len(),
+        silent.join("\n")
+    );
 }
 
 /// The check itself: a timing element nothing knows is noticed, and so is its going.
