@@ -479,6 +479,38 @@ fn no_message_or_finding_carries_document_text() {
     let pkg = c
         .open("findings", deck, lim())
         .expect("findings do not stop a deck");
+
+    // The host's time budget, spent (`SEC-P10`): a read it stops is refused as cancelled,
+    // through the package the layers above read from, and is never taken for damage.
+    for strict in [false, true] {
+        let bytes = main_is(&format!(
+            "<p:presentation xmlns:p=\"{PML}\"><!--{MARK}--></p:presentation>"
+        ));
+        let mut stopped = if strict {
+            PresentationPackage::open_strict(bytes, lim())
+        } else {
+            PresentationPackage::open(bytes, lim())
+        }
+        .expect("opens before the budget is spent");
+        stopped.set_cancel(Some(std::sync::Arc::new(|| true)));
+        let main = stopped.main_part().to_owned();
+        let err = stopped
+            .read_xml_part(&main)
+            .expect_err("the read is stopped");
+        assert_eq!(err.code(), "CS-PKG-0010", "strict {strict}: {err:?}");
+        assert!(
+            stopped.recovery_report().is_empty(),
+            "strict {strict}: a stop is not a repair"
+        );
+        assert!(
+            !stopped
+                .recovery_report()
+                .plain_language()
+                .iter()
+                .any(|l| leaks(l))
+        );
+        c.error("cancelled", &err);
+    }
     assert!(pkg.findings().len() >= 11, "{:?}", pkg.findings());
 
     let missing: Vec<String> = registered()
