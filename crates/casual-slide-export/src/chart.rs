@@ -446,8 +446,15 @@ impl Patch<'_, '_> {
             let at = kids.iter().position(|k| k.id == prev.id);
             return Ok(at.and_then(|at| kids.get(at + 1)).map(|k| k.id));
         }
+        // Never before what came before it in the model: a repeated choice such as the axes of
+        // a plot area (`catAx`, then `valAx`, then `valAx`) runs against the schema's order, and
+        // the second `valAx` would otherwise go before the `catAx` (F-011).
+        let from = prev
+            .and_then(|prev| kids.iter().position(|k| k.id == prev.id))
+            .map_or(0, |at| at + 1);
         Ok(mine.and_then(|mine| {
             kids.iter()
+                .skip(from)
                 .find(|k| order_of.rank(&k.local).is_some_and(|theirs| theirs > mine))
                 .map(|k| k.id)
         }))

@@ -62,7 +62,7 @@ OpenPresent is designed around that problem:
 | Rendering to PNG and PDF | ⬜ Phase 2 |
 | Editor, slide show, co-editing, desktop app | ⬜ Phases 3 to 10 |
 
-**Phase 1 tiers 1A, 1B, 1C, 1D, 1E, 1F, 1G, 1H, 1I, 1K, 1L, 1M, 1N and 1R are closed** (2026-11-08). Of 8,739 checklist rows, 7,843 are marked `y` or `r` in model, import and export; 469 more are `n/a` in a column that does not apply to them; the 427 others each carry a named reason in `docs/spec/open-rows.tsv` or are accounted for by their members, and `tools/spec-audit` checks every one. What each tier still lacks is in the [tracker](docs/14-EXECUTION-TRACKER.md) under "Tier gates".
+**All Phase 1 tiers, 1A to 1N and 1R, are closed** (2026-11-08). Of 8,739 checklist rows, 7,843 are marked `y` or `r` in model, import and export; 469 more are `n/a` in a column that does not apply to them; the 427 others each carry a named reason in `docs/spec/open-rows.tsv` or are accounted for by their members, and `tools/spec-audit` checks every one. What each tier still lacks is in the [tracker](docs/14-EXECUTION-TRACKER.md) under "Tier gates".
 
 The full plan, with how each phase opens and closes, is the [roadmap](docs/06-ROADMAP-AND-DELIVERY.md).
 Every task is in the [execution tracker](docs/14-EXECUTION-TRACKER.md). 66 real PowerPoint-written decks open and save with every XML part byte-identical. PowerPoint itself has not yet checked our output; until then, nothing here claims to match it.
