@@ -89,7 +89,7 @@ Window Management API where the browser has it, falling back to a manually moved
 
 ## Budgets
 
-**Proposed, none measured.** The spikes replace these with evidence, and CI then asserts them on a named
+**Proposed, none measured, except the Phase 1 row marked measured.** The spikes replace these with evidence, and CI then asserts them on a named
 environment, as OpenCalc's docs/30 does.
 
 | Measure | Target |
@@ -98,5 +98,6 @@ environment, as OpenCalc's docs/30 does.
 | Keystroke to paint, 2,000-character body | under 16 ms |
 | Slide switch, cached | under 50 ms |
 | First paint of a 500-slide deck | under 1 s after bytes arrive |
+| Open and read every slide of a 500-slide deck; unedited save; one slide edit, unoptimized build (Phase 1, asserted) | under 10 s, 100 ms and 10 s. **Measured** 2026-11-08 on a 10-core laptop at load 6 to 9, so upper bounds: 0.5 to 0.7 s, under 1 ms, 1.7 to 2.4 s (`tests/phase1_exit.rs`, `tools/phase1-evidence.json`) |
 | Animation, 30 simultaneous objects | 60 fps |
 | Text stack in WASM, before fonts, Brotli | 313 KiB measured as an increment over a bare bundle ([64](64-SPK-01-TEXT-COST.md)); whole-engine budget set in Phase 3 |

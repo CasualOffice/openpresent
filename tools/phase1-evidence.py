@@ -74,7 +74,7 @@ def meta():
 
 
 def cargo_test(test, filter_, extra_env=None):
-    env = dict(os.environ, **CARGO_ENV, **(extra_env or {}))
+    env = {**os.environ, **CARGO_ENV, **(extra_env or {})}
     done = subprocess.run(
         ["cargo", "test", "-p", "casual-slide-export", "--locked", "--test", test, "--", filter_, "--nocapture"],
         cwd=ROOT, env=env, capture_output=True, text=True, check=False,
@@ -138,7 +138,7 @@ def hostile(_scratch):
 
 def damage(_scratch):
     m = meta()
-    code, out = cargo_test("damage_corpus", "every_damaged_deck", {"DAMAGE_FULL": "1", "F4_REQUIRED": "1"})
+    code, out = cargo_test("damage_corpus", "every_damaged_deck", {"DAMAGE_FULL": "1", "F4_REQUIRED": "1", "RUST_TEST_THREADS": os.environ.get("DAMAGE_THREADS", "4")})
     m["load_after"] = [round(x, 1) for x in os.getloadavg()]
     decks = real_decks()
     summary = {}
