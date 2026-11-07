@@ -46,6 +46,16 @@ LO_TIMEOUT = 300
 CARGO_ENV = {"CARGO_BUILD_JOBS": os.environ.get("CARGO_BUILD_JOBS", "4"), "RUST_TEST_THREADS": "1"}
 
 
+
+def libreoffice_own(failure):
+    """Owner instruction 40: LibreOffice failing on a deck whose unedited input fails the same way
+    is LibreOffice's fault, not ours."""
+    if not failure.startswith("LibreOffice "):
+        return False
+    _, _, rest = failure.partition(": ")
+    ours, _, theirs = rest.partition(", unedited input ")
+    return bool(theirs) and ours.split()[0] == theirs.split()[0]
+
 def digest(paths):
     """One hash over names and bytes, so phase1-exit.py can tell evidence for another corpus."""
     h = hashlib.sha256()
@@ -352,7 +362,7 @@ def export(scratch):
             failures.append(f"LibreOffice {label[p]}: {got['status']} {got.get('rc', '')}, unedited input {was}".strip())
     m_after = [round(x, 1) for x in os.getloadavg()]
     return record("export", {
-        **base, "load_after": m_after, "exit": code, "ok": not failures,
+        **base, "load_after": m_after, "exit": code, "ok": not [f for f in failures if not libreoffice_own(f)],
         "written": int(fields(written[0])["total"]), "edits_left_out": left_out[0].split() if left_out else [],
         "f4_and_sdk_checked": len(packages), "libreoffice_checked": len(lo), "libreoffice": lo_counts,
         "sdk_known_only": len(sdk_known), "libreoffice_not_decks": not_decks,
