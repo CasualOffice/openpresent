@@ -7,6 +7,8 @@ limit without a test seen to fail is not a control.
 Status: **Tested** means a test exists and was seen red without the fix. **Planned** names where it
 lands; some planned rows have partial code, and only Tested rows may be relied on. **Partial** means a control exists but no test proves all of it.
 
+**Outcome changed by ADR-015 ([29](29-RECOVERY.md)).** Where a row below says refused, the attack is still stopped, but the default outcome becomes: neutralize it, set aside what is affected, and open the rest of the deck. Status stays until `REC-01` to `REC-05` land. A host can select strict refusal.
+
 ## Package
 
 | ID | Threat | Control | Status |

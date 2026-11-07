@@ -63,6 +63,7 @@ Industry-standard practice applies everywhere, with these specifics.
 - New dependencies need a reason, a licence that passes `deny.toml`, and an ADR for the engine.
 
 **Parsing and security** ([docs/07](docs/07-SECURITY-THREAT-MODEL.md))
+- **Recover before refusing (owner instruction 24, [docs/29](docs/29-RECOVERY.md)).** Malformed input gets a best reading and the deck opens; hostile constructs are neutralized, never obeyed. Opening what Microsoft refuses is an advantage.
 - Every file is hostile. Every parser is bounded, has hostile fixtures, and has a fuzz target. All XML goes through `casual-slide-ooxml`'s walker.
 - No macro execution, no automatic network fetch, no document string reaching the DOM as HTML. No secrets in code or logs.
 

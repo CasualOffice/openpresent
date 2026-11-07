@@ -2,6 +2,8 @@
 name: openslide-parser
 description: Security rules for code reading untrusted input in OpenSlide. Use when adding or changing anything that parses a file, a part, XML, an image reference, a font, or wire data.
 ---
+Every byte is hostile, and we still open what we can (`docs/29-RECOVERY.md`): neutralize and report rather than refuse the deck.
+
 Every byte is hostile. Read `docs/07-SECURITY-THREAT-MODEL.md`, and find the threats for this input.
 
 - XML goes only through `casual-slide-ooxml`'s `walk` or `XmlTree`. `quick_xml` elsewhere fails `tools/check-repo.py`.

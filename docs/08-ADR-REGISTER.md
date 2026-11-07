@@ -23,3 +23,4 @@ the WASM bundle; the fidelity contract; a new dependency in the engine.
 | ADR-011 | Animations compile to a deterministic sampled timeline in the engine | Accepted | [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md) |
 | ADR-012 | Shell target: PowerPoint for the web; replace only what Microsoft owns | Accepted | [47](47-POWERPOINT-SHELL-AND-FEATURE-MAP.md) |
 | ADR-013 | Edited parts are patched as a byte-faithful XML tree held by export. The model holds plain values; save writes dirty values to their nodes, and never re-serializes a part | Accepted | [28](28-PACKAGE-AND-PART-GRAPH.md) |
+| ADR-015 | Recover before refusing: malformed input gets a best reading, and hostile constructs are neutralized, not obeyed. A host may choose strict | Accepted, owner instruction 24 | [29](29-RECOVERY.md) |
