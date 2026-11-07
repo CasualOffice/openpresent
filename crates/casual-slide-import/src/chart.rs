@@ -469,9 +469,22 @@ impl ChartReader<'_, '_> {
         Ok(value)
     }
 
+    /// An element holding only text: its attributes, which the schema gives it none of, are
+    /// reported, so one a file adds is not read past (`docs/06`, gate item 6).
+    fn leaf_text(&mut self, el: &Elem) -> Res<Option<String>> {
+        self.r.finish(el);
+        Ok(self.r.text(el)?)
+    }
+
+    /// [`Self::leaf_text`] as a typed value.
+    fn leaf_typed<T: Lexical>(&mut self, el: &Elem) -> Res<Option<T>> {
+        self.r.finish(el);
+        Ok(self.r.typed_text(el)?)
+    }
+
     /// One text branch of a repeated choice. Nothing to leave out of a list, so empty.
     fn choice_text(&mut self, el: &Elem) -> Res<String> {
-        Ok(self.r.text(el)?.unwrap_or_default())
+        Ok(self.leaf_text(el)?.unwrap_or_default())
     }
 
     /// `a:CT_ShapeProperties`, by Tier 1E's reader.

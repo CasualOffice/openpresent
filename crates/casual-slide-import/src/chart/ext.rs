@@ -112,7 +112,7 @@ impl ChartReader<'_, '_> {
         if el.in_namespace(NS_C16R2) {
             match el.local.as_str() {
                 // spec-audit: x:drawing/2015/06/chart:<formatcode2>
-                "formatcode2" => return Ok(ExtItem::C16r2Formatcode2(self.r.text(el)?.unwrap_or_default())),
+                "formatcode2" => return Ok(ExtItem::C16r2Formatcode2(self.choice_text(el)?)),
                 _ => {}
             }
         }

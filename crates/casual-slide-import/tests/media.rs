@@ -22,7 +22,7 @@ use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{NodeKind, ShapeNode};
 use casual_slide_model::slide::{SlideKind, SlidePart};
 use casual_slide_model::text::Bullet;
-use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, Relationship, XmlTree};
+use casual_slide_ooxml::{ElementId, OoxmlLimits, PresentationPackage, Relationship, XmlTree};
 
 /// How a name outside the schemas is reported, as it may be document text.
 const UNKNOWN_NAME: &str = "(unknown)";
@@ -913,6 +913,107 @@ fn nothing_a_media_element_does_not_model_goes_unreported() {
             .media_extension
             .is_some(),
         "another's extension hid p14:media"
+    );
+}
+
+/// The elements of Tier 1H, by local name: a picture, its fill, and every media element.
+const MEDIA_ELEMENTS: [&str; 26] = [
+    "pic",
+    "nvPicPr",
+    "cNvPicPr",
+    "blipFill",
+    "blip",
+    "srcRect",
+    "stretch",
+    "tile",
+    "videoFile",
+    "audioFile",
+    "wavAudioFile",
+    "quickTimeFile",
+    "audioCd",
+    "st",
+    "end",
+    "media",
+    "trim",
+    "fade",
+    "bmkLst",
+    "bmk",
+    "tracksInfo",
+    "trackLst",
+    "track",
+    "svgBlip",
+    "oembed",
+    "imageFormula",
+];
+
+/// What a read gives, as something to compare: the model and every finding.
+fn as_read(xml: &str, rels: &[Relationship]) -> (SlidePart, Vec<String>) {
+    let read = read_xml(xml, rels);
+    let report = read
+        .findings
+        .iter()
+        .map(|f| format!("{} {} {:?}", f.kind.code(), f.element, f.attribute))
+        .collect();
+    (read.part, report)
+}
+
+/// A silent drop fails here (`docs/06`, per-tier gate 6), the other way round from the row
+/// test above: an element and an attribute nothing knows, put in every picture and media
+/// element in turn, must change the model or the report. A reader that skips a child it does
+/// not know, and says nothing, fails.
+#[test]
+fn something_unknown_in_any_picture_or_media_element_is_reported() {
+    let (xml, rels) = source(EVERYTHING);
+    let whole = XmlTree::parse(xml.as_bytes(), SLIDE, &OoxmlLimits::default()).unwrap();
+    let before = as_read(&xml, &rels);
+    let mut held: Vec<ElementId> = Vec::new();
+    let mut stack = vec![whole.root()];
+    while let Some(id) = stack.pop() {
+        let qualified = whole.qualified_name(id);
+        let local = qualified.rsplit(':').next().unwrap_or(qualified);
+        // An extension the fixture made up, and a graphic frame's own content, are kept whole
+        // and named at their container: what is inside is that container's, asked in its own test.
+        let unknown_ext = local == "ext"
+            && whole
+                .attributes(id, SLIDE)
+                .unwrap()
+                .iter()
+                .any(|(k, v)| k == "uri" && v.starts_with("{00000000-"));
+        if matches!(local, "graphicData" | "Fallback") || unknown_ext {
+            continue;
+        }
+        stack.extend(whole.child_elements(id));
+        if MEDIA_ELEMENTS.contains(&local) {
+            held.push(id);
+        }
+    }
+    let mut tried = std::collections::HashSet::new();
+    let mut silent = Vec::new();
+    for id in held {
+        let name = whole.qualified_name(id).to_owned();
+        if !tried.insert(name.clone()) {
+            continue;
+        }
+        let mut with_child = whole.clone();
+        let new = with_child.new_element("p:madeUp");
+        with_child.insert_child(id, None, new);
+        let text = String::from_utf8(with_child.to_bytes()).unwrap();
+        if as_read(&text, &rels) == before {
+            silent.push(format!("a child in <{name}>"));
+        }
+        let mut with_attr = whole.clone();
+        assert!(with_attr.set_attribute(id, "madeUp", "1"));
+        let text = String::from_utf8(with_attr.to_bytes()).unwrap();
+        if as_read(&text, &rels) == before {
+            silent.push(format!("an attribute on <{name}>"));
+        }
+    }
+    assert!(tried.len() >= 25, "{}", tried.len());
+    assert!(
+        silent.is_empty(),
+        "{} read past:\n{}",
+        silent.len(),
+        silent.join("\n")
     );
 }
 

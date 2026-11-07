@@ -172,7 +172,7 @@ impl ChartReader<'_, '_> {
                     if out.line_width_scale.is_some() {
                         self.dup(&child);
                     } else {
-                        out.line_width_scale = self.r.typed_text::<Float64>(&child)?;
+                        out.line_width_scale = self.leaf_typed::<Float64>(&child)?;
                     }
                 }
                 "fillRef" if child.in_namespace(NS_CS) => {

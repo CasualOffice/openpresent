@@ -725,3 +725,68 @@ fn taking_out_any_chart_node_changes_the_model_or_the_report() {
     }
     assert!(total > 700, "only {total} kinds of node");
 }
+
+/// The other way round from the test above: an element and an attribute nothing knows, put in
+/// every kind of chart element in turn, must change the model or the report. A reader that
+/// skips a child it does not know, and says nothing, fails here; the removal test cannot see
+/// that, as no fixture holds such a child. DrawingML and what the model only names are left
+/// to their own tests, as above.
+#[test]
+fn something_unknown_in_any_chart_element_is_reported() {
+    let dml = casual_slide_import::properties::ns::DML;
+    let mut tried = HashSet::new();
+    let mut silent = Vec::new();
+    for deck in [CLASSIC, EX] {
+        let mut pkg = open(deck);
+        let names: Vec<String> = imported(&mut pkg)
+            .charts
+            .parts
+            .into_iter()
+            .map(|p| p.part)
+            .collect();
+        for part in names.iter().map(String::as_str) {
+            let bytes = pkg.read_part(part).unwrap();
+            let tree = XmlTree::parse(&bytes, part, &OoxmlLimits::default()).unwrap();
+            let as_read = read_part(&bytes, part).unwrap();
+            let mut stack = vec![tree.root()];
+            while let Some(id) = stack.pop() {
+                let name = tree.qualified_name(id).to_owned();
+                let local = tree.local_name(id);
+                let is_dml = tree
+                    .namespace(id)
+                    .is_some_and(|n| dml.contains(&n.as_str()));
+                if is_dml
+                    || name.starts_with("mc:")
+                    || (RETAINED_DML.contains(&local) && name != "c:style")
+                {
+                    continue;
+                }
+                stack.extend(tree.child_elements(id));
+                let Some((prefix, _)) = name.split_once(':') else {
+                    continue;
+                };
+                if !tried.insert(name.clone()) {
+                    continue;
+                }
+                let mut with_child = tree.clone();
+                let new = with_child.new_element(&format!("{prefix}:madeUp"));
+                with_child.insert_child(id, None, new);
+                if read_part(&with_child.to_bytes(), part).as_ref() == Some(&as_read) {
+                    silent.push(format!("{part}: a child in <{name}>"));
+                }
+                let mut with_attr = tree.clone();
+                assert!(with_attr.set_attribute(id, "madeUp", "1"));
+                if read_part(&with_attr.to_bytes(), part).as_ref() == Some(&as_read) {
+                    silent.push(format!("{part}: an attribute on <{name}>"));
+                }
+            }
+        }
+    }
+    assert!(tried.len() > 300, "only {} kinds of element", tried.len());
+    assert!(
+        silent.is_empty(),
+        "{} read past:\n{}",
+        silent.len(),
+        silent.join("\n")
+    );
+}

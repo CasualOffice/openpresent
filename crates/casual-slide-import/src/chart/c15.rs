@@ -27,7 +27,7 @@ impl ChartReader<'_, '_> {
                     if out.sqref.is_some() {
                         self.dup(&child);
                     } else {
-                        out.sqref = self.r.text(&child)?;
+                        out.sqref = self.leaf_text(&child)?;
                     }
                 }
                 _ => self.other(&child),
@@ -50,7 +50,7 @@ impl ChartReader<'_, '_> {
                     if out.sqref.is_some() {
                         self.dup(&child);
                     } else {
-                        out.sqref = self.r.text(&child)?;
+                        out.sqref = self.leaf_text(&child)?;
                     }
                 }
                 _ => self.other(&child),
@@ -73,7 +73,7 @@ impl ChartReader<'_, '_> {
                     if out.sqref.is_some() {
                         self.dup(&child);
                     } else {
-                        out.sqref = self.r.text(&child)?;
+                        out.sqref = self.leaf_text(&child)?;
                     }
                 }
                 _ => self.other(&child),
@@ -326,7 +326,7 @@ impl ChartReader<'_, '_> {
                     if out.f.is_some() {
                         self.dup(&child);
                     } else {
-                        out.f = self.r.text(&child)?;
+                        out.f = self.leaf_text(&child)?;
                     }
                 }
                 "dlblRangeCache" if child.in_namespace(NS_C15) => {
@@ -356,7 +356,7 @@ impl ChartReader<'_, '_> {
                     if out.sqref.is_some() {
                         self.dup(&child);
                     } else {
-                        out.sqref = self.r.text(&child)?;
+                        out.sqref = self.leaf_text(&child)?;
                     }
                 }
                 "spPr" if child.in_namespace(NS_C15) => {
@@ -440,14 +440,14 @@ impl ChartReader<'_, '_> {
                     if out.txfld_guid.is_some() {
                         self.dup(&child);
                     } else {
-                        out.txfld_guid = self.r.text(&child)?;
+                        out.txfld_guid = self.leaf_text(&child)?;
                     }
                 }
                 "f" if child.in_namespace(NS_C15) => {
                     if out.f.is_some() {
                         self.dup(&child);
                     } else {
-                        out.f = self.r.text(&child)?;
+                        out.f = self.leaf_text(&child)?;
                     }
                 }
                 "dlblFieldTableCache" if child.in_namespace(NS_C15) => {

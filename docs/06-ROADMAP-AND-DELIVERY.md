@@ -82,7 +82,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 
 Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re-read from `tools/spec-audit/audit.py`, not from this page.
 
-**Where it stands (2026-11-08).** Every tier is built and merged; **1A, 1B, 1C, 1D, 1E, 1F, 1G, 1I, 1L and 1N are closed** (2026-11-08), the rest are not. Each tier's gate, item by item, and what it still lacks are in [14](14-EXECUTION-TRACKER.md) §Tier gates. None of the Phase 1 exit criteria below is met yet. Status columns are filled by `tools/spec-audit`; a row needs code, a test and a fixture.
+**Where it stands (2026-11-08).** Every tier is built and merged; **1A, 1B, 1C, 1D, 1E, 1F, 1G, 1H, 1I, 1K, 1L, 1M and 1N are closed** (2026-11-08), the rest are not. Each tier's gate, item by item, and what it still lacks are in [14](14-EXECUTION-TRACKER.md) §Tier gates. None of the Phase 1 exit criteria below is met yet. Status columns are filled by `tools/spec-audit`; a row needs code, a test and a fixture.
 
 **Two corrections this plan makes to the table above.**
 - **1C cannot close before 1E and 1F.** A theme's format scheme is made of fills, lines and effects, and object defaults of text and shape properties. So 1C finishes as `T1C-02` after those tiers.
