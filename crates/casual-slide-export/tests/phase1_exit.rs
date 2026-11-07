@@ -391,9 +391,10 @@ fn a_layout_damaged_in_its_local_header_still_lets_the_slides_read() {
 
 /// Found by the first export run over the hostile files: adding and duplicating a slide in a
 /// deck whose sections are hostile is refused as a broken invariant (`CS-SAV-0012`), where the
-/// edit should save. Ignored until fixed, since it fails.
+/// edit should save. Two causes: a new slide after one in no section went to the front of the
+/// first section, out of step with the slide list; and sections sharing an id were all
+/// written with one row, so the slide was in many.
 #[test]
-#[ignore = "finding P1X-01: a slide-list edit on a deck with hostile sections is refused"]
 fn a_slide_list_edit_saves_on_a_deck_with_hostile_sections() {
     for name in [
         "section-bad-values.bin",

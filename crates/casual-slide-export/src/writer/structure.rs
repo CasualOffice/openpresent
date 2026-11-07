@@ -1,7 +1,7 @@
 //! The lists in `presentation.xml` and the master parts: slide, master and layout ids,
 //! the schema position of a new list, and the section list.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use casual_slide_model::presentation::{SLIDE_ID_MAX, SLIDE_ID_MIN, SLIDE_MASTER_ID_MIN};
 use casual_slide_ooxml::{Conformance, ElementId, XmlTree};
@@ -319,12 +319,18 @@ impl Draft<'_> {
         let Some((_, _, list)) = section_list(tree, root) else {
             return Ok(());
         };
+        // Sections sharing an id, as a hostile deck may have, are told apart by order: the
+        // n-th with an id takes the n-th row with it, so one row is never written to all.
+        let mut rows: BTreeMap<&str, std::collections::VecDeque<&SectionFacts>> = BTreeMap::new();
+        for row in wanted {
+            rows.entry(row.id.as_str()).or_default().push_back(row);
+        }
         for section in tree.child_elements(list) {
             if tree.local_name(section) != "section" {
                 continue;
             }
             let id = tree.plain_attribute(section, "id").unwrap_or_default();
-            let Some(row) = wanted.iter().find(|s| s.id == id) else {
+            let Some(row) = rows.get_mut(id.as_str()).and_then(|r| r.pop_front()) else {
                 continue;
             };
             let slides = match tree.child(section, "sldIdLst") {
@@ -380,21 +386,36 @@ impl Draft<'_> {
         for s in &mut sections {
             s.slides.retain(|id| id != slide);
         }
-        let holder = previous.and_then(|p| {
+        // A previous slide in no section arrived that way. The new one still goes
+        // somewhere, so it is not one more slide in none: after the nearest slide before it
+        // that is in a section, so reading the sections still gives the slide order
+        // (`INV-SL-05`); with none, first in the first section.
+        let earlier: Vec<String> = match previous {
+            Some(p) => {
+                let entries = self.slide_entries()?;
+                let upto = entries.iter().position(|e| e.raw_id == p);
+                entries
+                    .into_iter()
+                    .take(upto.map_or(0, |i| i.saturating_add(1)))
+                    .map(|e| e.raw_id)
+                    .collect()
+            }
+            None => Vec::new(),
+        };
+        let anchor = earlier.iter().rev().find_map(|p| {
             sections
                 .iter()
                 .position(|s| s.slides.iter().any(|id| id == p))
+                .map(|at| (at, p))
         });
-        match (holder, previous) {
-            (Some(at), Some(p)) => {
+        match anchor {
+            Some((at, p)) => {
                 if let Some(s) = sections.get_mut(at) {
                     let after = s.slides.iter().position(|id| id == p).map_or(0, |i| i + 1);
                     s.slides.insert(after, slide.to_owned());
                 }
             }
-            _ => {
-                // A previous slide in no section arrived that way. The new one still
-                // goes somewhere, so it is not one more slide in none.
+            None => {
                 if let Some(s) = sections.first_mut() {
                     s.slides.insert(0, slide.to_owned());
                 }
