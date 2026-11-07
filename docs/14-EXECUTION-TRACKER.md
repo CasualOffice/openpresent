@@ -57,7 +57,7 @@
 | UX-002 | Live-session measurements | Open | P1 | [50](50-POWERPOINT-UX-STUDY.md) §40 lists 21 measurements, and §42 the behaviours only a live session settles: marquee rule, group entry, undo depth, web default ribbon. Run with `PV-01`'s access, earlier if possible | Each recorded, and rules corrected |
 | PV-01 | PowerPoint verification | Open | P0 | Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Microsoft publishes no repair-trigger list, and a schema-valid deck can still prompt, so also open the seeded `RR-*` fixtures. Run whenever access exists; earlier is cheaper | Before first stable release |
 | PPT-01 | Import legacy `.ppt` | Open | P2 | `DEC-08`. CFB and MS-PPT parsers with limits and fuzz targets | Phase 10 |
-| NAME-01 | Rename product to OpenPresent in docs and site | Open | P2 | After parallel sessions merge. Crate prefix and folder unchanged | No product use of the old name remains |
+| NAME-01 | Rename product to OpenPresent | In progress | P2 | README, AGENTS and docs renamed; docs 19 and 22 follow 1D's merge. GitHub description and topics set. Crate prefix, skill names and folder unchanged | No product use of the old name remains |
 | DOC-007 | Owner instruction log | Done | P0 | [03](03-OWNER-INSTRUCTIONS.md), first in authority, cited from `CLAUDE.md` | Exists, indexed |
 | SEC-015 | Deck content in error messages | Done | P0 | 7 leaks found, 0 now, by a marker planted through every PKG, XML, OPC, MCE and FND code. Import's own CS-IMP, CS-IMF and CS-CLR codes are not covered: `SEC-018` | `no_document_text.rs` |
 | SEC-016 | Caps with no test | Done | P0 | Fixture per cap | Each of 7 caps removed in turn went red |
@@ -194,3 +194,51 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | LEG-01 | Legal scope widened | Open | P1 | `DEC-07` covers UI imitation, trademark, codec patents; third-party inventory beyond Rust | Before public release |
 | DOC-008 | Doc drift named by review | Open | P2 | Dead `docs/21` and `docs/15` citations; AGENTS state; 48 pending against 14 Done; mobile undecided | `check-doc-references` |
 | MOB-01 | Mobile and touch | Open | P2 | **Decided in scope** as a responsive shell after Phase 7, as OpenCalc's phone shell | Phase 10 |
+
+## Phase 1 tasks
+
+Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close when their tasks do.
+
+| ID | Title | St | Sev | Mechanism | Gate |
+| --- | --- | --- | --- | --- | --- |
+| STAT-01 | Fill checklist status columns | Open | P0 | No row is marked `y`, so no tier can show its gate. Teach `tools/spec-audit` to propose marks from code and fixtures; a mark needs both. Apply to 1A, 1B, 1C, 1D | Marks pass `audit.py --check`; a false mark fails |
+| T1A-02 | Close Tier 1A | Open | P0 | `SPEC-08`, `PKG-02`, `XML-04`, `SEC-018`, `DOC-009`, `F4-02` | Per-tier gate |
+| T1B-02 | Close Tier 1B | Open | P1 | Whole-part removal rule; `defaultTextStyle` follows `T1F-01`; app counts follow `T1N-05` | Per-tier gate |
+| T1C-01 | Tier 1C leftovers | Open | P1 | `COLOR-01`; effect reference; `themeManager`; export setters for panose, pitch, charset, style reference index | Tests seen red |
+| T1C-02 | Close Tier 1C | Open | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
+| T1D-02 | Merge and close Tier 1D | Open | P0 | Session running. Then adapt to the stricter reader and removed `XmlTree::attribute` | Per-tier gate |
+| SKEL-01X | Skeleton: minimal layout and PNG | Open | P0 | Creates `-layout` and `-render` with composition, presets, solid fills and one-font text, enough to see 5 decks. Compared in F7 only | 5 decks rendered and inspected |
+| T1E-01 | Geometry binding | Open | P0 | `prstGeom`, `custGeom`, `avLst` into the model; calls `-geometry`; `GEO-04` | All 187 presets round-trip |
+| T1E-02 | Fills | Open | P0 | Solid, gradient, pattern, blip, group, none; rotate-with-shape | Every `ST_PresetPatternVal`; fixed point |
+| T1E-03 | Lines | Open | P1 | Width, cap, compound, dash, join, arrowheads, sketch extension | Every enum value |
+| T1E-04 | Effects | Open | P1 | Effect lists and DAGs, blip effects, `a14` picture effects | Retained verbatim where unmodelled |
+| T1E-05 | 3D properties | Open | P2 | `scene3d`, `sp3d`, bevels, materials, cameras, light rigs. BEH-27 | Never flattened on save |
+| T1F-01 | Text structure | Open | P0 | `txBody`, `bodyPr`, `lstStyle`, paragraphs, runs, breaks, fields; `defaultTextStyle`, master text styles | Fixed point; BEH-02 resolver cases |
+| T1F-02 | Text properties | Open | P0 | Every run and paragraph property, spacing, tabs, bullets, 41 autonumber schemes, fonts, hyperlinks. BEH-28 | Every enum value |
+| T1F-03 | Autofit properties | Open | P0 | `normAutofit` scale stored as written; `spAutoFit`; recomputation is 2D6 | Stored values round-trip |
+| T1G-01 | Tables | Open | P0 | `tbl`, grid, rows, cells, merges, cell properties, text via 1F | Fixed point; merged-cell fixtures |
+| T1G-02 | Table styles | Open | P1 | `tableStyles.xml`, unknown style GUID reported (BEH-29) | Unknown GUID never crashes |
+| T1H-01 | Pictures | Open | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
+| T1H-02 | SVG with PNG fallback | Open | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
+| T1H-03 | Audio and video | Open | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
+| T1I-01 | Timing tree | Open | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
+| T1I-02 | Transitions | Open | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
+| T1J-01 | Classic charts | Open | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |
+| T1J-02 | Chart extensions and styles | Open | P1 | `c14`, `c15`, `c16`, chart style and colour parts. BEH-26 | Retained with base chart |
+| T1J-03 | 2016+ charts | Open | P1 | `cx:` with `AlternateContent` fallback, 8 layouts | Fallback kept with chart |
+| T1K-01 | SmartArt parts | Open | P0 | Data, layout, style, colours and drawing as linked parts; layout never run on load; `SEC-C12` | 5 parts stay consistent |
+| T1K-02 | Equations | Open | P1 | OMML, 326 rows; fallback retained | Fixed point |
+| T1K-03 | Ink | Open | P2 | `contentPart`, InkML, actions; fallback retained | Fixed point |
+| T1L-01 | OLE and controls | Open | P1 | Retained with fallback image; never opened; `SEC-C07` | Bytes compared |
+| T1L-02 | VML | Open | P2 | Legacy drawing parts retained; schema-checked in F4 | Bytes compared |
+| T1L-03 | 3D models | Open | P2 | Retained with fallback until `D3-01` | Bytes compared |
+| T1M-01 | Comments | Open | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
+| T1M-02 | Sections, zoom, classification | Open | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
+| T1M-03 | Review and custom data | Open | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
+| T1N-01 | Writer: part naming and rIds | Open | P0 | [36](36-EXPORT-AND-SAVE.md) rules, with `RR-*` fixtures | Each seeded break refused |
+| T1N-02 | Writer: content types and shared parts | Open | P0 | Default against Override, reference counts | Each seeded break refused |
+| T1N-03 | Writer: id rules and sections | Open | P0 | Slide, master and layout ids; section sync; notes master | Each seeded break refused |
+| T1N-04 | Writer: add, duplicate, delete slide at file level | Open | P0 | What Phase 4 needs beneath its ops. Deep clone rules from `OP-01` | Reopens with F4 and validator clean |
+| T1N-05 | Writer: docProps, thumbnails, signature drop | Open | P1 | App counts recalculated; `WR-06` | Fixtures |
+| T1N-06 | Writer: save-as matrix | Open | P1 | `WR-05`: 121 pairs | Fixture per pair |
+| P1X-01 | Phase 1 exit run | Open | P0 | `CORP-01` corpus at target, 500-slide budget, hostile corpus with no crash or hang, all tiers closed | Evidence assembled for owner sign-off |

@@ -159,7 +159,7 @@ Found: a free basic tier with paid plans, and a real-time co-editing claim cover
 
 - **Rendering: DOM plus SVG.** O: a public demo DOM has **0 `<canvas>`, 56 `<svg>`, ProseMirror editors and `base-element` nodes** [S55]; `BaseShapeElement.vue` uses `<svg>` [S55]; `package.json` depends on ProseMirror, `html-to-image` and ECharts [S55].
 - **Text: browser.** I, from the above: wrapping belongs to the browser, so it can differ between clients.
-- **Fidelity, by its own author.** D: import "~85%+", export "~95%+", "100% fidelity cannot be guaranteed"; **"I hope you use PPTist to build a presentation product different from Office PPT, rather than just an editing relay station for Office PPT"** [S56]. I: the most popular DOM attempt (9,467 stars, O) tells you not to use it for what OpenSlide is doing. The percentages have no stated method.
+- **Fidelity, by its own author.** D: import "~85%+", export "~95%+", "100% fidelity cannot be guaranteed"; **"I hope you use PPTist to build a presentation product different from Office PPT, rather than just an editing relay station for Office PPT"** [S56]. I: the most popular DOM attempt (9,467 stars, O) tells you not to use it for what OpenPresent is doing. The percentages have no stated method.
 - **PPTX.** O: uses `pptxtojson` for import and `pptxgenjs` for export [S55]. So both directions rebuild from JSON, and retention is not attempted (I).
 - **UI.** O: top menu, left and right panels; no ribbon [S55]. **Collaboration.** O: README has no mention [S55]. **Licence.** D: **AGPL-3.0, "prohibits closed-source commercial use"**, or a paid independent licence [S56]. `pptxtojson` itself is MIT (O) [S55].
 

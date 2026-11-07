@@ -1,6 +1,6 @@
 # 02 — Architecture
 
-OpenSlide is OpenCalc's architecture applied to a different document: **a headless
+OpenPresent is OpenCalc's architecture applied to a different document: **a headless
 engine with host adapters.** The engine owns the state, the layout and the display
 list. The host owns the window, fonts, I/O and policy.
 

@@ -1,6 +1,6 @@
-# AGENTS.md — Agent contract for OpenSlide
+# AGENTS.md — Agent contract for OpenPresent
 
-Read this in full before doing anything else. Owner instructions are in [docs/03](docs/03-OWNER-INSTRUCTIONS.md) and come first. Working rules, engineering standards and skills are in [CLAUDE.md](CLAUDE.md). The product is being renamed OpenPresent (`DEC-01`, `NAME-01`); crates use the prefix `casual-slide-`, which does not depend on it.
+Read this in full before doing anything else. Owner instructions are in [docs/03](docs/03-OWNER-INSTRUCTIONS.md) and come first. Working rules, engineering standards and skills are in [CLAUDE.md](CLAUDE.md). The product is OpenPresent (`DEC-01`); crates use the prefix `casual-slide-`, which does not depend on it.
 
 ## Repository boundary
 
@@ -69,4 +69,4 @@ Every task, none of it optional:
 
 ## Current state
 
-**Phases 0 and 1 are open, under waiver W-1** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Tiers 1A, 1B and 1C are built but not closed, and nothing renders yet. All ADRs are Accepted.
+**Phases 0 and 1 are open, under waiver W-1** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Tiers 1A to 1C are built but not closed, and Tier 1D is merging. The Phase 1 plan is in [06](docs/06-ROADMAP-AND-DELIVERY.md). Nothing renders yet. All ADRs are Accepted.

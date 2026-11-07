@@ -1,4 +1,4 @@
-# 00 — OpenSlide documentation index
+# 00 — OpenPresent documentation index
 
 `docs/` is the source of truth for the design. Code follows docs. Numbers mirror
 OpenCalc's where a document plays the same role, so the siblings read alike, and

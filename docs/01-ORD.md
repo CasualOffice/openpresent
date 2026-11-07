@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Someone who uses PowerPoint for the web opens a `.pptx` in OpenSlide and carries
+Someone who uses PowerPoint for the web opens a `.pptx` in OpenPresent and carries
 on working without being taught anything. The deck looks right, edits like
 PowerPoint, presents like PowerPoint, and saves back to a file PowerPoint opens
 with nothing lost.

@@ -17,8 +17,8 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | --- | --- | --- |
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
 | 0 Foundation | **Blocked** on `DEC-09` for CI | CI has never run; everything else proceeds |
-| 1 Model, import, export | **Open under waiver W-1** | 1A, 1B, 1C, 1E started |
-| 2 to 10 | Not opened | `SPK-01` and the fidelity tools are Phase 0 work feeding Phase 2 |
+| 1 Model, import, export | **Open under waiver W-1** | See the Phase 1 plan below |
+| 2 to 10 | Not opened | `SKEL-01` previews 2A and 2B during Phase 1 |
 
 ### Waivers
 
@@ -76,6 +76,34 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | **1L** | OLE, VML, 3D models, retained with fallback | 951 | 1H |
 | **1M** | Comments, review, sections, zoom, labels, tags, custom XML | 876 | 1D |
 | **1N** | **The writer:** part naming, rId allocation, content types, shared parts, id rules, app.xml, thumbnails, signature drop, save-as matrix ([36](36-EXPORT-AND-SAVE.md)) | invariants | 1A; grows with each tier |
+
+### Phase 1 plan
+
+Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re-read from `tools/spec-audit/audit.py`, not from this page.
+
+**Where it stands (2026-11-07).** Built, not closed: 1A, 1B, 1C. Merging: 1D. Not started: 1E to 1M. Designed, not built: 1N. **No checklist row is marked `y` yet**, so the status columns are the first job (`STAT-01`): until they are filled, no tier can show its gate.
+
+**Two corrections this plan makes to the table above.**
+- **1C cannot close before 1E and 1F.** A theme's format scheme is made of fills, lines and effects, and object defaults of text and shape properties. So 1C finishes as `T1C-02` after those tiers.
+- **1N is not one tier at the end.** Each tier that adds parts adds writer rules, so 1N runs alongside from Wave 1 and closes last.
+
+| Wave | Runs at once, because each owns separate files | Needs |
+| --- | --- | --- |
+| **0: close-out** | `STAT-01`, 1A and 1C leftovers, merge 1D | — |
+| **1: the shape of a slide** | 1E shape properties · 1F text · 1N core · `SKEL-01` | 1D |
+| **2: objects** | 1G tables · 1H pictures and media · 1I timing and transitions · 1M comments, sections, zoom | 1E, 1F |
+| **3: the big parts** | 1J charts · 1K SmartArt, equations, ink | 1E, 1F |
+| **4: retained, then finish** | 1L OLE, VML, 3D · `T1C-02` · 1N close | 1H, all |
+| **5: exit** | Corpus at target, 500-slide budget, hostile run, sign-off | all |
+
+**Three or four sessions at a time**, because usage limits stopped larger rounds three times. A wave does not wait for its slowest member if the next wave's dependencies are met. Each session follows the `openslide-tier` skill: read the MS-OI29500 notes, then split, build, fuzz and commit increments.
+
+**Order inside Waves 2 and 3 follows real decks** (`F-007`): what the decks use most goes first, since that finds wrong semantics soonest. Row count is not effort: charts are the largest tier by rows, while text will be the hardest later, in Phase 2.
+
+**What can change this plan:**
+- Real decks may refuse under the stricter XML reader, or exercise constructs not yet planned. That is why `F-007` comes first.
+- `SKEL-01` may show that a tier's semantics are wrong, which reopens it.
+- Throughput from 1A to 1D sizes the rest. Dates follow once 1D has merged, not before.
 
 **Walking skeleton (`SKEL-01`).** As soon as 1D closes, 5 real decks go through 2A, 2B and basic text, so that wrong semantics show up before the remaining tiers build on them. It adds to import-export-first; it does not reorder it.
 
