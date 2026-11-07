@@ -220,8 +220,8 @@ class Instance:
             if name == "idx" and element_local == "pt":
                 value = str(self.idx)
                 self.idx += 1
-            # `cx:autoUpdate` as PowerPoint writes it, and bare as the schema has it, by turns.
-            qualified = x.attr_qualified or ((x.prefix, name) == ("cx", "autoUpdate") and self.variant % 2 == 1)
+            # `cx:autoUpdate` as PowerPoint writes it, never bare as the schema names it (F4-07).
+            qualified = x.attr_qualified or (x.prefix, name) == ("cx", "autoUpdate")
             out.append(f'{x.prefix + ":" if qualified else ""}{name}="{value}"')
         return " ".join(out)
 
@@ -312,7 +312,9 @@ class Instance:
         """Extension items at the root alone: a list everywhere would hold them all, everywhere."""
         if x.prefix == "cx" and owner == "CT_ChartSpace" and self.root_exts:
             uri = "{C3380CC4-5D6E-409C-BE32-E72D297353CC}"
-            return f'<cx:extLst><cx:ext uri="{uri}"><c16:uniqueId val="{{00000000-0000-4000-8000-000000000000}}"/></cx:ext></cx:extLst>'
+            # Its namespace declared on the item and not ignorable, as PowerPoint writes it, so the
+            # item keeps its content under markup compatibility (F4-07).
+            return f'<cx:extLst><cx:ext uri="{uri}" xmlns:c16="{SCHEMAS["c16"][1]}"><c16:uniqueId val="{{00000000-0000-4000-8000-000000000000}}"/></cx:ext></cx:extLst>'
         if owner != "CT_ChartSpace" or x.prefix != "c" or not self.root_exts:
             return f"<{x.prefix}:extLst/>"
         items = []
@@ -350,7 +352,9 @@ def every_row_root(prefix, local, variant):
     inst = Instance(variant)
     out = inst.element(x, local, x.q(node.get("type")))
     head = f"<{prefix}:{local}"
-    return f"{DECL}{head} {ALL_NS} {IGNORABLE}" + out[len(head):]
+    # A `cx:` root has no `mc:Ignorable`: PowerPoint writes none there (F4-07).
+    ignorable = "" if prefix == "cx" else f" {IGNORABLE}"
+    return f"{DECL}{head} {ALL_NS}{ignorable}" + out[len(head):]
 
 
 def frame(sid, name, rid, extended=False):
