@@ -18,7 +18,7 @@ Each level answers a question the one below it cannot.
 | Corpus | `fixtures/manifest.tsv`, read by `corpus.rs`, `decks.rs`, `roundtrip.rs` | Every fixture meets its recorded expectation: opens with the findings named, or refuses with the code named. F1, F2 and the forced rewrite run over every deck that opens | `test` |
 | Hostile | `fixtures/hostile/` | Every `SEC-*` threat and every limit in [21](21-PARSER-LIMITS.md) has an input that crosses it | `test` |
 | Fuzz | `fuzz/`, one target per parser | Nothing panics, hangs or over-allocates on input nobody thought of | `fuzz-build` per push; `fuzz-campaign` weekly |
-| Schema validity (F4) | `tools/f4/validate.py`, xmllint and Ecma's XSDs | Every XML part we read or write is valid against the standard | `test` on Linux, where it is required |
+| Schema validity (F4) | `tools/f4/validate.py`, xmllint and Ecma's XSDs, with what PowerPoint writes allowed in Transitional and recorded in `tools/f4/allowances.tsv` (`F4-02`, `F4-03`) | Every XML part we read or write is valid against the standard, or against those recorded allowances | `test` on Linux, where it is required |
 | Office validity (`F-006`) | `tools/ooxml-sdk/`, Microsoft's Open XML SDK | The same parts against Office's reading of the schemas. Disagreements with F4 are recorded in `false-positives.tsv`, never silenced | `ooxml-sdk` |
 | Real decks (`F-007`) | `fixtures/real/`, `tools/real-decks/` | Decks written by PowerPoint, not by us, import and survive a forced rewrite | `test` for committed decks; `tools/real-decks/check.py` locally for the rest |
 | Second opinion (F7) | `tools/fidelity/` | LibreOffice's rendering, where it differs; a question, never a verdict | By hand until a job exists |
@@ -87,6 +87,7 @@ non-zero and names every problem.
 | `check-doc-references.py` | Every `docs/NN`, `docs/NN-NAME.md`, `ADR-NNN` and tracker id cited in documents, crate sources and tools exists. Dead references found when the gate arrived are listed in `tools/doc-references.known`, each owned by a row; the list can only shrink |
 | `check-crate-deps.py` | No crate under `crates/` depends on a server, or on any path outside `crates/` (`CI-01`) |
 | `check-fuzz-lock.py` | Every separate workspace's lockfile (`fuzz/`, `spikes/`, `tools/real-decks/`) agrees with its manifests |
+| `check-error-codes.py` | Every stable code in the code is in [20](20-ERROR-CODE-REGISTRY.md), and every code there is in the code (`DOC-010`) |
 | `check-parser-limits.py` | Every limit field and `MAX_*` constant in the code is in [21](21-PARSER-LIMITS.md) with the default the code holds |
 | `check-workflows.py` | The job contract above, SHA pins, permissions, no retries, and the release rules below |
 | `check-commits.py` | Conventional Commits; run by the `commit-msg` hook and `commit-messages`, not by `check-repo.py`, since it judges history rather than the tree |

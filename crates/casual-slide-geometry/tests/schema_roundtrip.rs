@@ -179,7 +179,7 @@ fn to_raw(shape: &Node) -> RawGeometry {
 /// is everything the corrections do not touch.
 fn apply_corrections(name: &str, raw: &mut RawGeometry) {
     if name == "curvedLeftArrow" {
-        assert_eq!(raw.sites[2].ang, "cd3", "GEO-03 no longer applies");
+        assert_eq!(raw.sites[2].ang, "cd3", "GEO-02b no longer applies");
         raw.sites[2].ang = "cd2".to_owned();
     }
     if name == "gear6" || name == "gear9" {
@@ -188,16 +188,16 @@ fn apply_corrections(name: &str, raw: &mut RawGeometry) {
             guide.fmla = guide.fmla.replace("+/ r 0 ", "+- r 0 ");
             fixed += 1;
         }
-        assert_eq!(fixed, if name == "gear6" { 1 } else { 4 }, "GEO-06");
+        assert_eq!(fixed, if name == "gear6" { 1 } else { 4 }, "GEO-02e");
     }
     if name == "pie" {
         let rect = raw.rect.as_mut().unwrap();
-        assert_eq!((rect.t.as_str(), rect.r.as_str()), ("ir", "it"), "GEO-05");
+        assert_eq!((rect.t.as_str(), rect.r.as_str()), ("ir", "it"), "GEO-02d");
         std::mem::swap(&mut rect.t, &mut rect.r);
     }
 }
 
-/// The definitions with surplus operands, each reported once per formula: GEO-04.
+/// The definitions with surplus operands, each reported once per formula: GEO-02c.
 fn expected_diagnostics(name: &str) -> usize {
     match name {
         "circularArrow" | "leftCircularArrow" => 2,
@@ -278,7 +278,7 @@ fn warp_table_matches_the_definitions_file() {
     assert_eq!(
         root.children.len(),
         40,
-        "GEO-02: 40 here and 41 in the schema"
+        "GEO-02a: 40 here and 41 in the schema"
     );
     for shape in &root.children {
         compare(&shape.name, shape, text_warp(&shape.name).unwrap());

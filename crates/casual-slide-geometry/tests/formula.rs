@@ -283,7 +283,7 @@ fn malformed_formulas_are_zero_and_reported() {
     }
 }
 
-/// Eight formulas in the shipped presets have one operand too many (GEO-04), so the
+/// Eight formulas in the shipped presets have one operand too many (GEO-02c), so the
 /// surplus has to be tolerated; it is reported for files.
 #[test]
 fn surplus_operands_are_ignored_and_reported() {
