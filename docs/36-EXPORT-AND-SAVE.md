@@ -1,7 +1,7 @@
 # 36 — Export and save (Tier 1N)
 
 The design for the writer: tracker rows `WR-02`, `WR-03`, `WR-04` and `WR-05`. Owning crate: `casual-slide-export`, with
-render-on-save hosted in `casual-slide-sdk`. Status: the `PN`, `RI`, `CT`, `SP`, `ID`, `SL`, `NM`, `AP`, `TH`, `SG` and `SA` families are built, in `crates/casual-slide-export/src/writer/` (`T1N-01` to `T1N-07`), see [Implementation status](#implementation-status); `PE` and `FB` are not. The fidelity contract it
+render-on-save hosted in `casual-slide-sdk`. Status: the `PN`, `RI`, `CT`, `SP`, `ID`, `SL`, `NM`, `AP`, `TH`, `SG` and `SA` families are built, in `crates/casual-slide-export/src/writer/` (`T1N-01` to `T1N-09`; Tier 1N closed 2026-11-08), see [Implementation status](#implementation-status); `PE` and `FB` are not. The fidelity contract it
 delivers is in [22](22-NORMALIZED-SCHEMA.md); the edit mechanism is ADR-013 and `ARC-01` in
 [28](28-PACKAGE-AND-PART-GRAPH.md); the ladder and `PV-01` are in [51](51-SPEC-CHECKLIST-AND-FIDELITY.md). The shape follows
 OpenCalc's `36-EXPORT-AND-ROUNDTRIP-DESIGN.md`.
