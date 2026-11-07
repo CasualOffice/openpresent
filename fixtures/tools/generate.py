@@ -474,6 +474,46 @@ def property_fixtures():
     # Unknown elements in numbers, which must not become a report of that size: made-up names are one finding (SEC-018).
     flood = "".join(f"<z{i}/>" for i in range(10_100))
     yield "hostile/import-findings-flood.bin", zipped(full_deck(pres_doc(f"<p:extLst/>{flood}"))), "open"
+    # COLOR-01: a theme past each colour bound in OoxmlLimits, which are capped and reported, not refused.
+    def theme_with(scheme="", tail=""):
+        names = ("dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink")
+        slots = "".join(f'<a:{n}>{scheme if n == "dk1" else ""}{"" if n == "dk1" and scheme else "<a:srgbClr val=" + chr(34) + "010203" + chr(34) + "/>"}</a:{n}>' for n in names)
+        return (f'{DECL}<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Hostile">'
+                f'<a:themeElements><a:clrScheme name="c">{slots}</a:clrScheme></a:themeElements>{tail}</a:theme>')
+
+    for name, theme in (
+        ("too-many-transforms", theme_with('<a:srgbClr val="010203">' + '<a:alpha val="50000"/>' * 65 + '</a:srgbClr>')),
+        ("list-capped", theme_with(tail='<a:custClrLst>' + '<a:custClr><a:srgbClr val="010203"/></a:custClr>' * 5000 + '</a:custClrLst>')),
+        ("findings-flood", theme_with(tail='<a:custClrLst>' + '<a:custClr><a:srgbClr val="bad"/></a:custClr>' * 2000 + '</a:custClrLst>')),
+    ):
+        yield f"hostile/color-{name}.bin", zipped(replace(deck(), "ppt/theme/theme1.xml", theme)), "open"
+
+    # GEO-04: custom geometry past each cap in casual-slide-geometry's `limits`, which the test reads itself until T1E-01.
+    def geometry(body):
+        shape = ('<p:sp><p:nvSpPr><p:cNvPr id="2" name="Custom"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+                 f'<p:spPr><a:custGeom>{body}</a:custGeom></p:spPr></p:sp>')
+        slide = f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{shape}</p:spTree></p:cSld></p:sld>'
+        return zipped(replace(deck(), "ppt/slides/slide1.xml", slide))
+
+    def repeated(item, count):
+        return "".join(item for _ in range(count))
+
+    pos = '<a:pos x="0" y="0"/>'
+    point = '<a:lnTo><a:pt x="0" y="0"/></a:lnTo>'
+    for name, body in (
+        ("too-many-guides", '<a:gdLst>' + repeated('<a:gd name="g" fmla="val 1"/>', 4097) + '</a:gdLst>'),
+        ("too-many-paths", '<a:pathLst>' + repeated('<a:path/>', 1025) + '</a:pathLst>'),
+        ("too-many-points", '<a:pathLst><a:path>' + repeated(point, 262_145) + '</a:path></a:pathLst>'),
+        ("too-many-handles", '<a:ahLst>' + repeated(f'<a:ahXY>{pos}</a:ahXY>', 257) + '</a:ahLst>'),
+        ("too-many-sites", '<a:cxnLst>' + repeated(f'<a:cxn ang="0">{pos}</a:cxn>', 4097) + '</a:cxnLst>'),
+        ("long-names", '<a:gdLst><a:gd name="' + "n" * 257 + '" fmla="val 1"/><a:gd name="b" fmla="' + "*/ 1 1 " * 147 + '"/></a:gdLst>'),
+        ("cycle", '<a:gdLst><a:gd name="ga" fmla="+- gb 1 0"/><a:gd name="gb" fmla="+- ga 1 0"/></a:gdLst>'),
+        ("huge-values", '<a:gdLst><a:gd name="a" fmla="*/ 9223372036854775807 9223372036854775807 0"/>'
+                        '<a:gd name="b" fmla="+- a a a"/></a:gdLst><a:pathLst><a:path><a:moveTo><a:pt x="b" y="b"/></a:moveTo>'
+                        '<a:arcTo wR="b" hR="b" stAng="b" swAng="b"/></a:path></a:pathLst>'),
+    ):
+        yield f"hostile/geometry-{name}.bin", geometry(body), "open"
+
     # Values that must be reported and left out, never coerced and never a panic.
     yield "hostile/import-bad-values.bin", zipped(full_deck(**bad_values())), "open"
 

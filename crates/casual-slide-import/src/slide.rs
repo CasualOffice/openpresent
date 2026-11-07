@@ -966,7 +966,10 @@ pub fn import_slide_parts(
                     .saturating_add(part.color_findings.total);
                 color_findings.items.extend(
                     part.color_findings.items.into_iter().take(
-                        crate::color::MAX_FINDINGS.saturating_sub(color_findings.items.len()),
+                        color_findings
+                            .bounds
+                            .findings
+                            .saturating_sub(color_findings.items.len()),
                     ),
                 );
                 parts.push(Some(part.value));

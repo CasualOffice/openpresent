@@ -19,4 +19,6 @@ Stable, never reused. **The contract:** messages and findings carry part names, 
 
 Findings, which do not stop a deck opening: CS-FND-0001 external content; 0002 unsafe link; 0003 target escapes package; 0004 dangling target; 0005 orphan part; 0006 undeclared content type; 0007 unknown relationship type; 0008 macro project; 0009 signature; 0010 embedded object; 0011 target or entry name that decodes to traversal or to no valid name; 0012 markup compatibility non-conformance.
 
+Geometry refusals, from `RawGeometry::compile`: CS-GEO-0001 too many guides; 0002 too many paths; 0003 too many path points; 0004 too many handles; 0005 too many sites. Geometry repairs, which do not stop anything: CS-GEF-0001 unknown operator; 0002 wrong operand count; 0003 unknown guide; 0004 a formula or name over its length; 0005 unknown adjust; 0006 too many adjusts; 0007 a path with no `moveTo`. They hold no text from the file (`SEC-019`).
+
 Colour and theme import findings: CS-CLR-0001, CS-CLR-0002, CS-CLR-0003, CS-CLR-0004, CS-CLR-0005, CS-CLR-0006, CS-CLR-0007, CS-CLR-0008, CS-CLR-0009, CS-CLR-0010. Defined in `crates/casual-slide-import/src/color.rs` and `theme.rs`.

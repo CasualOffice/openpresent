@@ -15,8 +15,7 @@ use casual_slide_model::theme::{
 use casual_slide_ooxml::{ElementId, OoxmlError, OoxmlLimits, PresentationPackage, XmlTree};
 
 use crate::color::{
-    FindingKind, Findings, MAX_LIST_ENTRIES, bounded_children, dml_name, read_color_choice,
-    read_optional_color,
+    FindingKind, Findings, bounded_children, dml_name, read_color_choice, read_optional_color,
 };
 
 /// The Office 2013 theme extension's namespace.
@@ -100,10 +99,18 @@ pub fn read_theme_parts(
     Ok(out)
 }
 
-/// Read a `theme` part.
+/// Read a `theme` part under the default limits.
 pub fn import_theme(tree: &XmlTree) -> Result<Imported<Theme>, ThemeImportError> {
+    import_theme_limited(tree, &OoxmlLimits::default())
+}
+
+/// Read a `theme` part under these limits.
+pub fn import_theme_limited(
+    tree: &XmlTree,
+    limits: &OoxmlLimits,
+) -> Result<Imported<Theme>, ThemeImportError> {
     let root = expect_root(tree, "theme")?;
-    let mut findings = Findings::default();
+    let mut findings = Findings::with_limits(limits);
     let value = Reader {
         tree,
         findings: &mut findings,
@@ -310,7 +317,7 @@ impl Reader<'_> {
                 uris.extend(self.attr(ext, "uri"));
             }
         }
-        uris.truncate(MAX_LIST_ENTRIES);
+        uris.truncate(self.findings.bounds.list_entries);
         uris
     }
 
@@ -467,7 +474,7 @@ impl Reader<'_> {
                 Some("ea") => self.once(&mut out.ea, child, Self::text_font),
                 Some("cs") => self.once(&mut out.cs, child, Self::text_font),
                 Some("font") => {
-                    if out.fonts.len() >= MAX_LIST_ENTRIES {
+                    if out.fonts.len() >= self.findings.bounds.list_entries {
                         self.note(FindingKind::ListCapped, el, "font");
                         break;
                     }
@@ -535,7 +542,7 @@ impl Reader<'_> {
     fn fill_list(&mut self, el: ElementId) -> Vec<StyleFill> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -594,7 +601,7 @@ impl Reader<'_> {
                     self.unknown(stop);
                     continue;
                 }
-                if out.len() >= MAX_LIST_ENTRIES {
+                if out.len() >= self.findings.bounds.list_entries {
                     self.note(FindingKind::ListCapped, child, "gs");
                     break;
                 }
@@ -619,7 +626,7 @@ impl Reader<'_> {
     fn line_list(&mut self, el: ElementId) -> Vec<StyleLine> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -652,7 +659,7 @@ impl Reader<'_> {
     fn effect_list(&mut self, el: ElementId) -> Vec<StyleEffect> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -749,7 +756,7 @@ impl Reader<'_> {
     fn extra_schemes(&mut self, el: ElementId) -> Vec<ExtraColorScheme> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -775,7 +782,7 @@ impl Reader<'_> {
     fn custom_colors(&mut self, el: ElementId) -> Vec<CustomColor> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }

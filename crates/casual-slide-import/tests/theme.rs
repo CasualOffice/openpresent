@@ -7,9 +7,9 @@ use casual_slide_import::color::{
     read_color_choice, read_color_mru, read_color_replace,
 };
 use casual_slide_import::theme::{
-    Imported, ThemeImportError, import_clipboard_style_sheet, import_theme, import_theme_override,
-    read_color_map, read_color_map_override, read_theme_parts, read_themeable_font,
-    read_themeable_style,
+    Imported, ThemeImportError, import_clipboard_style_sheet, import_theme, import_theme_limited,
+    import_theme_override, read_color_map, read_color_map_override, read_theme_parts,
+    read_themeable_font, read_themeable_style,
 };
 use casual_slide_model::color::{
     Color, ColorTransform, ColorValue, MAX_COLOR_TRANSFORMS, Percentage, PresetColor,
@@ -628,6 +628,85 @@ fn foreign_look_alikes_are_not_believed() {
         color(r#"<a:srgbClr xmlns:x="urn:x" val="000000"><x:tint val="1"/></a:srgbClr>"#);
     assert_eq!(got.unwrap().transforms, []);
     assert_eq!(codes(&f), ["CS-CLR-0009"]);
+}
+
+/// `COLOR-01`: a hostile deck past each bound, read through the package, and the bound
+/// the host set is the one that applies.
+#[test]
+fn a_hostile_deck_past_each_colour_bound_is_capped_and_reported() {
+    let read = |name: &str, limits: &OoxmlLimits| {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/hostile")
+            .join(format!("{name}.bin"));
+        let bytes = std::fs::read(path).unwrap();
+        let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+        let parts = read_theme_parts(&mut pkg).unwrap();
+        import_theme_limited(&parts[0].1, limits).unwrap()
+    };
+    let limits = OoxmlLimits::default();
+
+    let got = read("color-too-many-transforms", &limits);
+    assert!(codes(&got.findings).contains(&"CS-CLR-0002"));
+    let scheme = got.value.elements.unwrap().color_scheme.unwrap();
+    assert_eq!(
+        scheme.get(casual_slide_model::theme::ColorSchemeIndex::Dk1),
+        None
+    );
+    // With room, the same deck reads.
+    let roomy = OoxmlLimits {
+        max_color_transforms: limits.max_color_transforms + 1,
+        ..limits
+    };
+    let got = read("color-too-many-transforms", &roomy);
+    let scheme = got.value.elements.unwrap().color_scheme.unwrap();
+    assert_eq!(
+        scheme
+            .get(casual_slide_model::theme::ColorSchemeIndex::Dk1)
+            .unwrap()
+            .transforms
+            .len(),
+        limits.max_color_transforms + 1
+    );
+
+    let got = read("color-list-capped", &limits);
+    assert!(
+        codes(&got.findings).contains(&"CS-CLR-0010"),
+        "{:?}",
+        codes(&got.findings)
+    );
+    let colors = got.value.custom_colors.unwrap();
+    assert_eq!(colors.len(), limits.max_theme_list_entries);
+    let tight = OoxmlLimits {
+        max_theme_list_entries: 3,
+        ..limits
+    };
+    assert_eq!(
+        read("color-list-capped", &tight)
+            .value
+            .custom_colors
+            .unwrap()
+            .len(),
+        3
+    );
+
+    let got = read("color-findings-flood", &limits);
+    assert_eq!(got.findings.items.len(), limits.max_color_findings);
+    assert!(got.findings.total > limits.max_color_findings);
+    let tight = OoxmlLimits {
+        max_color_findings: 7,
+        ..limits
+    };
+    let got = read("color-findings-flood", &tight);
+    assert_eq!(got.findings.items.len(), 7);
+    assert!(got.findings.total > 7);
+}
+
+#[test]
+fn the_default_bounds_are_the_published_constants() {
+    let limits = OoxmlLimits::default();
+    assert_eq!(limits.max_color_transforms, MAX_COLOR_TRANSFORMS);
+    assert_eq!(limits.max_theme_list_entries, MAX_LIST_ENTRIES);
+    assert_eq!(limits.max_color_findings, MAX_FINDINGS);
 }
 
 #[test]

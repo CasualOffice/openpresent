@@ -101,6 +101,9 @@ is left absent, reported, and kept as bytes.
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
+| `max_color_transforms` | `64` | Transforms read on one colour; over it, the colour is absent. Applied by `import_theme_limited` and `Findings::with_limits` | CS-CLR-0002 | Tested; fixture `color-too-many-transforms`, seen red with the cap ignored (`COLOR-01`) |
+| `max_theme_list_entries` | `4096` | Entries read from one theme list; the rest is reported and kept in the part | CS-CLR-0010 | Tested; fixture `color-list-capped`, seen red |
+| `max_color_findings` | `1024` | Colour findings kept for one part; the count stays exact | none: report capped | Tested; fixture `color-findings-flood`, seen red |
 | `MAX_LIST_ENTRIES` | `4096` | Entries read from one theme list: custom colours, supplemental fonts, style matrix entries, gradient stops, extensions. The rest is retained, not modelled | CS-CLR-0010 | Tested |
 | `MAX_FINDINGS` | `1024` | Colour findings kept for one part | none: report capped | Tested |
 | `MAX_COLOR_TRANSFORMS` | `64` | Transforms on one colour, in `casual-slide-model`. Over it, the colour is absent | CS-CLR-0002 | Tested |
@@ -128,21 +131,17 @@ cap is the generous one.
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `MAX_GUIDES` | `4096` | `av` plus `gd` guides | none yet | Tested; `tests/hostile.rs` |
-| `MAX_PATHS` | `1024` | Paths | none yet | Tested |
-| `MAX_PATH_POINTS` | `262_144` | Points over all paths | none yet | Tested |
-| `MAX_HANDLES` | `256` | Adjust handles | none yet | Tested |
-| `MAX_SITES` | `4096` | Connection sites | none yet | Tested |
-| `MAX_FORMULA_LEN` | `1024` | Bytes in one formula | none yet | Tested |
-| `MAX_NAME_LEN` | `256` | Bytes in one guide name | none yet | Tested |
+| `MAX_GUIDES` | `4096` | `av` plus `gd` guides | CS-GEO-0001 | Tested; `tests/hostile.rs`, fixture `geometry-too-many-guides` |
+| `MAX_PATHS` | `1024` | Paths | CS-GEO-0002 | Tested; fixture `geometry-too-many-paths` |
+| `MAX_PATH_POINTS` | `262_144` | Points over all paths | CS-GEO-0003 | Tested; fixture `geometry-too-many-points` |
+| `MAX_HANDLES` | `256` | Adjust handles | CS-GEO-0004 | Tested; fixture `geometry-too-many-handles` |
+| `MAX_SITES` | `4096` | Connection sites | CS-GEO-0005 | Tested; fixture `geometry-too-many-sites` |
+| `MAX_FORMULA_LEN` | `1024` | Bytes in one formula | CS-GEF-0004, a repair | Tested; fixture `geometry-long-names` |
+| `MAX_NAME_LEN` | `256` | Bytes in one guide name | CS-GEF-0004, a repair | Tested; fixture `geometry-long-names` |
 | `MAX_EXTENT` | `27_273_042_316_900` | Shape extent in EMU, `ST_PositiveCoordinate`'s maximum; larger values are clamped, not refused, in `eval.rs` | none: clamped | Untested by a hostile extent; a compile-time assertion holds it under the arithmetic's limit |
 | `MAX_KEPT` | `32` | Diagnostics kept per compile or evaluation; the count stays exact | none: report capped | Tested |
-| `MAX_SUBJECT` | `64` | Bytes of **file-supplied text** kept in one diagnostic | none | Tested; but see below |
 
-`GeometryError` has messages and no stable codes, against the rule that every refusal
-carries one (`GEO-04`). And a geometry diagnostic carries up to 64 bytes of text from the
-file, which the log contract in [20](20-ERROR-CODE-REGISTRY.md) forbids: the same defect
-as `SEC-015`, in a crate that row does not name.
+A geometry diagnostic holds no text from the file (`SEC-019`), and every refusal and repair has a code (`GEO-04`).
 
 ## Export
 
