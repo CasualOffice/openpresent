@@ -1,8 +1,11 @@
 //! The part graph of an admitted presentation.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::sync::Arc;
 
-use casual_slide_package::{Package, PartEdits};
+use casual_slide_package::{
+    Package, PackageError, PartEdits, Salvaged, part_entry_key, salvage, scrub_name,
+};
 
 use crate::content_types::{CONTENT_TYPES_PART, ContentTypes};
 use crate::error::OoxmlError;
@@ -10,15 +13,17 @@ use crate::limits::OoxmlLimits;
 use crate::mce::{Compatibility, resolve_compatibility};
 use crate::namespaces::{to_strict, to_transitional};
 use crate::part_name::{PartIndex, entry_key, part_name_key};
+use crate::recovery::{RecoveryReport, Repair, ReportLine};
 use crate::rels::{
     ExternalKind, Relationship, TargetMode, classify_external, parse_relationships, rels_part_for,
     resolve_internal, source_of_rels,
 };
+use crate::repair::{
+    Repaired, STRICT_RELS, TRANSITIONAL_RELS, chain_is_broken, entry_is_good, part_needs_repair,
+    repair_package,
+};
 use crate::xml::{XmlTree, walk, wrong_root};
 
-const TRANSITIONAL_RELS: &str =
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
-const STRICT_RELS: &str = "http://purl.oclc.org/ooxml/officeDocument/relationships/";
 const OFFICE_RELS_2006: &str = "http://schemas.microsoft.com/office/2006/relationships/";
 const SIGNATURE_ORIGIN: &str =
     "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin";
@@ -170,6 +175,8 @@ pub enum FindingKind {
     DisguisedPartName,
     /// The part breaks ECMA-376 Part 3's syntax. Nothing was guessed at.
     MarkupCompatibility,
+    /// Damage was repaired ([`docs/29`](crate::RecoveryReport)).
+    Repaired(Repair),
 }
 
 impl FindingKind {
@@ -188,6 +195,7 @@ impl FindingKind {
             Self::EmbeddedObject => "CS-FND-0010",
             Self::DisguisedPartName => "CS-FND-0011",
             Self::MarkupCompatibility => "CS-FND-0012",
+            Self::Repaired(repair) => repair.code(),
         }
     }
 }
@@ -203,10 +211,36 @@ pub struct Finding {
     pub rel_id: Option<String>,
 }
 
+/// How to open a package.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct OpenOptions {
+    /// The bounds, which hold in either mode.
+    pub limits: OoxmlLimits,
+    /// Refuse a fault rather than recover from it, for a deployment that prefers
+    /// rejection, such as a mail gateway. The default is recovery (`docs/29`).
+    pub strict: bool,
+}
+
 /// An admitted presentation: its part graph and the report on it.
+///
+/// **What is read is one clean package.** A damaged deck is repaired into an image in
+/// memory, which everything above reads and an edit writes from, while the bytes as they
+/// arrived are kept for an unedited save (`docs/29-RECOVERY.md`).
 #[derive(Debug)]
 pub struct PresentationPackage {
     package: Package,
+    /// The file exactly as it arrived.
+    original: Arc<[u8]>,
+    /// Refuse faults rather than repair them.
+    strict: bool,
+    /// XML parts seen to need no repair, or made so, by key.
+    checked: BTreeSet<String>,
+    /// Every part's stream and XML has been seen to be sound.
+    prepared: bool,
+    /// What repairs have done so far.
+    repairs: BTreeSet<Finding>,
+    /// Parts whose content is not what arrived, by key.
+    damaged: BTreeSet<String>,
     index: PartIndex,
     limits: OoxmlLimits,
     content_types: ContentTypes,
@@ -219,13 +253,155 @@ pub struct PresentationPackage {
 }
 
 impl PresentationPackage {
-    /// Admit `bytes` and walk everything reachable, reading only `.rels` parts,
-    /// `[Content_Types].xml` and the main part's root.
+    /// Open `bytes`, recovering from what is wrong with them: strict first, and on failure
+    /// a repair. Refuses only what `docs/29` lists: a Compound File, the whole-file size
+    /// limit, and what holds no ZIP entry at all. An unedited save returns `bytes`.
     pub fn open(bytes: Vec<u8>, limits: OoxmlLimits) -> Result<Self, OoxmlError> {
+        Self::open_with(
+            bytes,
+            OpenOptions {
+                limits,
+                strict: false,
+            },
+        )
+    }
+
+    /// Open `bytes` refusing any fault, each with its own code, and repairing nothing.
+    pub fn open_strict(bytes: Vec<u8>, limits: OoxmlLimits) -> Result<Self, OoxmlError> {
+        Self::open_with(
+            bytes,
+            OpenOptions {
+                limits,
+                strict: true,
+            },
+        )
+    }
+
+    /// Open `bytes` as `options` says.
+    pub fn open_with(bytes: Vec<u8>, options: OpenOptions) -> Result<Self, OoxmlError> {
+        let OpenOptions { limits, strict } = options;
         if bytes.starts_with(&COMPOUND_FILE_MAGIC) {
             return Err(OoxmlError::CompoundFile);
         }
-        let mut package = Package::open(bytes, limits.package)?;
+        let source: Arc<[u8]> = Arc::from(bytes);
+        if strict {
+            let mut opened = Self::admit(Arc::clone(&source), limits)?;
+            opened.strict = true;
+            return Ok(opened);
+        }
+        // The one limit that refuses: it protects the machine.
+        let size = source.len() as u64;
+        if size > limits.package.max_input_bytes {
+            return Err(PackageError::InputTooLarge {
+                size,
+                limit: limits.package.max_input_bytes,
+            }
+            .into());
+        }
+        match Self::admit(Arc::clone(&source), limits) {
+            Ok(mut opened) => {
+                let names = opened.part_names();
+                let broken = chain_is_broken(
+                    &opened.main_part,
+                    &opened.relationships,
+                    &names,
+                    &opened.content_types,
+                );
+                if broken {
+                    opened.repair_now(&BTreeSet::new())?;
+                }
+                Ok(opened)
+            }
+            Err(_) => Self::recover(source, limits),
+        }
+    }
+
+    /// Repair what strict admission refused, and open the result.
+    fn recover(source: Arc<[u8]>, limits: OoxmlLimits) -> Result<Self, OoxmlError> {
+        let mut findings = BTreeSet::new();
+        let package = Package::open_shared(Arc::clone(&source), limits.package)
+            .ok()
+            .and_then(|mut package| package.verify_entries().then_some(package));
+        let mut package = match package {
+            Some(package) => package,
+            None => Self::salvaged(&source, &limits, &mut findings)?,
+        };
+        let repaired = repair_package(&mut package, &limits, &BTreeSet::new(), usize::MAX)?;
+        let mut opened = Self::from_repaired(repaired, limits, &mut findings)?;
+        opened.original = source;
+        Ok(opened)
+    }
+
+    /// The container's own damage, read past.
+    fn salvaged(
+        source: &[u8],
+        limits: &OoxmlLimits,
+        findings: &mut BTreeSet<Finding>,
+    ) -> Result<Package, OoxmlError> {
+        let Salvaged { image, faults, .. } = salvage(source, limits.package, |name, bytes| {
+            entry_is_good(name, bytes, limits)
+        })?;
+        for fault in faults {
+            findings.insert(Finding {
+                kind: FindingKind::Repaired(Repair::Container(fault.kind)),
+                part: fault.entry,
+                rel_id: None,
+            });
+        }
+        Ok(Package::open(image, limits.package)?)
+    }
+
+    /// Open a repaired image, strictly: it is clean or the repair has a bug, and a bug
+    /// here is a refusal the damage corpus sees, never an unchecked file.
+    fn from_repaired(
+        repaired: Repaired,
+        limits: OoxmlLimits,
+        findings: &mut BTreeSet<Finding>,
+    ) -> Result<Self, OoxmlError> {
+        let Repaired {
+            image,
+            findings: done,
+            damaged,
+        } = repaired;
+        findings.extend(done);
+        let mut opened = Self::admit(Arc::from(image), limits)?;
+        opened.prepared = true;
+        opened.repairs = std::mem::take(findings);
+        opened.findings.extend(opened.repairs.iter().cloned());
+        opened.findings.sort();
+        opened.damaged = damaged.iter().map(|n| part_entry_key(n)).collect();
+        for name in opened.part_names() {
+            opened.checked.insert(part_entry_key(&name));
+        }
+        Ok(opened)
+    }
+
+    /// Replace this package with its repaired self, keeping what arrived. Run on first
+    /// sight of damage: everything is mended at once, so there is one image and no overlay.
+    fn repair_now(&mut self, aside: &BTreeSet<String>) -> Result<(), OoxmlError> {
+        self.repair_capped(aside, usize::MAX)
+    }
+
+    fn repair_capped(&mut self, aside: &BTreeSet<String>, cap: usize) -> Result<(), OoxmlError> {
+        let limits = self.limits;
+        let mut findings = std::mem::take(&mut self.repairs);
+        if !self.package.verify_entries() {
+            let source = self.package.source_bytes().to_vec();
+            self.package = Self::salvaged(&source, &limits, &mut findings)?;
+        }
+        let repaired = repair_package(&mut self.package, &limits, aside, cap)?;
+        let mut opened = Self::from_repaired(repaired, limits, &mut findings)?;
+        opened.original = Arc::clone(&self.original);
+        opened.damaged.extend(std::mem::take(&mut self.damaged));
+        *self = opened;
+        Ok(())
+    }
+
+    /// Admit `bytes` under strict rules and walk everything reachable, reading only `.rels`
+    /// parts, `[Content_Types].xml` and the main part's root.
+    fn admit(bytes: Arc<[u8]>, limits: OoxmlLimits) -> Result<Self, OoxmlError> {
+        let original = Arc::clone(&bytes);
+        let mut package = Package::open_shared(bytes, limits.package)?;
         let index = PartIndex::build(package.entry_names())?;
         let ct_name = index
             .find(CONTENT_TYPES_PART)
@@ -277,6 +453,12 @@ impl PresentationPackage {
         }
         Ok(Self {
             package,
+            original,
+            strict: false,
+            checked: BTreeSet::new(),
+            prepared: false,
+            repairs: BTreeSet::new(),
+            damaged: BTreeSet::new(),
             index,
             limits,
             content_types,
@@ -318,9 +500,110 @@ impl PresentationPackage {
         self.relationships.get(part).map_or(&[], Vec::as_slice)
     }
 
-    /// Everything noticed, in a stable order.
+    /// Everything noticed, in a stable order, repairs included.
     pub fn findings(&self) -> &[Finding] {
         &self.findings
+    }
+
+    /// Whether this package refuses faults rather than repairing them.
+    pub fn is_strict(&self) -> bool {
+        self.strict
+    }
+
+    /// Whether anything was repaired.
+    pub fn was_repaired(&self) -> bool {
+        !self.repairs.is_empty()
+    }
+
+    /// Whether a part's content is not what arrived: it was mended, or made.
+    pub fn is_damaged(&self, part: &str) -> bool {
+        self.damaged.contains(&part_entry_key(part))
+    }
+
+    /// What to tell the user, in plain language. Part names and fixed text: no document
+    /// text. Empty for a deck that arrived healthy.
+    pub fn recovery_report(&self) -> RecoveryReport {
+        let lines = self
+            .repairs
+            .iter()
+            .filter_map(|f| match f.kind {
+                FindingKind::Repaired(repair) => Some(ReportLine {
+                    code: repair.code(),
+                    part: scrub_name(&f.part),
+                    text: repair.plain(),
+                }),
+                _ => None,
+            })
+            .collect();
+        RecoveryReport { lines }
+    }
+
+    /// A reader above could not use this part: put a stand-in in its place, retaining its
+    /// bytes. A slide becomes an empty slide marked damaged. Refused under `strict`.
+    pub fn set_part_aside(&mut self, name: &str) -> Result<(), OoxmlError> {
+        self.set_parts_aside(&[name.to_owned()], usize::MAX)
+    }
+
+    /// [`PresentationPackage::set_part_aside`] for several parts at once. A main part among
+    /// them is rebuilt with at most `list_cap` slides and masters, for a reader whose own
+    /// limit was what it could not use.
+    pub fn set_parts_aside(&mut self, names: &[String], list_cap: usize) -> Result<(), OoxmlError> {
+        if self.strict {
+            return Err(OoxmlError::MissingPart {
+                name: names.first().cloned().unwrap_or_default(),
+            });
+        }
+        let mut aside = BTreeSet::new();
+        for name in names {
+            aside.insert(self.actual_name(name)?);
+        }
+        self.repair_capped(&aside, list_cap)
+    }
+
+    /// Make every part sound, before an edit or a repair writes from them. Nothing is
+    /// decided by this on a healthy deck, though each stream is read once. Under `strict`,
+    /// nothing happens.
+    pub fn prepare_for_edit(&mut self) -> Result<(), OoxmlError> {
+        if self.strict || self.prepared {
+            return Ok(());
+        }
+        let sound = self.package.verify_entries() && self.xml_is_sound();
+        if !sound {
+            self.repair_now(&BTreeSet::new())?;
+        }
+        self.prepared = true;
+        Ok(())
+    }
+
+    fn xml_is_sound(&mut self) -> bool {
+        let limits = self.limits;
+        let cap = limits.max_xml_part_bytes as u64;
+        for name in self.package.entry_names() {
+            let lower = name.to_ascii_lowercase();
+            let is_xml = lower.ends_with(".xml") || lower.ends_with(".rels");
+            if !is_xml || name.ends_with('/') || self.checked.contains(&part_entry_key(&name)) {
+                continue;
+            }
+            let Ok(bytes) = self.package.read_part_capped(&name, cap) else {
+                return false;
+            };
+            if part_needs_repair(&bytes, &name, &limits) {
+                return false;
+            }
+            self.checked.insert(part_entry_key(&name));
+        }
+        true
+    }
+
+    /// The bytes everything here reads from: what arrived, or the repaired image.
+    pub fn base_bytes(&self) -> &[u8] {
+        self.package.source_bytes()
+    }
+
+    /// The deck as a clean file, with nothing edited: an explicit repair.
+    pub fn save_repaired(&mut self) -> Result<Vec<u8>, OoxmlError> {
+        self.prepare_for_edit()?;
+        Ok(self.package.source_bytes().to_vec())
     }
 
     /// Every entry name, in archive order.
@@ -334,16 +617,49 @@ impl PresentationPackage {
     /// before decompressing any of it.
     pub fn read_part(&mut self, name: &str) -> Result<Vec<u8>, OoxmlError> {
         let actual = self.actual_name(name)?;
-        Ok(self.package.read_part(&actual)?)
+        match self.package.read_part(&actual) {
+            // A stream that will not read: mend the container, and look again.
+            Err(PackageError::NotAPackage) if !self.strict => {
+                self.repair_now(&BTreeSet::new())?;
+                let actual = self.actual_name(name)?;
+                Ok(self.package.read_part(&actual)?)
+            }
+            other => Ok(other?),
+        }
     }
 
     /// Read a part that is to be parsed as XML. A part declaring more than the
     /// walker accepts (`max_xml_part_bytes`) is refused as `CS-PKG-0009` with
     /// nothing decompressed, rather than read in full for the walker to refuse
     /// (`PKG-04`).
+    ///
+    /// **Strict first, recovery on failure for that part.** A part the walker refuses, or
+    /// one over the bound, starts the repair, and what comes back is the best reading that
+    /// the walker admits. Under `strict`, the refusal is the answer.
     pub fn read_xml_part(&mut self, name: &str) -> Result<Vec<u8>, OoxmlError> {
         let actual = self.actual_name(name)?;
         let cap = self.limits.max_xml_part_bytes as u64;
+        if self.strict {
+            return Ok(self.package.read_part_capped(&actual, cap)?);
+        }
+        let key = part_entry_key(&actual);
+        let first = self.package.read_part_capped(&actual, cap);
+        let good = match &first {
+            Ok(bytes) => {
+                self.checked.contains(&key) || !part_needs_repair(bytes, &actual, &self.limits)
+            }
+            Err(_) => false,
+        };
+        if good {
+            self.checked.insert(key);
+            return Ok(first?);
+        }
+        if self.checked.contains(&key) {
+            // Mended already, and still not to be had: this is a reader's limit.
+            return Ok(first?);
+        }
+        self.repair_now(&BTreeSet::new())?;
+        let actual = self.actual_name(name)?;
         Ok(self.package.read_part_capped(&actual, cap)?)
     }
 
@@ -356,6 +672,8 @@ impl PresentationPackage {
     /// Read an XML part for use: its tree, keeping every branch and byte, and what
     /// markup compatibility says applies. Refuses a must-understand namespace that
     /// is not understood, in the part as read and not in a branch not taken.
+    ///
+    /// Under recovery, a repair has already taken the demand out of a part that had one.
     pub fn read_resolved(&mut self, name: &str) -> Result<(XmlTree, Compatibility), OoxmlError> {
         let bytes = self.read_xml_part(name)?;
         let actual = self.actual_name(name)?;
@@ -373,13 +691,19 @@ impl PresentationPackage {
             })
     }
 
-    /// The file exactly as it arrived.
+    /// The file exactly as it arrived, damage included.
     pub fn save_unedited(&self) -> Vec<u8> {
-        self.package.source_bytes().to_vec()
+        self.original.to_vec()
     }
 
-    /// Write the file with `edits`. Every other part keeps its compressed bytes.
+    /// Write the file with `edits`. Every other part keeps its compressed bytes. With no
+    /// edits, the file as it arrived. With any, a clean file: what was damaged is mended
+    /// first, and what arrived of it is retained under `recovered/`.
     pub fn save_with(&mut self, edits: &PartEdits) -> Result<Vec<u8>, OoxmlError> {
+        if edits.is_empty() {
+            return Ok(self.save_unedited());
+        }
+        self.prepare_for_edit()?;
         Ok(self.package.rewrite(edits)?)
     }
 }

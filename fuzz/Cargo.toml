@@ -111,3 +111,24 @@ path = "fuzz_targets/text_bodies.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "xml_recover"
+path = "fuzz_targets/xml_recover.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "package_salvage"
+path = "fuzz_targets/package_salvage.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "deck_recover"
+path = "fuzz_targets/deck_recover.rs"
+test = false
+doc = false
+bench = false

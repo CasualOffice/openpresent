@@ -64,13 +64,30 @@ fn every_fixture_meets_its_expectation() {
     assert!(cases.len() > 30, "only {} fixtures", cases.len());
     for (path, expect, limits) in cases {
         let result = PresentationPackage::open(read(&path), limits);
+        // What only docs/29's rules refuse, whichever way it is opened.
         if let Some(code) = expect.strip_prefix("refuse:") {
             match result {
                 Ok(_) => panic!("{path}: admitted, expected {code}"),
                 Err(err) => assert_eq!(err.code(), code, "{path}: {err}"),
             }
+            match PresentationPackage::open_strict(read(&path), limits) {
+                Ok(_) => panic!("{path}: admitted strictly, expected {code}"),
+                Err(err) => assert_eq!(err.code(), code, "{path}: {err}"),
+            }
             continue;
         }
+        // A fault: a host asking for strictness gets the refusal it always got.
+        let expect = match expect.strip_prefix("recover:") {
+            Some(rest) => {
+                let (code, findings) = rest.split_once(' ').unwrap_or((rest, ""));
+                match PresentationPackage::open_strict(read(&path), limits) {
+                    Ok(_) => panic!("{path}: admitted strictly, expected {code}"),
+                    Err(err) => assert_eq!(err.code(), code, "{path}: {err}"),
+                }
+                format!("open {findings}").trim_end().to_owned()
+            }
+            None => expect,
+        };
         let pkg = result.unwrap_or_else(|err| panic!("{path}: {err}"));
         let mut codes: Vec<&str> = pkg.findings().iter().map(|f| f.kind.code()).collect();
         codes.sort_unstable();
@@ -83,7 +100,9 @@ fn every_fixture_meets_its_expectation() {
 fn opening_decks() -> Vec<String> {
     limited_cases()
         .into_iter()
-        .filter(|(_, e, _)| e.starts_with("open"))
+        // A repaired deck has its own tests, in `recovery.rs`: it is not meant to keep every
+        // part as it was.
+        .filter(|(_, e, _)| e.starts_with("open") && !e.contains("CS-REC"))
         .map(|(p, _, _)| p)
         .collect()
 }
@@ -102,7 +121,7 @@ fn a_deck_with_lowered_limits_is_refused_only_by_them() {
         if cols.len() < 4 {
             continue;
         }
-        PresentationPackage::open(read(cols[0]), OoxmlLimits::default())
+        PresentationPackage::open_strict(read(cols[0]), OoxmlLimits::default())
             .unwrap_or_else(|e| panic!("{}: {e}", cols[0]));
         seen += 1;
     }
@@ -194,7 +213,7 @@ fn an_oversized_xml_part_is_refused_before_it_is_read() {
         max_xml_part_bytes: 100_000,
         ..OoxmlLimits::default()
     };
-    let mut pkg = PresentationPackage::open(deck, limits).unwrap();
+    let mut pkg = PresentationPackage::open_strict(deck.clone(), limits).unwrap();
     let before = pkg.consumed();
     let err = pkg.read_xml_part("ppt/slides/slide1.xml").unwrap_err();
     assert_eq!(err.code(), "CS-PKG-0009");
@@ -207,6 +226,14 @@ fn an_oversized_xml_part_is_refused_before_it_is_read() {
         .read_xml_part("ppt/slideLayouts/slideLayout1.xml")
         .unwrap();
     assert_eq!(pkg.consumed(), before + layout.len() as u64);
+
+    // Without `strict` the slide is an empty one, marked, and what it held is not read: the
+    // bytes kept for it are its compressed bytes (`SEC-P13`).
+    let mut pkg = PresentationPackage::open(deck, limits).unwrap();
+    let served = pkg.read_xml_part("ppt/slides/slide1.xml").unwrap();
+    assert!(served.len() < 2048, "{}", served.len());
+    assert!(pkg.is_damaged("ppt/slides/slide1.xml"));
+    assert!(pkg.consumed() < 100_000, "{}", pkg.consumed());
 }
 
 #[test]
@@ -343,7 +370,12 @@ fn reading_a_part_picks_the_branch_and_keeps_both() {
 fn a_must_understand_we_do_not_know_refuses_only_where_it_is_reached() {
     let refused = slide("<p:grpSp mc:MustUnderstand=\"p14\"/>");
     let deck = with_part("generated/minimal.pptx", "ppt/slides/slide1.xml", &refused);
-    let mut pkg = PresentationPackage::open(deck, OoxmlLimits::default()).unwrap();
+    // Without `strict`, the demand is set aside and the part reads.
+    let mut lenient = PresentationPackage::open(deck.clone(), OoxmlLimits::default()).unwrap();
+    let (tree, compatibility) = lenient.read_resolved("ppt/slides/slide1.xml").unwrap();
+    assert!(compatibility.must_understand.is_empty());
+    assert!(!tree.to_bytes().windows(14).any(|w| w == b"MustUnderstand"));
+    let mut pkg = PresentationPackage::open_strict(deck, OoxmlLimits::default()).unwrap();
     let err = pkg.read_resolved("ppt/slides/slide1.xml").unwrap_err();
     assert_eq!(err.code(), "CS-MCE-0001");
     // The namespace is the document's text, so the message does not carry it

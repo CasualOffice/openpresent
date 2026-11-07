@@ -13,7 +13,7 @@
 //! nothing a part contains can reach a log through one.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use quick_xml::Reader;
 use quick_xml::errors::{Error as XmlError, IllFormedError};
@@ -21,10 +21,11 @@ use quick_xml::events::{BytesStart, Event};
 
 use crate::error::OoxmlError;
 use crate::limits::OoxmlLimits;
+use crate::recover_xml::{Prune, XmlRepair, declaration_disagrees, recover_xml};
 
 const PREDEFINED: [&[u8]; 5] = [b"lt", b"gt", b"amp", b"apos", b"quot"];
-const XML_NS: &[u8] = b"http://www.w3.org/XML/1998/namespace";
-const XMLNS_NS: &[u8] = b"http://www.w3.org/2000/xmlns/";
+pub(crate) const XML_NS: &[u8] = b"http://www.w3.org/XML/1998/namespace";
+pub(crate) const XMLNS_NS: &[u8] = b"http://www.w3.org/2000/xmlns/";
 
 /// UTF-8 bytes for a part, which OPC allows in UTF-8 or UTF-16, marked by a BOM.
 fn decode<'a>(bytes: &'a [u8], part: &str) -> Result<Cow<'a, [u8]>, OoxmlError> {
@@ -77,7 +78,7 @@ fn reason_for(err: &XmlError) -> &'static str {
 }
 
 /// Whether `c` is a character XML 1.0 allows in a document.
-fn is_xml_char(c: u32) -> bool {
+pub(crate) fn is_xml_char(c: u32) -> bool {
     matches!(c, 0x9 | 0xA | 0xD | 0x20..=0xD7FF | 0xE000..=0xFFFD | 0x1_0000..=0x10_FFFF)
 }
 
@@ -97,7 +98,7 @@ fn is_space(b: u8) -> bool {
     matches!(b, b' ' | b'\t' | b'\r' | b'\n')
 }
 
-fn is_name_start(c: char) -> bool {
+pub(crate) fn is_name_start(c: char) -> bool {
     matches!(c,
         'A'..='Z' | '_' | 'a'..='z' | '\u{C0}'..='\u{D6}' | '\u{D8}'..='\u{F6}'
         | '\u{F8}'..='\u{2FF}' | '\u{370}'..='\u{37D}' | '\u{37F}'..='\u{1FFF}'
@@ -106,7 +107,7 @@ fn is_name_start(c: char) -> bool {
         | '\u{10000}'..='\u{EFFFF}')
 }
 
-fn is_name_char(c: char) -> bool {
+pub(crate) fn is_name_char(c: char) -> bool {
     is_name_start(c)
         || matches!(c, '-' | '.' | '0'..='9' | '\u{B7}' | '\u{300}'..='\u{36F}' | '\u{203F}'..='\u{2040}')
 }
@@ -121,7 +122,7 @@ fn is_ncname(bytes: &[u8]) -> bool {
 }
 
 /// A qualified name split into prefix and local part. `None` if it is not one.
-fn split_qname(name: &[u8]) -> Option<(&[u8], &[u8])> {
+pub(crate) fn split_qname(name: &[u8]) -> Option<(&[u8], &[u8])> {
     let mut parts = name.splitn(3, |b| *b == b':');
     let first = parts.next()?;
     match (parts.next(), parts.next()) {
@@ -134,7 +135,7 @@ fn split_qname(name: &[u8]) -> Option<(&[u8], &[u8])> {
 /// An attribute value with its references resolved and white space normalized
 /// as for CDATA. Refuses what XML does not allow in one: `<`, and a reference
 /// that is not one of the five predefined entities or a character XML allows.
-fn attribute_value(raw: &[u8]) -> Result<Cow<'_, [u8]>, &'static str> {
+pub(crate) fn attribute_value(raw: &[u8]) -> Result<Cow<'_, [u8]>, &'static str> {
     if raw.contains(&b'<') {
         return Err("`<` in an attribute value");
     }
@@ -172,7 +173,7 @@ fn attribute_value(raw: &[u8]) -> Result<Cow<'_, [u8]>, &'static str> {
 }
 
 /// The character a reference's body (`#65`, `#x41`) names, if XML allows it.
-fn char_reference(body: &[u8]) -> Option<char> {
+pub(crate) fn char_reference(body: &[u8]) -> Option<char> {
     let digits = std::str::from_utf8(body.strip_prefix(b"#")?).ok()?;
     let (digits, radix) = match digits.strip_prefix('x') {
         Some(hex) => (hex, 16),
@@ -257,7 +258,7 @@ fn scan_attributes(
 /// The namespace bindings in scope. Lookups are by prefix, so their cost does not
 /// grow with the number of declarations a hostile part piles up.
 #[derive(Default)]
-struct Scope {
+pub(crate) struct Scope {
     /// Prefix, or empty for the default namespace, to the bindings in force,
     /// innermost last. An empty URI undeclares the default namespace.
     bindings: HashMap<Vec<u8>, Vec<Vec<u8>>>,
@@ -266,7 +267,7 @@ struct Scope {
 }
 
 impl Scope {
-    fn resolve(&self, prefix: &[u8]) -> Option<&[u8]> {
+    pub(crate) fn resolve(&self, prefix: &[u8]) -> Option<&[u8]> {
         if prefix == b"xml" {
             return Some(XML_NS);
         }
@@ -276,7 +277,17 @@ impl Scope {
             .map(Vec::as_slice)
     }
 
-    fn enter(&mut self, declared: Vec<(Vec<u8>, Vec<u8>)>) {
+    /// Add declarations to the innermost open element.
+    pub(crate) fn bind(&mut self, declared: Vec<(Vec<u8>, Vec<u8>)>) {
+        for (prefix, uri) in declared {
+            self.bindings.entry(prefix.clone()).or_default().push(uri);
+            if let Some(frame) = self.frames.last_mut() {
+                frame.push(prefix);
+            }
+        }
+    }
+
+    pub(crate) fn enter(&mut self, declared: Vec<(Vec<u8>, Vec<u8>)>) {
         let mut prefixes = Vec::with_capacity(declared.len());
         for (prefix, uri) in declared {
             self.bindings.entry(prefix.clone()).or_default().push(uri);
@@ -285,7 +296,7 @@ impl Scope {
         self.frames.push(prefixes);
     }
 
-    fn leave(&mut self) {
+    pub(crate) fn leave(&mut self) {
         for prefix in self.frames.pop().unwrap_or_default() {
             if let Some(stack) = self.bindings.get_mut(&prefix) {
                 stack.pop();
@@ -294,6 +305,16 @@ impl Scope {
                 }
             }
         }
+    }
+}
+
+/// Whether Namespaces in XML forbids binding `prefix`, empty for the default, to `uri`.
+pub(crate) fn declaration_refused(prefix: &[u8], uri: &[u8]) -> bool {
+    match prefix {
+        b"xmlns" => true,
+        b"xml" => uri != XML_NS,
+        b"" => uri == XML_NS || uri == XMLNS_NS,
+        _ => uri.is_empty() || uri == XML_NS || uri == XMLNS_NS,
     }
 }
 
@@ -331,13 +352,7 @@ fn enter_element(
         };
         if let Some(p) = declares {
             let uri = value.as_ref();
-            let refused = match p {
-                b"xmlns" => true,
-                b"xml" => uri != XML_NS,
-                b"" => uri == XML_NS || uri == XMLNS_NS,
-                _ => uri.is_empty() || uri == XML_NS || uri == XMLNS_NS,
-            };
-            if refused {
+            if declaration_refused(p, uri) {
                 return Err(malformed(part, "a namespace declaration the rules forbid"));
             }
             declared.push((p.to_vec(), uri.to_vec()));
@@ -570,6 +585,15 @@ pub struct XmlTree {
     top: Vec<usize>,
     root: usize,
     bom: Bom,
+    /// Set by [`XmlTree::parse_recovering`]: what arrived, and what the tree first wrote.
+    /// While the tree still writes that, it is untouched, and what arrived goes back.
+    recovered_from: Option<Box<RecoveredSource>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RecoveredSource {
+    original: Vec<u8>,
+    repaired: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -607,6 +631,7 @@ impl XmlTree {
             top: Vec::new(),
             root: 0,
             bom,
+            recovered_from: None,
         };
         let mut stack: Vec<usize> = Vec::new();
         let text = |b: &[u8]| {
@@ -678,8 +703,46 @@ impl XmlTree {
         Ok(tree)
     }
 
+    /// Read a part that [`XmlTree::parse`] may refuse: strict first, and on failure the
+    /// recovering reader, for this part only. `None` if no root element could be found.
+    ///
+    /// **The tree is still byte-faithful:** untouched, it writes back exactly what arrived,
+    /// damage included. Edited, it writes the repaired text, so an edit gives valid XML.
+    pub fn parse_recovering(
+        bytes: &[u8],
+        part: &str,
+        limits: &OoxmlLimits,
+    ) -> Option<(Self, BTreeSet<XmlRepair>)> {
+        if !declaration_disagrees(bytes)
+            && let Ok(tree) = Self::parse(bytes, part, limits)
+        {
+            return Some((tree, BTreeSet::new()));
+        }
+        let recovered = recover_xml(bytes, limits, Prune::Nothing);
+        let mut tree = Self::parse(&recovered.bytes, part, limits).ok()?;
+        tree.recovered_from = Some(Box::new(RecoveredSource {
+            original: bytes.to_vec(),
+            repaired: recovered.bytes,
+        }));
+        Some((tree, recovered.repairs))
+    }
+
+    /// The well-formed text this tree stands for: for a tree read by
+    /// [`XmlTree::parse_recovering`], the repaired form even when untouched.
+    pub fn to_repaired_bytes(&self) -> Vec<u8> {
+        self.serialized()
+    }
+
     /// The bytes, identical to the input for an untouched tree.
     pub fn to_bytes(&self) -> Vec<u8> {
+        let out = self.serialized();
+        match &self.recovered_from {
+            Some(source) if source.repaired == out => source.original.clone(),
+            _ => out,
+        }
+    }
+
+    fn serialized(&self) -> Vec<u8> {
         let mut out = String::new();
         for &id in &self.top {
             self.write(id, &mut out);
@@ -1391,7 +1454,7 @@ fn escape(s: &str) -> String {
 
 /// Escape for an attribute. Tab and line breaks go as references, since a literal
 /// one would come back as a space after attribute normalization.
-fn escape_attribute(s: &str) -> String {
+pub(crate) fn escape_attribute(s: &str) -> String {
     escape(s)
         .replace('\t', "&#9;")
         .replace('\n', "&#10;")

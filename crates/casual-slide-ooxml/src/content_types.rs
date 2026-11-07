@@ -64,6 +64,50 @@ impl ContentTypes {
         Ok(out)
     }
 
+    /// Declare an extension's type if none is declared. The first one read wins, which is
+    /// the recovering reading of a part declared twice. `false` if it was there.
+    pub(crate) fn add_default(&mut self, extension: &str, value: &str) -> bool {
+        let key = extension.to_ascii_lowercase();
+        if self.defaults.contains_key(&key) {
+            return false;
+        }
+        self.defaults.insert(key, value.to_owned());
+        true
+    }
+
+    /// As [`ContentTypes::add_default`], for one part.
+    pub(crate) fn add_override(&mut self, part: &str, value: &str) -> bool {
+        let key = entry_key(part.trim_start_matches('/'));
+        if self.overrides.contains_key(&key) {
+            return false;
+        }
+        self.overrides.insert(key, value.to_owned());
+        true
+    }
+
+    pub(crate) fn set_default(&mut self, extension: &str, value: &str) {
+        self.defaults
+            .insert(extension.to_ascii_lowercase(), value.to_owned());
+    }
+
+    pub(crate) fn set_override(&mut self, part: &str, value: &str) {
+        self.overrides
+            .insert(entry_key(part.trim_start_matches('/')), value.to_owned());
+    }
+
+    pub(crate) fn defaults(&self) -> impl Iterator<Item = (&String, &String)> {
+        self.defaults.iter()
+    }
+
+    pub(crate) fn override_for(&self, key: &str) -> Option<&str> {
+        self.overrides.get(key).map(String::as_str)
+    }
+
+    /// How many declarations there are, against `max_content_types`.
+    pub(crate) fn len(&self) -> usize {
+        self.defaults.len().saturating_add(self.overrides.len())
+    }
+
     /// The content type of `part`, by OPC's rules. Any spelling equivalent under
     /// [`part_name_key`](crate::part_name_key) finds it.
     pub fn resolve(&self, part: &str) -> Option<&str> {

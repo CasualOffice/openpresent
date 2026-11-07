@@ -751,6 +751,7 @@ pub fn retained_name(ordinal: usize, original: &str) -> String {
             _ => '_',
         })
         .collect();
+    let clean = clean.replace("..", "__");
     let tail = clean.get(clean.len().saturating_sub(TAIL)..).unwrap_or("");
     format!("{RETAINED_DIR}{ordinal:05}-{tail}.{RETAINED_EXTENSION}")
 }

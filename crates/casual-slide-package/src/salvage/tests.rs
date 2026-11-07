@@ -233,6 +233,49 @@ fn a_declared_size_allocates_nothing() {
     assert_eq!(image_of(&s).read_part("a.bin").unwrap(), b"xyz");
 }
 
+/// A ZIP64 record can claim anything in 64 bits. Sized from that, this would abort.
+#[test]
+fn a_claim_of_exabytes_allocates_nothing() {
+    let name = b"a.bin";
+    let data = [0x03, 0x00]; // an empty deflate stream
+    let mut bytes = LOCAL_SIG.to_vec();
+    bytes.extend_from_slice(&[20, 0, 0, 0, 8, 0, 0, 0, 0x21, 0]);
+    bytes.extend_from_slice(&0u32.to_le_bytes()); // crc
+    bytes.extend_from_slice(&2u32.to_le_bytes()); // compressed
+    bytes.extend_from_slice(&u32::MAX.to_le_bytes()); // uncompressed: see the extra
+    bytes.extend_from_slice(&(name.len() as u16).to_le_bytes());
+    bytes.extend_from_slice(&0u16.to_le_bytes());
+    bytes.extend_from_slice(name);
+    bytes.extend_from_slice(&data);
+    let central = bytes.len();
+    bytes.extend_from_slice(&CENTRAL_SIG);
+    bytes.extend_from_slice(&[20, 0, 20, 0, 0, 0, 8, 0, 0, 0, 0x21, 0]);
+    bytes.extend_from_slice(&0u32.to_le_bytes());
+    bytes.extend_from_slice(&2u32.to_le_bytes());
+    bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+    bytes.extend_from_slice(&(name.len() as u16).to_le_bytes());
+    bytes.extend_from_slice(&12u16.to_le_bytes()); // extra
+    bytes.extend_from_slice(&[0; 10]); // comment, disk, attributes
+    bytes.extend_from_slice(&0u32.to_le_bytes()); // offset
+    bytes.extend_from_slice(name);
+    bytes.extend_from_slice(&1u16.to_le_bytes());
+    bytes.extend_from_slice(&8u16.to_le_bytes());
+    bytes.extend_from_slice(&(1u64 << 62).to_le_bytes());
+    let size = bytes.len() - central;
+    bytes.extend_from_slice(&EOCD_SIG);
+    bytes.extend_from_slice(&[0; 4]);
+    bytes.extend_from_slice(&1u16.to_le_bytes());
+    bytes.extend_from_slice(&1u16.to_le_bytes());
+    bytes.extend_from_slice(&(size as u32).to_le_bytes());
+    bytes.extend_from_slice(&(central as u32).to_le_bytes());
+    bytes.extend_from_slice(&0u16.to_le_bytes());
+    let s = salvaged(&bytes);
+    assert_eq!(codes(&s), ["CS-REC-0107"]);
+    assert_eq!(s.retained.len(), 1);
+    assert_eq!(s.retained[0].original, "a.bin");
+    image_of(&s);
+}
+
 #[test]
 fn overlapping_entries_share_one_budget() {
     // Fifield's construction: many directory records naming one stream.

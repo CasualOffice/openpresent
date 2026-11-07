@@ -35,7 +35,7 @@ mod zipcheck;
 pub use draft::{Disposition, Draft, ReportEntry, WriterOutcome};
 pub use error::WriterError;
 pub use ops::{Op, SlideRef};
-pub use plan::{SavePlan, WriterLimits};
+pub use plan::{SavePlan, WriterLimits, repair_deck};
 pub use preflight::{Preflight, Violation};
 pub use zipcheck::check_zip;
 

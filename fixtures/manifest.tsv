@@ -30,29 +30,29 @@ generated/mce-alternate-content.pptx	c87ea5371b999b5ba52c3b2fac96131c6267b80f62b
 generated/mce-process-content.pptx	0225cf32cc7dfcb395fc4aee93ba1f7be9d5fa61c11136fcec6df9e41a63d0e3	open
 generated/mce-must-understand.pptx	27e40e0275760efb151ce89fd0d94ba398bdad4501e773b07ae8cd3b78a12b02	open
 generated/strict-synthetic.pptx	57d0967768756c63a14f0f77d851a347b3fa463f811bb21ac0928c211aa3348d	open
-hostile/doctype-billion-laughs.bin	95b584d9403a4de8e3bf27f64429fbb057eee1b7795abb2e00bbc054d2eca8e5	refuse:CS-XML-0005
-hostile/doctype-xxe-in-rels.bin	af3e9442b8832730bc2193df09554fc76afa4efdbad6cc18de38ce3ed7b540a3	refuse:CS-XML-0005
-hostile/doctype-xxe-in-content-types.bin	32d20f7b159d3e9afacad913c40f183c261788430f7ec7023cefefe9847affd6	refuse:CS-XML-0005
-hostile/undeclared-entity.bin	718abb6e9cc8622707fedc292ee2f85468add2d49b75377652d75d0c96d6650a	refuse:CS-XML-0004
-hostile/deep-nesting.bin	7849ae161425922f0d83538ac75365a9d64907756bd48d377badadf6bdb7d87e	refuse:CS-XML-0002
-hostile/unclosed-element.bin	c57a846cfe2f654e1231d08ed431e0825a0acb8083a3047390c6a8fec2bf0e5d	refuse:CS-XML-0004
-hostile/two-roots.bin	8d52fe0bbbaf2756b2b02f2db5341e09c04b7188b09913b4a26c81a08df8fd85	refuse:CS-XML-0004
-hostile/wrong-main-root.bin	119a77f53a52f166f8fee1a009a2bcb48fb7d03508eb39f82e918fd931c6c2c3	refuse:CS-XML-0004
-hostile/repeated-relationship-id.bin	78eb26791bbe2df03a48d053f8041d081e65f18b3625e53a8b435855d8242e7f	refuse:CS-XML-0004
-hostile/content-type-conflict.bin	a0cf3d99353daceeb00082fef0da104ce06cd2740eb0277e3a14b3fd1bdba59e	refuse:CS-XML-0004
-hostile/main-is-workbook.bin	95f5aa7bd54856a954f2b25af5616b20ca933d62aae7a432d989f06453053373	refuse:CS-OPC-0004
-hostile/no-content-types.bin	570de4a7a7ebe3bcff700698e2434bf4e58e63117c2dbbe0e1e4c3ee940b7ff0	refuse:CS-OPC-0001
-hostile/no-root-rels.bin	c4236261b6cf2370062d9ee0d8e9285364c4392c48169e0a9fb851e6e451a31a	refuse:CS-OPC-0001
-hostile/main-part-missing.bin	c4c6274115415ff41f2381b2d3ad9402855442d3b28117db50f350c522299881	refuse:CS-OPC-0001
-hostile/spoofed-office-document-type.bin	7c681456cadf5c32be631dd80f910c68c5afafca725f1c920ee6064f499c97d0	refuse:CS-OPC-0001
+hostile/doctype-billion-laughs.bin	95b584d9403a4de8e3bf27f64429fbb057eee1b7795abb2e00bbc054d2eca8e5	recover:CS-XML-0005 CS-FND-0005 CS-REC-0204 CS-REC-0301 CS-REC-0305
+hostile/doctype-xxe-in-rels.bin	af3e9442b8832730bc2193df09554fc76afa4efdbad6cc18de38ce3ed7b540a3	recover:CS-XML-0005 CS-FND-0005 CS-REC-0202 CS-REC-0301
+hostile/doctype-xxe-in-content-types.bin	32d20f7b159d3e9afacad913c40f183c261788430f7ec7023cefefe9847affd6	recover:CS-XML-0005 CS-REC-0201 CS-REC-0205 CS-REC-0301
+hostile/undeclared-entity.bin	718abb6e9cc8622707fedc292ee2f85468add2d49b75377652d75d0c96d6650a	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0305
+hostile/deep-nesting.bin	7849ae161425922f0d83538ac75365a9d64907756bd48d377badadf6bdb7d87e	recover:CS-XML-0002 CS-FND-0005 CS-REC-0204 CS-REC-0302 CS-REC-0307
+hostile/unclosed-element.bin	c57a846cfe2f654e1231d08ed431e0825a0acb8083a3047390c6a8fec2bf0e5d	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0302
+hostile/two-roots.bin	8d52fe0bbbaf2756b2b02f2db5341e09c04b7188b09913b4a26c81a08df8fd85	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0306
+hostile/wrong-main-root.bin	119a77f53a52f166f8fee1a009a2bcb48fb7d03508eb39f82e918fd931c6c2c3	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0205
+hostile/repeated-relationship-id.bin	78eb26791bbe2df03a48d053f8041d081e65f18b3625e53a8b435855d8242e7f	recover:CS-XML-0004 CS-FND-0005 CS-REC-0202
+hostile/content-type-conflict.bin	a0cf3d99353daceeb00082fef0da104ce06cd2740eb0277e3a14b3fd1bdba59e	recover:CS-XML-0004 CS-REC-0201 CS-REC-0205
+hostile/main-is-workbook.bin	95f5aa7bd54856a954f2b25af5616b20ca933d62aae7a432d989f06453053373	recover:CS-OPC-0004 CS-REC-0205
+hostile/no-content-types.bin	570de4a7a7ebe3bcff700698e2434bf4e58e63117c2dbbe0e1e4c3ee940b7ff0	recover:CS-OPC-0001 CS-REC-0201 CS-REC-0205
+hostile/no-root-rels.bin	c4236261b6cf2370062d9ee0d8e9285364c4392c48169e0a9fb851e6e451a31a	recover:CS-OPC-0001 CS-REC-0203
+hostile/main-part-missing.bin	c4c6274115415ff41f2381b2d3ad9402855442d3b28117db50f350c522299881	recover:CS-OPC-0001 CS-REC-0204
+hostile/spoofed-office-document-type.bin	7c681456cadf5c32be631dd80f910c68c5afafca725f1c920ee6064f499c97d0	recover:CS-OPC-0001 CS-FND-0007 CS-REC-0203
 hostile/compound-file.bin	a899fb4496afa7230c378d5be03cf3461990994993110fd2dad3257111081275	refuse:CS-OPC-0005
 hostile/not-a-zip.bin	33cfb16d7f653a798e5c4bebacc536d429614e1d22d9e554c0df2fea7438fc02	refuse:CS-PKG-0005
-hostile/path-traversal.bin	d29698bde94d5c9dbd783aa22bf7b2ba3c0f9b4b80279506722510db40fdb0d5	refuse:CS-PKG-0004
-hostile/path-too-long.bin	46bbee1ac5678c42089fd7da81a5d54c19d3a79451d90ebd49ceb58a7206f220	refuse:CS-PKG-0004
-hostile/case-colliding-parts.bin	e926726d7d0c829c5f348eee3d6e21769483d4b14f93ac9b1468800045c33d87	refuse:CS-PKG-0007
-hostile/zip-bomb.bin	c375b4a3dd36290e20f2297ad2a1a9e48162ed1e98953558dc89ade0d5e5ba0d	refuse:CS-PKG-0003
-hostile/percent-equivalent-parts.bin	8e7aef10ace1e7e302b59133dc0d2ca3f2b1b8c643a871a9e10e013d77f5c201	refuse:CS-PKG-0007
-hostile/mce-must-understand-unknown.bin	b4668e690adf29dccafc03f4c3cb51fce63528682f079398ae19a66128b503e5	refuse:CS-MCE-0001
+hostile/path-traversal.bin	d29698bde94d5c9dbd783aa22bf7b2ba3c0f9b4b80279506722510db40fdb0d5	recover:CS-PKG-0004 CS-FND-0005 CS-REC-0106
+hostile/path-too-long.bin	46bbee1ac5678c42089fd7da81a5d54c19d3a79451d90ebd49ceb58a7206f220	recover:CS-PKG-0004 CS-FND-0005 CS-REC-0106
+hostile/case-colliding-parts.bin	e926726d7d0c829c5f348eee3d6e21769483d4b14f93ac9b1468800045c33d87	recover:CS-PKG-0007 CS-FND-0005 CS-REC-0105
+hostile/zip-bomb.bin	c375b4a3dd36290e20f2297ad2a1a9e48162ed1e98953558dc89ade0d5e5ba0d	recover:CS-PKG-0003 CS-FND-0005 CS-REC-0107
+hostile/percent-equivalent-parts.bin	8e7aef10ace1e7e302b59133dc0d2ca3f2b1b8c643a871a9e10e013d77f5c201	recover:CS-PKG-0007 CS-FND-0005 CS-REC-0105
+hostile/mce-must-understand-unknown.bin	b4668e690adf29dccafc03f4c3cb51fce63528682f079398ae19a66128b503e5	recover:CS-MCE-0001 CS-FND-0005 CS-REC-0206
 hostile/mce-nonconformant-main.bin	d492de3db0e20793523715e8fa4ada0f34ed269331019491f781abe43196ff67	open CS-FND-0012
 hostile/rel-percent-traversal.bin	a85d88718c9189f863be86c0021c4cebdf02e36d493dbb0690adaea4bf3aa896	open CS-FND-0011
 hostile/part-name-undecodable.bin	23a33a708caf568437d30b3bc841678288dbd47e84629299d672055bcd0bc5b8	open CS-FND-0005 CS-FND-0011
@@ -70,20 +70,20 @@ hostile/unknown-rel-type.bin	c818df9c2811fa0f13930ff5a66546a4fb4e1b3e8e0482b9764
 hostile/embedded-object.bin	ea07a91aedb1b6b13fefea05adb9651ec239cf0dd9ef58043261c525ef54a99f	open CS-FND-0010
 hostile/vba-project.bin	1c17c0978effaa0c8cc54d8968b67fdb2ece61e9a928a8736df9647f1a32d359	open CS-FND-0008
 hostile/non-ascii-case-distinct-parts.bin	e70da4d1104ebfb5c1d0273a75bc56931842c2a8ac51abed119e73cf6b068c0b	open
-hostile/xml-repeated-attribute.bin	3d904befabca4f7002a2b333fabac4b0d923ab5ec58e460d52a5ace0efe279fa	refuse:CS-XML-0004
-hostile/xml-repeated-expanded-attribute.bin	09b9dd469419aaad4333ef75ee819b6d8227fd284b41a751ea6780269ae74ed0	refuse:CS-XML-0004
-hostile/xml-attribute-without-value.bin	27c5d06339eb91c702adc61847fb3ca46b76955df79a460ff17ef17cd15b665a	refuse:CS-XML-0004
-hostile/xml-attributes-run-together.bin	2fae7c08d80db502e151c7d866fe68f8cf540236fea62e7d577aaeed49d81d3b	refuse:CS-XML-0004
-hostile/xml-undeclared-prefix.bin	d601a05f5520512c39de889aeed140c4015e9f185dc8c0f2fe023221a203dfff	refuse:CS-XML-0004
-hostile/xml-nul-in-name.bin	2282e4c8514ea3b36505bdcbc7211deeb9d091a54171d6a34d8096cb26ecc42a	refuse:CS-XML-0004
-hostile/xml-text-outside-root.bin	244e1803dc5e2557d2b9fed2feae5daf817c2460109eaeeba7671909b32ba422	refuse:CS-XML-0004
-hostile/xml-second-byte-order-mark.bin	f07f9aedd0b566dc08b7bf83eda7d94e7c88a620f1e3307798b372632f03bfa6	refuse:CS-XML-0004
-hostile/xml-too-many-attributes.bin	34f9169df82970c6deb5294d7de3746756d1794d86f8a57232016768dd08825a	refuse:CS-XML-0003
-hostile/xml-too-many-elements.bin	7d584d1bdc16d50580e866b419a406675f8d8c615eefb895117cc3887992cbe1	refuse:CS-XML-0001	max_xml_elements=1000
-hostile/xml-part-over-size.bin	6a1bdaf94f819a58eebf3c901926c5610c1fe938c9e0479abca39e6f8fa024a4	refuse:CS-PKG-0009	max_xml_part_bytes=4096
-hostile/rels-per-part.bin	037b14a939a67dbf4aad6f1207db38e64864792dfe5cb50d390b4604c063b946	refuse:CS-OPC-0002	max_part_relationships=40
-hostile/rels-total.bin	9ffbd055d8b5bfba4a4dffb12a53fc5a8e7dd4171a5bc34f2460763c98d0237b	refuse:CS-OPC-0002	max_total_relationships=30
-hostile/content-types-flood.bin	1132c8bead12fd1e9e52c02021e8fda26e211b1a16d4a5d78c860a35c1379845	refuse:CS-OPC-0003	max_content_types=30
+hostile/xml-repeated-attribute.bin	3d904befabca4f7002a2b333fabac4b0d923ab5ec58e460d52a5ace0efe279fa	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303
+hostile/xml-repeated-expanded-attribute.bin	09b9dd469419aaad4333ef75ee819b6d8227fd284b41a751ea6780269ae74ed0	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303
+hostile/xml-attribute-without-value.bin	27c5d06339eb91c702adc61847fb3ca46b76955df79a460ff17ef17cd15b665a	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303
+hostile/xml-attributes-run-together.bin	2fae7c08d80db502e151c7d866fe68f8cf540236fea62e7d577aaeed49d81d3b	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303
+hostile/xml-undeclared-prefix.bin	d601a05f5520512c39de889aeed140c4015e9f185dc8c0f2fe023221a203dfff	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303
+hostile/xml-nul-in-name.bin	2282e4c8514ea3b36505bdcbc7211deeb9d091a54171d6a34d8096cb26ecc42a	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303 CS-REC-0304
+hostile/xml-text-outside-root.bin	244e1803dc5e2557d2b9fed2feae5daf817c2460109eaeeba7671909b32ba422	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0306
+hostile/xml-second-byte-order-mark.bin	f07f9aedd0b566dc08b7bf83eda7d94e7c88a620f1e3307798b372632f03bfa6	recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0304
+hostile/xml-too-many-attributes.bin	34f9169df82970c6deb5294d7de3746756d1794d86f8a57232016768dd08825a	recover:CS-XML-0003 CS-FND-0005 CS-REC-0204 CS-REC-0307
+hostile/xml-too-many-elements.bin	7d584d1bdc16d50580e866b419a406675f8d8c615eefb895117cc3887992cbe1	recover:CS-XML-0001 CS-FND-0005 CS-REC-0204 CS-REC-0302 CS-REC-0307	max_xml_elements=1000
+hostile/xml-part-over-size.bin	6a1bdaf94f819a58eebf3c901926c5610c1fe938c9e0479abca39e6f8fa024a4	recover:CS-PKG-0009 CS-FND-0005 CS-REC-0204	max_xml_part_bytes=4096
+hostile/rels-per-part.bin	037b14a939a67dbf4aad6f1207db38e64864792dfe5cb50d390b4604c063b946	recover:CS-OPC-0002 CS-FND-0005 CS-REC-0202 CS-REC-0307	max_part_relationships=40
+hostile/rels-total.bin	9ffbd055d8b5bfba4a4dffb12a53fc5a8e7dd4171a5bc34f2460763c98d0237b	recover:CS-OPC-0002 CS-REC-0307	max_total_relationships=30
+hostile/content-types-flood.bin	1132c8bead12fd1e9e52c02021e8fda26e211b1a16d4a5d78c860a35c1379845	recover:CS-OPC-0003 CS-REC-0201 CS-REC-0307	max_content_types=30
 generated/rich-properties.pptx	5d794db7f5c7fa19cb748553a0f564424dca2d2f2efc38822708b2f3dab69968	open
 generated/strict-properties.pptx	895fd81d5208782bec8079ac86fdb51a266554939a56a2ea60a8e8db991f5dda	open
 hostile/import-limit-slides.bin	e47d107ab77dcfec01245cd2e265a2df39d1c6efd4a818647fb06d0b9f123283	open
@@ -121,10 +121,10 @@ generated/five-hundred-slides.pptx	148bdf32a995ff4e5f906fd55126f3a8ea8b5ece1b04f
 hostile/slide-limit-shapes.bin	06ea8492b4e00a7e1530437ba3c1dc564758cea93e2e0e917c5c61de3e0ada00	open
 hostile/slide-limit-group-depth.bin	316ae44615e136506e758aead16cf75f4920bb97855658989de44f4e6f71e53e	open
 hostile/slide-duplicate-ids.bin	9023661a2899a217a5ddf94bff0886b09d950b9e4ae16c412079fd174561e4ae	open
-hostile/slide-layout-cycle.bin	7b39c86dacfa8768f99044012eb1b3467d389ab5f38b49e7135e947d2fec7eec	open
-hostile/slide-layout-wrong-kind.bin	b8b4159c2068922ebe88e5d7dbd01e69c83bce19948fe8b54ab2751e3637a0f1	open
-hostile/slide-no-layout.bin	7c532ba32be4c81beebce163ac30015b70518c175e04b9b84b7f74cc4d8ce7a7	open
-hostile/slide-missing-layout.bin	3610846d0962c7db5de76600f745d5ebe069fc248e780f6335befd3300b9c018	open CS-FND-0004
+hostile/slide-layout-cycle.bin	7b39c86dacfa8768f99044012eb1b3467d389ab5f38b49e7135e947d2fec7eec	open CS-REC-0205 CS-REC-0403 CS-REC-0404
+hostile/slide-layout-wrong-kind.bin	b8b4159c2068922ebe88e5d7dbd01e69c83bce19948fe8b54ab2751e3637a0f1	open CS-REC-0403
+hostile/slide-no-layout.bin	7c532ba32be4c81beebce163ac30015b70518c175e04b9b84b7f74cc4d8ce7a7	open CS-REC-0402
+hostile/slide-missing-layout.bin	3610846d0962c7db5de76600f745d5ebe069fc248e780f6335befd3300b9c018	open CS-REC-0205 CS-REC-0402 CS-REC-0403
 hostile/slide-bad-values.bin	f2acd9626a10aa085649e8fd2ca8a0111dac4a08e18809f58db48374e4e3137c	open
 generated/rr-vba.pptm	1b90fe575d27a315b8bf967a4a494214af58cc77f3e67bc00dfee4d632e9c070	open CS-FND-0008
 generated/rr-animated.pptx	e3a9c61b6ff3fccec382c21f04eb5adbc4232d78573acf1b426736754bdd5268	open

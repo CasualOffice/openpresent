@@ -108,6 +108,7 @@ fn leaks(text: &str) -> bool {
 struct Checked {
     codes: BTreeSet<String>,
     leaks: Vec<String>,
+    recovered_with_repairs: usize,
 }
 
 impl Checked {
@@ -125,7 +126,8 @@ impl Checked {
         bytes: Vec<u8>,
         limits: OoxmlLimits,
     ) -> Option<PresentationPackage> {
-        match PresentationPackage::open(bytes, limits) {
+        self.recovered(label, bytes.clone(), limits);
+        match PresentationPackage::open_strict(bytes, limits) {
             Ok(pkg) => {
                 for f in pkg.findings() {
                     self.codes.insert(f.kind.code().to_owned());
@@ -140,6 +142,36 @@ impl Checked {
                 None
             }
         }
+    }
+
+    /// The same input without `strict`: it opens, a repair says what it did, and neither the
+    /// report nor anything in it holds the marker. Every refusal below passes through here.
+    fn recovered(&mut self, label: &str, bytes: Vec<u8>, limits: OoxmlLimits) {
+        let mut pkg = match PresentationPackage::open(bytes, limits) {
+            Ok(pkg) => pkg,
+            Err(err) => {
+                if leaks(&format!("{err} {err:?}")) {
+                    self.leaks.push(format!("recovering {label}: {err}"));
+                }
+                return;
+            }
+        };
+        // What a lazily found repair adds is in the report as well.
+        if let Err(err) = pkg.prepare_for_edit()
+            && leaks(&format!("{err} {err:?}"))
+        {
+            self.leaks.push(format!("recovering {label}: {err}"));
+        }
+        let report = pkg.recovery_report();
+        let mut said = report.plain_language().join("\n");
+        said.push_str(&format!("{report:?}"));
+        for f in pkg.findings() {
+            said.push_str(&format!("{f:?}"));
+        }
+        if leaks(&said) {
+            self.leaks.push(format!("recovering {label}: {said}"));
+        }
+        self.recovered_with_repairs += usize::from(!report.is_empty());
     }
 
     fn refused(&mut self, label: &str, bytes: Vec<u8>) {
@@ -180,6 +212,7 @@ fn no_message_or_finding_carries_document_text() {
     let mut c = Checked {
         codes: BTreeSet::new(),
         leaks: Vec::new(),
+        recovered_with_repairs: 0,
     };
     let lim = OoxmlLimits::default;
     let marked = || {
@@ -453,6 +486,12 @@ fn no_message_or_finding_carries_document_text() {
         .filter(|code| !c.codes.contains(code))
         .collect();
     assert!(missing.is_empty(), "codes never produced: {missing:?}");
+    // The other half: these opened, and were said to be repaired, with no marker in it.
+    assert!(
+        c.recovered_with_repairs >= 25,
+        "only {} repaired",
+        c.recovered_with_repairs
+    );
     assert!(
         c.leaks.is_empty(),
         "{} leaks:\n{}",

@@ -26,8 +26,8 @@ the one beneath it.
 2. **Reading a part**, `casual-slide-package`: decompression held to the declared size
    and to the whole-package budget.
 3. **XML**, `casual-slide-ooxml`: one bounded walker and one tree, which every XML part
-   goes through. DOCTYPE is refused outright (`CS-XML-0005`), so entity expansion never
-   arises.
+   goes through. Under `strict`, DOCTYPE is refused outright (`CS-XML-0005`). By default the
+   recovering reader skips it uninterpreted, so entity expansion never arises either way.
 4. **Graph**, `casual-slide-ooxml`: relationships and content types.
 5. **Import**, `casual-slide-import`: counts the model would allocate for.
 6. **Values**: per-construct caps in the model, geometry and export.
@@ -63,6 +63,9 @@ the central directory, before anything is inflated.
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
 | `MAX_SCRUBBED_NAME` | `200` | Characters of a damaged entry's name repeated in a report or a retained name | none: text only | Tested by `an_unsafe_name_never_becomes_a_part` |
+| `MAX_REFERENCE` | `32` | How far the recovering XML reader looks for a reference's `;`. Past it, the `&` is literal text | none: text only | Tested by `broken_nesting_is_closed` |
+
+The recovering XML reader, `crates/casual-slide-ooxml/src/recover_xml.rs` (`REC-03`), holds to `OoxmlLimits` as `walk` does, with one difference: `max_xml_elements`, `max_xml_depth` and `max_xml_attributes` stop the reading of that part and keep what was read (`CS-REC-0307`), and a reading over `max_xml_part_bytes` is given up, so the part is set aside. `max_part_relationships`, `max_total_relationships` and `max_content_types` keep what fits.
 
 ## XML and graph: `OoxmlLimits`
 
