@@ -58,7 +58,7 @@ OpenPresent is designed around that problem:
 | Animations and transitions | 🟡 Built, tier open |
 | Charts, SmartArt, equations, ink | 🟡 Built, tier open; limits not yet mutation-tested |
 | OLE, VML, 3D models: kept with their fallback | 🟡 Built, tier open |
-| Comments, sections, zoom, labels, tags, custom XML | 🟡 Built, tier open |
+| Comments, sections, zoom, labels, tags, custom XML | ✅ Tier 1M closed |
 | Rendering to PNG and PDF | ⬜ Phase 2 |
 | Editor, slide show, co-editing, desktop app | ⬜ Phases 3 to 10 |
 
