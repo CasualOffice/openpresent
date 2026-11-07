@@ -408,3 +408,19 @@ fn no_damage_at_any_offset_panics_or_breaks_the_image() {
         }
     }
 }
+
+/// Strict admission refuses a local header whose sizes differ from the directory's
+/// (`SEC-P11`), so the recovering reader must say it read past one, or the deck opens
+/// repaired with nothing in the report (`T1N-09`).
+#[test]
+fn a_local_header_disagreeing_on_size_is_read_by_the_directory_and_reported() {
+    let mut whole = deflated(&[("a.xml", BODY), ("b/c.xml", BODY)]);
+    // The first local header's compressed size.
+    whole[18] = whole[18].wrapping_add(1);
+    assert!(Package::open(whole.clone(), PackageLimits::default()).is_err());
+    let s = salvaged(&whole);
+    assert_eq!(codes(&s), ["CS-REC-0104"]);
+    let mut image = image_of(&s);
+    assert_eq!(image.read_part("a.xml").unwrap(), BODY);
+    assert_eq!(image.read_part("b/c.xml").unwrap(), BODY);
+}
