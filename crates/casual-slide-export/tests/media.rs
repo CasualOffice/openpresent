@@ -1736,3 +1736,76 @@ fn asked_for(changed: &[String]) -> Vec<String> {
 fn survives_an_edit(name: &str) -> bool {
     !name.starts_with("_xmlsignatures/") && !name.starts_with("docProps/thumbnail")
 }
+
+/// A slide with every node's picture, picture fill and media taken out.
+fn without_media(part: &SlidePart) -> SlidePart {
+    let mut emptied = part.clone();
+    let ids: Vec<ObjectId> = part
+        .shape_tree()
+        .into_iter()
+        .flat_map(ShapeNode::descendants)
+        .map(|n| n.id)
+        .collect();
+    for id in ids {
+        let node = emptied.node_mut(id).unwrap();
+        node.properties.picture = None;
+        if matches!(node.properties.fill, Some(Fill::Blip(_))) {
+            node.properties.fill = None;
+        }
+        if let Some(app) = &mut node.app {
+            app.media = None;
+            app.media_extension = None;
+        }
+    }
+    emptied
+}
+
+/// Tier 1H gate items 4 and 5, over every picture and media deck: each slide's pictures
+/// and media taken out and saved, then written back from the model and saved. Import,
+/// export, import is a fixed point; saving again changes no byte; F4 finds nothing worse.
+#[test]
+fn picture_and_media_decks_written_from_the_model_are_a_fixed_point_and_pass_f4() {
+    let mut checked = 0;
+    for deck in [
+        "generated/area-pic.pptx",
+        "generated/image.pptx",
+        EVERYTHING,
+        "generated/rr-shared-media.pptx",
+        SVG,
+    ] {
+        let source = fixture(deck);
+        let original = model(&source);
+        let mut bytes = source.clone();
+        for &ordinal in &original.structure.slides {
+            let part = original.get(ordinal).unwrap();
+            let emptied = without_media(part);
+            if &emptied == part {
+                continue;
+            }
+            let Ok((stripped, _)) = save(&bytes, &emptied) else {
+                // A node in an alternate branch is not rewritten (`CS-SLE-0002`).
+                continue;
+            };
+            assert_ne!(model(&stripped).get(ordinal), Some(part), "{deck}");
+            let (rebuilt, _) = save(&stripped, part).unwrap_or_else(|e| panic!("{deck}: {e}"));
+            assert_eq!(
+                model(&rebuilt).get(ordinal),
+                Some(part),
+                "{deck}: read back"
+            );
+            let (again, changed) = save(&rebuilt, part).unwrap();
+            assert_eq!(again, rebuilt, "{deck}: fixed point");
+            assert!(changed.is_empty(), "{deck}");
+            bytes = rebuilt;
+            checked += 1;
+        }
+        assert_eq!(
+            model(&bytes).parts,
+            original.parts,
+            "{deck}: the whole deck"
+        );
+        f4_validates(&source, &bytes, deck);
+    }
+    eprintln!("slides rewritten: {checked}");
+    assert!(checked >= 5, "{checked}");
+}
