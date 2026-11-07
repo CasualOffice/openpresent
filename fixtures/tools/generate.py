@@ -259,6 +259,8 @@ def fixtures():
     yield from table_fixtures()
     from generate_shapes import fixtures as shape_fixtures  # imports this module, so not at the top
     yield from shape_fixtures()
+    from generate_review import fixtures as review_fixtures  # imports this module, so not at the top
+    yield from review_fixtures()
 
 
 def main_part(xml):

@@ -215,6 +215,26 @@ Each of these is a known gap with an owner, not an oversight:
   before decode.
 - **Legacy `.ppt`** has no reader; a Compound File is refused as `CS-OPC-0005` (`CFB-01`, `PPT-01`).
 
+## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
+
+Past one of these the part is set aside and named, or the list left out, and the deck opens (owner instruction 24): the bytes stay, and the report says `CS-RVW-0001`.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Tested; `hostile/comment-limit-comments.bin` |
+| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Tested; `hostile/comment-limit-authors.bin` |
+| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Tested; `hostile/comment-limit-replies.bin` |
+| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Tested; `hostile/comment-limit-reactions.bin` |
+| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Tested; `hostile/comment-limit-task-events.bin` |
+| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Tested; `hostile/comment-limit-monikers.bin` |
+| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Tested at a lowered bound: 100,001 parts is past `CS-PKG-0002` first |
+| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Tested; `hostile/section-limit-sections.bin` |
+| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Tested; `hostile/section-limit-slides.bin` |
+| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Tested; `hostile/tags-limit-tags.bin` |
+| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Tested; `hostile/marks-limit-part.bin` |
+| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Tested; `hostile/custom-limit-schema-refs.bin` |
+| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Tested; `hostile/custom-limit-labels.bin` |
+
 ## Tools
 
 `tools/f4/validate.py` and `tools/ooxml-sdk/` read the same untrusted decks and are bounded

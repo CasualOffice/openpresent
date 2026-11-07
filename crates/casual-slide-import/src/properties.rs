@@ -297,6 +297,8 @@ pub enum ImportFindingKind {
     Table(crate::table::TableFinding),
     /// What the colour reader noticed in a shape's properties, under its own codes.
     Color(crate::color::FindingKind),
+    /// What this tier's readers noticed in comments, sections and retained parts.
+    Review(crate::comment::ReviewFinding),
 }
 
 impl ImportFindingKind {
@@ -321,6 +323,7 @@ impl ImportFindingKind {
             Self::Drawing(finding) => finding.code(),
             Self::Table(finding) => finding.code(),
             Self::Color(finding) => finding.code(),
+            Self::Review(finding) => finding.code(),
         }
     }
 }

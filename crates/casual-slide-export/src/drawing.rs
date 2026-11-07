@@ -38,26 +38,49 @@ pub(crate) enum Space {
     Pml,
     A14,
     Ask,
+    /// A namespace this file does not need by name: its URIs and its usual prefix.
+    Other(&'static [&'static str], &'static str),
 }
 
-const SPACES: [Space; 4] = [Space::Dml, Space::Pml, Space::A14, Space::Ask];
+const SPACES: [Space; 18] = [
+    Space::Dml,
+    Space::Pml,
+    Space::A14,
+    Space::Ask,
+    crate::comment::P15,
+    crate::comment::P188,
+    crate::comment::P223,
+    crate::comment::P228,
+    crate::comment::P14,
+    crate::comment::P166,
+    crate::comment::PSLZ,
+    crate::comment::PSEZ,
+    crate::comment::PSUZ,
+    crate::comment::P16,
+    crate::comment::P184,
+    crate::comment::ACS,
+    crate::comment::P202,
+    crate::comment::CLBL,
+];
 
 impl Space {
-    fn uris(self) -> &'static [&'static str] {
+    pub(crate) fn uris(self) -> &'static [&'static str] {
         match self {
             Self::Dml => ns::DML,
             Self::Pml => ns::PML,
             Self::A14 => A14,
             Self::Ask => ASK,
+            Self::Other(uris, _) => uris,
         }
     }
 
-    fn prefix(self) -> &'static str {
+    pub(crate) fn prefix(self) -> &'static str {
         match self {
             Self::Dml => "a",
             Self::Pml => "p",
             Self::A14 => "a14",
             Self::Ask => "ask",
+            Self::Other(_, prefix) => prefix,
         }
     }
 }
@@ -187,7 +210,7 @@ impl Node {
         self.attrs.iter().find(|(n, _)| *n == name).map(|(_, v)| v)
     }
 
-    fn same_name(&self, other: &Node) -> bool {
+    pub(crate) fn same_name(&self, other: &Node) -> bool {
         self.local == other.local && self.space == other.space
     }
 
@@ -321,7 +344,7 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
         "lineSketchStyleProps" => &["custGeom", "prstGeom", "type", "seed", "extLst"],
         // Any number of effects, in any order, then `extLst`.
         "blip" => return Some(usize::from(local == "extLst")),
-        _ => crate::table::order_in(parent)?,
+        _ => crate::table::order_in(parent).or_else(|| crate::comment::order_in(parent))?,
     };
     order.iter().position(|o| *o == local)
 }
@@ -332,7 +355,7 @@ fn landmark(w: &Writer<'_>, parent: &Elem, local: &str) -> Result<Option<Elem>, 
         return Ok(None);
     };
     Ok(parent.children(w.tree, w.part)?.into_iter().find(|c| {
-        (c.in_namespace(ns::DML) || c.in_namespace(ns::PML))
+        (c.in_namespace(ns::DML) || c.in_namespace(ns::PML) || c.uri == parent.uri)
             && rank(&parent.local, &c.local).is_some_and(|theirs| theirs > mine)
     }))
 }
