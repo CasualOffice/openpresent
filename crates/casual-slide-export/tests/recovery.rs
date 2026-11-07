@@ -442,3 +442,17 @@ fn a_repaired_part_is_read_alike_by_every_reader() {
     assert_eq!(tree.local_name(tree.root()), "sld");
     assert_eq!(pkg.read_part(SLIDE2).unwrap(), bytes);
 }
+
+/// `FUZZ-02`, found by `deck_recover`: one byte of a central directory record's compressed
+/// size changed (0x152 to 0x2b52). The deck opens; an edit to it must write a clean file,
+/// not refuse with `INV-PN-10`.
+#[test]
+fn a_central_directory_size_that_disagrees_with_its_local_header_still_saves() {
+    let mut deck = read(THREE);
+    let at = 0xc030 % deck.len();
+    deck[at] = 0x2b;
+    let mut pkg = open(deck);
+    let (d, _) = read_all(&mut pkg);
+    let edited = edit_title(&mut pkg, &d);
+    PresentationPackage::open_strict(edited, OoxmlLimits::default()).unwrap();
+}

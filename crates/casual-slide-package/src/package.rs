@@ -113,6 +113,10 @@ impl Package {
         let mut total_compressed: u64 = 0;
         // Bounded by `max_entries`, checked above.
         let mut names = HashMap::with_capacity(count);
+        // Where each entry's header starts and its stored bytes end, and where the
+        // directory starts: an entry may not run into the next one (`FUZZ-02`).
+        let mut extents = Vec::with_capacity(count);
+        let mut directory = input_len;
 
         for i in 0..count {
             // Reading metadata does not decompress the entry.
@@ -154,6 +158,15 @@ impl Package {
                 });
             }
 
+            directory = directory.min(entry.central_header_start());
+            // Opening the entry read its local header, so where its data starts is known.
+            if let Some(start) = entry.data_start() {
+                let data_end = start
+                    .checked_add(entry.compressed_size())
+                    .ok_or(PackageError::NotAPackage)?;
+                extents.push((entry.header_start(), data_end));
+            }
+
             total_uncompressed = total_uncompressed.saturating_add(entry.size());
             total_compressed = total_compressed.saturating_add(entry.compressed_size());
 
@@ -172,6 +185,17 @@ impl Package {
                 ratio,
                 limit: limits.max_expansion_ratio,
             });
+        }
+
+        // A stored size reaching past the next entry, or past the directory, is a damaged
+        // directory: a raw copy would carry that many bytes, or stop short of them, into a
+        // file that then contradicts itself. Refused here, so recovery reads past it.
+        extents.sort_unstable();
+        let mut next_starts = extents.iter().skip(1).map(|&(start, _)| start);
+        for &(_, end) in &extents {
+            if end > next_starts.next().unwrap_or(directory) {
+                return Err(PackageError::NotAPackage);
+            }
         }
 
         Ok(Package {
