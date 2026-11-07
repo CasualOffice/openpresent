@@ -34,7 +34,7 @@ OpenPresent is designed around that problem:
 - **Edits are surgical.** Saving an edited deck rewrites only the XML nodes that changed. Every
   untouched part keeps its exact bytes.
 - **Coverage is measured, not claimed.** Every element, attribute and enum value in the Office Open XML
-  schemas, 8,730 in all, is a row in a [spec checklist](docs/spec/README.md). A row is marked supported
+  schemas, 8,739 in all, is a row in a [spec checklist](docs/spec/README.md). A row is marked supported
   only when code and a test deck prove it.
 - **Every file is treated as hostile.** Zip bombs, entity expansion, path tricks, tracking links and
   credential-leaking UNC paths are refused or reported. Nothing is fetched and no macro ever runs.
@@ -45,19 +45,25 @@ OpenPresent is designed around that problem:
 
 | Area | State |
 | --- | --- |
-| Package reading: bounded ZIP, part graph, content types, relationships | ✅ Built, fuzzed |
-| Saving: unedited byte-identical, edits patch only what changed | ✅ Built |
-| Markup compatibility, Strict and Transitional, percent-encoded part names | ✅ Built |
+| Package reading: bounded ZIP, part graph, content types, relationships | 🟡 Built, fuzzed, tier open |
+| Opening damaged decks: salvage, XML recovery, repair | 🟡 Built, tier open; its fuzz targets not yet run |
+| Saving: unedited byte-identical, edits patch only what changed; the writer | 🟡 Built, tier open |
+| Markup compatibility, Strict and Transitional, percent-encoded part names | 🟡 Built, tier open |
 | Geometry: all 187 preset shapes and 41 text warps | ✅ Built |
-| Document properties, presentation part, view state | 🟡 Built, tier open |
-| Colour models, transforms, themes, colour maps | 🟡 Built, tier open |
-| Slides, masters, layouts, shape tree, inheritance | 🔨 In progress |
-| Text, tables, pictures, charts, SmartArt, animations | ⬜ Planned, Phase 1 |
+| Presentation part, view state, colour, themes | 🟡 Built, tier open |
+| Slides, masters, layouts, shape tree, inheritance | 🟡 Built, tier open |
+| Fills, lines, effects, 3D, text, tables, pictures, media | 🟡 Built, tier open |
+| Animations and transitions | 🟡 Built, tier open |
+| Charts, SmartArt, equations, ink | 🟡 Built, tier open; limits not yet mutation-tested |
+| OLE, VML, 3D models: kept with their fallback | 🟡 Built, tier open |
+| Comments, sections, zoom, labels, tags, custom XML | 🟡 Built, tier open |
 | Rendering to PNG and PDF | ⬜ Phase 2 |
 | Editor, slide show, co-editing, desktop app | ⬜ Phases 3 to 10 |
 
+**No Phase 1 tier is closed yet** (2026-11-08). Of 8,739 checklist rows, 7,843 are marked `y` or `r` in model, import and export; 469 more are `n/a` in a column that does not apply to them; the 427 others each carry a named reason in `docs/spec/open-rows.tsv` or are accounted for by their members, and `tools/spec-audit` checks every one. What each tier still lacks is in the [tracker](docs/14-EXECUTION-TRACKER.md) under "Tier gates".
+
 The full plan, with how each phase opens and closes, is the [roadmap](docs/06-ROADMAP-AND-DELIVERY.md).
-Every task is in the [execution tracker](docs/14-EXECUTION-TRACKER.md). 66 real PowerPoint-written decks open and save with every XML part byte-identical, though so far only their presentation, properties and themes are modelled. PowerPoint itself has not yet checked our output; until then, nothing here claims to match it.
+Every task is in the [execution tracker](docs/14-EXECUTION-TRACKER.md). 66 real PowerPoint-written decks open and save with every XML part byte-identical. PowerPoint itself has not yet checked our output; until then, nothing here claims to match it.
 
 ## Try it
 

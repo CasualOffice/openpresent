@@ -132,6 +132,13 @@ Every patched part is read back before saving.
 **Import.** `read_deck_charts`, from `import_slide_parts`: `ImportedSlides::charts`. A part is read for what its root says. A part that cannot be read, is over a bound in `ChartLimits`, or has the wrong root is set aside, reported, kept byte for byte, and **the deck opens**. An embedded workbook is recorded (`ChartWorkbook`), and no byte of it is read (`SEC-P09`).
 
 **Export.** `patch_chart_part`, `save_chart_parts`: edits patch named nodes, by one function for every type, and read back. `rewrite_from_model` writes from nothing, is never used to save, and exists so that tests hold the writer to every row. Adding or removing a chart part, or changing which chart a frame holds, is refused: those are Phase 6's.
+
+## Tier 1K: SmartArt, equations and ink as built
+
+**Model** (`casual-slide-model`, `diagram.rs`, `math.rs`, `ink.rs`, each with a generated `schema.rs`). SmartArt is the five linked parts of one diagram as typed values; its `dsp:drawing` is what will be drawn, and a layout definition is read as data and never run (`SEC-C12`). An equation is OMML as PowerPoint holds it, in `a14:m`, kept beside its fallback, neither drawn nor regenerated. Ink is the `p:contentPart`'s `inkml:ink` with its context and recorded actions; trace points stay as written. A part that cannot be read is set aside and stays in the package untouched. Bounds are `GraphicLimits` ([21](21-PARSER-LIMITS.md)).
+
+**Known and absent.** 2016 ink brush property values are read as text (`T1K-04`); `a:EG_TextBullet` is not named by the generated modules (`T1K-05`). The bounds have fixtures but were not seen failing with their guards removed (`SEC-021`), and the `graphics` fuzz target has not been run (`FUZZ-02`).
+
 **Status marks.** `DGM`, `MATH` and `INK` in `docs/spec/checklist.tsv` hold what `tools/spec-audit/audit.py`'s rule allows, by a run over this tier's decks: 1076 rows `y` in model, import and export, every `extLst` `r` where a fixture holds one, and the blanks with their reasons in `docs/spec/open-rows.tsv`.
 
 ## Tier 1G: tables as built
@@ -187,6 +194,10 @@ Every patched part is read back before saving.
 **Rows.** Every row is marked by `tools/spec-audit`, or has a reason. Left blank: `CT_SlideTiming` and `CT_SlideTransition`, whose `extLst` is retained (`r`); the unions `ST_TLTime`, `ST_TLTimeNodeID`, `ST_TLTimeAnimateValueTime`, `ST_TransitionEightDirectionType`, `ST_AnimationDgmBuildType`, `ST_AnimationChartBuildType`, as a simple type with no values of its own has nothing for the audit to hold; `<morph>`, a root row, whose attribute and values are marked; and the 15 rows of `x:drawing/2018/animation`, `animPr`, which is not in `p:timing` and is a 3D model's playback, Tier 1L's. The values of the members of a union are `M` alone, as the audit asks for an attribute of exactly that type: the fixtures hold each, and `every_row_of_timing_and_trans_is_in_a_fixture_or_has_a_named_reason` and the rewrite of those fixtures carry them. The 2010 effects and `p15:prstTrans` are `EXT` rows, whose marks are Tier 1M's; the code and fixtures for them are here.
 
 **Evidence.** `MS-OI29500` v20260818, read as data, by section: 2.1.1128 (`sld`), 2.1.1138 (`anim`), 2.1.1145 (`audio`), 2.1.1149 (`bldP`), 2.1.1152 (`cBhvr`), 2.1.1156 (`cond`), 2.1.1157 (`cTn`), 2.1.1173 (`seq`), 2.1.1176 (`spTgt`), 2.1.1177 (`subSp`), 2.1.1181 (`tnLst`), 2.1.1186 (`wheel`), 2.1.1192 (`ST_TLTime`). The other notes in 2.1.1139 to 2.1.1204 were not read (`SPEC-02`), so nothing here rests on them. What they say of PowerPoint's defaults is for Phase 8: `calcmode` lin, `valueType` num, `additive` base, `accumulate` none, `xfrmType` pt, `dur` 0, `restart` always, `display` true, `afterEffect` false, `nodePh` false, `cond/@delay` 0. **Inferred:** that a shape in a branch not taken satisfies a target; that `presetBounceEnd` is enough to keep a node in a branch; `p15:prstTrans`'s names in `fixtures/generated`; and placing the older `dur` namespace with the released one, from one real deck. No committed real deck holds a 2010 effect, `prstTrans` or Morph, so those are shown against the schemas and validators only, until `PV-01`.
+
+## Tier 1L: OLE, VML and 3D models as built
+
+**Model** (`casual-slide-model`, `retained.rs`). An OLE object, an ActiveX control or a 3D model is kept as bytes and never opened (`SEC-C07`): only who it is and which image stands in for it are modelled, and nothing it names is followed. VML drawing parts are retained whole. **Not yet:** VML is not schema-checked in F4 (`F4-04`).
 
 ## Tier 1M: comments, sections, zoom, labels and retained data as built
 

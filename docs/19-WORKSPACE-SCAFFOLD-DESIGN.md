@@ -25,6 +25,15 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
 
 `-style` exists from Tier 1D and depends on `-model` alone; its tests read fixtures through `-import` and `-ooxml` as dev-dependencies only, which the DAG allows because nothing ships them. `-layout` is its first product consumer (Phase 2).
 
+**Seven crates exist today** (2026-11-08): `-package`, `-ooxml`, `-model`, `-style`, `-geometry`, `-import`, `-export`. The rest in the table below are planned and arrive with a first consumer.
+
+**Added in Phase 1, by tier.**
+- `-package` takes `flate2` (`zlib-rs` backend, Apache-2.0 or MIT, already in the lockfile through `zip`) as a direct dependency for the recovering reader, `salvage.rs` (ADR-015, Tier 1R).
+- `-ooxml` gains `recover_xml.rs`, `recovery.rs` and `repair.rs`: the recovering XML reader and the repair of a damaged package into one clean image (Tier 1R).
+- `-model`, `-import` and `-export` gain `chart/`, `diagram/`, `math/` and `ink/`: in `chart/` one module per schema namespace, in the others one `schema.rs`, generated from the vendored schemas by `tools/chart-codegen` and `tools/spec-codegen`, and held to them by `check-chart-codegen.py` (Tiers 1J, 1K). Charts therefore live in these three crates, not in a separate `-chart`, which stays planned for plotting in Phase 2.
+- `retained.rs` (Tier 1L), `comment.rs`, `section.rs`, `custom_data.rs` (Tier 1M), `table.rs` (1G), `media.rs` and `picture.rs` (1H), `timing.rs` and `transition.rs` (1I) in the same three crates.
+- `-export` gains `writer/`: the save plan, preflight, part naming, bookkeeping, save-as and the ZIP check (Tier 1N).
+
 `server/*` depends on `crates/*`; nothing in `crates/` depends on a server. CI does not check this yet (`CI-01`).
 
 ## Crates
