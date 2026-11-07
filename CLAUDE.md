@@ -79,7 +79,7 @@ Industry-standard practice applies everywhere, with these specifics.
 
 **Git**
 - [Conventional Commits](https://www.conventionalcommits.org/): `feat(scope):`, `fix(scope):`, `docs:`, `chore:`, citing tracker ids. One coherent change per commit, with the reason in the message.
-- Never commit to `main` directly; never force-push shared branches. Commit and push only when asked or when the task includes it. Never skip hooks. Enable them with `git config core.hooksPath .githooks`.
+- **Work lands directly on `main`, with no pull requests for now** (owner instruction 17). Parallel workers still use their own worktree branches; the main session verifies and merges them to `main`, then pushes. Never force-push `main`. Never skip hooks. Enable them with `git config core.hooksPath .githooks`.
 - Never commit build output, confidential decks, or unreviewed third-party files.
 
 **Gates before any commit**
