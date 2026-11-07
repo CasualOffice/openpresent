@@ -731,13 +731,8 @@ fn signature_rules(draft: &Draft<'_>, before: &View, after: &View, found: &mut F
 /// Rules that compare the draft with the input.
 pub(crate) fn change_rules(draft: &Draft<'_>, before: &View, after: &View, found: &mut Found) {
     if let (Some(was), Some(now)) = (&before.app, &after.app) {
-        // INV-AP-03 (Inferred): never one of the two removed.
-        if was.groups.is_some()
-            && was.titles.is_some()
-            && now.groups.is_some() != now.titles.is_some()
-        {
-            add(found, "INV-AP-03", &now.part, "one of the two removed");
-        }
+        // INV-AP-03's "never one of the two removed" is `state_rules`' "both, or neither"
+        // on the draft: a separate check here could never fire alone.
         // INV-AP-05 (Inferred).
         if let Some(name) = draft
             .log
