@@ -193,44 +193,6 @@ fn a_part_that_produces_more_than_it_declared_is_refused() {
     assert_eq!(err.code(), "CS-PKG-0003");
 }
 
-/// **The whole-package ceiling is charged against bytes that actually exist.**
-///
-/// Each part passing a per-part test says nothing about all of them together,
-/// and the parts are retained, so the total is what stays in memory.
-#[test]
-fn parts_are_charged_cumulatively_against_the_package_ceiling() {
-    let chunk = vec![b'x'; 4096];
-    let bytes = make_zip(&[
-        ("[Content_Types].xml", b"<Types/>"),
-        ("a.bin", &chunk),
-        ("b.bin", &chunk),
-        ("c.bin", &chunk),
-    ]);
-    // Exactly enough for the three chunks and the content types: admission
-    // passes, since the declared sizes are honest here and add up to this.
-    let limits = PackageLimits {
-        max_total_uncompressed: 12_288 + 64,
-        max_expansion_ratio: u64::MAX,
-        ..PackageLimits::default()
-    };
-    let mut pkg = Package::open(bytes, limits).expect("admitted");
-    assert_eq!(pkg.read_part("a.bin").unwrap().len(), 4096);
-    assert_eq!(pkg.read_part("b.bin").unwrap().len(), 4096);
-    assert_eq!(pkg.read_part("c.bin").unwrap().len(), 4096);
-    // A fourth read spends budget the package does not have left. Re-reading a
-    // part is the cheapest way to show the ledger is cumulative rather than
-    // per-part, and it is also a real shape: nothing stops a reader asking for
-    // the same part twice.
-    let err = pkg
-        .read_part("a.bin")
-        .map(|part| part.len())
-        .expect_err("the budget is spent, and re-reading spends it again");
-    assert!(
-        matches!(err, PackageError::ExpansionTooLarge { .. }),
-        "got {err:?}"
-    );
-}
-
 // ---- Threat model probes (docs/07-SECURITY-THREAT-MODEL.md) -------------------
 
 /// Rewrite one part name everywhere it occurs (local header and central
@@ -440,4 +402,143 @@ fn a_capped_read_refuses_before_decompressing() {
     assert_eq!(pkg.consumed(), 0);
     assert_eq!(pkg.read_part_capped("small.xml", 1000).unwrap(), b"<a/>");
     assert_eq!(pkg.consumed(), 4);
+}
+
+// ---- PKG-01, PKG-02, PKG-03, SEC-017 -------------------------------------------
+
+fn stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
+    let opts = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+    for (name, data) in entries {
+        writer.start_file(*name, opts).unwrap();
+        writer.write_all(data).unwrap();
+    }
+    writer.finish().unwrap().into_inner()
+}
+
+/// `SEC-017`, `SEC-P04`: the allocation `read_part` makes before any byte arrives
+/// is the bounded one, whatever the part declares. Observed on the real path.
+#[test]
+fn read_part_allocates_up_front_no_more_than_the_bound() {
+    let big: Vec<u8> = (0..3u32 << 20)
+        .map(|i| (i.wrapping_mul(2_654_435_761) >> 24) as u8)
+        .collect();
+    let mut pkg =
+        Package::open(stored_zip(&[("big.bin", &big)]), PackageLimits::default()).unwrap();
+    let part = pkg.read_part("big.bin").unwrap();
+    assert_eq!(part.len(), big.len());
+    let up_front = crate::package::LAST_UP_FRONT.with(std::cell::Cell::get);
+    assert!(
+        up_front <= 1 << 20,
+        "allocated {up_front} bytes before reading a part that declared {}",
+        big.len()
+    );
+}
+
+/// `PKG-01`: a long session reads parts again and again. Each part's bytes are
+/// charged once, so a legitimate deck is never refused for being reread, while
+/// what is charged still adds up across parts.
+#[test]
+fn rereading_a_part_does_not_spend_the_budget_again() {
+    let chunk = vec![b'x'; 4096];
+    let bytes = make_zip(&[
+        ("[Content_Types].xml", b"<Types/>"),
+        ("a.bin", &chunk),
+        ("b.bin", &chunk),
+        ("c.bin", &chunk),
+    ]);
+    let limits = PackageLimits {
+        max_total_uncompressed: 12_288 + 64,
+        max_expansion_ratio: u64::MAX,
+        ..PackageLimits::default()
+    };
+    let mut pkg = Package::open(bytes, limits).expect("admitted");
+    for name in ["a.bin", "b.bin", "c.bin"] {
+        assert_eq!(pkg.read_part(name).unwrap().len(), 4096);
+    }
+    assert_eq!(pkg.consumed(), 12_288);
+    for _ in 0..1000 {
+        for name in ["a.bin", "b.bin", "c.bin", "[Content_Types].xml"] {
+            pkg.read_part(name)
+                .unwrap_or_else(|e| panic!("{name}: {e}"));
+        }
+    }
+    assert_eq!(pkg.consumed(), 12_288 + 8);
+}
+
+/// `PKG-02`: package names compare as `part_name_key` does: percent-decoded once,
+/// then ASCII case-insensitively. `É` and `é` are different parts.
+#[test]
+fn letters_outside_ascii_are_not_folded() {
+    let zip = make_zip(&[
+        ("ppt/media/\u{c9}.png", b"upper"),
+        ("ppt/media/\u{e9}.png", b"lower"),
+    ]);
+    let mut pkg =
+        Package::open(zip, PackageLimits::default()).expect("two parts, by ECMA-376 Part 2");
+    assert_eq!(
+        pkg.find_part("PPT/MEDIA/\u{c9}.PNG"),
+        Some("ppt/media/\u{c9}.png")
+    );
+    assert_eq!(
+        pkg.find_part("ppt/media/\u{e9}.png"),
+        Some("ppt/media/\u{e9}.png")
+    );
+    let mut edits = crate::PartEdits::default();
+    edits.remove("ppt/media/\u{c9}.png");
+    let out = pkg.rewrite(&edits).unwrap();
+    let re = Package::open(out, PackageLimits::default()).unwrap();
+    assert_eq!(re.entry_names(), ["ppt/media/\u{e9}.png"]);
+}
+
+#[test]
+fn percent_encoded_spellings_are_one_part() {
+    let err = Package::open(
+        make_zip(&[("ppt/media/a b.png", b"x"), ("ppt/media/a%20b.png", b"y")]),
+        PackageLimits::default(),
+    )
+    .unwrap_err();
+    assert_eq!(err.code(), "CS-PKG-0007");
+
+    let zip = make_zip(&[("ppt/my slide.xml", b"<old/>")]);
+    let mut pkg = Package::open(zip, PackageLimits::default()).unwrap();
+    assert_eq!(
+        pkg.find_part("PPT/my%20slide.xml"),
+        Some("ppt/my slide.xml")
+    );
+    let mut edits = crate::PartEdits::default();
+    edits.replace("ppt/my%20slide.xml", b"<new/>".to_vec());
+    let out = pkg.rewrite(&edits).unwrap();
+    let mut re = Package::open(out, PackageLimits::default()).expect("one part, not two");
+    assert_eq!(re.entry_names(), ["ppt/my slide.xml"]);
+    assert_eq!(re.read_part("ppt/my slide.xml").unwrap(), b"<new/>");
+}
+
+/// `PKG-03`: what a rewrite writes carries the fixed time, set explicitly, so a
+/// `zip` feature turned on by some other crate cannot put the clock in the bytes.
+#[test]
+fn a_rewrite_writes_a_fixed_timestamp() {
+    let zip = make_zip(&[("keep.xml", b"<a/>"), ("edit.xml", b"<b/>")]);
+    let mut pkg = Package::open(zip, PackageLimits::default()).unwrap();
+    let mut edits = crate::PartEdits::default();
+    edits.replace("edit.xml", b"<c/>".to_vec());
+    edits.replace("new.xml", b"<d/>".to_vec());
+    let out = pkg.rewrite(&edits).unwrap();
+    let mut archive = zip::ZipArchive::new(Cursor::new(out)).unwrap();
+    for name in ["edit.xml", "new.xml"] {
+        let entry = archive.by_name(name).unwrap();
+        let t = entry.last_modified().unwrap();
+        assert_eq!(
+            (
+                t.year(),
+                t.month(),
+                t.day(),
+                t.hour(),
+                t.minute(),
+                t.second()
+            ),
+            (1980, 1, 1, 0, 0, 0),
+            "{name}"
+        );
+    }
 }

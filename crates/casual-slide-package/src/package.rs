@@ -1,16 +1,17 @@
 //! Bounded ZIP/OPC package admission and on-demand part reads.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
 
 use zip::write::{SimpleFileOptions, ZipWriter};
-use zip::{CompressionMethod, ZipArchive};
+use zip::{CompressionMethod, DateTime, ZipArchive};
 
 use crate::directory::record_count;
 use crate::error::PackageError;
 use crate::limits::PackageLimits;
+use crate::part_name::part_entry_key;
 use crate::path::is_safe_part_path;
 
 /// Metadata for one admitted entry (part).
@@ -34,11 +35,13 @@ pub struct Package {
     archive: ZipArchive<Cursor<Arc<[u8]>>>,
     /// The bytes as they arrived, kept so an unedited save can return them.
     source: Arc<[u8]>,
-    /// Lower-cased part name to the name the archive actually uses. OPC compares
-    /// part names case-insensitively, so a relationship may spell one differently.
+    /// Each part's equivalence key ([`part_entry_key`]) to the name the archive
+    /// actually uses. OPC compares part names after percent-decoding, and ASCII
+    /// case-insensitively, so a relationship may spell one differently (`PKG-02`).
     names: HashMap<String, String>,
     limits: PackageLimits,
-    /// Bytes actually handed out by [`Package::read_part`] so far.
+    /// Bytes charged to the whole-package budget by [`Package::read_part`]: each
+    /// part's, once, however often it is read (`PKG-01`).
     ///
     /// The whole-package ceiling is checked at admission against the sizes the
     /// central directory *declares*, which is the only information available
@@ -49,6 +52,8 @@ pub struct Package {
     /// 200 MiB each cannot each pass a 4 GiB test individually and add up to a
     /// gigabyte of retained memory.
     consumed: u64,
+    /// The entries already charged, by index.
+    charged: HashSet<usize>,
 }
 
 impl fmt::Debug for Package {
@@ -126,8 +131,9 @@ impl Package {
             }
             // Which of two same-named entries a reader returns differs between
             // ZIP implementations, so what a scanner approved need not be what
-            // opens here. OPC compares part names case-insensitively.
-            if !entry.is_dir() && names.insert(name.to_lowercase(), name.clone()).is_some() {
+            // opens here. OPC compares part names after percent-decoding, and
+            // ASCII case-insensitively: `a%20b` is `A B`, and `é` is not `É`.
+            if !entry.is_dir() && names.insert(part_entry_key(&name), name.clone()).is_some() {
                 return Err(PackageError::DuplicatePart { path: name });
             }
 
@@ -169,6 +175,7 @@ impl Package {
             names,
             limits,
             consumed: 0,
+            charged: HashSet::new(),
         })
     }
 
@@ -177,9 +184,10 @@ impl Package {
         &self.source
     }
 
-    /// The name a part actually has in the archive, matched case-insensitively.
+    /// The name a part actually has in the archive, matched by OPC's equivalence:
+    /// percent-encoding decoded once, and ASCII letters in either case.
     pub fn find_part(&self, name: &str) -> Option<&str> {
-        self.names.get(&name.to_lowercase()).map(String::as_str)
+        self.names.get(&part_entry_key(name)).map(String::as_str)
     }
 
     /// Write a new package with `edits` applied.
@@ -192,24 +200,33 @@ impl Package {
         if edits.is_empty() {
             return Ok(self.source.to_vec());
         }
+        let mut replacing = HashSet::new();
         for name in edits.replace.keys() {
             if !is_safe_part_path(name) {
                 return Err(PackageError::UnsafePath { path: name.clone() });
             }
+            // Two spellings of one part would write a package this crate refuses.
+            if !replacing.insert(part_entry_key(name)) {
+                return Err(PackageError::DuplicatePart { path: name.clone() });
+            }
         }
-        // A fixed timestamp and method: determinism is a contract.
-        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+        // A fixed timestamp and method: determinism is a contract. The time is set
+        // here, not left to `zip`'s default, which is the clock when its `time`
+        // feature is on, as any crate in the build could make it (`PKG-03`).
+        let options = SimpleFileOptions::default()
+            .compression_method(CompressionMethod::Deflated)
+            .last_modified_time(DateTime::default());
         let failed = |_| PackageError::RewriteFailed;
         let mut out = ZipWriter::new(Cursor::new(Vec::new()));
         let mut written = BTreeSet::new();
         for i in 0..self.archive.len() {
             let raw = self.archive.by_index_raw(i).map_err(failed)?;
             let name = raw.name().map_err(failed)?.into_owned();
-            let key = name.to_lowercase();
+            let key = part_entry_key(&name);
             if edits.remove.contains(&key) {
                 continue;
             }
-            if let Some((_, bytes)) = edits.replace.iter().find(|(n, _)| n.to_lowercase() == key) {
+            if let Some((_, bytes)) = edits.replace.iter().find(|(n, _)| part_entry_key(n) == key) {
                 drop(raw);
                 out.start_file(name.as_str(), options).map_err(failed)?;
                 out.write_all(bytes)
@@ -220,7 +237,7 @@ impl Package {
             }
         }
         for (name, bytes) in &edits.replace {
-            if !written.contains(&name.to_lowercase()) {
+            if !written.contains(&part_entry_key(name)) {
                 out.start_file(name.as_str(), options).map_err(failed)?;
                 out.write_all(bytes)
                     .map_err(|_| PackageError::RewriteFailed)?;
@@ -278,7 +295,7 @@ impl Package {
             .any(|n| n.is_ok_and(|n| n == name))
     }
 
-    /// Bytes handed out by reads so far.
+    /// Bytes charged to the package's budget so far: each part read, once.
     pub fn consumed(&self) -> u64 {
         self.consumed
     }
@@ -321,12 +338,30 @@ impl Package {
     /// the same reason: each part staying under a 4 GiB cap says nothing about
     /// five of them together, and unmodelled parts are *retained* in the model,
     /// so the bytes stay resident.
+    ///
+    /// **A part is charged once** (`PKG-01`). Reading it again produces the same
+    /// bytes, held to the same declaration, so it adds nothing the ledger does not
+    /// already count; charging it again would refuse an editor's long session on a
+    /// legitimate deck. Since every part is held to its declaration, and admission
+    /// held the declarations' sum to this same ceiling, the ledger is a second
+    /// line, reached only if the first fails.
     pub fn read_part(&mut self, name: &str) -> Result<Vec<u8>, PackageError> {
         let total_cap = self.limits.max_total_uncompressed;
-        let remaining = total_cap.saturating_sub(self.consumed);
+        let index =
+            self.archive
+                .index_for_name(name)
+                .ok_or_else(|| PackageError::PartNotFound {
+                    name: name.to_owned(),
+                })?;
+        let charged = self.charged.contains(&index);
+        let remaining = if charged {
+            u64::MAX
+        } else {
+            total_cap.saturating_sub(self.consumed)
+        };
         let mut entry = self
             .archive
-            .by_name(name)
+            .by_index(index)
             .map_err(|_| PackageError::PartNotFound {
                 name: name.to_owned(),
             })?;
@@ -336,6 +371,8 @@ impl Package {
         let declared = entry.size();
         let cap = declared.min(remaining);
         let mut buf = Vec::with_capacity(initial_capacity(cap));
+        #[cfg(test)]
+        LAST_UP_FRONT.with(|c| c.set(buf.capacity()));
         // One byte past the cap, so exceeding it is detectable rather than
         // silently truncated — a truncated part is a corrupt document that
         // reports success.
@@ -372,7 +409,10 @@ impl Package {
                 limit: total_cap,
             });
         }
-        self.consumed = self.consumed.saturating_add(produced);
+        if !charged {
+            self.consumed = self.consumed.saturating_add(produced);
+            self.charged.insert(index);
+        }
         Ok(buf)
     }
 }
@@ -386,23 +426,33 @@ pub struct PartEdits {
 }
 
 impl PartEdits {
-    /// Set a part's bytes, adding it if it does not exist.
+    /// Set a part's bytes, adding it if it does not exist. Any equivalent spelling
+    /// of an existing part's name replaces that part.
     pub fn replace(&mut self, name: impl Into<String>, bytes: Vec<u8>) {
         let name = name.into();
-        self.remove.remove(&name.to_lowercase());
+        let key = part_entry_key(&name);
+        self.remove.remove(&key);
+        self.replace.retain(|n, _| part_entry_key(n) != key);
         self.replace.insert(name, bytes);
     }
 
-    /// Remove a part. OPC names compare case-insensitively.
+    /// Remove a part, named in any spelling equivalent under OPC's rules.
     pub fn remove(&mut self, name: &str) {
-        self.replace.retain(|n, _| !n.eq_ignore_ascii_case(name));
-        self.remove.insert(name.to_lowercase());
+        let key = part_entry_key(name);
+        self.replace.retain(|n, _| part_entry_key(n) != key);
+        self.remove.insert(key);
     }
 
     /// Whether nothing would change.
     pub fn is_empty(&self) -> bool {
         self.replace.is_empty() && self.remove.is_empty()
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    /// What the last [`Package::read_part`] allocated before any byte arrived.
+    pub(crate) static LAST_UP_FRONT: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// Up-front capacity for a part that declares `declared` bytes.

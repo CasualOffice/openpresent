@@ -13,11 +13,13 @@ mod directory;
 mod error;
 mod limits;
 mod package;
+mod part_name;
 mod path;
 
 pub use error::PackageError;
 pub use limits::PackageLimits;
 pub use package::{EntryInfo, Package, PartEdits};
+pub use part_name::{part_entry_key, part_name_key, part_names_equivalent};
 pub use path::is_safe_part_path;
 
 #[cfg(test)]
