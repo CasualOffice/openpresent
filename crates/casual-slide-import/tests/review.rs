@@ -10,13 +10,13 @@ use std::path::{Path, PathBuf};
 use casual_slide_import::comment::{ReviewFinding, ReviewLimits};
 use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::{Findings, ImportFindingKind as K, ImportLimits};
-use casual_slide_import::retained::{
+use casual_slide_import::custom_data::{
     ImportedReview, import_datastore_item, import_label_info, import_review,
     import_schema_library, import_tags,
 };
 use casual_slide_import::section::import_part_marks;
 use casual_slide_model::comment::{CommentAnchor, CommentStatus, TaskAction};
-use casual_slide_model::retained::RetainedKind;
+use casual_slide_model::custom_data::RetainedKind;
 use casual_slide_model::section::{
     ClassificationOutcome, DesignerMark, LabelSource, SummaryLayout, Zoom, ZoomFallback,
     ZoomImageType,

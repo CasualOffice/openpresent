@@ -112,6 +112,7 @@ fn rel_id(
 
 /// `p:sldId`. An id out of range is kept and reported: the entry names a real
 /// slide. One that cannot be read at all leaves the entry out of the model.
+// spec-audit: owner=sldId
 pub fn read_slide_id(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -129,6 +130,7 @@ pub fn read_slide_id(
 }
 
 /// `p:sldMasterId`.
+// spec-audit: owner=sldMasterId
 pub fn read_master_id(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -161,6 +163,7 @@ pub fn read_master_id(
 }
 
 /// An element holding only `r:id` of interest: `notesMasterId`, `sld`, `tags` and so on.
+// spec-audit: owner=notesMasterId,handoutMasterId,smartTags,sld,regular,bold,italic,boldItalic
 pub fn read_rel_only(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -192,6 +195,7 @@ fn seen_before(r: &mut Reader<'_>, seen: &mut HashSet<String>, el: &Elem) -> boo
 }
 
 /// `a:CT_PositiveSize2D`. `None` unless both sides are usable.
+// spec-audit: owner=notesSz,gridSpacing
 pub fn read_positive_size(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -200,18 +204,19 @@ pub fn read_positive_size(
     let range = |v: &i64| (0..=POSITIVE_COORDINATE_MAX).contains(v);
     let cx = r.required::<i64>(&mut el, "cx", range)?;
     let cy = r.required::<i64>(&mut el, "cy", range)?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(cx.zip(cy).map(|(cx, cy)| PositiveSize { cx, cy }))
 }
 
 /// `p:sldSz`. `None` unless both sides are in range.
+// spec-audit: owner=sldSz
 pub fn read_slide_size(r: &mut Reader<'_>, el: &Elem) -> Result<Option<SlideSize>, ImportError> {
     let mut el = el.clone();
     let range = |v: &i32| (SLIDE_SIZE_MIN..=SLIDE_SIZE_MAX).contains(v);
     let cx = r.required::<i32>(&mut el, "cx", range)?;
     let cy = r.required::<i32>(&mut el, "cy", range)?;
     let size_type = r.attr(&mut el, "type")?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(cx.zip(cy).map(|(cx, cy)| SlideSize { cx, cy, size_type }))
 }
 
@@ -226,7 +231,7 @@ pub(crate) fn read_text_font(
     })?;
     let pitch_family = r.attr(&mut el, "pitchFamily")?;
     let charset = r.attr(&mut el, "charset")?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(typeface.map(|typeface| TextFont {
         typeface,
         panose,
@@ -237,6 +242,7 @@ pub(crate) fn read_text_font(
 
 /// `p:embeddedFont`. `None` unless its `font` is usable. Only ids are read: no font
 /// data is reached by this (`SEC-C05`).
+// spec-audit: owner=embeddedFont
 pub fn read_embedded_font(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -273,6 +279,7 @@ pub fn read_embedded_font(
 
 /// `p:custShow`. `None` unless it has a usable name and id. `budget` is the slides
 /// left across the part's shows.
+// spec-audit: owner=custShow
 pub fn read_custom_show(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -312,6 +319,7 @@ pub fn read_custom_show(
         .map(|(name, id)| CustomShow { name, id, slides }))
 }
 
+// spec-audit: owner=photoAlbum
 fn read_photo_album(r: &mut Reader<'_>, el: &Elem) -> Result<PhotoAlbum, ImportError> {
     let mut el = el.clone();
     let album = PhotoAlbum {
@@ -326,12 +334,13 @@ fn read_photo_album(r: &mut Reader<'_>, el: &Elem) -> Result<PhotoAlbum, ImportE
 }
 
 /// `p:kinsoku`. `None` unless both required sets are there.
+// spec-audit: owner=kinsoku
 pub fn read_kinsoku(r: &mut Reader<'_>, el: &Elem) -> Result<Option<Kinsoku>, ImportError> {
     let mut el = el.clone();
     let lang = r.attr(&mut el, "lang")?;
     let start = r.required::<String>(&mut el, "invalStChars", |_| true)?;
     let end = r.required::<String>(&mut el, "invalEndChars", |_| true)?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(start.zip(end).map(|(start, end)| Kinsoku {
         lang,
         invalid_start_chars: start,
@@ -339,6 +348,7 @@ pub fn read_kinsoku(r: &mut Reader<'_>, el: &Elem) -> Result<Option<Kinsoku>, Im
     }))
 }
 
+// spec-audit: owner=modifyVerifier
 fn read_modify_verifier(r: &mut Reader<'_>, el: &Elem) -> Result<ModifyVerifier, ImportError> {
     let mut el = el.clone();
     let v = ModifyVerifier {
@@ -359,10 +369,11 @@ fn read_modify_verifier(r: &mut Reader<'_>, el: &Elem) -> Result<ModifyVerifier,
         crypt_provider_type_ext: r.attr(&mut el, "cryptProviderTypeExt")?,
         crypt_provider_type_ext_source: r.attr(&mut el, "cryptProviderTypeExtSource")?,
     };
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(v)
 }
 
+// spec-audit: owner=custDataLst
 fn read_customer_data(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -402,6 +413,7 @@ pub fn import_presentation(
 
 /// As [`import_presentation`], also saying what the colour readers noticed in
 /// `defaultTextStyle`, under their own codes.
+// spec-audit: owner=presentation
 pub fn import_presentation_with_colors(
     tree: &XmlTree,
     part: &str,
@@ -578,6 +590,7 @@ fn check_unique(r: &mut Reader<'_>, el: &Elem, ids: impl Iterator<Item = u32>) {
 }
 
 /// One choice of `p:EG_SlideListChoice`, if `el` is one.
+// spec-audit: owner=showPr,htmlPubPr
 fn read_slide_list_choice(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -599,10 +612,11 @@ fn read_slide_list_choice(
             .map(SlideListChoice::CustomShow),
         _ => return Ok(None),
     };
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(Some(choice))
 }
 
+// spec-audit: owner=htmlPubPr
 fn read_html_publish(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -635,6 +649,7 @@ fn read_html_publish(
     Ok(h)
 }
 
+// spec-audit: owner=webPr
 fn read_web(r: &mut Reader<'_>, el: &Elem) -> Result<WebProperties, ImportError> {
     let mut el = el.clone();
     let w = WebProperties {
@@ -653,6 +668,7 @@ fn read_web(r: &mut Reader<'_>, el: &Elem) -> Result<WebProperties, ImportError>
     Ok(w)
 }
 
+// spec-audit: owner=prnPr
 fn read_print(r: &mut Reader<'_>, el: &Elem) -> Result<PrintProperties, ImportError> {
     let mut el = el.clone();
     let p = PrintProperties {
@@ -667,6 +683,7 @@ fn read_print(r: &mut Reader<'_>, el: &Elem) -> Result<PrintProperties, ImportEr
     Ok(p)
 }
 
+// spec-audit: owner=showPr
 fn read_show(r: &mut Reader<'_>, el: &Elem) -> Result<ShowProperties, ImportError> {
     let mut el = el.clone();
     let mut s = ShowProperties {
@@ -701,7 +718,7 @@ fn read_show(r: &mut Reader<'_>, el: &Elem) -> Result<ShowProperties, ImportErro
                 typed = true;
                 s.show_type = Some(show_type);
             }
-            r.finish(&child);
+            r.finish_leaf(&child)?;
             continue;
         }
         match read_slide_list_choice(r, &child)? {
@@ -718,6 +735,7 @@ fn read_show(r: &mut Reader<'_>, el: &Elem) -> Result<ShowProperties, ImportErro
 }
 
 /// Read `p:presentationPr`. `rels` are the part's own relationships.
+// spec-audit: owner=presentationPr
 pub fn import_presentation_properties(
     tree: &XmlTree,
     part: &str,
@@ -752,14 +770,16 @@ pub fn import_presentation_properties(
     Ok(p)
 }
 
+// spec-audit: owner=sx,sy
 fn read_ratio(r: &mut Reader<'_>, el: &Elem) -> Result<Option<Ratio>, ImportError> {
     let mut el = el.clone();
     let n = r.required::<i64>(&mut el, "n", |_| true)?;
     let d = r.required::<i64>(&mut el, "d", |_| true)?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(n.zip(d).map(|(n, d)| Ratio { n, d }))
 }
 
+// spec-audit: owner=scale
 fn read_scale(r: &mut Reader<'_>, el: &Elem) -> Result<Option<Scale>, ImportError> {
     r.finish(el);
     let (mut x, mut y) = (None, None);
@@ -785,16 +805,18 @@ fn read_scale(r: &mut Reader<'_>, el: &Elem) -> Result<Option<Scale>, ImportErro
     Ok(scale)
 }
 
+// spec-audit: owner=origin
 fn read_point(r: &mut Reader<'_>, el: &Elem) -> Result<Option<Point>, ImportError> {
     let mut el = el.clone();
     let range = |c: &Coordinate| (COORDINATE_MIN..=POSITIVE_COORDINATE_MAX).contains(&c.0);
     let x = r.required::<Coordinate>(&mut el, "x", range)?;
     let y = r.required::<Coordinate>(&mut el, "y", range)?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(x.zip(y).map(|(x, y)| Point { x, y }))
 }
 
 /// `p:cViewPr`.
+// spec-audit: owner=cViewPr
 pub fn read_common_view(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -825,6 +847,7 @@ pub fn read_common_view(
 }
 
 /// `p:guide`.
+// spec-audit: owner=guide
 pub fn read_guide(r: &mut Reader<'_>, el: &Elem) -> Result<Guide, ImportError> {
     let mut el = el.clone();
     let range = |c: &Coordinate| i32::try_from(c.0).is_ok();
@@ -832,10 +855,11 @@ pub fn read_guide(r: &mut Reader<'_>, el: &Elem) -> Result<Guide, ImportError> {
         orient: r.attr(&mut el, "orient")?,
         pos: r.attr_in(&mut el, "pos", range)?,
     };
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(g)
 }
 
+// spec-audit: owner=cSldViewPr
 fn read_common_slide_view(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -893,6 +917,7 @@ fn holder_child(r: &mut Reader<'_>, el: &Elem, name: &str) -> Result<Option<Elem
     Ok(found)
 }
 
+// spec-audit: owner=restoredLeft,restoredTop
 fn read_normal_portion(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -900,10 +925,11 @@ fn read_normal_portion(
     let mut el = el.clone();
     let size = r.required::<Percentage>(&mut el, "sz", |p| (0..=100_000).contains(&p.0))?;
     let auto_adjust = r.attr(&mut el, "autoAdjust")?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(size.map(|size| NormalViewPortion { size, auto_adjust }))
 }
 
+// spec-audit: owner=normalViewPr
 fn read_normal_view(r: &mut Reader<'_>, el: &Elem) -> Result<NormalViewProperties, ImportError> {
     let mut el = el.clone();
     let mut v = NormalViewProperties {
@@ -935,6 +961,7 @@ fn read_normal_view(r: &mut Reader<'_>, el: &Elem) -> Result<NormalViewPropertie
 }
 
 /// `p:sld` in the outline view.
+// spec-audit: owner=sld
 pub fn read_outline_slide(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -943,10 +970,11 @@ pub fn read_outline_slide(
     let mut el = el.clone();
     let rel = rel_id(r, &mut el, rels, Some("slide"))?;
     let collapse = r.attr(&mut el, "collapse")?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(rel.map(|rel_id| OutlineSlide { rel_id, collapse }))
 }
 
+// spec-audit: owner=outlineViewPr
 fn read_outline_view(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -983,6 +1011,7 @@ fn read_outline_view(
     Ok(v)
 }
 
+// spec-audit: owner=sorterViewPr
 fn read_sorter_view(r: &mut Reader<'_>, el: &Elem) -> Result<SorterViewProperties, ImportError> {
     let mut el = el.clone();
     let show_formatting = r.attr(&mut el, "showFormatting")?;
@@ -995,6 +1024,7 @@ fn read_sorter_view(r: &mut Reader<'_>, el: &Elem) -> Result<SorterViewPropertie
 }
 
 /// Read `p:viewPr`. `rels` are the part's own relationships.
+// spec-audit: owner=viewPr
 pub fn import_view_properties(
     tree: &XmlTree,
     part: &str,

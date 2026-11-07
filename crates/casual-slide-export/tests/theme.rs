@@ -821,3 +821,47 @@ fn each_colour_and_theme_refusal_has_its_stable_code() {
     assert_eq!(ExportError::MalformedNode("x").code(), "CS-CLE-0004");
     assert_eq!(ExportError::NoNamespace.code(), "CS-CLE-0005");
 }
+
+/// Each slot of a colour map by its schema name, which comes from the model's table.
+#[test]
+fn every_slot_of_a_colour_map_can_be_set() {
+    let names = [
+        "bg1", "tx1", "bg2", "tx2", "accent1", "accent2", "accent3", "accent4", "accent5",
+        "accent6", "hlink", "folHlink",
+    ];
+    let master = fixture("generated/minimal.pptx");
+    let mut pkg = PresentationPackage::open(master, OoxmlLimits::default()).unwrap();
+    let bytes = pkg.read_part("ppt/slideMasters/slideMaster1.xml").unwrap();
+    let source = String::from_utf8(bytes).unwrap();
+    assert_eq!(ColorMapSlot::ALL.len(), names.len());
+    for (slot, name) in ColorMapSlot::ALL.iter().zip(names) {
+        assert_eq!(slot.as_xml(), name);
+        let mut tree = parse(&source);
+        let el = tree.child(tree.root(), "clrMap").unwrap();
+        set_color_map_slot(&mut tree, el, *slot, I::Dk2).unwrap();
+        let reread = parse(&text(&tree));
+        let el = reread.child(reread.root(), "clrMap").unwrap();
+        let mut f = Findings::default();
+        let got = read_color_map(&reread, el, &mut f).get(*slot);
+        assert_eq!(got, Some(I::Dk2), "{name}");
+    }
+}
+
+/// `extraClrScheme`: a colour in the theme's list of extra schemes, by its place.
+#[test]
+fn an_extra_scheme_colour_can_be_set() {
+    let deck = fixture("generated/theme-every-construct.pptx");
+    let mut pkg = PresentationPackage::open(deck, OoxmlLimits::default()).unwrap();
+    let source = String::from_utf8(pkg.read_part("ppt/theme/theme1.xml").unwrap()).unwrap();
+    assert!(source.contains("extraClrScheme"));
+    let mut tree = parse(&source);
+    let color = Color {
+        value: ColorValue::Srgb(Rgb::new(9, 8, 7)),
+        transforms: Vec::new(),
+    };
+    assert!(set_extra_scheme_color(&mut tree, 0, I::Accent1, &color).unwrap());
+    let reread = model(&parse(&text(&tree)));
+    let extra = &reread.extra_color_schemes.unwrap()[0];
+    let scheme = extra.color_scheme.as_ref().unwrap();
+    assert_eq!(scheme.slots[I::Accent1 as usize], Some(color));
+}

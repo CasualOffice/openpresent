@@ -1,534 +1,432 @@
-//! Read tags, custom XML properties and sensitivity labels, and name what is kept whole
-//! (Tier 1M): change tracking, revision info, and the bodies of custom XML items.
-//!
-//! [`import_review`] reads everything of this tier from a deck, and cannot fail: a part it
-//! cannot read is set aside, retained byte for byte, and named (owner instruction 24).
-//!
-//! **Retained whole means the bytes are never parsed by the model.** Only a part's name and
-//! kind are reported. An item's body is read only to learn whether its root is a schema
-//! library, and nothing else of it reaches the model.
-//!
-//! Evidence: `MS-PPTX` for `changesInfo` and `revisionInfo`, and `fixtures/real` for their
-//! relationship types. The `classificationlabels` relationship and `LabelInfo`'s attributes,
-//! and `MSIP_Label_*` custom properties, are Inferred from Microsoft's public description of
-//! sensitivity labels: no deck here holds one.
+//! Read who a retained object is and what stands in for it, and name every retained part
+//! (`SEC-C07`, Tier 1L). An OLE object, a control, a VML drawing and a 3D model are bytes:
+//! nothing here decodes one, starts one, or follows a link out of the file.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
-use casual_slide_model::presentation::Deck;
-use casual_slide_model::properties::Variant;
-use casual_slide_model::retained::{
-    CustomXmlItem, DatastoreItem, DatastoreSchemaRef, DeckCustomData, RetainedKind, RetainedPart,
-    Schema, SchemaLibrary, StringTag, TagList, TagPart,
+use casual_slide_model::retained::{RetainedKind, RetainedObject};
+use casual_slide_ooxml::{
+    MARKUP_COMPATIBILITY, OoxmlError, PresentationPackage, Relationship, TargetMode,
+    part_names_equivalent, resolve_internal,
 };
-use casual_slide_model::section::{DeckLabels, LabelSource, PartMarks, SensitivityLabel};
-use casual_slide_model::comment::DeckComments;
-use casual_slide_ooxml::{PresentationPackage, XmlTree};
 
-use crate::color::Findings as ColorFindings;
-use crate::comment::{
-    ReviewFinding, ReviewLimits, first, guid_attr, name_map, read_deck_comments,
-    read_part_or_set_aside, targets_of,
-};
-use crate::properties::{Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns};
-use crate::section::{check_zoom_targets, import_part_marks};
+use crate::properties::{Elem, ImportError, ImportFindingKind as K, Reader, ns};
+use crate::slide::rel_suffix;
 
-/// `ds:`.
-pub const DS: &[&str] = &[
-    "http://schemas.openxmlformats.org/officeDocument/2006/customXml",
-    "http://purl.oclc.org/ooxml/officeDocument/customXml",
-];
-/// `sl:`.
-pub const SL: &[&str] = &[
-    "http://schemas.openxmlformats.org/schemaLibrary/2006/main",
-    "http://purl.oclc.org/ooxml/schemaLibrary/main",
-];
-/// `clbl:`, Inferred.
-pub const CLBL: &[&str] = &["http://schemas.microsoft.com/office/2020/mipLabelMetadata"];
+const MC: &[&str] = &[MARKUP_COMPATIBILITY];
+const MODEL3D: &[&str] = &["http://schemas.microsoft.com/office/drawing/2017/model3d"];
 
-/// The `tags` relationship, Transitional and Strict.
-pub const TAGS_RELATIONSHIP: &[&str] = &[
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tags",
-    "http://purl.oclc.org/ooxml/officeDocument/relationships/tags",
-];
-/// The `customXml` relationship, Transitional and Strict.
-pub const CUSTOM_XML_RELATIONSHIP: &[&str] = &[
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml",
-    "http://purl.oclc.org/ooxml/officeDocument/relationships/customXml",
-];
-/// The `customXmlProps` relationship, Transitional and Strict.
-pub const CUSTOM_XML_PROPS_RELATIONSHIP: &[&str] = &[
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXmlProps",
-    "http://purl.oclc.org/ooxml/officeDocument/relationships/customXmlProps",
-];
-/// The `changesInfo` relationship, as `fixtures/real` has it.
-pub const CHANGES_INFO_RELATIONSHIP: &[&str] =
-    &["http://schemas.microsoft.com/office/2016/11/relationships/changesInfo"];
-/// The `revisionInfo` relationship, as `fixtures/real` has it.
-pub const REVISION_INFO_RELATIONSHIP: &[&str] =
-    &["http://schemas.microsoft.com/office/2015/10/relationships/revisionInfo"];
-/// The sensitivity label relationship, Inferred.
-pub const LABELS_RELATIONSHIP: &[&str] =
-    &["http://schemas.microsoft.com/office/2020/02/relationships/classificationlabels"];
+/// What a retained relationship must be, by the end of its type.
+fn accepts(kind: RetainedKind, rel: &Relationship) -> bool {
+    let suffix = rel_suffix(rel);
+    match kind {
+        RetainedKind::OleEmbedded | RetainedKind::OleLinked => {
+            matches!(suffix, Some("oleObject" | "package"))
+        }
+        RetainedKind::Control => suffix == Some("control"),
+        RetainedKind::Model3d => rel.rel_type.ends_with("/model3d"),
+    }
+}
 
-/// `p:CT_TagList`.
-// spec-audit: owner=tagLst
-// spec-audit: p:<tagLst>
-pub fn import_tags(
-    tree: &XmlTree,
-    part: &str,
-    limits: &ReviewLimits,
-    import: &ImportLimits,
-    findings: &mut Findings,
-) -> Result<TagList, ImportError> {
-    let mut reader = Reader::new(tree, part, import, findings);
-    let r = &mut reader;
-    let root = r.root(ns::PML, "tagLst")?;
-    r.finish(&root);
-    let mut out = TagList::default();
-    for child in r.bounded_children(&root, limits.max_tags, "tags")? {
-        if child.is(ns::PML, "tag") {
-            out.tags.push(read_tag(r, &child)?);
-        } else {
-            r.retained(&child);
+fn check_object_rel(r: &mut Reader<'_>, rels: &[Relationship], el: &Elem, o: &RetainedObject) {
+    let attribute = if o.kind == RetainedKind::Model3d {
+        "r:embed"
+    } else {
+        "r:id"
+    };
+    let Some(id) = o.rel_id.as_deref() else {
+        r.note(K::MissingRequired, el, Some(attribute));
+        return;
+    };
+    match rels.iter().find(|rel| rel.id == id) {
+        None => r.note(K::DanglingRelationship, el, Some(attribute)),
+        Some(rel) if !accepts(o.kind, rel) => r.note(K::WrongRelationship, el, Some(attribute)),
+        // A link may leave the file, as it is never followed. Nothing else may.
+        Some(rel) if rel.mode == TargetMode::External && o.kind != RetainedKind::OleLinked => {
+            r.note(K::WrongRelationship, el, Some(attribute));
+        }
+        Some(_) => {}
+    }
+}
+
+fn check_links(r: &mut Reader<'_>, rels: &[Relationship], el: &Elem, o: &RetainedObject) {
+    check_object_rel(r, rels, el, o);
+    if let Some(id) = o.fallback_rel_id.as_deref() {
+        match rels.iter().find(|rel| rel.id == id) {
+            None => r.note(K::DanglingRelationship, el, Some("r:embed")),
+            Some(rel) if rel_suffix(rel) != Some("image") || rel.mode == TargetMode::External => {
+                r.note(K::WrongRelationship, el, Some("r:embed"));
+            }
+            Some(_) => {}
         }
     }
-    Ok(out)
 }
 
-// spec-audit: owner=tag
-fn read_tag(r: &mut Reader<'_>, el: &Elem) -> Result<StringTag, ImportError> {
-    let mut e = el.clone();
-    let out = StringTag {
-        name: r.required(&mut e, "name", |_: &String| true)?,
-        val: r.required(&mut e, "val", |_: &String| true)?,
-    };
-    r.finish(&e);
-    for child in r.children(el)? {
-        r.retained(&child);
-    }
-    Ok(out)
-}
-
-/// `ds:CT_DatastoreItem`.
-// spec-audit: owner=datastoreItem
-// spec-audit: ds:<datastoreItem>
-pub fn import_datastore_item(
-    tree: &XmlTree,
-    part: &str,
-    limits: &ReviewLimits,
-    import: &ImportLimits,
-    findings: &mut Findings,
-) -> Result<DatastoreItem, ImportError> {
-    let mut reader = Reader::new(tree, part, import, findings);
-    let r = &mut reader;
-    let root = r.root(DS, "datastoreItem")?;
-    let mut e = root.clone();
-    let item_id = e.take_ns(DS, "itemID");
-    if item_id.is_none() {
-        r.note(K::MissingRequired, &root, Some("itemID"));
-    }
-    let good = item_id.as_ref().filter(|i| guid_attr(i)).cloned();
-    if item_id.is_some() && good.is_none() {
-        r.note(K::MalformedValue, &root, Some("itemID"));
-    }
-    r.finish(&e);
-    let mut out = DatastoreItem {
-        item_id: good,
-        schema_refs: None,
-    };
-    let mut seen = HashSet::new();
-    for child in r.children(&root)? {
-        if !child.is(DS, "schemaRefs") {
-            r.retained(&child);
-        } else if first(r, &mut seen, "schemaRefs", &child) {
-            out.schema_refs = Some(read_schema_refs(r, &child, limits)?);
+/// `a:blip/@r:embed` in a `p:pic`, read without taking anything: the picture itself is
+/// retained and reported whole.
+fn picture_fallback(r: &mut Reader<'_>, pic: &Elem) -> Result<Option<String>, ImportError> {
+    for fill in r.children(pic)? {
+        if fill.local == "blipFill" {
+            for mut blip in r.children(&fill)? {
+                if blip.is(ns::DML, "blip") {
+                    return Ok(blip.take_ns(ns::REL, "embed"));
+                }
+            }
         }
     }
-    Ok(out)
+    Ok(None)
 }
 
-// spec-audit: owner=schemaRefs
-fn read_schema_refs(
+/// The later reading fills only what the earlier left unsaid: the two branches of an
+/// `mc:AlternateContent` hold one object, and often only one says `@spid` or holds the picture.
+fn merge(into: &mut RetainedObject, other: RetainedObject) {
+    into.spid = into.spid.take().or(other.spid);
+    into.display_name = into.display_name.take().or(other.display_name);
+    into.prog_id = into.prog_id.take().or(other.prog_id);
+    into.show_as_icon = into.show_as_icon.or(other.show_as_icon);
+    into.img_w = into.img_w.or(other.img_w);
+    into.img_h = into.img_h.or(other.img_h);
+    into.rel_id = into.rel_id.take().or(other.rel_id);
+    into.fallback_rel_id = into.fallback_rel_id.take().or(other.fallback_rel_id);
+}
+
+/// `ST_PositiveCoordinate32`, which a value outside of is reported and left out.
+// spec-audit: owner=oleObj,control
+fn image_size(
+    r: &mut Reader<'_>,
+    attrs: &mut Elem,
+    name: &str,
+) -> Result<Option<i64>, ImportError> {
+    let value: Option<i64> = r.attr(attrs, name)?;
+    Ok(value.filter(|v| {
+        let fits = (0..=i64::from(i32::MAX)).contains(v);
+        if !fits {
+            r.note(K::OutOfRange, attrs, Some(name));
+        }
+        fits
+    }))
+}
+
+// spec-audit: owner=oleObj,control
+fn read_ole_attributes(
     r: &mut Reader<'_>,
     el: &Elem,
-    limits: &ReviewLimits,
-) -> Result<Vec<DatastoreSchemaRef>, ImportError> {
-    r.finish(el);
+    kind: RetainedKind,
+) -> Result<RetainedObject, ImportError> {
+    let mut attrs = el.clone();
+    let mut o = RetainedObject::new(kind);
+    o.spid = attrs.take("spid");
+    o.display_name = attrs.take("name");
+    o.show_as_icon = r.attr(&mut attrs, "showAsIcon")?;
+    o.img_w = image_size(r, &mut attrs, "imgW")?;
+    o.img_h = image_size(r, &mut attrs, "imgH")?;
+    if kind != RetainedKind::Control {
+        o.prog_id = attrs.take("progId");
+    }
+    o.rel_id = attrs.take_ns(ns::REL, "id");
+    r.finish(&attrs);
+    Ok(o)
+}
+
+/// `p:oleObj` or `p:control`: identity, whether it is a link, and the picture standing in.
+fn read_object(
+    r: &mut Reader<'_>,
+    el: &Elem,
+    kind: RetainedKind,
+) -> Result<RetainedObject, ImportError> {
+    let mut o = read_ole_attributes(r, el, kind)?;
+    for child in r.children(el)? {
+        if child.is(ns::PML, "link") && kind != RetainedKind::Control {
+            o.kind = RetainedKind::OleLinked;
+        } else if child.is(ns::PML, "pic") {
+            let found = picture_fallback(r, &child)?;
+            o.fallback_rel_id = o.fallback_rel_id.take().or(found);
+        }
+        // `p:embed` is the default kind. Each stays in the file, and is reported.
+        r.retained(&child);
+    }
+    r.retained(el);
+    Ok(o)
+}
+
+/// `am3d:model3d`: the model's relationship and the raster it was last drawn as. Its
+/// camera, lights and transform stay in the file until `D3-01`.
+// spec-audit: owner=model3d
+fn read_model(r: &mut Reader<'_>, el: &Elem) -> Result<RetainedObject, ImportError> {
+    let mut attrs = el.clone();
+    let mut o = RetainedObject::new(RetainedKind::Model3d);
+    o.rel_id = attrs.take_ns(ns::REL, "embed");
+    for child in r.children(el)? {
+        if child.is(MODEL3D, "raster") {
+            for mut blip in r.children(&child)? {
+                if blip.is(MODEL3D, "blip") {
+                    o.fallback_rel_id = blip.take_ns(ns::REL, "embed");
+                }
+            }
+        }
+    }
+    Ok(o)
+}
+
+/// The children of an `mc:AlternateContent`'s branches in order, or the element itself.
+fn branches(r: &mut Reader<'_>, el: &Elem) -> Result<Vec<Elem>, ImportError> {
     let mut out = Vec::new();
-    for child in r.bounded_children(el, limits.max_schema_refs, "schema references")? {
-        if child.is(DS, "schemaRef") {
-            out.push(read_schema_ref(r, &child));
-        } else {
-            r.retained(&child);
+    if el.is(MC, "AlternateContent") {
+        for branch in r.children(el)? {
+            out.extend(r.children(&branch)?);
         }
+    } else {
+        out.push(el.clone());
     }
     Ok(out)
 }
 
-// spec-audit: owner=schemaRef
-fn read_schema_ref(r: &mut Reader<'_>, el: &Elem) -> DatastoreSchemaRef {
-    let mut e = el.clone();
-    let uri = e.take_ns(DS, "uri");
-    if uri.is_none() {
-        r.note(K::MissingRequired, el, Some("uri"));
-    }
-    r.finish(&e);
-    DatastoreSchemaRef { uri }
-}
-
-/// `sl:CT_SchemaLibrary`.
-// spec-audit: owner=schemaLibrary
-// spec-audit: sl:<schemaLibrary>
-pub fn import_schema_library(
-    tree: &XmlTree,
-    part: &str,
-    limits: &ReviewLimits,
-    import: &ImportLimits,
-    findings: &mut Findings,
-) -> Result<SchemaLibrary, ImportError> {
-    let mut reader = Reader::new(tree, part, import, findings);
-    let r = &mut reader;
-    let root = r.root(SL, "schemaLibrary")?;
-    r.finish(&root);
-    let mut out = SchemaLibrary::default();
-    for child in r.bounded_children(&root, limits.max_schema_refs, "schemas")? {
-        if child.is(SL, "schema") {
-            out.schemas.push(read_schema(r, &child));
+/// What a graphic frame's `a:graphicData` child holds, if it is an object or a model.
+/// Both branches of an `mc:AlternateContent` count, whichever would be taken, as the picture
+/// is usually only in the fallback. The caller has already reported `el`.
+pub(crate) fn read_frame_content(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<Option<RetainedObject>, ImportError> {
+    let mut found: Option<RetainedObject> = None;
+    for item in branches(r, el)? {
+        let read = if item.is(ns::PML, "oleObj") {
+            read_object(r, &item, RetainedKind::OleEmbedded)?
+        } else if item.is(MODEL3D, "model3d") {
+            r.retained(&item);
+            read_model(r, &item)?
         } else {
-            r.retained(&child);
+            continue;
+        };
+        match &mut found {
+            Some(first) => merge(first, read),
+            None => found = Some(read),
         }
     }
-    Ok(out)
+    if let Some(o) = &found {
+        check_links(r, rels, el, o);
+    }
+    Ok(found)
 }
 
-// spec-audit: owner=schema
-fn read_schema(r: &mut Reader<'_>, el: &Elem) -> Schema {
-    let mut e = el.clone();
-    let out = Schema {
-        uri: e.take_ns(SL, "uri"),
-        manifest_location: e.take_ns(SL, "manifestLocation"),
-        schema_location: e.take_ns(SL, "schemaLocation"),
-        schema_language: e.take_ns(SL, "schemaLanguage"),
-    };
-    r.finish(&e);
-    out
-}
-
-/// Sensitivity label metadata. Inferred: see the module documentation.
-pub fn import_label_info(
-    tree: &XmlTree,
-    part: &str,
-    limits: &ReviewLimits,
-    import: &ImportLimits,
-    findings: &mut Findings,
-) -> Result<Vec<SensitivityLabel>, ImportError> {
-    let mut reader = Reader::new(tree, part, import, findings);
-    let r = &mut reader;
-    let root = r.root(CLBL, "labelList")?;
-    r.finish(&root);
+/// `p:controls`: each control, the branches of one `mc:AlternateContent` being one control.
+pub(crate) fn read_controls(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<Vec<RetainedObject>, ImportError> {
     let mut out = Vec::new();
-    for child in r.bounded_children(&root, limits.max_labels, "labels")? {
-        if !child.is(CLBL, "label") {
-            r.retained(&child);
-            continue;
+    r.retained(el);
+    for child in r.children(el)? {
+        let mut one: Option<RetainedObject> = None;
+        for item in branches(r, &child)? {
+            if !item.is(ns::PML, "control") {
+                r.retained(&item);
+                continue;
+            }
+            let read = read_object(r, &item, RetainedKind::Control)?;
+            match &mut one {
+                Some(first) => merge(first, read),
+                None => one = Some(read),
+            }
         }
-        let mut e = child.clone();
-        let label = SensitivityLabel {
-            source: LabelSource::LabelPart,
-            id: r.attr_in(&mut e, "id", guid_attr)?,
-            site_id: r.attr_in(&mut e, "siteId", guid_attr)?,
-            enabled: r.attr(&mut e, "enabled")?,
-            method: r.attr(&mut e, "method")?,
-            name: None,
-            content_bits: r.attr(&mut e, "contentBits")?,
-            removed: r.attr(&mut e, "removed")?,
-        };
-        r.finish(&e);
-        out.push(label);
+        if let Some(o) = one {
+            check_links(r, rels, &child, &o);
+            out.push(o);
+        }
     }
     Ok(out)
 }
 
-/// Labels left in custom properties. A property's name holds a label's id, so these are the
-/// only property names read here.
-pub fn labels_in_custom_properties(deck: &Deck, limits: &ReviewLimits) -> Vec<SensitivityLabel> {
-    let mut out: Vec<SensitivityLabel> = Vec::new();
-    let Some(custom) = &deck.properties.custom else {
-        return out;
-    };
-    for property in &custom.properties {
-        let Some(name) = &property.name else { continue };
-        let Some(rest) = name.strip_prefix("MSIP_Label_") else {
-            continue;
-        };
-        let Some((id, field)) = rest.split_once('_') else {
-            continue;
-        };
-        let at = match out.iter().position(|l| l.id.as_deref() == Some(id)) {
-            Some(at) => at,
-            None => {
-                if out.len() >= limits.max_labels {
+/// A 3D model in a branch of `mc:AlternateContent` that was not taken, with `pic` the picture
+/// the taken branch drew in its place. A consumer that does not understand `am3d` takes the
+/// fallback, so that picture's node is what carries the model.
+pub(crate) fn model_beside_picture(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    alternate: &Elem,
+    pic: &Elem,
+) -> Result<Option<RetainedObject>, ImportError> {
+    for branch in r.children(alternate)? {
+        for frame in r.children(&branch)? {
+            if !frame.is(ns::PML, "graphicFrame") {
+                continue;
+            }
+            for graphic in r.children(&frame)? {
+                if !graphic.is(ns::DML, "graphic") {
                     continue;
                 }
-                out.push(SensitivityLabel {
-                    source: LabelSource::CustomProperties,
-                    id: Some(id.to_owned()),
-                    ..SensitivityLabel::default()
-                });
-                out.len() - 1
-            }
-        };
-        let Some(label) = out.get_mut(at) else { continue };
-        let text = match &property.value {
-            Some(Variant::Lpwstr(v) | Variant::Lpstr(v)) => Some(v.clone()),
-            _ => None,
-        };
-        match field {
-            "Enabled" => label.enabled = text.as_deref().map(|t| t.eq_ignore_ascii_case("true")),
-            "Name" => label.name = text,
-            "SiteId" => label.site_id = text,
-            "Method" => label.method = text,
-            "Removed" => label.removed = text.as_deref().map(|t| t.eq_ignore_ascii_case("true")),
-            "ContentBits" => label.content_bits = text.as_deref().and_then(|t| t.parse().ok()),
-            _ => {}
-        }
-    }
-    out
-}
-
-/// Read every tag part and custom XML item in a deck. See the module documentation.
-pub fn read_deck_custom_data(
-    package: &mut PresentationPackage,
-    slide_parts: &[String],
-    limits: &ReviewLimits,
-    import: &ImportLimits,
-    findings: &mut Findings,
-) -> DeckCustomData {
-    let names = name_map(package);
-    let main = package.main_part().to_owned();
-    let mut out = DeckCustomData::default();
-    let mut set_aside = Vec::new();
-    let mut seen_tags = HashSet::new();
-    let sources = std::iter::once(main.clone()).chain(slide_parts.iter().cloned());
-    for source in sources {
-        let rels = package.relationships_of(&source).to_vec();
-        for part in targets_of(&names, &source, &rels, TAGS_RELATIONSHIP, findings) {
-            if !seen_tags.insert(part.clone()) {
-                continue;
-            }
-            if seen_tags.len() > limits.max_review_parts {
-                findings.note(K::Review(ReviewFinding::OverBound), &part, "", None);
-                set_aside.push(part);
-                continue;
-            }
-            let read = read_part_or_set_aside(package, &part, findings, &mut set_aside, |t, _, f| {
-                import_tags(t, &part, limits, import, f)
-            });
-            if let Some(list) = read {
-                out.tags.push(TagPart { part, list });
-            }
-        }
-    }
-    let rels = package.relationships_of(&main).to_vec();
-    let items = targets_of(&names, &main, &rels, CUSTOM_XML_RELATIONSHIP, findings);
-    for (i, part) in items.into_iter().enumerate() {
-        if i >= limits.max_review_parts {
-            findings.note(K::Review(ReviewFinding::OverBound), &part, "", None);
-            set_aside.push(part);
-            continue;
-        }
-        let mut item = CustomXmlItem {
-            part: part.clone(),
-            ..CustomXmlItem::default()
-        };
-        let item_rels = package.relationships_of(&part).to_vec();
-        let props = targets_of(&names, &part, &item_rels, CUSTOM_XML_PROPS_RELATIONSHIP, findings);
-        if let Some(props) = props.first() {
-            item.properties_part = Some(props.clone());
-            item.properties = read_part_or_set_aside(package, props, findings, &mut set_aside, |t, _, f| {
-                import_datastore_item(t, props, limits, import, f)
-            });
-        }
-        // An item is whatever its owner put there, so it may not be XML we can read, or
-        // XML at all. That is not damage: nothing here needs it to be.
-        item.schema_library = read_item_library(package, &part, limits, import, findings);
-        findings.note(K::Review(ReviewFinding::RetainedWhole), &part, "customXml", None);
-        out.custom_xml.push(item);
-    }
-    out.set_aside = set_aside;
-    out
-}
-
-fn read_item_library(
-    package: &mut PresentationPackage,
-    part: &str,
-    limits: &ReviewLimits,
-    import: &ImportLimits,
-    findings: &mut Findings,
-) -> Option<SchemaLibrary> {
-    let xml = *package.limits();
-    let bytes = package.read_xml_part(part).ok()?;
-    let tree = XmlTree::parse(&bytes, part, &xml).ok()?;
-    let root = Elem::root(&tree, part).ok()?;
-    if !root.is(SL, "schemaLibrary") {
-        return None;
-    }
-    import_schema_library(&tree, part, limits, import, findings).ok()
-}
-
-/// Name every part of this tier kept whole, in a stable order.
-pub fn retained_parts(package: &PresentationPackage, findings: &mut Findings) -> Vec<RetainedPart> {
-    let names = name_map(package);
-    let main = package.main_part().to_owned();
-    let rels = package.relationships_of(&main).to_vec();
-    let mut out = Vec::new();
-    let mut take = |types: &[&str], kind: RetainedKind, findings: &mut Findings| {
-        for part in targets_of(&names, &main, &rels, types, findings) {
-            findings.note(K::Review(ReviewFinding::RetainedWhole), &part, kind.name(), None);
-            out.push(RetainedPart { part, kind });
-        }
-    };
-    take(CHANGES_INFO_RELATIONSHIP, RetainedKind::ChangesInfo, findings);
-    take(REVISION_INFO_RELATIONSHIP, RetainedKind::RevisionInfo, findings);
-    take(CUSTOM_XML_RELATIONSHIP, RetainedKind::CustomXml, &mut Findings::new(0));
-    let root_rels = package.relationships_of("").to_vec();
-    for part in targets_of(&names, "", &root_rels, LABELS_RELATIONSHIP, findings) {
-        out.push(RetainedPart {
-            part,
-            kind: RetainedKind::LabelInfo,
-        });
-    }
-    out.sort();
-    out
-}
-
-/// Everything of this tier a deck holds, beyond what the main part's reader holds. Reading it
-/// reads every slide, so this is asked for and is not part of opening a deck.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImportedReview {
-    /// Comments, in both forms.
-    pub comments: DeckComments,
-    /// Tags and custom XML.
-    pub custom: DeckCustomData,
-    /// Sensitivity labels.
-    pub labels: DeckLabels,
-    /// Each slide-like part's marks, for parts that hold any.
-    pub marks: Vec<(String, PartMarks)>,
-    /// Slide-like parts that could not be walked. Set aside and named.
-    pub marks_set_aside: Vec<String>,
-    /// Parts kept whole.
-    pub retained: Vec<RetainedPart>,
-    /// The report.
-    pub findings: Findings,
-    /// What the colour readers noticed in comment text.
-    pub color_findings: ColorFindings,
-}
-
-/// The slide-like parts of a deck, by following relationships from the main part: slides,
-/// and each slide's layout and master and notes. An unreachable part holds nothing here.
-pub fn slide_like_parts(package: &PresentationPackage) -> Vec<String> {
-    const KINDS: [&str; 6] = [
-        "slide",
-        "slideLayout",
-        "slideMaster",
-        "notesSlide",
-        "notesMaster",
-        "handoutMaster",
-    ];
-    let names = name_map(package);
-    let mut scratch = Findings::new(0);
-    let mut out: Vec<String> = Vec::new();
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut queue = vec![package.main_part().to_owned()];
-    while let Some(source) = queue.pop() {
-        let rels = package.relationships_of(&source).to_vec();
-        for rel in &rels {
-            let kind = crate::slide::rel_suffix(rel);
-            if !kind.is_some_and(|k| KINDS.contains(&k)) {
-                continue;
-            }
-            let single = [rel.rel_type.as_str()];
-            for part in targets_of(&names, &source, std::slice::from_ref(rel), &single, &mut scratch) {
-                if seen.insert(part.clone()) {
-                    queue.push(part.clone());
-                    out.push(part);
+                for data in r.children(&graphic)? {
+                    for model in r.children(&data)? {
+                        if model.is(MODEL3D, "model3d") {
+                            let mut o = read_model(r, &model)?;
+                            o.fallback_rel_id = picture_fallback(r, pic)?.or(o.fallback_rel_id);
+                            check_links(r, rels, alternate, &o);
+                            return Ok(Some(o));
+                        }
+                    }
                 }
             }
         }
     }
+    Ok(None)
+}
+
+/// Which family a retained part belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RetainedPartKind {
+    /// An OLE object or an embedded package.
+    Ole,
+    /// An ActiveX control's part, or its binary.
+    Control,
+    /// A legacy VML drawing.
+    Vml,
+    /// A 3D model.
+    Model3d,
+}
+
+/// What became of a retained part. It stays in the saved file whichever this is.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RetainedStatus {
+    /// Its bytes are there and intact.
+    Kept,
+    /// It is a link out of the file, which is never followed.
+    External,
+    /// It is missing or its bytes are damaged. Set aside, with why, and the deck opens.
+    SetAside {
+        /// The stable code (docs/20).
+        code: &'static str,
+    },
+}
+
+/// One retained part, for the report. Part names only, never document content.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RetainedPart {
+    /// Which family.
+    pub kind: RetainedPartKind,
+    /// The part holding the relationship, or empty for a part nothing refers to.
+    pub source: String,
+    /// The relationship's id, or empty for a part nothing refers to.
+    pub rel_id: String,
+    /// The part's name. Empty for a link, whose target is document content, or a missing part.
+    pub target: String,
+    /// What became of it.
+    pub status: RetainedStatus,
+}
+
+fn kind_of_relationship(rel: &Relationship) -> Option<RetainedPartKind> {
+    match rel_suffix(rel) {
+        Some("oleObject" | "package") => Some(RetainedPartKind::Ole),
+        Some("control") => Some(RetainedPartKind::Control),
+        Some("vmlDrawing") => Some(RetainedPartKind::Vml),
+        _ if rel.rel_type.ends_with("/activeXControlBinary") => Some(RetainedPartKind::Control),
+        _ if rel.rel_type.ends_with("/model3d") => Some(RetainedPartKind::Model3d),
+        _ => None,
+    }
+}
+
+fn kind_of_name(name: &str) -> Option<RetainedPartKind> {
+    let lower = name.to_ascii_lowercase();
+    if lower.contains("/_rels/") {
+        None
+    } else if lower.ends_with(".vml") {
+        Some(RetainedPartKind::Vml)
+    } else if lower.starts_with("ppt/embeddings/") {
+        Some(RetainedPartKind::Ole)
+    } else if lower.starts_with("ppt/activex/") {
+        Some(RetainedPartKind::Control)
+    } else if lower.ends_with(".glb") {
+        Some(RetainedPartKind::Model3d)
+    } else {
+        None
+    }
+}
+
+/// Name every retained part in the deck, referred to or not, and set aside any that is
+/// missing or damaged. Each is read once, to check its bytes, by a second reader of the
+/// file, so this charges nothing to `package`'s read budget, and the bytes are dropped
+/// unlooked at. When that second reader's budget runs out, what is left is set aside.
+pub fn retained_report(package: &PresentationPackage) -> Vec<RetainedPart> {
+    let mut names = package.part_names();
+    names.sort();
+    let mut checker = None;
+    let mut targets = BTreeSet::new();
+    let mut out = Vec::new();
+    for source in &names {
+        for rel in package.relationships_of(source) {
+            let Some(kind) = kind_of_relationship(rel) else {
+                continue;
+            };
+            let (target, status) = if rel.mode == TargetMode::External {
+                (String::new(), RetainedStatus::External)
+            } else {
+                let actual = resolve_internal(source, &rel.target)
+                    .and_then(|t| names.iter().find(|n| part_names_equivalent(n, &t)));
+                match actual {
+                    Some(name) => {
+                        targets.insert(name.clone());
+                        (name.clone(), check_bytes(package, &mut checker, name))
+                    }
+                    None => (
+                        String::new(),
+                        RetainedStatus::SetAside {
+                            code: missing_code(),
+                        },
+                    ),
+                }
+            };
+            out.push(RetainedPart {
+                kind,
+                source: source.clone(),
+                rel_id: rel.reportable_id().unwrap_or_default().to_owned(),
+                target,
+                status,
+            });
+        }
+    }
+    for name in &names {
+        if !targets.contains(name)
+            && let Some(kind) = kind_of_name(name)
+        {
+            out.push(RetainedPart {
+                kind,
+                source: String::new(),
+                rel_id: String::new(),
+                target: name.clone(),
+                status: check_bytes(package, &mut checker, name),
+            });
+        }
+    }
     out.sort();
     out
 }
 
-/// Read everything of this tier. Never refuses: see the module documentation.
-pub fn import_review(
-    package: &mut PresentationPackage,
-    deck: &Deck,
-    limits: &ReviewLimits,
-    import: &ImportLimits,
-) -> ImportedReview {
-    let mut findings = Findings::new(import.max_findings);
-    let mut color = ColorFindings::default();
-    let slide_parts = slide_like_parts(package);
-    let comments = read_deck_comments(package, &slide_parts, limits, import, &mut findings, &mut color);
-    let custom = read_deck_custom_data(package, &slide_parts, limits, import, &mut findings);
-    let retained = retained_parts(package, &mut findings);
-    let mut marks = Vec::new();
-    let mut marks_set_aside = Vec::new();
-    for part in &slide_parts {
-        let read = read_part_or_set_aside(package, part, &mut findings, &mut marks_set_aside, |t, r, f| {
-            import_part_marks(t, part, r, limits, import, f)
-        });
-        if let Some(m) = read
-            && m != PartMarks::default()
-        {
-            marks.push((part.clone(), m));
-        }
+fn missing_code() -> &'static str {
+    OoxmlError::MissingPart {
+        name: String::new(),
     }
-    check_zoom_targets(&deck.presentation, &marks, &mut findings);
-    check_comment_rels(package, &marks, &mut findings);
-    let mut labels = DeckLabels {
-        labels: labels_in_custom_properties(deck, limits),
-        set_aside: None,
-    };
-    let names = name_map(package);
-    let root_rels = package.relationships_of("").to_vec();
-    for part in targets_of(&names, "", &root_rels, LABELS_RELATIONSHIP, &mut findings) {
-        let mut aside = Vec::new();
-        let read = read_part_or_set_aside(package, &part, &mut findings, &mut aside, |t, _, f| {
-            import_label_info(t, &part, limits, import, f)
-        });
-        match read {
-            Some(found) => labels.labels.extend(found),
-            None => labels.set_aside = aside.pop(),
-        }
-    }
-    ImportedReview {
-        comments,
-        custom,
-        labels,
-        marks,
-        marks_set_aside,
-        retained,
-        findings,
-        color_findings: color,
-    }
+    .code()
 }
 
-/// A `commentRel` should name a comment relationship of its own part.
-fn check_comment_rels(
+fn check_bytes(
     package: &PresentationPackage,
-    marks: &[(String, PartMarks)],
-    findings: &mut Findings,
-) {
-    for (part, m) in marks {
-        let Some(id) = &m.comment_rel else { continue };
-        let good = package.relationships_of(part).iter().any(|r| {
-            &r.id == id && crate::comment::THREADED_COMMENTS_RELATIONSHIP.contains(&r.rel_type.as_str())
-        });
-        if !good {
-            findings.note(K::Review(ReviewFinding::CommentRelMismatch), part, "commentRel", Some("id"));
+    checker: &mut Option<PresentationPackage>,
+    name: &str,
+) -> RetainedStatus {
+    if checker.is_none() {
+        match PresentationPackage::open(package.save_unedited(), *package.limits()) {
+            Ok(opened) => *checker = Some(opened),
+            Err(err) => return RetainedStatus::SetAside { code: err.code() },
         }
+    }
+    let Some(reader) = checker.as_mut() else {
+        return RetainedStatus::SetAside {
+            code: missing_code(),
+        };
+    };
+    match reader.read_part(name) {
+        Ok(_) => RetainedStatus::Kept,
+        Err(err) => RetainedStatus::SetAside { code: err.code() },
     }
 }

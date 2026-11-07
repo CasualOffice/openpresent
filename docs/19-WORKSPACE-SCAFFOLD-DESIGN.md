@@ -21,6 +21,8 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
 
 `-import` depends on `-geometry` from Tier 1E (`GEO-04`), to check a preset's token and adjust names and to compile custom geometry as it is read. It evaluates nothing at a size. `-geometry` parses no XML and depends on nothing.
 
+`-ooxml` has `-geometry` as a dev-dependency only: `tests/geometry_fixtures.rs` holds the hostile custom-geometry decks (`GEO-04`) to the geometry caps, and nothing ships it. It is no layer dependency, and the diagram above stays true.
+
 `-style` exists from Tier 1D and depends on `-model` alone; its tests read fixtures through `-import` and `-ooxml` as dev-dependencies only, which the DAG allows because nothing ships them. `-layout` is its first product consumer (Phase 2).
 
 `server/*` depends on `crates/*`; nothing in `crates/` depends on a server. CI does not check this yet (`CI-01`).

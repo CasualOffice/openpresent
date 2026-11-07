@@ -254,7 +254,13 @@ fn strict_namespace_and_percent_forms_read() {
 fn every_transform_element_reads() {
     for kind in K::ALL {
         let name = kind.as_xml();
-        let inner = format!(r#"<a:srgbClr val="000000"><a:{name} val="1000"/></a:srgbClr>"#);
+        // A transform with no value has no `val` to read: one there is reported, below.
+        let value = if kind.domain() == casual_slide_model::color::ValueDomain::None {
+            ""
+        } else {
+            r#" val="1000""#
+        };
+        let inner = format!(r#"<a:srgbClr val="000000"><a:{name}{value}/></a:srgbClr>"#);
         let (got, f) = color(&inner);
         assert_eq!(f, Findings::default(), "{name}");
         let got = got.unwrap();
@@ -451,6 +457,11 @@ fn themes_in_the_corpus_import_and_resolve() {
         let parts = read_theme_parts(&mut pkg).unwrap();
         assert!(!parts.is_empty(), "{name}: no theme part");
         for (part, tree) in parts {
+            if part.contains("themeOverride") {
+                let got = import_theme_override(&tree).unwrap_or_else(|e| panic!("{part}: {e}"));
+                assert_eq!(got.findings, Findings::default(), "{name} {part}");
+                continue;
+            }
             let got = import_theme(&tree).unwrap_or_else(|e| panic!("{name} {part}: {e}"));
             assert_eq!(got.findings, Findings::default(), "{name} {part}");
             let scheme = got.value.elements.unwrap().color_scheme.unwrap();
@@ -613,14 +624,18 @@ fn foreign_look_alikes_are_not_believed() {
     // A colour in another namespace is not a colour.
     let (got, f) = color(r#"<x:srgbClr xmlns:x="urn:x" val="123456"/>"#);
     assert_eq!(got, None);
-    assert_eq!(codes(&f), ["CS-CLR-0007"]);
+    assert_eq!(codes(&f), ["CS-CLR-0007", "CS-CLR-0009"]);
     // A foreign attribute does not stand in for the schema's.
     let (got, f) = color(r#"<a:srgbClr xmlns:x="urn:x" x:val="000000" val="4472C4"/>"#);
     assert_eq!(
         got.unwrap().value,
         ColorValue::Srgb(Rgb::new(0x44, 0x72, 0xC4))
     );
-    assert_eq!(f, Findings::default());
+    assert_eq!(
+        codes(&f),
+        ["CS-CLR-0009"],
+        "the foreign attribute is reported, not read"
+    );
     let (got, _) = color(r#"<a:srgbClr xmlns:x="urn:x" x:val="000000"/>"#);
     assert_eq!(got, None);
     // A foreign child of a colour is reported, and the colour stands.

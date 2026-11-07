@@ -199,13 +199,49 @@ pub fn is_color_element(tree: &XmlTree, id: ElementId) -> bool {
     )
 }
 
+/// Report the attributes of `el` no reader here uses. They stay in the tree, and the report
+/// is how anyone hears of them. Namespace declarations are not content.
+pub(crate) fn report_unread_attributes(
+    tree: &XmlTree,
+    el: ElementId,
+    known: &[&str],
+    findings: &mut Findings,
+) {
+    let Ok(attributes) = tree.attributes(el, "") else {
+        return;
+    };
+    for (name, _) in attributes {
+        let declaration = name == "xmlns" || name.starts_with("xmlns:");
+        if !declaration && !known.contains(&name.as_str()) {
+            findings.push(FindingKind::Unmodelled, tree, el, "attribute");
+        }
+    }
+}
+
+/// Report every child of an element that may have none.
+pub(crate) fn report_unread_children(tree: &XmlTree, el: ElementId, findings: &mut Findings) {
+    for child in bounded_children(tree, el, findings) {
+        findings.push(FindingKind::Unmodelled, tree, child, "");
+    }
+}
+
 /// Read `EG_ColorChoice` from a holder that has exactly one colour as a child.
-/// `None`, reported, if it has none or the colour cannot be believed.
+/// `None`, reported, if it has none or the colour cannot be believed. Anything else in it
+/// is reported.
 pub fn read_color_choice(
     tree: &XmlTree,
     holder: ElementId,
     findings: &mut Findings,
 ) -> Option<Color> {
+    for child in bounded_children(tree, holder, findings) {
+        if !is_color_element(tree, child) {
+            findings.push(FindingKind::Unmodelled, tree, child, "");
+        }
+    }
+    first_color(tree, holder, findings)
+}
+
+fn first_color(tree: &XmlTree, holder: ElementId, findings: &mut Findings) -> Option<Color> {
     let mut found = None;
     let mut any = false;
     for child in bounded_children(tree, holder, findings) {
@@ -236,7 +272,7 @@ pub fn read_optional_color(
         .into_iter()
         .any(|c| is_color_element(tree, c));
     if has {
-        read_color_choice(tree, holder, findings)
+        first_color(tree, holder, findings)
     } else {
         None
     }
@@ -248,6 +284,13 @@ pub fn read_color(tree: &XmlTree, el: ElementId, findings: &mut Findings) -> Opt
         findings.push(FindingKind::MalformedAttributes, tree, el, "");
         return None;
     }
+    let known: &[&str] = match tree.local_name(el) {
+        "scrgbClr" => &["r", "g", "b"],
+        "hslClr" => &["hue", "sat", "lum"],
+        "sysClr" => &["val", "lastClr"],
+        _ => &["val"],
+    };
+    report_unread_attributes(tree, el, known, findings);
     let value = read_value(tree, el, findings)?;
     let mut transforms = Vec::new();
     let mut seen = 0usize;
@@ -366,9 +409,12 @@ fn read_transform(
     findings: &mut Findings,
 ) -> Option<ColorTransform> {
     let domain = kind.domain();
+    report_unread_children(tree, el, findings);
     if domain == ValueDomain::None {
+        report_unread_attributes(tree, el, &[], findings);
         return Some(ColorTransform::new(kind, 0));
     }
+    report_unread_attributes(tree, el, &["val"], findings);
     let bad = |findings: &mut Findings| {
         findings.push(FindingKind::BadTransform, tree, el, "val");
     };

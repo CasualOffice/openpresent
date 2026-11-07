@@ -531,6 +531,7 @@ pub fn verify<T: PartialEq>(
 }
 
 /// Patch a tree of `coreProperties` to say `after`. Returns the nodes changed.
+// spec-audit: owner=coreProperties
 pub fn patch_core_properties(
     tree: &mut XmlTree,
     part: &str,
@@ -629,6 +630,7 @@ fn patch_date(
     )
 }
 
+// spec-audit: owner=keywords
 fn patch_keywords(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -662,6 +664,7 @@ fn patch_keywords(
 }
 
 /// The element name of a variant.
+// spec-audit: owner=variant,vector,array,property
 fn variant_local(v: &Variant) -> &'static str {
     match v {
         Variant::Variant(_) => "variant",
@@ -737,6 +740,7 @@ fn variant_text(v: &Variant) -> Option<String> {
 const MAX_WRITE_DEPTH: usize = 16;
 
 /// Write a variant as a new last child of `parent`.
+// spec-audit: owner=variant,vector,array,property
 fn write_variant(
     w: &mut Writer<'_>,
     parent: &Elem,
@@ -782,6 +786,7 @@ fn write_variant(
 }
 
 /// Make a `vt:vector` say this: attributes set, content replaced.
+// spec-audit: owner=vector
 fn fill_vector(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -797,6 +802,7 @@ fn fill_vector(
     Ok(())
 }
 
+// spec-audit: owner=HeadingPairs,TitlesOfParts,HLinks
 fn patch_vector_holder(
     w: &mut Writer<'_>,
     holder: &Elem,
@@ -815,6 +821,7 @@ fn patch_vector_holder(
 }
 
 #[allow(clippy::ptr_arg)] // The shape `sync_child` calls, with `T = String`.
+// spec-audit: owner=DigSig
 fn patch_dig_sig(
     w: &mut Writer<'_>,
     holder: &Elem,
@@ -833,6 +840,7 @@ fn patch_dig_sig(
 }
 
 /// Patch a tree of extended `Properties` to say `after`. Returns the nodes changed.
+// spec-audit: owner=Properties
 pub fn patch_app_properties(
     tree: &mut XmlTree,
     part: &str,
@@ -908,6 +916,7 @@ pub fn patch_app_properties(
     Ok(w.changes)
 }
 
+// spec-audit: owner=property
 fn patch_custom_property(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -957,6 +966,7 @@ fn patch_custom_property(
 }
 
 /// Patch a tree of custom `Properties` to say `after`. Returns the nodes changed.
+// spec-audit: owner=Properties
 pub fn patch_custom_properties(
     tree: &mut XmlTree,
     part: &str,

@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ds:datastoreItem ds:itemID="{CCCCCCCC-0000-4000-8000-000000000001}" xmlns:ds="http://schemas.openxmlformats.org/officeDocument/2006/customXml"><ds:schemaRefs><ds:schemaRef ds:uri="urn:example:note"/><ds:schemaRef ds:uri="urn:example:other"/></ds:schemaRefs></ds:datastoreItem>

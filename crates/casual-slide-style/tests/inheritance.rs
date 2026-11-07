@@ -96,7 +96,7 @@ fn part_with(
 /// A slide placeholder case: what it is, its type, idx and kind, the layout match.
 type SlideCase<'a> = (&'a str, Option<T>, Option<u32>, NodeKind, Option<&'a str>);
 
-/// BEH-01: slide to layout by `idx` (MS-OI29500 2.1.1127), layout to master by
+/// BEH-01: slide to layout by `idx` (MS-OI29500, Part 1 Section 19.3.1.36), layout to master by
 /// type then class (Inferred), notes slide to notes master by type (documented).
 #[test]
 fn beh_01_placeholder_matching_table() {

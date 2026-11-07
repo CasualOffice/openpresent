@@ -37,9 +37,9 @@ use crate::text::patch_text_body;
 type Result<T = ()> = std::result::Result<T, ExportError>;
 
 /// `p14:`.
-pub(crate) const P14: Space = Space::Other(casual_slide_import::comment::P14, "p14");
+pub(crate) const P14: Space = Space::P14;
 /// `p15:`.
-pub(crate) const P15: Space = Space::Other(casual_slide_import::comment::P15, "p15");
+pub(crate) const P15: Space = Space::P15;
 /// `p188:`.
 pub(crate) const P188: Space = Space::Other(casual_slide_import::comment::P188, "p188");
 /// `p223:`.
@@ -63,7 +63,7 @@ pub(crate) const ACS: Space = Space::Other(casual_slide_import::section::ACS, "a
 /// `p202:`.
 pub(crate) const P202: Space = Space::Other(casual_slide_import::section::P202, "p202");
 /// `clbl:`.
-pub(crate) const CLBL: Space = Space::Other(casual_slide_import::retained::CLBL, "clbl");
+pub(crate) const CLBL: Space = Space::Other(casual_slide_import::custom_data::CLBL, "clbl");
 
 /// A `presenceInfo` entry's `uri`, as `fixtures/real` has it.
 const PRESENCE_URI: &str = "{19B8F6BF-5375-455C-9EA6-DF929625EA0E}";

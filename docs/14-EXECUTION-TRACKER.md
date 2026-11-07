@@ -209,6 +209,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | SPEC-09 | A place for named reasons | Open | P0 | Checklist has no column for why a row is unmarked, so "or carries a named reason" cannot be gated | `audit.py --check` fails on an unaccounted row |
 | T1C-03 | Theme default `spPr` not reported, no writer for object defaults | Open | P1 | Part of `T1C-02` | Silent-drop test covers themes |
 | T2E-01 | Built-in table style definitions | Open | P1 | Real decks name built-in GUIDs with an empty `tableStyles.xml`, so tables would look unstyled when rendered. Phase 2. Definitions must be ours, not copied | Styled tables render |
+| T1N-08 | Wire `replace_media` to the writer | In progress | P1 | Only plans today; a replacement needing a new relationship cannot be saved. No real deck holds audio or video, so MEDIA rests on synthetic decks until `PV-01` | Saved deck holds the new image |
 | GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
@@ -249,9 +250,9 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1F-03 | Autofit properties | Done | P0 | Stored as written; recomputation is 2D6 | Stored values round-trip |
 | T1G-01 | Tables | Done | P0 | `a:tbl`, grid, rows, cells, merges, cell properties. Merge behaviour rests on synthetic fixtures only: no real deck has a merged table. Adding or removing rows, cells or columns is refused until Phase 6 | Fixed point; 20 mutants red |
 | T1G-02 | Table styles | Done | P1 | `tableStyles.xml`; unknown GUID reported. Real decks name built-in styles and we hold no definitions: `T2E-01` | Unknown GUID never crashes |
-| T1H-01 | Pictures | In progress | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
-| T1H-02 | SVG with PNG fallback | In progress | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
-| T1H-03 | Audio and video | In progress | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
+| T1H-01 | Pictures | Done | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
+| T1H-02 | SVG with PNG fallback | Done | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
+| T1H-03 | Audio and video | Done | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
 | T1I-01 | Timing tree | In progress | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
 | T1I-02 | Transitions | In progress | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
 | T1J-01 | Classic charts | Open | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |

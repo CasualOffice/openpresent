@@ -161,6 +161,8 @@ def fixtures():
     yield "generated/case-differs.pptx", zipped(cased), "open"
     from generate_presets import fixtures as preset_fixtures  # imports this module, so not at the top
     yield from preset_fixtures()
+    from generate_retained import fixtures as retained_fixtures  # also imports this module
+    yield from retained_fixtures()
 
     # OPC-01: one part, spelled differently by its relationship and its ZIP item.
     yield "generated/percent-encoded-names.pptx", zipped(deck(
@@ -257,10 +259,16 @@ def fixtures():
     yield from text_fixtures()
     from generate_table import fixtures as table_fixtures  # imports this module, so not at the top
     yield from table_fixtures()
+    from generate_media import fixtures as media_fixtures  # imports this module, so not at the top
+    yield from media_fixtures()
     from generate_shapes import fixtures as shape_fixtures  # imports this module, so not at the top
     yield from shape_fixtures()
     from generate_review import fixtures as review_fixtures  # imports this module, so not at the top
     yield from review_fixtures()
+    from generate_close import fixtures as close_fixtures  # as above
+    yield from close_fixtures()
+    from generate_timing import fixtures as timing_fixtures  # imports this module, so not at the top
+    yield from timing_fixtures()
 
 
 def main_part(xml):

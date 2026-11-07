@@ -10,8 +10,7 @@
 //!
 //! A run's fill, line, effects and underline line and fill are Tier 1E's own types, as
 //! are a body's `prstTxWarp`, `scene3d` and `EG_Text3D`. What is still another tier's
-//! stays in the part's tree, preserved but not modelled, and named in the report: a
-//! picture bullet's `a:blip` beyond its relationship, and `extLst`.
+//! stays in the part's tree, preserved but not modelled, and named in the report: `extLst`.
 //!
 //! Text content is document data: it lives here and in the tree, and never reaches
 //! a diagnostic.
@@ -423,7 +422,7 @@ pub enum BulletFont {
     Font(TextFont),
 }
 
-/// `a:EG_TextBullet`.
+/// `a:EG_TextBullet`, with `a:CT_TextBlipBullet` for a picture.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bullet {
     /// `buNone`.
@@ -437,12 +436,9 @@ pub enum Bullet {
     },
     /// `buChar/@char`, which the schema requires.
     Char(Option<String>),
-    /// `buBlip`: the picture's relationship. The rest of `a:blip` belongs to the
-    /// picture tier and stays in the tree; nothing here reads the image.
-    Picture {
-        /// `a:blip/@r:embed`.
-        embed: Option<String>,
-    },
+    /// `buBlip`: its `blip`, Tier 1H's type. `None` if the schema's required blip is missing
+    /// or was over a bound. Nothing here reads the image.
+    Picture(Option<Box<crate::fill::Blip>>),
 }
 
 /// `a:CT_TextTabStop`.

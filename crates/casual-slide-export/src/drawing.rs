@@ -17,9 +17,13 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use casual_slide_import::drawing::{A14, ASK};
+use casual_slide_import::media::{AIF, ASVG, P14, P173, WOE};
 use casual_slide_import::properties::{Elem, ns};
+use casual_slide_import::timing::MC;
+use casual_slide_import::transition::{P15, P159};
 use casual_slide_model::color::{Angle, Color, ColorValue, Percentage, format_percentage};
 use casual_slide_model::drawing::{HiddenProperties, ShapeProperties};
+use casual_slide_model::fill::{Blip, Fill};
 use casual_slide_model::presentation::Coordinate;
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::NodeKind;
@@ -38,20 +42,34 @@ pub(crate) enum Space {
     Pml,
     A14,
     Ask,
+    Asvg,
+    Woe,
+    Aif,
+    P14,
+    P173,
+    Mc,
+    P15,
+    P159,
     /// A namespace this file does not need by name: its URIs and its usual prefix.
     Other(&'static [&'static str], &'static str),
 }
 
-const SPACES: [Space; 18] = [
+const SPACES: [Space; 24] = [
     Space::Dml,
     Space::Pml,
     Space::A14,
     Space::Ask,
-    crate::comment::P15,
+    Space::Asvg,
+    Space::Woe,
+    Space::Aif,
+    Space::P14,
+    Space::P173,
+    Space::Mc,
+    Space::P15,
+    Space::P159,
     crate::comment::P188,
     crate::comment::P223,
     crate::comment::P228,
-    crate::comment::P14,
     crate::comment::P166,
     crate::comment::PSLZ,
     crate::comment::PSEZ,
@@ -70,6 +88,14 @@ impl Space {
             Self::Pml => ns::PML,
             Self::A14 => A14,
             Self::Ask => ASK,
+            Self::Asvg => ASVG,
+            Self::Woe => WOE,
+            Self::Aif => AIF,
+            Self::P14 => P14,
+            Self::P173 => P173,
+            Self::Mc => MC,
+            Self::P15 => P15,
+            Self::P159 => P159,
             Self::Other(uris, _) => uris,
         }
     }
@@ -80,6 +106,14 @@ impl Space {
             Self::Pml => "p",
             Self::A14 => "a14",
             Self::Ask => "ask",
+            Self::Asvg => "asvg",
+            Self::Woe => "woe",
+            Self::Aif => "aif",
+            Self::P14 => "p14",
+            Self::P173 => "p173",
+            Self::Mc => "mc",
+            Self::P15 => "p15",
+            Self::P159 => "p159",
             Self::Other(_, prefix) => prefix,
         }
     }
@@ -94,6 +128,8 @@ enum Value {
     Percent(i32),
     /// A relationship id: the attribute is in the relationships namespace.
     Rel(String),
+    /// An attribute in `p14`, under whatever prefix the part uses.
+    P14(String),
     /// `ST_PositiveCoordinate`, which PowerPoint stops short of the schema's maximum of.
     PositiveCoordinate(i64),
     /// A dash stop, which PowerPoint wants above zero.
@@ -113,6 +149,8 @@ pub(crate) struct Node {
     text: Option<String>,
     /// What this element's `extLst` holds, by item, each in an `ext` of its own.
     exts: Vec<Node>,
+    /// The `uri` of the `ext` to hold this, where only the file can say.
+    ext_uri: Option<String>,
 }
 
 impl Node {
@@ -124,6 +162,24 @@ impl Node {
             kids: Vec::new(),
             text: None,
             exts: Vec::new(),
+            ext_uri: None,
+        }
+    }
+
+    /// The `uri` of the `ext` to hold this, where [`extension_uri`] has none.
+    pub fn ext_uri(mut self, uri: Option<&String>) -> Self {
+        self.ext_uri = uri.cloned();
+        self
+    }
+
+    /// An extension's item, named with its conventional prefix.
+    pub fn extension(qualified: &'static str) -> Self {
+        match qualified.split_once(':') {
+            Some(("asvg", local)) => Self::new(Space::Asvg, local),
+            Some(("woe", local)) => Self::new(Space::Woe, local),
+            Some(("aif", local)) => Self::new(Space::Aif, local),
+            Some((_, local)) => Self::new(Space::P173, local),
+            None => Self::a(qualified),
         }
     }
 
@@ -176,6 +232,14 @@ impl Node {
         self
     }
 
+    /// An attribute in the 2010 namespace.
+    pub fn p14(mut self, name: &'static str, value: Option<&String>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::P14(value.clone())));
+        }
+        self
+    }
+
     pub fn kid(mut self, kid: Node) -> Self {
         self.kids.push(kid);
         self
@@ -208,6 +272,11 @@ impl Node {
     /// Whether this element holds this attribute.
     fn value(&self, name: &str) -> Option<&Value> {
         self.attrs.iter().find(|(n, _)| *n == name).map(|(_, v)| v)
+    }
+
+    /// The element's local name.
+    pub fn local(&self) -> &'static str {
+        self.local
     }
 
     pub(crate) fn same_name(&self, other: &Node) -> bool {
@@ -271,6 +340,13 @@ const CHOICES: &[&[&str]] = &[
     &["prstDash", "custDash"],
     &["round", "bevel", "miter"],
     &["tile", "stretch"],
+    &[
+        "audioCd",
+        "wavAudioFile",
+        "audioFile",
+        "videoFile",
+        "quickTimeFile",
+    ],
 ];
 
 /// `path` means a shade only in a gradient; in `pathLst` it is one of a list.
@@ -307,6 +383,21 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
             "extLst",
         ],
         "pic" => &["nvPicPr", "blipFill", "spPr", "style", "extLst"],
+        "nvPr" => &[
+            "ph",
+            "audioCd",
+            "wavAudioFile",
+            "audioFile",
+            "videoFile",
+            "quickTimeFile",
+            "custDataLst",
+            "extLst",
+        ],
+        "audioCd" => &["st", "end", "extLst"],
+        "tracksInfo" => &["trackLst"],
+        "trackLst" => &["track"],
+        "media" => &["trim", "fade", "bmkLst", "extLst"],
+        "hlinkClick" | "hlinkHover" | "hlinkMouseOver" => &["snd", "extLst"],
         "gradFill" => &["gsLst", "lin", "path", "tileRect"],
         "blipFill" => &["blip", "srcRect", "tile", "stretch"],
         "pattFill" => &["fgClr", "bgClr"],
@@ -344,18 +435,28 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
         "lineSketchStyleProps" => &["custGeom", "prstGeom", "type", "seed", "extLst"],
         // Any number of effects, in any order, then `extLst`.
         "blip" => return Some(usize::from(local == "extLst")),
-        _ => crate::table::order_in(parent).or_else(|| crate::comment::order_in(parent))?,
+        _ => match crate::table::order_in(parent).or_else(|| crate::comment::order_in(parent)) {
+            Some(order) => order,
+            None => return crate::timing::rank(parent, local),
+        },
     };
     order.iter().position(|o| *o == local)
 }
 
 /// The sibling a new child of this name goes before, by the schema's order.
-fn landmark(w: &Writer<'_>, parent: &Elem, local: &str) -> Result<Option<Elem>, ExportError> {
+pub(crate) fn landmark(
+    w: &Writer<'_>,
+    parent: &Elem,
+    local: &str,
+) -> Result<Option<Elem>, ExportError> {
     let Some(mine) = rank(&parent.local, local) else {
         return Ok(None);
     };
     Ok(parent.children(w.tree, w.part)?.into_iter().find(|c| {
-        (c.in_namespace(ns::DML) || c.in_namespace(ns::PML) || c.uri == parent.uri)
+        (c.in_namespace(ns::DML)
+            || c.in_namespace(ns::PML)
+            || c.in_namespace(P14)
+            || c.uri == parent.uri)
             && rank(&parent.local, &c.local).is_some_and(|theirs| theirs > mine)
     }))
 }
@@ -368,7 +469,7 @@ fn out_of_range(w: &Writer<'_>, what: &'static str) -> ExportError {
 }
 
 /// A new child: built, placed, then patched from nothing.
-fn insert_new(
+pub(crate) fn insert_new(
     w: &mut Writer<'_>,
     parent: &Elem,
     before: Option<&Elem>,
@@ -413,6 +514,13 @@ fn write_attr(w: &mut Writer<'_>, el: &Elem, name: &str, value: &Value) -> Resul
             };
             (name.to_owned(), text)
         }
+        Value::P14(text) => {
+            let written = match el.name_of_ns(P14, name) {
+                Some(written) => written.to_owned(),
+                None => format!("{}:{name}", w.declared_prefix(el, P14, "p14")?),
+            };
+            (written, text.clone())
+        }
         Value::Rel(id) => {
             if !id.is_empty()
                 && w.known_rels
@@ -452,6 +560,7 @@ pub(crate) fn patch(
         if after.value(name).is_none() {
             let written = match value {
                 Value::Rel(_) => el.name_of_ns(ns::REL, name).map(str::to_owned),
+                Value::P14(_) => el.name_of_ns(P14, name).map(str::to_owned),
                 _ => Some((*name).to_owned()),
             };
             if let Some(written) = written {
@@ -673,6 +782,8 @@ fn extension_uri(local: &str) -> Option<&'static str> {
         "hiddenLine" => "{91240B29-F687-4F45-9708-019B960494DF}",
         "hiddenEffects" => "{AF507438-7753-43E0-B8FC-AC1667EBCBE1}",
         "useLocalDpi" => "{28A0092B-C50C-407E-A947-70E740481C1C}",
+        "imgProps" => "{BEBA8EAE-BF5A-486C-A8C5-ECC9F3942E4B}",
+        "svgBlip" => "{96DAC541-7B7A-43D3-8B79-37D633B846F1}",
         "lineSketchStyleProps" => "{C807C97D-BFC1-408E-A445-0C87EB9F89A2}",
         _ => return None,
     })
@@ -731,7 +842,7 @@ fn patch_exts(
             patch(w, &item, b, a)?;
             continue;
         }
-        let Some(uri) = extension_uri(a.local) else {
+        let Some(uri) = extension_uri(a.local).or(a.ext_uri.as_deref()) else {
             return Err(out_of_range(w, "adding this extension"));
         };
         let list = match el.first_child(w.tree, w.part, ns::DML, "extLst")? {
@@ -796,6 +907,28 @@ fn properties_node(p: &ShapeProperties, holder: &'static str) -> Node {
         }
     }
     n
+}
+
+fn blip_of(fill: Option<&Fill>) -> Option<&Blip> {
+    match fill {
+        Some(Fill::Blip(f)) => f.blip.as_ref(),
+        _ => None,
+    }
+}
+
+/// An SVG keeps its fallback: an edit taking the blip's own picture away and leaving
+/// `asvg:svgBlip` would leave one older readers cannot show (`MS-ODRAWXML` "Pictures").
+/// A file that arrived that way is reported on reading and left alone.
+pub(crate) fn check_svg_fallback(
+    w: &Writer<'_>,
+    before: Option<&Blip>,
+    after: Option<&Blip>,
+) -> Result<(), ExportError> {
+    let lost = |b: &Blip| b.svg.is_some() && b.embed.is_none() && b.link.is_none();
+    if after.is_some_and(lost) && !before.is_some_and(lost) {
+        return Err(out_of_range(w, "an SVG with no fallback"));
+    }
+    Ok(())
 }
 
 fn matrix_ref(local: &'static str, r: &StyleMatrixRef) -> Node {
@@ -863,6 +996,16 @@ pub(crate) fn patch_properties(
         };
         patch(w, &props, Some(&b), &a)?;
     }
+    check_svg_fallback(
+        w,
+        blip_of(before.fill.as_ref()),
+        blip_of(after.fill.as_ref()),
+    )?;
+    check_svg_fallback(
+        w,
+        before.picture.as_ref().and_then(|f| f.blip.as_ref()),
+        after.picture.as_ref().and_then(|f| f.blip.as_ref()),
+    )?;
     if before.picture != after.picture {
         if kind != NodeKind::Picture {
             return Err(out_of_range(w, "a picture fill on a node not a picture"));

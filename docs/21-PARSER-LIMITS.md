@@ -54,7 +54,7 @@ the central directory, before anything is inflated.
 | Declared size | as declared | A part may not produce more bytes than its entry declares (`SEC-P02`) | CS-PKG-0003 | Partial: removing our bound leaves tests green, because the `zip` crate also enforces it (`SEC-017`) |
 | Whole-package budget | `max_total_uncompressed` | Every read is charged; once spent, reads refuse. **Cumulative over the package's life**, so a long editing session can exhaust it on a legitimate deck (`PKG-01`) | CS-PKG-0003 | Tested |
 | `MAX_UP_FRONT` | `1 << 20` | Capacity allocated before decompressing, whatever the entry declares, so a forged size cannot abort a WebAssembly instance (`SEC-P04`). Nothing proves `read_part` uses it (`SEC-017`) | none: allocation only | Partial |
-| `read_part_capped` | caller's `max` | A caller-chosen ceiling for one part, refused on the declaration with nothing inflated. `PresentationPackage::read_part` does not use it, so optional parts are bounded only by the budget (`PKG-04`) | CS-PKG-0009 | Tested |
+| `read_part_capped` | caller's `max` | A caller-chosen ceiling for one part, refused on the declaration with nothing inflated. `PresentationPackage::read_part_capped` exposes it for binary parts. `PresentationPackage::read_part` does not use it, so optional parts are bounded only by the budget (`PKG-04`) | CS-PKG-0009 | Tested |
 
 ## XML and graph: `OoxmlLimits`
 
@@ -193,6 +193,37 @@ Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fi
 | `max_headers_per_cell` | `1_024` | `header` in one cell's `headers` | CS-TBL-0006 | Tested; `hostile/table-limit-headers.bin` |
 
 A table has a fixed depth, and a style's parts follow no input. What is damaged but not over a bound opens and is reported: `hostile/table-bad-structure.bin`.
+## Media: `MediaLimits`
+
+`crates/casual-slide-import/src/media.rs`. Media is read only by `catalog_media`, on request, and never by opening a deck. Its bytes go to a hash and a header sniff, and are dropped: nothing is decoded, and an SVG is not even sniffed. Each default is Inferred, far above any deck here.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_bookmarks` | `4_096` | `bmk` in one `bmkLst`. Over it, the whole `p14:media` is left out, reported, and kept in the tree | CS-MED-0002 | Tested; `hostile/media-limit-bookmarks.bin`, at the bound and one past |
+| `max_tracks` | `1_024` | `track` in one `trackLst`, the same way | CS-MED-0002 | Tested; `hostile/media-limit-tracks.bin`, at the bound and one past |
+| `max_part_bytes` | `256 << 20` | Bytes one part may declare and still be read for a catalog, refused from the declaration with nothing inflated | CS-MED-0003 | Tested, with the bound lowered: `a_catalog_stops_at_its_bounds_and_says_so`, `a_binary_part_over_the_ceiling_is_refused_with_nothing_inflated` |
+| `max_catalog_parts` | `100_000` | Parts one catalog lists | CS-MED-0008 | Tested, with the bound lowered: the package's `max_entries` is under it by default |
+| `max_catalog_bytes` | `2 << 30` | Bytes one catalog reads, half the package's budget, which is cumulative (`PKG-01`). Checked between parts, so one part can overshoot by its size, itself capped below | CS-MED-0003 | Tested, with the bound lowered |
+| `max_image_pixels` | `1 << 28` | Pixels an image may declare before it is reported. Reported and not refused: nothing here decodes; the renderer in Tier 2E must check it first (`SEC-C01`) | CS-MED-0004 | Tested; `hostile/media-image-bomb.bin`, at the bound and one past |
+| `MAX_HEADER_SCAN` | `1 << 20` | Bytes looked through for a JPEG's size. Past it, the size stays unknown | none: left unknown | Tested in part: `hostile/media-lying-images.bin` covers cut and looping headers. Nothing crosses the bound itself |
+
+A part in a catalog is read by `PresentationPackage::read_part_capped`, which refuses as `CS-PKG-0009` from the declared size; the catalog reports that as CS-MED-0003.
+## Timing: `TimingLimits`
+
+`crates/casual-slide-import/src/timing.rs`, nested in `SlideLimits` as `timing`. Nothing here refuses a deck or a part: crossing a bound leaves the whole `p:timing` or `p:transition` unread and in the tree, reported as `CS-TMG-0001` naming what crossed it (owner instruction 24), and an edit may replace it. The real decks committed hold 6 levels of time nodes at most, and 65 `cTn` across a whole deck (`T1I-01`).
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_node_depth` | `32` | Time nodes nested in time nodes, `mc:AlternateContent` counting as one. Three XML levels each, so it is met well before `max_xml_depth`. The writer holds a tree built by hand to it, as `CS-EXP-0008` | CS-TMG-0001 | Tested; `hostile/timing-limit-depth.bin` |
+| `max_nodes` | `100_000` | Time nodes in one part's timing, the build list's templates included | CS-TMG-0001 | Tested; `hostile/timing-limit-nodes.bin` |
+| `max_conditions` | `4_096` | Conditions in one list | CS-TMG-0001 | Tested; `hostile/timing-limit-conditions.bin` |
+| `max_attr_names` | `1_024` | `attrName` in one `attrNameLst` | CS-TMG-0001 | Tested; `hostile/timing-limit-attr-names.bin` |
+| `max_animate_values` | `65_536` | `tav` in one `tavLst` | CS-TMG-0001 | Tested; `hostile/timing-limit-animate-values.bin` |
+| `max_builds` | `65_536` | Entries in one `bldLst` | CS-TMG-0001 | Tested; `hostile/timing-limit-builds.bin` |
+| `max_templates` | `64` | `tmpl` in one `tmplLst`. Between the schema's 9 and this, they are kept | CS-TMG-0001 | Tested; `hostile/timing-limit-templates.bin` |
+| `max_branches` | `64` | Branches in one `mc:AlternateContent` holding timing or a transition | CS-TMG-0001 | Tested; `hostile/timing-limit-branches.bin` |
+
+Each fixture is seen to read with its bound raised by one (`raising_each_limit_by_one_reads_what_it_refused`). `hostile/timing-long-value.bin` is `CS-TMG-0002` under a lowered `max_value_bytes`. Past `max_xml_depth`, `hostile/timing-beyond-xml-depth.bin` fails in the XML reader before this one sees it: that slide is left out and reported as `CS-IMF-0012`, the deck opens, and `REC-03` and `REC-04` will read more of it. Nothing here evaluates a path or a formula, runs a command, or plays anything. Infinite repeats and a timeline's time budget are Phase 8's (`SEC-C10`).
 
 ## Export
 

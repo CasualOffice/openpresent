@@ -2,12 +2,15 @@
 
 pub mod color;
 pub mod comment;
+pub mod custom_data;
 pub mod d3;
 pub mod drawing;
 pub mod effect;
 pub mod fill;
 pub mod geometry;
 pub mod line;
+pub mod media;
+pub mod picture;
 pub mod presentation;
 pub mod properties;
 pub mod retained;
@@ -17,3 +20,5 @@ pub mod slide;
 pub mod table;
 pub mod text;
 pub mod theme;
+pub mod timing;
+pub mod transition;

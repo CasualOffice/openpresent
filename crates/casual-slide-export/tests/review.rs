@@ -12,7 +12,7 @@ use casual_slide_export::comment::{
     patch_authors, patch_comment_authors, patch_comments, patch_threaded_comments,
 };
 use casual_slide_export::presentation::{patch_presentation, save_deck};
-use casual_slide_export::retained::{
+use casual_slide_export::custom_data::{
     patch_datastore_item, patch_schema_library, patch_tags, save_review,
 };
 use casual_slide_export::section::patch_part_marks;
@@ -24,7 +24,7 @@ use casual_slide_import::comment::{
 };
 use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::{Findings, ImportLimits};
-use casual_slide_import::retained::{
+use casual_slide_import::custom_data::{
     ImportedReview, import_datastore_item, import_review, import_schema_library, import_tags,
 };
 use casual_slide_import::section::import_part_marks;
@@ -32,7 +32,7 @@ use casual_slide_model::comment::{
     Comment, CommentAnchor, CommentReply, CommentStatus, Moniker, ParentComment, ThreadedComment,
 };
 use casual_slide_model::presentation::Deck;
-use casual_slide_model::retained::StringTag;
+use casual_slide_model::custom_data::StringTag;
 use casual_slide_model::section::{
     ClassificationOutcome, DesignerMark, Section, Zoom, ZoomImageType,
 };
