@@ -8,6 +8,9 @@ use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::ImportLimits;
 use casual_slide_import::slide::{SlideLimits, import_slide_parts};
 use casual_slide_model::color::Color;
+use casual_slide_model::effect::EffectProperties;
+use casual_slide_model::fill::Fill;
+use casual_slide_model::line::Line;
 use casual_slide_model::presentation::{Coordinate, Percentage, TextFont};
 use casual_slide_model::shape::{
     Hyperlink, NodeKind, ObjectId, Placeholder, PlaceholderType, ShapeNode,
@@ -16,9 +19,9 @@ use casual_slide_model::slide::{CommonSlideData, MasterTextStyles, SlideKind, Sl
 use casual_slide_model::text::{
     Autofit, BodyProperties, BooleanElement, Bullet, BulletColor, BulletFont, BulletSize, CapsType,
     CharacterProperties, FontAlign, HorizontalOverflow, Paragraph, ParagraphProperties, StrikeType,
-    TabStop, TextAlign, TextAnchor, TextBody, TextEffects, TextFill, TextItem, TextListStyle,
-    TextPoint, TextRun, TextSpacing, TextVertical, TextWarp, TextWrap, UnderlineFill,
-    UnderlineLine, UnderlineType, VerticalOverflow, Written,
+    TabStop, TextAlign, TextAnchor, TextBody, TextItem, TextListStyle, TextPoint, TextRun,
+    TextSpacing, TextVertical, TextWarp, TextWrap, UnderlineFill, UnderlineLine, UnderlineType,
+    VerticalOverflow, Written,
 };
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
 use casual_slide_style::text::{TextChain, TextLevel as L, paragraph_level};
@@ -322,12 +325,12 @@ fn run_families() -> Vec<RunFamily> {
         "smtClean", smart_tag_clean, |i| i % 2 == 0;
         "smtId", smart_tag_id, |i| i as u32;
         "bmk", bookmark, |i| format!("b{i}");
-        "ln", has_line, |i| i % 2 == 0;
-        "fill", fill, |i| TextFill::Solid(Some(Color::srgb(i as u8, 0, 0)));
-        "effects", effects, |i| if i % 2 == 0 { TextEffects::List } else { TextEffects::Dag };
+        "ln", line, |i| Box::new(Line { width: Some(i), ..Line::default() });
+        "fill", fill, |i| Fill::Solid(Some(Color::srgb(i as u8, 0, 0)));
+        "effects", effects, |i| Box::new(EffectProperties::List(vec![casual_slide_model::effect::Effect::Reference(Some(format!("{i}")))]));
         "highlight", highlight, |i| Some(Color::srgb(0, i as u8, 0));
-        "uLn", underline_line, |i| if i % 2 == 0 { UnderlineLine::Line } else { UnderlineLine::FollowText };
-        "uFill", underline_fill, |i| UnderlineFill::Fill(Some(TextFill::Solid(Some(Color::srgb(0, 0, i as u8)))));
+        "uLn", underline_line, |i| UnderlineLine::Line(Box::new(Line { width: Some(i), ..Line::default() }));
+        "uFill", underline_fill, |i| UnderlineFill::Fill(Some(Fill::Solid(Some(Color::srgb(0, 0, i as u8)))));
         "latin", latin, font;
         "ea", east_asian, font;
         "cs", complex_script, font;
@@ -502,13 +505,13 @@ fn a_choice_family_is_one_unit() {
         })),
         ..ParagraphProperties::default()
     };
-    l.style_mut(L::MasterTextStyles).levels[0] = Some(Box::new(run_with(TextFill::Solid(Some(
-        Color::srgb(1, 2, 3),
-    )))));
-    l.style_mut(L::LayoutPlaceholder).levels[0] = Some(Box::new(run_with(TextFill::Gradient)));
+    l.style_mut(L::MasterTextStyles).levels[0] =
+        Some(Box::new(run_with(Fill::Solid(Some(Color::srgb(1, 2, 3))))));
+    l.style_mut(L::LayoutPlaceholder).levels[0] =
+        Some(Box::new(run_with(Fill::Gradient(Box::default()))));
     let chain = l.chain();
     let found = chain.run(None, None, |c| c.fill.as_ref()).unwrap();
-    assert_eq!(*found.value, TextFill::Gradient);
+    assert!(matches!(found.value, Fill::Gradient(_)));
     assert_eq!(found.from, L::LayoutPlaceholder);
 
     let mut l = levels();
@@ -535,21 +538,18 @@ fn a_choice_family_is_one_unit() {
 fn a_group_fill_on_a_run_is_no_fill() {
     let l = levels();
     let run = CharacterProperties {
-        fill: Some(TextFill::Group),
+        fill: Some(Fill::Group),
         ..CharacterProperties::default()
     };
     let chain = l.chain();
-    assert_eq!(
-        *chain.run_fill(Some(&run), None).unwrap().value,
-        TextFill::None
-    );
+    assert_eq!(*chain.run_fill(Some(&run), None).unwrap().value, Fill::None);
     let solid = CharacterProperties {
-        fill: Some(TextFill::Solid(None)),
+        fill: Some(Fill::Solid(None)),
         ..CharacterProperties::default()
     };
     assert_eq!(
         *chain.run_fill(Some(&solid), None).unwrap().value,
-        TextFill::Solid(None)
+        Fill::Solid(None)
     );
 }
 

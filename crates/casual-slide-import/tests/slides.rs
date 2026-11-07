@@ -382,14 +382,11 @@ fn every_node_kind_has_identity_transform_locks_and_links() {
         )
     );
     // What a node holds beyond this tier is in the report, by name.
-    for element in ["prstGeom", "tbl"] {
-        assert!(
-            s.findings.has(K::RetainedElement, element),
-            "{element}: {:?}",
-            s.findings
-        );
-    }
-    assert!(s.findings.has(K::RetainedElement, "blipFill"));
+    assert!(
+        s.findings.has(K::RetainedElement, "tbl"),
+        "{:?}",
+        s.findings
+    );
     assert!(s.findings.has(K::RetainedElement, "AlternateContent"));
     assert_eq!(
         s.parts.get(8).unwrap().shape_tree().unwrap().children.len(),
@@ -620,7 +617,9 @@ fn absent_stays_absent_on_a_bare_node_and_part() {
     expected.app = title.app.clone();
     expected.transform = title.transform;
     expected.text_body = title.text_body.clone();
+    expected.properties = title.properties.clone();
     assert_eq!(*title, expected, "no field the file did not state");
+    assert!(title.properties.fill.is_none() && title.properties.line.is_none());
     let nv = title.non_visual.as_ref().unwrap();
     assert_eq!(
         (nv.descr.as_deref(), nv.hidden, nv.title.as_deref()),

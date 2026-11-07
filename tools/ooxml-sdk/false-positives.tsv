@@ -30,3 +30,4 @@ strict-properties.pptx	Sch_AttributeValueDataTypeDetailed	/ppt/viewProps.xml	p:r
 case-differs.pptx	refused:OpenXmlPackageException	*	*	packaging	a relationship target differing in case from its ZIP item; OPC part names are case-insensitive and the engine resolves it
 percent-encoded-names.pptx	refused:OpenXmlPackageException	*	*	packaging	ZIP items named in percent-encoded form, targets unencoded; ECMA-376 Part 2 makes them one part (OPC-01)
 percent-encoded-targets.pptx	refused:InvalidOperationException	*	*	packaging	ZIP item names with a raw space and a non-ASCII letter, targets percent-encoded; equivalent under ECMA-376 Part 2 (OPC-01)
+slides-*.pptx	Sch_UndeclaredAttribute	/ppt/slides/slide*.xml	graphicFrame	sdk-vs-ecma	ECMA-376 declares bwMode on CT_GraphicalObjectFrame (pml.xsd); the SDK does not. Our fixture, kept to exercise the attribute.

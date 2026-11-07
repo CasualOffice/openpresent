@@ -162,8 +162,8 @@ fn enum_case(simple_type: &str) -> EnumCase {
 enum Outcome {
     /// In the model, and not reported as retained.
     Modelled,
-    /// That it is stated is in the model; what it holds is another tier's, is reported,
-    /// and export cannot add one.
+    /// That it is stated is in the model; what it holds is another tier's, and export
+    /// cannot add one.
     Stated,
     /// Reported as retained, with no model field. Patching leaves it alone.
     Reported,
@@ -339,11 +339,7 @@ fn text_row(id: &str) -> Option<Row> {
                 element = "extLst";
                 run_row("", "<a:extLst/>")
             }
-            "ln" => {
-                outcome = Stated;
-                element = "ln";
-                run_row("", r#"<a:ln w="1"/>"#)
-            }
+            "ln" => run_row("", r#"<a:ln w="1"/>"#),
             "highlight" => run_row("", r#"<a:highlight><a:srgbClr val="FF0000"/></a:highlight>"#),
             "latin" | "ea" | "cs" | "sym" => run_row("", &format!(r#"<a:{name} typeface="Arial"/>"#)),
             "hlinkClick" | "hlinkMouseOver" => run_row("", &format!(r#"<a:{name} r:id="rId2"/>"#)),
@@ -365,11 +361,7 @@ fn text_row(id: &str) -> Option<Row> {
                 run_row(&attr(name, value), "")
             }
         },
-        "EG_TextUnderlineLine" if name == "uLn" => {
-            outcome = Stated;
-            element = "uLn";
-            run_row("", r#"<a:uLn w="1"/>"#)
-        }
+        "EG_TextUnderlineLine" if name == "uLn" => run_row("", r#"<a:uLn w="1"/>"#),
         "EG_TextUnderlineFill" if name == "uFill" => {
             run_row("", r#"<a:uFill><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:uFill>"#)
         }

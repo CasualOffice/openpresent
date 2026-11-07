@@ -4,8 +4,9 @@
 //!
 //! A value that can be used goes in the model, with its written form where the type
 //! has several. One that cannot is reported and left out, and stays in the tree. What
-//! other tiers own (a gradient, a line, an effect, 3D, `extLst`) is reported and stays
-//! in the tree, and a run's fill says only which it is. A count over a bound in
+//! other tiers still own (3D, a warp's `avLst`, a picture bullet's content, `extLst`) is
+//! reported and stays in the tree. A run's fill, line and effects go through Tier 1E's
+//! readers, with their own bounds. A count over a bound in
 //! [`TextLimits`] refuses the part. Nothing here recurses on input: a text body has a
 //! fixed depth, and colours have their own bound.
 //!
@@ -21,12 +22,13 @@ use casual_slide_model::text::{
     Bullet, BulletColor, BulletFont, BulletSize, CharacterProperties, FONT_SCALE_MAX,
     FONT_SCALE_MIN, FONT_SIZE_MIN, LineBreak, Paragraph, ParagraphProperties, SPACING_PERCENT_MAX,
     SPACING_POINT_MAX, TEXT_COLUMNS_MAX, TEXT_LEVEL_MAX, TEXT_MARGIN_MAX, TEXT_POINT_MAX, TabStop,
-    TextBody, TextEffects, TextField, TextFill, TextItem, TextListStyle, TextPoint, TextRun,
-    TextSpacing, TextWarp, UnderlineFill, UnderlineLine, Written,
+    TextBody, TextField, TextItem, TextListStyle, TextPoint, TextRun, TextSpacing, TextWarp,
+    UnderlineFill, UnderlineLine, Written,
 };
 use casual_slide_ooxml::Relationship;
 
 use crate::color::{Findings as ColorFindings, read_color_choice};
+use crate::drawing::{DrawingLimits, is_fill_element, read_effects, read_fill, read_line};
 use crate::presentation::read_text_font;
 use crate::properties::{
     Elem, ImportError, ImportFindingKind as K, Reader, TextBound, is_guid, ns,
@@ -670,19 +672,15 @@ impl TextReader<'_, '_> {
             }
             match name {
                 "ln" => {
-                    c.has_line = Some(true);
-                    self.r.retained(&child);
+                    c.line = read_line(self.r, self.rels, DrawingLimits::default(), &child)?
+                        .map(Box::new);
                 }
                 "noFill" | "solidFill" | "gradFill" | "blipFill" | "pattFill" | "grpFill" => {
-                    c.fill = self.fill(&child)?;
+                    c.fill = read_fill(self.r, self.rels, DrawingLimits::default(), &child)?;
                 }
-                "effectLst" => {
-                    c.effects = Some(TextEffects::List);
-                    self.r.retained(&child);
-                }
-                "effectDag" => {
-                    c.effects = Some(TextEffects::Dag);
-                    self.r.retained(&child);
+                "effectLst" | "effectDag" => {
+                    c.effects = read_effects(self.r, self.rels, DrawingLimits::default(), &child)?
+                        .map(Box::new);
                 }
                 "highlight" => {
                     self.r.finish(&child);
@@ -693,8 +691,9 @@ impl TextReader<'_, '_> {
                     c.underline_line = Some(UnderlineLine::FollowText);
                 }
                 "uLn" => {
-                    c.underline_line = Some(UnderlineLine::Line);
-                    self.r.retained(&child);
+                    c.underline_line =
+                        read_line(self.r, self.rels, DrawingLimits::default(), &child)?
+                            .map(|line| UnderlineLine::Line(Box::new(line)));
                 }
                 "uFillTx" => {
                     finish_empty(self.r, &child)?;
@@ -704,10 +703,12 @@ impl TextReader<'_, '_> {
                     self.r.finish(&child);
                     let mut fill = None;
                     for inner in self.r.children(&child)? {
-                        if fill.is_some() {
+                        if !is_fill_element(&inner) {
+                            self.r.retained(&inner);
+                        } else if fill.is_some() {
                             self.r.note(K::DuplicateElement, &inner, None);
                         } else {
-                            fill = self.fill(&inner)?;
+                            fill = read_fill(self.r, self.rels, DrawingLimits::default(), &inner)?;
                         }
                     }
                     c.underline_fill = Some(UnderlineFill::Fill(fill));
@@ -733,41 +734,6 @@ impl TextReader<'_, '_> {
             }
         }
         Ok(c)
-    }
-
-    /// One `EG_FillProperties` choice. Only a solid colour's content is read here.
-    fn fill(&mut self, el: &Elem) -> Result<Option<TextFill>, ImportError> {
-        if !el.in_namespace(ns::DML) {
-            self.r.retained(el);
-            return Ok(None);
-        }
-        Ok(Some(match el.local.as_str() {
-            "noFill" => {
-                finish_empty(self.r, el)?;
-                TextFill::None
-            }
-            "solidFill" => {
-                self.r.finish(el);
-                TextFill::Solid(read_color_choice(self.r.tree, el.id, self.color))
-            }
-            "grpFill" => {
-                finish_empty(self.r, el)?;
-                TextFill::Group
-            }
-            kind @ ("gradFill" | "blipFill" | "pattFill") => {
-                // Tier 1E's. The tree keeps it, and the report says so.
-                self.r.retained(el);
-                match kind {
-                    "gradFill" => TextFill::Gradient,
-                    "blipFill" => TextFill::Picture,
-                    _ => TextFill::Pattern,
-                }
-            }
-            _ => {
-                self.r.retained(el);
-                return Ok(None);
-            }
-        }))
     }
 }
 

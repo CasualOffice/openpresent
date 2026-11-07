@@ -1,0 +1,100 @@
+//! `EG_FillProperties` as what the tree should say (`docs/spec/FILL.md`).
+
+use casual_slide_model::fill::{
+    Blip, BlipFill, BlipFillMode, Fill, GradientFill, GradientShade, PatternFill, RelativeRect,
+};
+
+use crate::drawing::{Node, Space};
+use crate::effect::{effect_node, image_properties_node};
+
+fn rect(local: &'static str, r: &RelativeRect) -> Node {
+    Node::a(local)
+        .pct("l", r.l)
+        .pct("t", r.t)
+        .pct("r", r.r)
+        .pct("b", r.b)
+}
+
+fn gradient(g: &GradientFill) -> Node {
+    let shade = g.shade.as_ref().map(|shade| match shade {
+        GradientShade::Linear { angle, scaled } => Node::a("lin")
+            .ang("ang", *angle)
+            .lex("scaled", scaled.as_ref()),
+        GradientShade::Path { path, fill_to_rect } => Node::a("path")
+            .lex("path", path.as_ref())
+            .opt(fill_to_rect.as_ref().map(|r| rect("fillToRect", r))),
+    });
+    let stops = g.stops.as_ref().map(|stops| {
+        Node::a("gsLst").list(
+            stops
+                .iter()
+                .map(|s| Node::a("gs").pct("pos", s.position).color(s.color.as_ref())),
+        )
+    });
+    Node::a("gradFill")
+        .lex("flip", g.flip.as_ref())
+        .lex("rotWithShape", g.rotate_with_shape.as_ref())
+        .opt(stops)
+        .opt(shade)
+        .opt(g.tile_rect.as_ref().map(|r| rect("tileRect", r)))
+}
+
+fn pattern(p: &PatternFill) -> Node {
+    Node::a("pattFill")
+        .lex("prst", p.preset.as_ref())
+        .opt(
+            p.foreground
+                .as_ref()
+                .map(|c| Node::a("fgClr").color(Some(c))),
+        )
+        .opt(
+            p.background
+                .as_ref()
+                .map(|c| Node::a("bgClr").color(Some(c))),
+        )
+}
+
+fn blip(b: &Blip) -> Node {
+    let local_dpi = b
+        .use_local_dpi
+        .map(|v| Node::new(Space::A14, "useLocalDpi").lex("val", Some(&v)));
+    Node::a("blip")
+        .rel("embed", b.embed.as_ref())
+        .rel("link", b.link.as_ref())
+        .lex("cstate", b.compression.as_ref())
+        .list(b.effects.iter().map(effect_node))
+        .ext(b.image_properties.as_ref().map(image_properties_node))
+        .ext(local_dpi)
+}
+
+/// `a:CT_BlipFillProperties`: `a:blipFill`, or a picture's `p:blipFill`.
+pub(crate) fn blip_fill_node(f: &BlipFill, space: Space) -> Node {
+    let mode = f.mode.as_ref().map(|mode| match mode {
+        BlipFillMode::Tile(t) => Node::a("tile")
+            .lex("tx", t.tx.as_ref())
+            .lex("ty", t.ty.as_ref())
+            .pct("sx", t.sx)
+            .pct("sy", t.sy)
+            .lex("flip", t.flip.as_ref())
+            .lex("algn", t.align.as_ref()),
+        BlipFillMode::Stretch(r) => Node::a("stretch").opt(r.as_ref().map(|r| rect("fillRect", r))),
+    });
+    Node::new(space, "blipFill")
+        .lex("dpi", f.dpi.as_ref())
+        .lex("rotWithShape", f.rotate_with_shape.as_ref())
+        .opt(f.blip.as_ref().map(blip))
+        .opt(f.source_rect.as_ref().map(|r| rect("srcRect", r)))
+        .opt(mode)
+}
+
+/// One element of `EG_FillProperties`.
+pub(crate) fn fill_node(fill: &Fill) -> Node {
+    match fill {
+        Fill::None => Node::a("noFill"),
+        Fill::Group => Node::a("grpFill"),
+        Fill::Solid(color) => Node::a("solidFill").color(color.as_ref()),
+        Fill::Gradient(g) => gradient(g),
+        Fill::Blip(b) => blip_fill_node(b, Space::Dml),
+        Fill::Pattern(p) => pattern(p),
+    }
+}

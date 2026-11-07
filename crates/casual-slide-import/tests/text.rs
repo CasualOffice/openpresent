@@ -11,11 +11,13 @@ use casual_slide_import::slide::{
     ImportedSlides, SlideLimits, import_slide_part, import_slide_parts,
 };
 use casual_slide_import::text::TextLimits;
+use casual_slide_model::effect::EffectProperties;
+use casual_slide_model::fill::Fill;
 use casual_slide_model::shape::ShapeNode;
 use casual_slide_model::slide::{SlideKind, SlidePart};
 use casual_slide_model::text::{
-    Autofit, BulletColor, BulletFont, BulletSize, CharacterProperties, TextEffects, TextFill,
-    TextSpacing, UnderlineFill, UnderlineLine,
+    Autofit, BulletColor, BulletFont, BulletSize, CharacterProperties, TextSpacing, UnderlineFill,
+    UnderlineLine,
 };
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, Relationship, TargetMode, XmlTree};
 
@@ -271,9 +273,11 @@ fn every_property_deck_reads_as_written() {
     assert_eq!(c.alt_lang.as_deref(), Some("de-DE"));
     assert_eq!(c.smart_tag_id, Some(7));
     assert_eq!(c.bookmark.as_deref(), Some("mark"));
-    assert_eq!(c.has_line, Some(true));
-    assert!(matches!(c.fill, Some(TextFill::Solid(Some(_)))));
-    assert_eq!(c.effects, Some(TextEffects::List));
+    let line = c.line.as_ref().unwrap();
+    assert_eq!(line.width, Some(12700));
+    assert!(matches!(line.fill, Some(Fill::Solid(Some(_)))));
+    assert!(matches!(c.fill, Some(Fill::Solid(Some(_)))));
+    assert!(matches!(c.effects.as_deref(), Some(EffectProperties::List(e)) if e.len() == 1));
     assert!(matches!(c.highlight, Some(Some(_))));
     assert_eq!(c.underline_line, Some(UnderlineLine::FollowText));
     assert_eq!(c.underline_fill, Some(UnderlineFill::FollowText));
@@ -306,18 +310,7 @@ fn every_property_deck_reads_as_written() {
     assert_eq!(p.end_properties.as_ref().unwrap().dirty, Some(false));
 
     // Preserved, not modelled, and said so.
-    for element in [
-        "scene3d",
-        "sp3d",
-        "extLst",
-        "ln",
-        "effectLst",
-        "avLst",
-        "gradFill",
-        "blipFill",
-        "pattFill",
-        "uLn",
-    ] {
+    for element in ["scene3d", "sp3d", "extLst", "avLst"] {
         assert!(
             s.findings.has(K::RetainedElement, element),
             "{element}: {:?}",
@@ -360,7 +353,7 @@ fn every_property_deck_reads_as_written() {
         (62_500, 10_000)
     );
 
-    // Each fill, by which it is.
+    // Each fill, through Tier 1E's reader, with what it holds.
     let fills: Vec<_> = body_of(slide, "Fills").paragraphs[0]
         .items
         .iter()
@@ -369,26 +362,27 @@ fn every_property_deck_reads_as_written() {
             other => panic!("{other:?}"),
         })
         .collect();
-    assert_eq!(
-        fills,
-        [
-            Some(TextFill::None),
-            Some(TextFill::Gradient),
-            Some(TextFill::Picture),
-            Some(TextFill::Pattern),
-            Some(TextFill::Group),
-            None,
-        ]
-    );
+    assert_eq!(fills[0], Some(Fill::None));
+    let Some(Fill::Gradient(gradient)) = &fills[1] else {
+        panic!("{:?}", fills[1]);
+    };
+    assert_eq!(gradient.stops.as_ref().map(Vec::len), Some(2));
+    assert!(matches!(fills[2], Some(Fill::Blip(_))));
+    assert!(matches!(fills[3], Some(Fill::Pattern(_))));
+    assert_eq!(fills[4], Some(Fill::Group));
+    assert_eq!(fills[5], None);
     let TextItem::Run(under) = &body_of(slide, "Fills").paragraphs[0].items[5] else {
         panic!("not a run");
     };
     let under = under.properties.as_ref().unwrap();
-    assert_eq!(under.underline_line, Some(UnderlineLine::Line));
-    assert_eq!(under.effects, Some(TextEffects::Dag));
+    assert!(matches!(&under.underline_line, Some(UnderlineLine::Line(l)) if l.width == Some(9525)));
+    assert!(matches!(
+        under.effects.as_deref(),
+        Some(EffectProperties::Dag(_))
+    ));
     assert!(matches!(
         under.underline_fill,
-        Some(UnderlineFill::Fill(Some(TextFill::Solid(Some(_)))))
+        Some(UnderlineFill::Fill(Some(Fill::Solid(Some(_)))))
     ));
 
     // Each bullet.
@@ -816,7 +810,7 @@ fn every_deck_reads_its_text() {
 #[test]
 fn a_run_costs_what_the_limits_page_says() {
     assert!(
-        size_of::<CharacterProperties>() <= 360,
+        size_of::<CharacterProperties>() <= 400,
         "{}",
         size_of::<CharacterProperties>()
     );

@@ -290,6 +290,8 @@ pub enum ImportFindingKind {
     UnusableRelationship,
     /// The list of findings reached its bound.
     FindingsTruncated,
+    /// What a drawing property's reader noticed, under its own codes.
+    Drawing(crate::drawing::DrawingFinding),
 }
 
 impl ImportFindingKind {
@@ -311,6 +313,7 @@ impl ImportFindingKind {
             Self::DuplicateRelationship => "CS-IMF-0013",
             Self::UnusableRelationship => "CS-IMF-0014",
             Self::FindingsTruncated => "CS-IMF-0015",
+            Self::Drawing(finding) => finding.code(),
         }
     }
 }

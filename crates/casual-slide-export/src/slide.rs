@@ -1,14 +1,16 @@
 //! Patch slide-like parts and their shape trees in place (ADR-013, Tier 1D).
 //!
-//! The part is read again with a map from each [`ObjectId`] to the element it came
+//! The part is read again with a map from each `ObjectId` to the element it came
 //! from; the wanted model is compared with what the tree says, and only the
 //! attributes and children that differ are touched. Every other byte stays as it
 //! was read, and a part not handed in is not opened at all.
 //!
 //! What this tier writes: a node's transform, `cNvPr` attributes, hyperlink
 //! attributes, locks, `txBox`, placeholder attributes, `isPhoto`, `userDrawn`,
-//! `useBgFill`, `bwMode` and text body ([`crate::text`]); a part's root attributes,
-//! `cSld/@name`, `clrMap` slots, `clrMapOvr`, `hf`, `txStyles` and `notesStyle`. Anything else that differs (a node added, removed
+//! `useBgFill`, `bwMode`, through `drawing.rs` its geometry, fill, line, effects
+//! and 3D, and through `text.rs` its text body; a part's root attributes,
+//! `cSld/@name`, `clrMap` slots, `clrMapOvr`, `hf`, `txStyles` and `notesStyle`.
+//! Anything else that differs (a node added, removed
 //! or reordered, a background, a layout list) is refused as `CS-SLE-0001`, and
 //! nothing is saved: those edits belong to the writer tier (1N) and to Phase 4.
 
@@ -378,6 +380,7 @@ impl Patch<'_, '_> {
             || b.transform != a.transform
             || b.bw_mode != a.bw_mode
             || b.use_bg_fill != a.use_bg_fill
+            || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
             || b.rel_id != a.rel_id
             || b.text_body != a.text_body;
@@ -442,6 +445,15 @@ impl Patch<'_, '_> {
             a.text_body.as_ref(),
             |w, el, before, after| patch_text_body(w, el, before.map(|b| &**b), after),
         )?;
+        if b.properties != a.properties {
+            crate::drawing::patch_properties(
+                &mut self.w,
+                el,
+                a.kind,
+                &b.properties,
+                &a.properties,
+            )?;
+        }
         Ok(())
     }
 

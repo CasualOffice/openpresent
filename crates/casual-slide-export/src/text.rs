@@ -5,24 +5,30 @@
 //! So what a run holds beyond the model stays with it, and a retained element, such as
 //! an equation's `mc:AlternateContent`, stays where it is.
 //!
-//! What another tier owns can be kept or removed, and cannot be written from here: a
-//! gradient, picture or pattern fill, a line, an underline's line, effects and a
-//! picture bullet. Asking for one is refused as `CS-EXP-0009`, and nothing is saved.
+//! A run's fill, line, effects and underline go through Tier 1E's writer. A picture
+//! bullet can be kept or removed, and not made from here: asking for one is refused as
+//! `CS-EXP-0009`, and nothing is saved.
 //! A change that would leave required content out (`bodyPr`, the last `p`, `a:t`) is
 //! refused the same way.
 
 use casual_slide_import::properties::{Elem, ns};
 use casual_slide_model::color::Color;
+use casual_slide_model::effect::EffectProperties;
+use casual_slide_model::fill::Fill;
+use casual_slide_model::line::Line;
 use casual_slide_model::presentation::Percentage;
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::Hyperlink;
 use casual_slide_model::text::{
     Autofit, BodyProperties, BooleanElement, Bullet, BulletColor, BulletFont, BulletSize,
-    CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TabStop, TextBody, TextEffects,
-    TextField, TextFill, TextItem, TextListStyle, TextRun, TextSpacing, TextWarp, UnderlineFill,
-    UnderlineLine, Written,
+    CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TabStop, TextBody, TextField,
+    TextItem, TextListStyle, TextRun, TextSpacing, TextWarp, UnderlineFill, UnderlineLine, Written,
 };
 
+use crate::drawing::{Space, patch};
+use crate::effect::effect_properties_node;
+use crate::fill::fill_node;
+use crate::line::line_node;
 use crate::presentation::patch_text_font;
 use crate::properties::{ExportError, Writer};
 use crate::slide::{patch_hyperlink, sync_ordered};
@@ -702,31 +708,72 @@ fn patch_tabs(w: &mut Writer<'_>, el: &Elem, b: Option<&Vec<TabStop>>, a: &Vec<T
     Ok(())
 }
 
-/// A fill among `order`'s children. Only `noFill`, `grpFill` and a solid colour can be
-/// made here; the rest are Tier 1E's, and can only be kept or removed.
+fn fill_element(fill: &Fill) -> &'static str {
+    match fill {
+        Fill::None => "noFill",
+        Fill::Solid(_) => "solidFill",
+        Fill::Gradient(_) => "gradFill",
+        Fill::Blip(_) => "blipFill",
+        Fill::Pattern(_) => "pattFill",
+        Fill::Group => "grpFill",
+    }
+}
+
+/// A fill among `order`'s children, by Tier 1E's writer. A fill of another kind replaces
+/// it; one of the same kind is patched, so what it holds beyond the model stays.
 fn patch_fill(
     w: &mut Writer<'_>,
     el: &Elem,
     order: &[&str],
-    b: Option<&TextFill>,
-    a: Option<&TextFill>,
+    b: Option<&Fill>,
+    a: Option<&Fill>,
 ) -> Result {
     if b == a {
         return Ok(());
     }
-    match a {
-        None => remove_group(w, el, FILLS),
-        Some(TextFill::None) => swap_choice(w, el, FILLS, order, "noFill").map(|_| ()),
-        Some(TextFill::Group) => swap_choice(w, el, FILLS, order, "grpFill").map(|_| ()),
-        Some(TextFill::Solid(Some(color))) => {
-            let holder = swap_choice(w, el, FILLS, order, "solidFill")?;
-            set_color(w, &holder, color)
-        }
-        Some(TextFill::Solid(None)) => Err(unsupported(w, "a solid fill with no colour")),
-        Some(TextFill::Gradient | TextFill::Picture | TextFill::Pattern) => {
-            Err(unsupported(w, "a fill Tier 1E writes"))
-        }
+    let Some(wanted) = a else {
+        return remove_group(w, el, FILLS);
+    };
+    let local = fill_element(wanted);
+    let holder = swap_choice(w, el, FILLS, order, local)?;
+    let before = b.filter(|old| fill_element(old) == local).map(fill_node);
+    patch(w, &holder, before.as_ref(), &fill_node(wanted))
+}
+
+fn patch_line(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    local: &'static str,
+    b: Option<&Line>,
+    a: &Line,
+) -> Result {
+    let before = b.map(|old| line_node(old, Space::Dml, local));
+    patch(w, el, before.as_ref(), &line_node(a, Space::Dml, local))
+}
+
+fn patch_effects(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&EffectProperties>,
+    a: Option<&EffectProperties>,
+) -> Result {
+    const GROUP: &[&str] = &["effectLst", "effectDag"];
+    if b == a {
+        return Ok(());
     }
+    let Some(wanted) = a else {
+        return remove_group(w, el, GROUP);
+    };
+    let element = |e: &EffectProperties| match e {
+        EffectProperties::List(_) => "effectLst",
+        EffectProperties::Dag(_) => "effectDag",
+    };
+    let local = element(wanted);
+    let holder = swap_choice(w, el, GROUP, CHARACTER_ORDER, local)?;
+    let before = b
+        .filter(|old| element(old) == local)
+        .map(effect_properties_node);
+    patch(w, &holder, before.as_ref(), &effect_properties_node(wanted))
 }
 
 /// `a:CT_TextCharacterProperties`.
@@ -768,12 +815,17 @@ fn patch_character(
         b.and_then(|b| b.baseline.as_ref()),
         a.baseline.as_ref(),
     )?;
-    if b.and_then(|b| b.has_line) != a.has_line {
-        if a.has_line.is_some() {
-            return Err(unsupported(w, "a line on text, which Tier 1E writes"));
-        }
-        w.remove_all(el, ns::DML, "ln")?;
-    }
+    sync_ordered(
+        w,
+        el,
+        ns::DML,
+        "a",
+        CHARACTER_ORDER,
+        "ln",
+        b.and_then(|b| b.line.as_ref()),
+        a.line.as_ref(),
+        |w, el, before, after| patch_line(w, el, "ln", before.map(|b| &**b), after),
+    )?;
     patch_fill(
         w,
         el,
@@ -781,13 +833,12 @@ fn patch_character(
         b.and_then(|b| b.fill.as_ref()),
         a.fill.as_ref(),
     )?;
-    let effects: Option<TextEffects> = b.and_then(|b| b.effects);
-    if effects != a.effects {
-        if a.effects.is_some() {
-            return Err(unsupported(w, "text effects, which Tier 1E writes"));
-        }
-        remove_group(w, el, &["effectLst", "effectDag"])?;
-    }
+    patch_effects(
+        w,
+        el,
+        b.and_then(|b| b.effects.as_deref()),
+        a.effects.as_deref(),
+    )?;
     patch_highlight(
         w,
         el,
@@ -917,15 +968,20 @@ fn patch_underline(
 ) -> Result {
     const LINE: &[&str] = &["uLnTx", "uLn"];
     const FILL: &[&str] = &["uFillTx", "uFill"];
-    let line = b.and_then(|b| b.underline_line);
-    if line != a.underline_line {
-        match a.underline_line {
+    let line = b.and_then(|b| b.underline_line.as_ref());
+    if line != a.underline_line.as_ref() {
+        match &a.underline_line {
             None => remove_group(w, el, LINE)?,
             Some(UnderlineLine::FollowText) => {
                 swap_choice(w, el, LINE, CHARACTER_ORDER, "uLnTx")?;
             }
-            Some(UnderlineLine::Line) => {
-                return Err(unsupported(w, "an underline line, which Tier 1E writes"));
+            Some(UnderlineLine::Line(wanted)) => {
+                let holder = swap_choice(w, el, LINE, CHARACTER_ORDER, "uLn")?;
+                let old = match line {
+                    Some(UnderlineLine::Line(old)) => Some(&**old),
+                    _ => None,
+                };
+                patch_line(w, &holder, "uLn", old, wanted)?;
             }
         }
     }

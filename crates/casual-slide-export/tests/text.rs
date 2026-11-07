@@ -14,11 +14,13 @@ use casual_slide_import::presentation::{import_deck, import_presentation};
 use casual_slide_import::properties::{Findings, ImportLimits};
 use casual_slide_import::slide::{SlideLimits, import_slide_part, import_slide_parts};
 use casual_slide_model::color::Color;
+use casual_slide_model::effect::{Effect, EffectProperties};
+use casual_slide_model::fill::{Fill, GradientFill};
+use casual_slide_model::line::Line;
 use casual_slide_model::shape::ShapeNode;
 use casual_slide_model::slide::{SlideKind, SlidePart, SlideParts};
 use casual_slide_model::text::{
-    Autofit, CharacterProperties, Paragraph, TextFill, TextListStyle, TextRun, UnderlineLine,
-    Written,
+    Autofit, CharacterProperties, Paragraph, TextListStyle, TextRun, UnderlineLine, Written,
 };
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, Relationship, TargetMode, XmlTree};
 
@@ -448,7 +450,7 @@ fn property_edits_stay_valid_to_the_schema() {
     let edited = edit_slide(&source, |slide| {
         let run = first_run_of_mut(named_mut(slide, "Every Property"));
         let c = run.properties.as_mut().unwrap();
-        c.fill = Some(TextFill::Solid(Some(Color::srgb(1, 2, 3))));
+        c.fill = Some(Fill::Solid(Some(Color::srgb(1, 2, 3))));
         c.underline_line = None;
         c.highlight = None;
         c.latin.as_mut().unwrap().typeface = "Verdana".to_owned();
@@ -456,7 +458,7 @@ fn property_edits_stay_valid_to_the_schema() {
         let bare = first_run_of_mut(named_mut(slide, "No Autofit"));
         bare.properties = Some(Box::new(CharacterProperties {
             size: Some(1000),
-            fill: Some(TextFill::Solid(Some(Color::srgb(9, 9, 9)))),
+            fill: Some(Fill::Solid(Some(Color::srgb(9, 9, 9)))),
             underline_line: Some(UnderlineLine::FollowText),
             latin: Some(Box::new(casual_slide_model::presentation::TextFont {
                 typeface: "Arial".to_owned(),
@@ -713,40 +715,11 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
     let refused = |change: fn(&mut SlidePart)| edit_slide(&source, change).unwrap_err();
     for change in [
         (|s| {
-            first_run_of_mut(named_mut(s, "No Autofit")).properties =
-                Some(Box::new(CharacterProperties {
-                    fill: Some(TextFill::Gradient),
-                    ..CharacterProperties::default()
-                }))
+            let body = named_mut(s, "Bullets").text_body.as_mut().unwrap();
+            body.paragraphs[0].properties.as_mut().unwrap().bullet = Some(Bullet::Picture {
+                embed: Some("rId3".to_owned()),
+            });
         }) as fn(&mut SlidePart),
-        |s| {
-            first_run_of_mut(named_mut(s, "No Autofit")).properties =
-                Some(Box::new(CharacterProperties {
-                    has_line: Some(true),
-                    ..CharacterProperties::default()
-                }))
-        },
-        |s| {
-            first_run_of_mut(named_mut(s, "No Autofit")).properties =
-                Some(Box::new(CharacterProperties {
-                    effects: Some(casual_slide_model::text::TextEffects::List),
-                    ..CharacterProperties::default()
-                }))
-        },
-        |s| {
-            first_run_of_mut(named_mut(s, "No Autofit")).properties =
-                Some(Box::new(CharacterProperties {
-                    underline_line: Some(UnderlineLine::Line),
-                    ..CharacterProperties::default()
-                }))
-        },
-        |s| {
-            first_run_of_mut(named_mut(s, "No Autofit")).properties =
-                Some(Box::new(CharacterProperties {
-                    fill: Some(TextFill::Solid(None)),
-                    ..CharacterProperties::default()
-                }))
-        },
         |s| {
             named_mut(s, "No Autofit")
                 .text_body
@@ -837,6 +810,93 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
     assert_eq!(code, "CS-EXP-0003");
 }
 
+/// Tier 1E's writer, from a run: each kind is made, changed in place and taken away,
+/// reads back, and stays valid to the schema.
+#[test]
+fn a_runs_fill_line_effects_and_underline_are_written_through_tier_1e() {
+    let source = read_fixture(FULL);
+    let stated = |c: CharacterProperties| {
+        move |s: &mut SlidePart| {
+            first_run_of_mut(named_mut(s, "No Autofit")).properties = Some(Box::new(c));
+        }
+    };
+    let solid = |r| Some(Fill::Solid(Some(Color::srgb(r, 0, 0))));
+    let cases = [
+        CharacterProperties {
+            fill: Some(Fill::Gradient(Box::new(GradientFill {
+                rotate_with_shape: Some(true),
+                stops: Some(Vec::new()),
+                ..GradientFill::default()
+            }))),
+            line: Some(Box::new(Line {
+                width: Some(12700),
+                fill: solid(1),
+                ..Line::default()
+            })),
+            effects: Some(Box::new(EffectProperties::List(vec![Effect::SoftEdge(
+                Some(casual_slide_model::presentation::Coordinate(12700)),
+            )]))),
+            underline_line: Some(UnderlineLine::Line(Box::new(Line {
+                width: Some(9525),
+                ..Line::default()
+            }))),
+            underline_fill: Some(casual_slide_model::text::UnderlineFill::Fill(solid(2))),
+            ..CharacterProperties::default()
+        },
+        CharacterProperties {
+            fill: Some(Fill::Solid(None)),
+            effects: Some(Box::new(EffectProperties::List(Vec::new()))),
+            ..CharacterProperties::default()
+        },
+    ];
+    for case in cases {
+        // `edit_slide` checks the edit reads back, and is a fixed point.
+        edit_slide(&source, stated(case)).unwrap();
+    }
+
+    // A real gradient, in the deck, changed in place: its stops' spelling stays.
+    let edited = edit_slide(&source, |s| {
+        let body = named_mut(s, "Fills").text_body.as_mut().unwrap();
+        let TextItem::Run(run) = &mut body.paragraphs[0].items[1] else {
+            panic!("not a run");
+        };
+        let Some(Fill::Gradient(g)) = &mut run.properties.as_mut().unwrap().fill else {
+            panic!("no gradient");
+        };
+        g.rotate_with_shape = Some(true);
+    })
+    .unwrap();
+    only_this_changed(
+        &source,
+        &edited,
+        "ppt/slides/slide1.xml",
+        &[(
+            "<a:rPr><a:gradFill>",
+            r#"<a:rPr><a:gradFill rotWithShape="1">"#,
+        )],
+    );
+    f4_validates(&edited);
+
+    // Kinds swapped, a line and effects taken away, an underline line changed.
+    let edited = edit_slide(&source, |s| {
+        let run = first_run_of_mut(named_mut(s, "Every Property"));
+        let c = run.properties.as_mut().unwrap();
+        c.line.as_mut().unwrap().width = Some(25400);
+        c.effects = None;
+        c.fill = Some(Fill::Group);
+        let body = named_mut(s, "Fills").text_body.as_mut().unwrap();
+        let TextItem::Run(under) = &mut body.paragraphs[0].items[5] else {
+            panic!("not a run");
+        };
+        let c = under.properties.as_mut().unwrap();
+        c.underline_line = Some(UnderlineLine::FollowText);
+        c.effects = Some(Box::new(EffectProperties::List(Vec::new())));
+        c.fill = solid(3);
+    })
+    .unwrap();
+    f4_validates(&edited);
+}
+
 #[test]
 fn strict_decks_are_patched_in_their_own_namespaces_and_percent_forms() {
     let source = read_fixture("generated/text-strict.pptx");
@@ -868,7 +928,7 @@ fn strict_decks_are_patched_in_their_own_namespaces_and_percent_forms() {
         // New elements in the part's own namespace.
         let bare = named_mut(slide, "Shape Autofit");
         first_run_of_mut(bare).properties = Some(Box::new(CharacterProperties {
-            fill: Some(TextFill::Solid(Some(Color::srgb(1, 1, 1)))),
+            fill: Some(Fill::Solid(Some(Color::srgb(1, 1, 1)))),
             baseline: Some(Written::new(casual_slide_model::presentation::Percentage(
                 5_000,
             ))),

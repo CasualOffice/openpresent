@@ -8,16 +8,18 @@
 //! time. Where a type's written form is a union, [`Written`] keeps what the file
 //! wrote beside the value, so a `normAutofit/@fontScale` of `62.5%` stays `62.5%`.
 //!
-//! What a property holds that other tiers own stays in the part's tree, preserved
-//! but not modelled, and named in the report: a gradient, picture or pattern fill
-//! on a run says only which it is ([`TextFill`]), and `ln`, `uLn`, effects, 3D and
-//! `extLst` say only that they are stated. A resolver needs that much, since a
-//! nearer level's gradient hides a further level's solid colour.
+//! A run's fill, line, effects and underline line and fill are Tier 1E's own types.
+//! What is still another tier's stays in the part's tree, preserved but not modelled,
+//! and named in the report: `scene3d`, `EG_Text3D`, a warp's `avLst`, a picture bullet's
+//! `a:blip` beyond its relationship, and `extLst`.
 //!
 //! Text content is document data: it lives here and in the tree, and never reaches
 //! a diagnostic.
 
 use crate::color::Color;
+use crate::effect::EffectProperties;
+use crate::fill::Fill;
+use crate::line::Line;
 use crate::presentation::{Coordinate, Percentage, TextFont};
 use crate::properties::{Lexical, token_enum, trim_xml};
 use crate::shape::Hyperlink;
@@ -491,42 +493,13 @@ pub struct ParagraphProperties {
     pub default_run: Option<Box<CharacterProperties>>,
 }
 
-/// A run's `EG_FillProperties` choice, as far as this tier reads it. Only a solid
-/// colour's content is modelled; the others stay in the tree until Tier 1E's fill
-/// model joins them.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TextFill {
-    /// `noFill`.
-    None,
-    /// `solidFill`. `None` if its colour could not be believed; the tree keeps it.
-    Solid(Option<Color>),
-    /// `gradFill`. Preserved, not modelled.
-    Gradient,
-    /// `blipFill`. Preserved, not modelled.
-    Picture,
-    /// `pattFill`. Preserved, not modelled.
-    Pattern,
-    /// `grpFill`. Office treats it as `noFill` in text (`MS-OI29500`, the note on
-    /// ECMA-376 Part 1 20.1.8.35).
-    Group,
-}
-
-/// A run's `EG_EffectProperties` choice. Preserved, not modelled.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TextEffects {
-    /// `effectLst`.
-    List,
-    /// `effectDag`.
-    Dag,
-}
-
 /// `a:EG_TextUnderlineLine`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnderlineLine {
     /// `uLnTx`.
     FollowText,
-    /// `uLn`. Preserved, not modelled.
-    Line,
+    /// `uLn`.
+    Line(Box<Line>),
 }
 
 /// `a:EG_TextUnderlineFill`.
@@ -535,7 +508,7 @@ pub enum UnderlineFill {
     /// `uFillTx`.
     FollowText,
     /// `uFill`, with its fill if it states one.
-    Fill(Option<TextFill>),
+    Fill(Option<Fill>),
 }
 
 /// `a:CT_Boolean`, as `rtl` in `rPr`. An absent `@val` is not filled in.
@@ -587,12 +560,13 @@ pub struct CharacterProperties {
     pub smart_tag_id: Option<u32>,
     /// `@bmk`.
     pub bookmark: Option<String>,
-    /// `ln` is stated. Preserved, not modelled: the line tier's.
-    pub has_line: Option<bool>,
-    /// The `EG_FillProperties` choice.
-    pub fill: Option<TextFill>,
+    /// `ln`.
+    pub line: Option<Box<Line>>,
+    /// The `EG_FillProperties` choice. `Fill::Group` is `noFill` in text: Office treats
+    /// it so (`MS-OI29500` 2.1.1298), and the resolver says so.
+    pub fill: Option<Fill>,
     /// The `EG_EffectProperties` choice.
-    pub effects: Option<TextEffects>,
+    pub effects: Option<Box<EffectProperties>>,
     /// `highlight`. The outer `None` is absent, the inner one a colour that could
     /// not be believed; the tree keeps it.
     pub highlight: Option<Option<Color>>,

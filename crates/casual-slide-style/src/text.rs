@@ -23,9 +23,10 @@
 //! `MS-OI29500`'s note on `fontRef` has a shape's `p:style` under its text body's
 //! properties. Neither is in this chain, because neither is in the model yet.
 
+use casual_slide_model::fill::Fill;
 use casual_slide_model::shape::ShapeNode;
 use casual_slide_model::text::{
-    BodyProperties, CharacterProperties, ParagraphProperties, TextFill, TextListStyle,
+    BodyProperties, CharacterProperties, ParagraphProperties, TextListStyle,
 };
 
 use crate::{Chain, TextStyle};
@@ -202,10 +203,10 @@ impl<'a> TextChain<'a> {
         &self,
         run: Option<&'a CharacterProperties>,
         paragraph: Option<&ParagraphProperties>,
-    ) -> Option<TextResolved<&'a TextFill>> {
-        const NO_FILL: &TextFill = &TextFill::None;
+    ) -> Option<TextResolved<&'a Fill>> {
+        const NO_FILL: &Fill = &Fill::None;
         self.run(run, paragraph, |c| c.fill.as_ref())
-            .map(|fill| fill.map(|f| if *f == TextFill::Group { NO_FILL } else { f }))
+            .map(|fill| fill.map(|f| if *f == Fill::Group { NO_FILL } else { f }))
     }
 
     /// `@sz`, 1800 if no level says (`MS-OI29500` 2.1.1399 (e)).
