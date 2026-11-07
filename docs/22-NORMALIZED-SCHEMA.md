@@ -121,6 +121,8 @@ Every patched part is read back before saving.
 
 **Open until `PV-01`.** Whether PowerPoint uses `otherStyle` for a shape that is no placeholder. Whether all three object defaults apply to every shape, as 2.1.1379 reads, or "corresponding" narrows them by kind of shape. A default's `style` and `spPr` take no part: the notes name `bodyPr` and `lstStyle`.
 
+**Status marks.** `DGM`, `MATH` and `INK` in `docs/spec/checklist.tsv` hold what `tools/spec-audit/audit.py`'s rule allows, by a run over this tier's decks: 1076 rows `y` in model, import and export, every `extLst` `r` where a fixture holds one, and the blanks with their reasons in `docs/spec/open-rows.tsv`.
+
 ## Tier 1G: tables as built
 
 **Model** (`casual-slide-model`, `table.rs`). A graphic frame holds `ShapeNode::table`: `tblPr`, the grid, rows, cells. A cell's text is Tier 1F's `TextBody`, and its fill, borders and `cell3D` Tier 1E's types. `TableStyleList` is the `tableStyles` part, and `TableStyle` is also what `tblPr/tableStyle` holds. Absent stays absent, and a list present and empty is not an absent one. `Table::merges` gives the merges, what does not hold of them, and each covered cell's origin. A row height is what was stored, and nothing here lays anything out (owner instruction 20).
