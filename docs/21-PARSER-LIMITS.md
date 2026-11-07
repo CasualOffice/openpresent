@@ -284,7 +284,7 @@ What is damaged but not over a bound is read as far as it goes and reported: `ho
 
 Each of these is a known gap with an owner, not an oversight:
 
-- **Time.** No limit bounds the time a deck can take within its byte budgets (`SEC-P10`, Tier 1A).
+- **Time.** The package asks a host-supplied predicate before every read of a decompressing part, and stops with `CS-PKG-0010` (`SEC-P10`, `Package::set_cancel`). Import does not yet pass one through, and parsing after decompression has no time bound of its own.
 - **Embedded packages.** An embedded deck or workbook is retained, never opened; opening one
   will be a separate admission with an inherited budget (`SEC-P09`).
 - **Layout and rendering** limits arrive with Tier 2D: glyphs per frame, image pixel dimensions

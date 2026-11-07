@@ -32,6 +32,8 @@ pub enum PackageError {
     NotAPackage,
     /// A requested part does not exist in the package.
     PartNotFound { name: String },
+    /// The host's time budget stopped a part's decompression (`SEC-P10`).
+    Cancelled { name: String },
 }
 
 impl PackageError {
@@ -48,6 +50,7 @@ impl PackageError {
             PackageError::DuplicatePart { .. } => "CS-PKG-0007",
             PackageError::RewriteFailed => "CS-PKG-0008",
             PackageError::PartTooLarge { .. } => "CS-PKG-0009",
+            PackageError::Cancelled { .. } => "CS-PKG-0010",
         }
     }
 }
@@ -88,6 +91,9 @@ impl fmt::Display for PackageError {
             PackageError::RewriteFailed => write!(f, "could not write the package"),
             PackageError::NotAPackage => write!(f, "not a valid ZIP/OPC package"),
             PackageError::PartNotFound { name } => write!(f, "part not found: {name:?}"),
+            PackageError::Cancelled { name } => {
+                write!(f, "reading part {name:?} stopped by the time budget")
+            }
         }
     }
 }

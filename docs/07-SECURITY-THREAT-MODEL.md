@@ -27,8 +27,8 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 | SEC-P16 | A ZIP inside a stored entry, whose directory a tolerant reader takes for the deck's when the real one is cut off | A directory not at the end of the file is not believed alone; what a local header's entry holds is content: `a_zip_inside_a_stored_entry_is_content` | Tested |
 | SEC-P08 | Encrypted or unusual compression methods in entries | Kept as opaque blobs, never decoded: `encrypted_and_unknown_methods_are_kept_unopened` | Tested |
 | SEC-P09 | Recursive bomb: embedded `.xlsx` or `.pptx` inside a deck | Embedded parts are retained, never auto-opened; opening one is a separate bounded admission with an inherited budget | Planned 1J, 1L |
-| SEC-P10 | Slow decompression within the size budget | Time budget, cancellable; host-supplied predicate | Planned 1A |
-| SEC-P11 | Local header disagreeing with central directory | Compare name and sizes on read | Planned 0 |
+| SEC-P10 | Slow decompression within the size budget | Time budget, cancellable; host-supplied predicate: `Package::set_cancel` takes the host's predicate, asked before every read while a part decompresses; a stop is `CS-PKG-0010`. The package samples no clock: `the_hosts_time_budget_stops_a_part_read`, seen red with the check removed. Not yet threaded through import's API, and one read call into the inflater is not itself interrupted | Tested |
+| SEC-P11 | Local header disagreeing with central directory | Compare name and sizes on admission: a name or a compressed or uncompressed size that differs is `CS-PKG-0005`, unless the header defers its sizes to a data descriptor (flag bit 3) or ZIP64 (`0xFFFFFFFF`). `a_local_header_whose_sizes_disagree_with_the_directory_is_refused`, seen red with the comparison removed | Tested |
 
 ## XML
 
