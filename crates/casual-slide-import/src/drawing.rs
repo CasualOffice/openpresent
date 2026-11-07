@@ -489,6 +489,12 @@ impl<'c, 'r> Ctx<'c, 'r> {
                 self.r.retained(&item);
                 continue;
             }
+            // spec-audit: x:drawing/2010/main:<hiddenFill>
+            // spec-audit: x:drawing/2010/main:<hiddenLine>
+            // spec-audit: x:drawing/2010/main:<hiddenEffects>
+            // spec-audit: x:drawing/2010/main:<hiddenScene3d>
+            // spec-audit: x:drawing/2010/main:<hiddenSp3d>
+            // spec-audit: x:drawing/2010/main:<shadowObscured>
             let known = matches!(
                 item.local.as_str(),
                 "hiddenFill"

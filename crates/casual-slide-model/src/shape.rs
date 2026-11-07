@@ -562,6 +562,7 @@ pub struct ShapeNode {
     // spec-audit: p:CT_PictureNonVisual/cNvPicPr
     // spec-audit: p:CT_GraphicalObjectFrameNonVisual/cNvGraphicFramePr
     // spec-audit: p:CT_GroupShapeNonVisual/cNvGrpSpPr
+    // spec-audit: a:CT_NonVisualPictureProperties/picLocks
     pub locks: Option<Locks>,
     /// `cNvSpPr/@txBox`, shapes only.
     pub text_box: Option<bool>,

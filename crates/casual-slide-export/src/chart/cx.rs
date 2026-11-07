@@ -14,6 +14,7 @@ pub(crate) fn cx_feature_extension(v: &FeatureExtension, name: &'static str, spa
     let mut n = N::new(space, name, &[]);
     n.attr("feature", v.feature.as_ref());
     n.attr("drop", v.drop.as_ref());
+    // spec-audit: x:drawing/2014/chartex:CT_FeatureExtension/xsd:any
     for x in &v.items {
         n.push(super::ext_item(x));
     }
@@ -24,6 +25,7 @@ pub(crate) fn cx_feature_extension(v: &FeatureExtension, name: &'static str, spa
 pub(crate) fn cx_extension(v: &Extension, name: &'static str, space: Space) -> N {
     let mut n = N::new(space, name, &[]);
     n.attr("uri", v.uri.as_ref());
+    // spec-audit: x:drawing/2014/chartex:CT_Extension/xsd:any
     for x in &v.items {
         n.push(super::ext_item(x));
     }

@@ -422,10 +422,10 @@ class Marks(unittest.TestCase):
         cases = {
             # Nothing writes it: it stays in the tree.
             "x:thememl/2012/main:CT_ThemeFamily/@vid": ("E", "casual-slide-export"),
-            # Nothing in the crates reads charts yet.
-            "c:CT_NumFmt/@formatCode": ("I", "no reference in casual-slide-import"),
-            # In code and in a fixture, and no model struct field holds it under that name.
-            "x:drawing/2010/main:CT_PictureEffectBlur/@radius": ("M", "M=y, no declaration"),
+            # In a fixture, and nothing reads an animated picture's properties.
+            "x:drawing/2018/animation:CT_AnimationProperties/@auto": ("I", "in casual-slide-import"),
+            # In a fixture, and no model struct field holds it under that name.
+            "x:drawing/2018/animation:CT_AnimationProperties/@offset": ("M", "M=y, no declaration"),
             # Half of the type is not done.
             "p:CT_Presentation": ("I", "not all it declares is done"),
         }

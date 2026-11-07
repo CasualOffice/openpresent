@@ -174,5 +174,6 @@ pub struct Line {
     /// `tailEnd`.
     pub tail_end: Option<LineEnd>,
     /// `ask:lineSketchStyleProps`, from `extLst`.
+    // spec-audit: x:drawing/2018/sketchyshapes:<lineSketchStyleProps>
     pub sketch: Option<LineSketch>,
 }

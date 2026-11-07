@@ -464,6 +464,8 @@ impl Ctx<'_, '_> {
                 continue;
             }
             let mut k = kid.clone();
+            // Read from the `imgEffect` tested just above.
+            // spec-audit: x:drawing/2010/main:CT_PictureEffect/@visible
             let visible = self.attr(&mut k, "visible")?;
             self.r.finish(&k);
             let mut kind = None;
@@ -490,6 +492,77 @@ impl Ctx<'_, '_> {
         use ValueDomain as D;
         let mut e = el.clone();
         let local = el.local.as_str();
+        // The element and its parameter are named by `ArtisticEffect`, from the model.
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticBlur
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticCement
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticChalkSketch
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticCrisscrossEtching
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticCutout
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticFilmGrain
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticGlass
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticGlowDiffused
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticGlowEdges
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticLightScreen
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticLineDrawing
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticMarker
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticMosiaicBubbles
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPaintStrokes
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPaintBrush
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPastelsSmooth
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPencilGrayscale
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPencilSketch
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPhotocopy
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPlasticWrap
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticTexturizer
+        // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticWatercolorSponge
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectBlur/@radius
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCement/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCement/@crackSpacing
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectChalkSketch/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectChalkSketch/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCrisscrossEtching/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCrisscrossEtching/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCutout/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCutout/@numberOfShades
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectFilmGrain/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectFilmGrain/@grainSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlass/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlass/@scaling
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowDiffused/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowDiffused/@intensity
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowEdges/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowEdges/@smoothness
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLightScreen/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLightScreen/@gridSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLineDrawing/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLineDrawing/@pencilSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMarker/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMarker/@size
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMosiaicBubbles/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMosiaicBubbles/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintBrush/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintBrush/@brushSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintStrokes/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintStrokes/@intensity
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPastelsSmooth/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPastelsSmooth/@scaling
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilGrayscale/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilGrayscale/@pencilSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilSketch/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilSketch/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPhotocopy/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPhotocopy/@detail
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPlasticWrap/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPlasticWrap/@smoothness
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectTexturizer/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectTexturizer/@scaling
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectWatercolorSponge/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectWatercolorSponge/@brushSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectBrightnessContrast/@bright
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectBrightnessContrast/@contrast
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectColorTemperature/@colorTemp
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectSaturation/@sat
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectSharpenSoften/@amount
         let kind = if let Some(effect) = ArtisticEffect::parse_lexical(local) {
             let transparency = if effect.has_transparency() {
                 self.pct(&mut e, "trans", D::PositiveFixedPercentage)?
@@ -524,6 +597,15 @@ impl Ctx<'_, '_> {
                             continue;
                         }
                         let mut m = mark.clone();
+                        // Read from the mark tested just above.
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalForegroundMark/@x1
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalForegroundMark/@y1
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalForegroundMark/@x2
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalForegroundMark/@y2
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalBackgroundMark/@x1
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalBackgroundMark/@y1
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalBackgroundMark/@x2
+                        // spec-audit: x:drawing/2010/main:CT_PictureEffectBackgroundRemovalBackgroundMark/@y2
                         let value = RemovalMark {
                             x1: self.req_pct(&mut m, "x1", D::PositiveFixedPercentage)?,
                             y1: self.req_pct(&mut m, "y1", D::PositiveFixedPercentage)?,

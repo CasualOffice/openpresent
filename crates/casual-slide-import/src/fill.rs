@@ -312,6 +312,8 @@ impl Ctx<'_, '_> {
     // spec-audit: owner=useLocalDpi
     fn blip_extensions(&mut self, el: &Elem, b: &mut Blip) -> Res<()> {
         for item in self.extension_items(el)? {
+            // spec-audit: x:drawing/2010/main:<imgProps>
+            // spec-audit: x:drawing/2010/main:<useLocalDpi>
             if item.is(A14, "imgProps") && b.image_properties.is_none() {
                 b.image_properties = Some(self.image_properties(&item)?);
             } else if item.is(A14, "useLocalDpi") && b.use_local_dpi.is_none() {

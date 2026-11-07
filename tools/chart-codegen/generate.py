@@ -656,7 +656,8 @@ def emit_model(builder, mod):
             elif f.kind in ("value",):
                 out.append(f"    /// {f.doc}.\n    pub value: Option<{field_type(f, mod)}>,\n")
             elif f.kind == "items":
-                out.append(f"    /// {f.doc}.\n    pub items: Vec<ExtItem>,\n")
+                notes = "".join(f"    // spec-audit: {row}\n" for row in any_rows(t))
+                out.append(f"    /// {f.doc}.\n{notes}    pub items: Vec<ExtItem>,\n")
             else:
                 out.append(f"    /// {field_docs(f, t)}\n    pub {f.rust}: {model_type(f, mod)},\n")
         if (mod, name) in HAND_FIELDS:
@@ -897,7 +898,8 @@ def emit_ext_model(builder):
             inner = p[1].rust.replace("super::", "")
         else:
             raise SystemExit(f"ext {name} {p}")
-        out.append(f"    /// `{mod}:{name}`.\n    {var}({inner}),\n")
+        note = f"    // spec-audit: {KEY_OF[mod]}:<{name}>\n" if p[0] == "simple" else ""
+        out.append(f"    /// `{mod}:{name}`.\n{note}    {var}({inner}),\n")
     out.append("    /// Anything else.\n    Other(Retained),\n}\n")
     return "".join(out)
 
@@ -1015,6 +1017,7 @@ def emit_write_fn(t, builder, mod):
         if f.kind == "value":
             lines.append("    n.set_text(v.value.as_ref());\n")
         elif f.kind == "items":
+            lines.extend(f"    // spec-audit: {row}\n" for row in any_rows(t))
             lines.append("    for x in &v.items {\n        n.push(super::ext_item(x));\n    }\n")
         elif f.kind == "element":
             names_many = f.many

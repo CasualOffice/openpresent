@@ -123,7 +123,8 @@ RETENTION_TESTS = (
 )
 DEFAULT_GATE = "1A,1B,1C,1D,1M"
 TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE"),
-         "1E": ("GEOM", "FILL", "LINE", "EFFECT", "D3"), "1F": ("TEXT",), "1H": ("PIC", "MEDIA"), "1I": ("TIMING", "TRANS"),
+         "1E": ("GEOM", "FILL", "LINE", "EFFECT", "D3"), "1F": ("TEXT",), "1G": ("TABLE",), "1H": ("PIC", "MEDIA"),
+         "1I": ("TIMING", "TRANS"), "1J": ("CHART", "CHARTEX"), "1K": ("DGM", "MATH", "INK"), "1L": ("OLE", "VML", "MODEL3D"),
          "1M": ("COMMENT", "EXT", "REVIEW", "DESIGN", "CUSTOM")}
 LEAF_KINDS = ("element", "attribute", "root", "rootattr", "value")
 # Model fields too generic to say anything about which attribute they hold.
@@ -138,6 +139,7 @@ OWNER_STRUCTS = {
     "AG_Blob": "Blip",
     "CT_AudioFile": "MediaFile", "CT_VideoFile": "MediaFile", "CT_QuickTimeFile": "MediaFile",
     "CT_Track": "MediaTrack",
+    "cdr:EG_Anchor": "DrawingChoice",
     "CT_NonVisualPictureProperties": "ShapeNode",
     "CT_Properties": "AppProperties",
     "AG_Locking": "Locks", "CT_ShapeLocking": "Locks", "CT_GroupLocking": "Locks", "CT_ConnectorLocking": "Locks",

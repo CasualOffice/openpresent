@@ -15,8 +15,10 @@ use crate::line::Line;
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HiddenProperties {
     /// `a14:hiddenFill`.
+    // spec-audit: x:drawing/2010/main:<hiddenFill>
     pub fill: Option<Fill>,
     /// `a14:hiddenLine`.
+    // spec-audit: x:drawing/2010/main:<hiddenLine>
     pub line: Option<Line>,
     /// `a14:hiddenEffects`.
     pub effects: Option<EffectProperties>,
@@ -25,6 +27,7 @@ pub struct HiddenProperties {
     /// `a14:hiddenSp3d`.
     pub sp3d: Option<Shape3D>,
     /// `a14:shadowObscured/@val`.
+    // spec-audit: x:drawing/2010/main:<shadowObscured>
     pub shadow_obscured: Option<bool>,
 }
 

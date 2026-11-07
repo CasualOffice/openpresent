@@ -334,3 +334,73 @@ x:drawing/2016/ink:ST_InkEffectsType/=lava	IEM	T1K-03	A value of inkml:brushProp
 x:drawing/2016/ink:ST_InkEffectsType/=ocean	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
 x:drawing/2016/ink:ST_InkEffectsType/=rosegold	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
 x:drawing/2016/ink:ST_InkEffectsType/=bronze	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2010/main:CT_CameraTool/@cellRange	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:CT_CameraTool/@spid	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:<cameraTool>	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:CT_CompatExt/@spid	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:<compatExt>	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:CT_IsGvmlCanvas/@val	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:<isCanvas>	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:<contentPart>	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+x:drawing/2010/main:CT_GvmlContentPartNonVisual/cNvPr	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+x:drawing/2010/main:CT_GvmlContentPartNonVisual/cNvContentPartPr	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+x:drawing/2010/main:CT_GvmlContentPart/nvContentPartPr	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+x:drawing/2010/main:CT_GvmlContentPart/xfrm	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+x:drawing/2010/main:CT_GvmlContentPart/extLst	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+x:drawing/2010/main:CT_GvmlContentPart/@bwMode	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+x:drawing/2010/main:CT_GvmlContentPart/@r:id	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+a:CT_GvmlTextShape/xfrm	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+a:CT_GvmlTextShape/extLst	MIE	CLOSE-03	Inside a locked canvas, which nothing reads; no fixture has it, so `r` is not earned
+x:drawing/2018/animation:<animPr>	MIE	CLOSE-03	Nothing reads or writes it, and no fixture has it, so `r` is not earned; it stays in the tree
+p:ST_TLTimeIndefinite/=indefinite	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationBuildType/=allAtOnce	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationDgmOnlyBuildType/=one	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationDgmOnlyBuildType/=lvlOne	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationDgmOnlyBuildType/=lvlAtOnce	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationChartOnlyBuildType/=series	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationChartOnlyBuildType/=category	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationChartOnlyBuildType/=seriesEl	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+a:ST_AnimationChartOnlyBuildType/=categoryEl	IE	CLOSE-03	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_ColorStyleMethodEnum/=acrossLinear	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_ColorStyleMethodEnum/=acrossLinearReversed	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_ColorStyleMethodEnum/=cycle	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_ColorStyleMethodEnum/=withinLinear	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_ColorStyleMethodEnum/=withinLinearReversed	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_StyleEntryModifierEnum/=allowNoFillOverride	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_StyleEntryModifierEnum/=allowNoLineOverride	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2012/chartStyle:ST_StyleReferenceModifierEnum/=ignoreCSTransforms	IE	T1J-02	Read and written by the enum of the union it belongs to; no attribute has this member type, so the audit cannot place it
+x:drawing/2014/chartex:ST_DoubleOrAutomatic/=auto	MIE	T1J-03	Its attribute is read and written as a string, so `auto` is kept as written; no enum holds it
+x:drawing/2014/chartex:ST_GapWidthRatio/=auto	MIE	T1J-03	Its attribute is read and written as a string, so `auto` is kept as written; no enum holds it
+x:drawing/2014/chartex:ST_ValueAxisUnit/=auto	MIE	T1J-03	Its attribute is read and written as a string, so `auto` is kept as written; no enum holds it
+x:drawing/2014/chartex:ST_DoubleOrAutomatic	M	T1J-03	Its attribute is read and written as a string, so `auto` is kept as written; no enum holds it
+x:drawing/2014/chartex:ST_GapWidthRatio	M	T1J-03	Its attribute is read and written as a string, so `auto` is kept as written; no enum holds it
+x:drawing/2014/chartex:ST_ValueAxisUnit	M	T1J-03	Its attribute is read and written as a string, so `auto` is kept as written; no enum holds it
+a:ST_TextFontScalePercent	M	CLOSE-03	A restricted member of a union; the model holds the attribute as written, with no type for this member
+a:ST_TextPointUnqualified	M	CLOSE-03	A restricted member of a union; the model holds the attribute as written, with no type for this member
+a:ST_TextSpacingPercent	M	CLOSE-03	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_BubbleScalePercent	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_BubbleScaleUInt	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_DepthPercentUShort	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_DepthPercentWithSymbol	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_GapAmountPercent	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_GapAmountUShort	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_HPercentUShort	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_HPercentWithSymbol	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_HoleSizePercent	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_HoleSizeUByte	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_LblOffsetPercent	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_LblOffsetUShort	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_OverlapByte	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_OverlapPercent	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_SecondPieSizePercent	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_SecondPieSizeUShort	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+c:ST_ThicknessPercent	M	T1J-01	A restricted member of a union; the model holds the attribute as written, with no type for this member
+x:drawing/2012/chartStyle:ST_StyleEntryModifier	M	T1J-02	A union whose list is read through its enum member; no field of the model has this type by name
+x:drawing/2012/chartStyle:ST_StyleReferenceModifier	M	T1J-02	A union whose list is read through its enum member; no field of the model has this type by name
+x:drawing/2014/chartex:ST_ExtensionDropMode/=never	MIE	T1J-03	Only `CT_FeatureExtension/@drop` has this type and no element holds that type, so no legal deck has it
+x:drawing/2014/chartex:ST_ExtensionDropMode/=onModelChange	MIE	T1J-03	Only `CT_FeatureExtension/@drop` has this type and no element holds that type, so no legal deck has it
+x:drawing/2014/chartex:ST_ExtensionDropMode/=onDataChange	MIE	T1J-03	Only `CT_FeatureExtension/@drop` has this type and no element holds that type, so no legal deck has it
+x:drawing/2014/chartex:ST_ExtensionDropMode/=always	MIE	T1J-03	Only `CT_FeatureExtension/@drop` has this type and no element holds that type, so no legal deck has it
+x:drawing/2014/chartex:ST_ExtensionDropMode	M	T1J-03	Only `CT_FeatureExtension/@drop` has this type and no element holds that type, so no legal deck has it
+c:CT_ExtensionList/ext	MIE	T1J-01	Read and written as typed items, unreported, so `r` would be false; the audit lets no `ext` earn `y`
+x:drawing/2014/chartex:CT_ExtensionList/ext	MIE	T1J-03	Read and written as typed items, unreported, so `r` would be false; the audit lets no `ext` earn `y`

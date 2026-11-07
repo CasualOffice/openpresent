@@ -223,6 +223,7 @@ pub struct FeatureExtension {
     /// `drop`.
     pub drop: Option<ExtensionDropModeValue>,
     /// what an extension holds.
+    // spec-audit: x:drawing/2014/chartex:CT_FeatureExtension/xsd:any
     pub items: Vec<ExtItem>,
 }
 
@@ -232,6 +233,7 @@ pub struct Extension {
     /// `uri`.
     pub uri: Option<String>,
     /// what an extension holds.
+    // spec-audit: x:drawing/2014/chartex:CT_Extension/xsd:any
     pub items: Vec<ExtItem>,
 }
 

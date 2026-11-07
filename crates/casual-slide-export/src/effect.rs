@@ -180,6 +180,55 @@ fn picture_effect(e: &PictureEffect) -> Node {
             effect,
             transparency,
             parameter,
+        // The element comes from `artistic_name`, the parameter from `ArtisticEffect`.
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectBlur/@radius
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCement/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCement/@crackSpacing
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectChalkSketch/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectChalkSketch/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCrisscrossEtching/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCrisscrossEtching/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCutout/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectCutout/@numberOfShades
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectFilmGrain/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectFilmGrain/@grainSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlass/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlass/@scaling
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowDiffused/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowDiffused/@intensity
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowEdges/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowEdges/@smoothness
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLightScreen/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLightScreen/@gridSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLineDrawing/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectLineDrawing/@pencilSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMarker/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMarker/@size
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMosiaicBubbles/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectMosiaicBubbles/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintBrush/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintBrush/@brushSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintStrokes/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintStrokes/@intensity
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPastelsSmooth/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPastelsSmooth/@scaling
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilGrayscale/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilGrayscale/@pencilSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilSketch/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilSketch/@pressure
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPhotocopy/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPhotocopy/@detail
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPlasticWrap/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectPlasticWrap/@smoothness
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectTexturizer/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectTexturizer/@scaling
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectWatercolorSponge/@trans
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectWatercolorSponge/@brushSize
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectBrightnessContrast/@bright
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectBrightnessContrast/@contrast
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectColorTemperature/@colorTemp
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectSaturation/@sat
+        // spec-audit: x:drawing/2010/main:CT_PictureEffectSharpenSoften/@amount
         } => Node::new(Space::A14, artistic_name(*effect))
             .pct("trans", *transparency)
             .lex(effect.parameter().0, parameter.as_ref()),
@@ -216,5 +265,6 @@ pub(crate) fn image_properties_node(p: &ImageProperties) -> Node {
             .rel("embed", l.embed.as_ref())
             .list(l.effects.iter().map(picture_effect))
     });
+    // spec-audit: x:drawing/2010/main:<imgProps>
     Node::new(Space::A14, "imgProps").opt(layer)
 }

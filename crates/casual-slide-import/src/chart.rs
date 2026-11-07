@@ -568,6 +568,7 @@ impl ChartReader<'_, '_> {
                 let mut e = branch.clone();
                 out.requires = e.take("Requires");
                 for kid in self.r.children(&branch)? {
+                    // spec-audit: x:drawing/2010/chartDrawing:<contentPart>
                     if kid.is(NS_CDR14, "contentPart") {
                         out.choice = Some(Box::new(self.cdr14_content_part(&kid)?));
                         known = true;

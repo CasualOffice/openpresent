@@ -348,6 +348,7 @@ pub struct Extension {
     /// `uri`.
     pub uri: Option<String>,
     /// what an extension holds.
+    // spec-audit: c:CT_Extension/xsd:any
     pub items: Vec<ExtItem>,
 }
 

@@ -223,8 +223,10 @@ pub struct Blip {
     /// The blip effects, in document order.
     pub effects: Vec<Effect>,
     /// `a14:imgProps`, from `extLst`.
+    // spec-audit: x:drawing/2010/main:<imgProps>
     pub image_properties: Option<ImageProperties>,
     /// `a14:useLocalDpi/@val`, from `extLst`.
+    // spec-audit: x:drawing/2010/main:<useLocalDpi>
     pub use_local_dpi: Option<bool>,
     /// `asvg:svgBlip`, from `extLst`, of which this blip's `@r:embed` is the fallback.
     pub svg: Option<SvgBlip>,

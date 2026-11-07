@@ -33,6 +33,7 @@ fn sketch(s: &LineSketch) -> Node {
     let seed = s
         .seed
         .map(|v| Node::new(Space::Ask, "seed").text(Some(v.to_string())));
+    // spec-audit: x:drawing/2018/sketchyshapes:<lineSketchStyleProps>
     Node::new(Space::Ask, "lineSketchStyleProps")
         .lex("sd", s.seed_attribute.as_ref())
         .opt(s.geometry.as_ref().map(geometry_node))

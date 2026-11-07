@@ -111,6 +111,7 @@ impl MotionReader<'_, '_> {
         if c.is(P15, "prstTrans") {
             return Ok(Some(E::Preset(self.preset(c)?)));
         }
+        // spec-audit: x:powerpoint/2015/09/main:<morph>
         if c.is(P159, "morph") {
             return Ok(Some(E::Morph(self.morph(c)?)));
         }

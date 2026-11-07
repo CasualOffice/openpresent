@@ -72,6 +72,7 @@ pub(crate) fn inline_name(m: &InlineMath) -> (&'static [&'static str], &'static 
     if m.alternate.is_some() {
         (MC, "mc", "AlternateContent")
     } else {
+        // spec-audit: x:drawing/2010/main:<m>
         (A14, "a14", "m")
     }
 }

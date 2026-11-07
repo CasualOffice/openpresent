@@ -78,6 +78,7 @@ fn equation_shape(r: &Reader<'_>, el: &Elem) -> Result<Option<Shape>, ImportErro
     let [math] = inner.as_slice() else {
         return Ok(None);
     };
+    // spec-audit: x:drawing/2010/main:<m>
     if !math.is(A14, "m") {
         return Ok(None);
     }
