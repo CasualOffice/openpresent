@@ -17,14 +17,15 @@ use casual_slide_model::presentation::{
     COORDINATE_MIN, Coordinate, POSITIVE_COORDINATE_MAX, Point,
 };
 use casual_slide_model::shape::{
-    AppNonVisual, Connection, Hyperlink, Locks, MediaKind, NodeKind, NonVisualDrawing, ObjectId,
-    Placeholder, ShapeNode, Transform,
+    AppNonVisual, Connection, Hyperlink, Locks, NodeKind, NonVisualDrawing, ObjectId, Placeholder,
+    ShapeNode, Transform,
 };
 use casual_slide_model::table::Table;
 use casual_slide_ooxml::{AlternateResolution, Branch, MARKUP_COMPATIBILITY, Relationship};
 
 use crate::color::Findings as ColorFindings;
 use crate::drawing::{Ctx, note_dag_siblings, read_blip_fill};
+use crate::media::{MediaLimits, is_media_element, read_app_extensions, read_media, read_wav};
 use crate::presentation::read_positive_size;
 use crate::properties::{Elem, ImportError, ImportFindingKind as K, Reader, ns};
 use crate::slide::{SlideError, SlideLimits};
@@ -385,7 +386,9 @@ impl ShapeReader<'_, '_, '_> {
         if n.kind == NodeKind::Shape {
             n.text_box = self.r.attr(&mut el, "txBox")?;
         }
-        // `preferRelativeResize` on `cNvPicPr` is Tier 1H, and is reported.
+        if n.kind == NodeKind::Picture {
+            return self.c_nv_pic_pr(&el, n);
+        }
         self.r.finish(&el);
         let mut seen = HashSet::new();
         for child in self.r.children(&el)? {
@@ -408,6 +411,33 @@ impl ShapeReader<'_, '_, '_> {
             }
         }
         Ok(())
+    }
+
+    fn c_nv_pic_pr(&mut self, el: &Elem, n: &mut ShapeNode) -> Result<(), SlideError> {
+        let mut e = el.clone();
+        n.prefer_relative_resize = self.r.attr(&mut e, "preferRelativeResize")?;
+        self.r.finish(&e);
+        let mut seen = false;
+        for child in self.r.children(&e)? {
+            if !child.is(ns::DML, "picLocks") {
+                self.r.retained(&child);
+            } else if seen {
+                self.r.note(K::DuplicateElement, &child, None);
+            } else {
+                seen = true;
+                n.locks = Some(self.pic_locks(&child)?);
+            }
+        }
+        Ok(())
+    }
+
+    /// `AG_Locking` as any node has it, and `noCrop`, which only a picture does.
+    fn pic_locks(&mut self, el: &Elem) -> Result<Locks, SlideError> {
+        let mut e = el.clone();
+        let no_crop = self.r.attr(&mut e, "noCrop")?;
+        let mut locks = self.locks(&e, NodeKind::Picture)?;
+        locks.no_crop = no_crop;
+        Ok(locks)
     }
 
     fn locks(&mut self, el: &Elem, kind: NodeKind) -> Result<Locks, SlideError> {
@@ -444,22 +474,12 @@ impl ShapeReader<'_, '_, '_> {
         self.r.finish(&el);
         let mut seen = HashSet::new();
         for child in self.r.children(&el)? {
-            let media = match child.local.as_str() {
-                "audioCd" => Some(MediaKind::AudioCd),
-                "wavAudioFile" => Some(MediaKind::WavAudioFile),
-                "audioFile" => Some(MediaKind::AudioFile),
-                "videoFile" => Some(MediaKind::VideoFile),
-                "quickTimeFile" => Some(MediaKind::QuickTimeFile),
-                _ => None,
-            };
-            if let Some(media) = media.filter(|_| child.in_namespace(ns::DML)) {
+            if is_media_element(&child) {
                 if app.media.is_some() {
                     self.r.note(K::DuplicateElement, &child, None);
                 } else {
-                    app.media = Some(media);
+                    app.media = Some(read_media(self.r, self.rels, &child)?);
                 }
-                // What the media element holds is Tier 1H.
-                self.r.retained(&child);
             } else if child.is(ns::PML, "ph") {
                 if !seen.insert("ph") {
                     self.r.note(K::DuplicateElement, &child, None);
@@ -468,8 +488,15 @@ impl ShapeReader<'_, '_, '_> {
                 // MS-OI29500 2.1.1126: PowerPoint allows none on a connector or a
                 // group. Read as written all the same; the resolver matches none.
                 app.placeholder = Some(self.placeholder(&child)?);
+            } else if child.is(ns::PML, "extLst") {
+                if !seen.insert("extLst") {
+                    self.r.note(K::DuplicateElement, &child, None);
+                    continue;
+                }
+                app.media_extension =
+                    read_app_extensions(self.r, self.rels, &MediaLimits::default(), &child)?;
             } else {
-                // `custDataLst` is Tier 1M; `extLst` stays.
+                // `custDataLst` is Tier 1M.
                 self.r.retained(&child);
             }
         }
@@ -603,7 +630,7 @@ pub(crate) fn read_hyperlink(
     {
         r.note(K::DanglingRelationship, &el, Some("r:id"));
     }
-    let link = Hyperlink {
+    let mut link = Hyperlink {
         rel_id,
         invalid_url: r.attr(&mut el, "invalidUrl")?,
         action: r.attr(&mut el, "action")?,
@@ -612,11 +639,18 @@ pub(crate) fn read_hyperlink(
         history: r.attr(&mut el, "history")?,
         highlight_click: r.attr(&mut el, "highlightClick")?,
         end_sound: r.attr(&mut el, "endSnd")?,
+        sound: None,
     };
     r.finish(&el);
     for child in r.children(&el)? {
-        // `snd` is Tier 1H, `extLst` stays.
-        r.retained(&child);
+        if !child.is(ns::DML, "snd") {
+            // `extLst` stays.
+            r.retained(&child);
+        } else if link.sound.is_some() {
+            r.note(K::DuplicateElement, &child, None);
+        } else {
+            link.sound = Some(read_wav(r, rels, &child)?);
+        }
     }
     Ok(link)
 }
