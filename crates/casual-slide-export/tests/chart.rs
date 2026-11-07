@@ -471,6 +471,14 @@ fn every_chart_part_written_from_nothing_reads_back_as_its_model() {
     assert!(count >= 50, "only {count}");
 }
 
+/// A number as a value, since `0.0` and `0` say one thing and a new one is spelled afresh.
+fn same_number(value: String) -> String {
+    match value.parse::<f64>() {
+        Ok(number) if number.is_finite() => number.to_string(),
+        _ => value,
+    }
+}
+
 /// An element with its attributes sorted, so two trees compare by content.
 fn canonical(tree: &XmlTree, id: ElementId, part: &str, out: &mut String) {
     let mut attrs: Vec<(String, String)> = tree
@@ -478,12 +486,14 @@ fn canonical(tree: &XmlTree, id: ElementId, part: &str, out: &mut String) {
         .unwrap()
         .into_iter()
         .filter(|(k, _)| !k.starts_with("xmlns"))
+        // Bare in the schema, qualified as PowerPoint writes it: either reads, a new one is qualified.
+        .map(|(k, v)| (k.replace("cx:autoUpdate", "autoUpdate"), same_number(v)))
         .collect();
     attrs.sort();
     out.push_str(&format!("<{} {attrs:?}>", tree.qualified_name(id)));
     let kids = tree.child_elements(id);
     if kids.is_empty() {
-        out.push_str(&tree.own_text(id).unwrap_or_default());
+        out.push_str(&same_number(tree.own_text(id).unwrap_or_default()));
     }
     for kid in kids {
         canonical(tree, kid, part, out);

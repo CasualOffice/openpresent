@@ -528,7 +528,7 @@ def chart_ex_deck():
 
 def every_row_decks():
     """A deck per kind of root, with a part per value of the longest enumeration."""
-    longest = {"c": 24, "cx": 20, "cs": 10}
+    longest = {"c": 48, "cx": 20, "cs": 10}
     NEXT_VALUE.clear()
     c_charts = []
     extra_parts, extra_types = [], []
