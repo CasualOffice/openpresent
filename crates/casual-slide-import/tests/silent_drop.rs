@@ -12,7 +12,7 @@ use casual_slide_import::properties::{Findings, ImportLimits};
 use casual_slide_import::slide::{SlideLimits, import_slide_part};
 use casual_slide_import::theme::import_theme;
 use casual_slide_model::slide::{SlideKind, SlidePart};
-use casual_slide_ooxml::{ElementId, OoxmlLimits, PresentationPackage, XmlTree};
+use casual_slide_ooxml::{ElementId, OoxmlLimits, PresentationPackage, Relationship, XmlTree};
 
 const PART: &str = "ppt/slides/slide1.xml";
 /// The decks walked. Anything with a body-level `extLst` or a foreign child is here too, as
@@ -47,7 +47,10 @@ const EMPTY_HOLDERS: [&str; 7] = [
 
 type Read = (SlidePart, Vec<String>, Vec<String>);
 
-fn read(xml: &[u8]) -> Option<Read> {
+/// Read with the part's own relationships (`CLOSE-04`): read with none, every `r:id` is
+/// reported dangling, and that report names the element and so hides whatever is dropped
+/// inside it.
+fn read(xml: &[u8], rels: &[Relationship]) -> Option<Read> {
     let tree = XmlTree::parse(xml, PART, &OoxmlLimits::default()).ok()?;
     let import = ImportLimits::default();
     let mut findings = Findings::new(import.max_findings);
@@ -55,7 +58,7 @@ fn read(xml: &[u8]) -> Option<Read> {
     let part = import_slide_part(
         &tree,
         PART,
-        &[],
+        rels,
         SlideKind::Slide,
         0,
         &SlideLimits::default(),
@@ -98,13 +101,19 @@ fn elements(tree: &XmlTree) -> Vec<(ElementId, ElementId)> {
 /// first, and then this one has to be what the report was saying. An element inside one the
 /// report names is that element's: `ext` in `extLst`, or `a:r` in an `mc:Fallback`. Whichever
 /// holds it is asked this same question in its own turn.
-fn goes_unnoticed(whole: &XmlTree, parent: ElementId, kid: ElementId, above: &[String]) -> bool {
+fn goes_unnoticed(
+    whole: &XmlTree,
+    rels: &[Relationship],
+    parent: ElementId,
+    kid: ElementId,
+    above: &[Held],
+) -> bool {
     let without = |tree: &XmlTree| {
         let mut gone = tree.clone();
         gone.remove_child(parent, kid);
-        read(&gone.to_bytes())
+        read(&gone.to_bytes(), rels)
     };
-    let as_read = read(&whole.to_bytes());
+    let as_read = read(&whole.to_bytes(), rels);
     if without(whole) != as_read {
         return false;
     }
@@ -126,30 +135,30 @@ fn goes_unnoticed(whole: &XmlTree, parent: ElementId, kid: ElementId, above: &[S
             alone.remove_child(holder, other);
         }
     }
-    let Some(isolated) = read(&alone.to_bytes()) else {
+    let Some(isolated) = read(&alone.to_bytes(), rels) else {
         return false;
     };
     if without(&alone).as_ref() != Some(&isolated) {
         return false;
     }
-    !named_above(&isolated, above)
+    !named_above(&alone, rels, &isolated, above)
 }
 
 /// What in this slide reads no differently for being gone. A kind of thing is tried once for
 /// each place it can be, as a part reads slowly in a debug build.
-fn silent_in(xml: &[u8]) -> Vec<String> {
+fn silent_in(xml: &[u8], rels: &[Relationship]) -> Vec<String> {
     let whole = XmlTree::parse(xml, PART, &OoxmlLimits::default()).unwrap();
-    let as_read = read(xml).unwrap();
+    let as_read = read(xml, rels).unwrap();
     let mut silent = Vec::new();
     let mut tried = HashSet::new();
-    // Each element with the local names of what holds it.
-    let mut stack = vec![(whole.root(), Vec::<String>::new())];
+    // Each element with what holds it, outermost first.
+    let mut stack = vec![(whole.root(), Vec::<Held>::new())];
     while let Some((parent, above)) = stack.pop() {
         for kid in whole.child_elements(parent) {
             let name = whole.qualified_name(kid).to_owned();
             let attrs = whole.attributes(kid, PART).unwrap();
             let mut path = above.clone();
-            path.push(local(&name).to_owned());
+            path.push((parent, kid));
             stack.push((kid, path));
             if matches!(name.as_str(), "p:cSld" | "p:spTree" | "p:nvGrpSpPr") {
                 continue;
@@ -158,7 +167,7 @@ fn silent_in(xml: &[u8]) -> Vec<String> {
             let empty = attrs.is_empty() && whole.child_elements(kid).is_empty();
             if !(empty && EMPTY_HOLDERS.contains(&name.as_str()))
                 && tried.insert((held.clone(), name.clone(), String::new()))
-                && goes_unnoticed(&whole, parent, kid, &above)
+                && goes_unnoticed(&whole, rels, parent, kid, &above)
             {
                 silent.push(format!("<{name}> in <{held}>"));
             }
@@ -171,8 +180,8 @@ fn silent_in(xml: &[u8]) -> Vec<String> {
                 }
                 let mut tree = whole.clone();
                 tree.remove_attribute(kid, &attr);
-                if read(&tree.to_bytes()).as_ref() == Some(&as_read)
-                    && !named_above(&as_read, &above)
+                if read(&tree.to_bytes(), rels).as_ref() == Some(&as_read)
+                    && !named_above(&whole, rels, &as_read, &above)
                 {
                     silent.push(format!("<{name}>/@{attr} in <{held}>"));
                 }
@@ -182,31 +191,87 @@ fn silent_in(xml: &[u8]) -> Vec<String> {
     silent
 }
 
-/// Whether the report names something holding this.
-fn named_above((_, report, colors): &Read, above: &[String]) -> bool {
-    report
-        .iter()
-        .chain(colors)
-        .filter_map(|line| line.split(' ').nth(1))
-        .any(|named| above.iter().any(|a| a == local(named)))
+/// An element that holds the one being tried, with what holds it in turn.
+type Held = (ElementId, ElementId);
+
+/// Whether `inner` is `outer` or inside it.
+fn within(tree: &XmlTree, outer: ElementId, inner: ElementId) -> bool {
+    let mut stack = vec![outer];
+    while let Some(id) = stack.pop() {
+        if id == inner {
+            return true;
+        }
+        stack.extend(tree.child_elements(id));
+    }
+    false
 }
 
-fn slide_of(deck: &str) -> Vec<u8> {
+/// Whether the report names something holding this, for this element's own sake. A report
+/// names elements by kind, so a finding on one `a:blip` would otherwise cover what is
+/// dropped from every other (`CLOSE-04`). Each holder is asked alone, as in
+/// [`goes_unnoticed`]: every other element of its name goes first, and then the finding has
+/// to go with it.
+fn named_above(tree: &XmlTree, rels: &[Relationship], as_read: &Read, above: &[Held]) -> bool {
+    let naming = |(_, report, colors): &Read, name: &str| -> Vec<String> {
+        report
+            .iter()
+            .chain(colors)
+            .filter(|line| line.split(' ').nth(1).is_some_and(|n| local(n) == name))
+            .cloned()
+            .collect()
+    };
+    above.iter().any(|&(holder, held)| {
+        let name = local(tree.qualified_name(held));
+        if naming(as_read, name).is_empty() {
+            return false;
+        }
+        let mut alone = tree.clone();
+        for (h, other) in elements(tree) {
+            if local(tree.qualified_name(other)) == name
+                && !within(tree, other, held)
+                && !within(tree, held, other)
+            {
+                alone.remove_child(h, other);
+            }
+        }
+        let Some(isolated) = read(&alone.to_bytes(), rels) else {
+            return true;
+        };
+        let before = naming(&isolated, name);
+        if before.is_empty() {
+            return false;
+        }
+        alone.remove_child(holder, held);
+        match read(&alone.to_bytes(), rels) {
+            Some(after) => {
+                let after = naming(&after, name);
+                before.iter().any(|line| !after.contains(line))
+            }
+            None => true,
+        }
+    })
+}
+
+/// The slide and its relationships, as the deck importer reads them.
+fn slide_of(deck: &str) -> (Vec<u8>, Vec<Relationship>) {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../fixtures/generated")
         .join(format!("{deck}.pptx"));
     let bytes = std::fs::read(path).unwrap();
     let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
-    pkg.read_part(PART).unwrap()
+    let xml = pkg.read_part(PART).unwrap();
+    let rels = pkg.relationships_of(PART).to_vec();
+    assert!(!rels.is_empty(), "{deck}: a slide has relationships");
+    (xml, rels)
 }
 
 #[test]
 fn nothing_in_a_shape_can_go_without_the_model_or_the_report_changing() {
     let mut silent = Vec::new();
     for deck in DECKS {
-        let xml = slide_of(deck);
+        let (xml, rels) = slide_of(deck);
         silent.extend(
-            silent_in(&xml)
+            silent_in(&xml, &rels)
                 .into_iter()
                 .map(|what| format!("{deck}: {what}")),
         );
@@ -230,8 +295,8 @@ fn something_unknown_is_reported_and_so_is_its_absence() {
             r#"<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2" name="s"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr{extra}/><a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sld>"#
         )
     };
-    let plain = read(slide("").as_bytes()).unwrap();
-    let extra = read(slide(r#" madeUp="1""#).as_bytes()).unwrap();
+    let plain = read(slide("").as_bytes(), &[]).unwrap();
+    let extra = read(slide(r#" madeUp="1""#).as_bytes(), &[]).unwrap();
     assert_ne!(plain, extra, "an unknown attribute changes the report");
     assert!(
         extra.1.iter().any(|f| f.contains("bodyPr")),
@@ -239,7 +304,7 @@ fn something_unknown_is_reported_and_so_is_its_absence() {
         extra.1
     );
     assert_eq!(
-        silent_in(slide(r#" madeUp="1""#).as_bytes()),
+        silent_in(slide(r#" madeUp="1""#).as_bytes(), &[]),
         Vec::<String>::new()
     );
 }
