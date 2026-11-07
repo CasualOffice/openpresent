@@ -16,15 +16,15 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | Phase | State | Note |
 | --- | --- | --- |
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
-| 0 Foundation | **Open** | All criteria met; awaiting owner sign-off |
-| 1 Model, import, export | **Open under waiver W-1** | See the Phase 1 plan below |
+| 0 Foundation | **Closed** 2026-11-07 | Signed off by the owner. Seeded violations were run locally on macOS, not on GitHub's runners. Fonts measured in `SPK-01` left the repo and return in Phase 2 |
+| 1 Model, import, export | **Open** | See the Phase 1 plan below |
 | 2 to 10 | Not opened | **No rendering, painting or font work until Phase 1 closes** (owner instruction 20) |
 
 ### Waivers
 
 | ID | Criterion not met | Risk | Accepted | If it fails |
 | --- | --- | --- | --- | --- |
-| W-1 | Phase 1 opened before Phase 0 closed: CI not run, no PowerPoint-written decks | Code written against decks only we and LibreOffice wrote; failures on other platforms found late | Owner's "proceed", 2026-11-07 | Fix in tier; Phase 1 still cannot close without these |
+| W-1 | Phase 1 opened before Phase 0 closed: CI not run, no PowerPoint-written decks | Code written against decks only we and LibreOffice wrote; failures on other platforms found late | Owner's "proceed", 2026-11-07 | Fix in tier; Phase 1 still cannot close without these Resolved 2026-11-07: Phase 0 closed. |
 
 ## Phase D — Design
 
@@ -36,7 +36,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
   - [ ] Every ADR needed by Phases 0 to 2 is Accepted or has a named spike deciding it.
   - [ ] Each `DEC-*` is answered, or the owner has marked it as not blocking and named the phase that needs it.
   - [ ] The doc audit's P0 and P1 findings are fixed (`DOC-003`), and the gap analysis is dispositioned (`DOC-004`).
-  - [ ] Owner sign-off.
+  - [x] Owner sign-off, 2026-11-07.
 
 ## Phase 0 — Foundation
 

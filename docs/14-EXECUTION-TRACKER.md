@@ -30,7 +30,7 @@
 | DOC-001 | Initial design set | Done | P0 | Written 2026-11-07 from a scan of `../opencalc` at `b23c67c` | Owner review, below |
 | DOC-003 | Fix doc audit findings | In progress | P0 | Independent audit found 51 issues, with 18 of 31 guards confirmed by mutation. Doc corrections applied 2026-11-07, except rows below. Needs a re-check after the merges | Fresh re-audit finds no P0 |
 | DOC-004 | Disposition gap analysis | Done | P0 | 51 gaps reviewed; each has a row below or was applied. Items its author marked unverified stay so in their rows | Rows exist |
-| DOC-005 | Phase and task rules | In progress | P0 | [05](05-PHASES-AND-TASKS.md), charters in [06](06-ROADMAP-AND-DELIVERY.md). Needs owner approval | Owner approves |
+| DOC-005 | Phase and task rules | Done | P0 | [05](05-PHASES-AND-TASKS.md), charters in [06](06-ROADMAP-AND-DELIVERY.md). Used to close Phase 0 | Owner signed Phase 0 |
 | DOC-006 | Working rules and skills | Done | P1 | `CLAUDE.md` holds standards, one-roadmap-one-tracker, document updates. Six project skills in `.claude/skills`. `check-repo.py` refuses a second tracker or plan | Seeded second tracker seen failing |
 | ENG-01 | Enforce standards by lint | Open | P1 | Add `unwrap_used`, `expect_used`, `indexing_slicing`, `missing_docs` for non-test code. Waits for the parallel sessions to merge, since it touches their files. Copied `-text` needs a pass | Clippy passes with the lints on |
 | DOC-002 | ADR review | Done | P0 | All Accepted except ADR-004 and ADR-005, which wait on `SPK-01` | [08](08-ADR-REGISTER.md) |
@@ -246,9 +246,9 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1M-01 | Comments | Open | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
 | T1M-02 | Sections, zoom, classification | Open | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
 | T1M-03 | Review and custom data | Open | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
-| T1N-01 | Writer: part naming and rIds | Open | P0 | [36](36-EXPORT-AND-SAVE.md) rules, with `RR-*` fixtures | Each seeded break refused |
-| T1N-02 | Writer: content types and shared parts | Open | P0 | Default against Override, reference counts | Each seeded break refused |
-| T1N-03 | Writer: id rules and sections | Open | P0 | Slide, master and layout ids; section sync; notes master | Each seeded break refused |
+| T1N-01 | Writer: part naming and rIds | In progress | P0 | [36](36-EXPORT-AND-SAVE.md) rules, with `RR-*` fixtures | Each seeded break refused |
+| T1N-02 | Writer: content types and shared parts | In progress | P0 | Default against Override, reference counts | Each seeded break refused |
+| T1N-03 | Writer: id rules and sections | In progress | P0 | Slide, master and layout ids; section sync; notes master | Each seeded break refused |
 | T1N-04 | Writer: add, duplicate, delete slide at file level | Open | P0 | What Phase 4 needs beneath its ops. Deep clone rules from `OP-01` | Reopens with F4 and validator clean |
 | T1N-05 | Writer: docProps, thumbnails, signature drop | Open | P1 | App counts recalculated; `WR-06` | Fixtures |
 | T1N-06 | Writer: save-as matrix | Open | P1 | `WR-05`: 121 pairs | Fixture per pair |
