@@ -400,16 +400,27 @@ fn every_input_of_this_tier_meets_its_manifest_row() {
         }
         seen += 1;
         let bytes = std::fs::read(root().join("fixtures").join(cols[0])).unwrap();
-        let result = PresentationPackage::open_strict(bytes, OoxmlLimits::default());
         if let Some(code) = cols[2].strip_prefix("refuse:") {
-            assert_eq!(result.unwrap_err().code(), code, "{}", cols[0]);
+            let err = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap_err();
+            assert_eq!(err.code(), code, "{}", cols[0]);
             continue;
         }
-        let pkg = result.unwrap_or_else(|e| panic!("{}: {e}", cols[0]));
+        let expect = match cols[2].strip_prefix("recover:") {
+            Some(rest) => {
+                let (code, findings) = rest.split_once(' ').unwrap_or((rest, ""));
+                let err = PresentationPackage::open_strict(bytes.clone(), OoxmlLimits::default())
+                    .unwrap_err();
+                assert_eq!(err.code(), code, "{}", cols[0]);
+                format!("open {findings}").trim_end().to_owned()
+            }
+            None => cols[2].to_owned(),
+        };
+        let pkg = PresentationPackage::open(bytes, OoxmlLimits::default())
+            .unwrap_or_else(|e| panic!("{}: {e}", cols[0]));
         let mut codes: Vec<&str> = pkg.findings().iter().map(|f| f.kind.code()).collect();
         codes.sort_unstable();
         codes.dedup();
-        let wanted: Vec<&str> = cols[2].split(' ').skip(1).collect();
+        let wanted: Vec<&str> = expect.split(' ').skip(1).collect();
         if codes != wanted {
             wrong.push(format!("{}: {codes:?}", cols[0]));
         }
