@@ -15,7 +15,8 @@ pub(crate) fn read_integer255(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::Integer255::default();
-    out.val = c.attr_range(&mut e, "val", true, 1..=255)?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_range(&mut e, &name, true, 1..=255)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -29,7 +30,8 @@ pub(crate) fn read_integer2(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::I
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::Integer2::default();
-    out.val = c.attr_range(&mut e, "val", true, -2..=2)?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_range(&mut e, &name, true, -2..=2)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -43,7 +45,8 @@ pub(crate) fn read_spacing_rule(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::SpacingRule::default();
-    out.val = c.attr_range(&mut e, "val", true, 0..=4)?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_range(&mut e, &name, true, 0..=4)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -60,7 +63,8 @@ pub(crate) fn read_un_signed_integer(
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::UnSignedInteger::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -74,7 +78,8 @@ pub(crate) fn read_char(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Char>
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::Char::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -88,7 +93,8 @@ pub(crate) fn read_on_off(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::OnO
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::OnOff::default();
-    out.val = c.attr(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -102,7 +108,8 @@ pub(crate) fn read_string_type(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::StringType::default();
-    out.val = c.attr(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -116,7 +123,8 @@ pub(crate) fn read_x_align(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::XA
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::XAlign::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -130,7 +138,8 @@ pub(crate) fn read_y_align(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::YA
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::YAlign::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -144,7 +153,8 @@ pub(crate) fn read_shp(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Shp> {
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::Shp::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -158,7 +168,8 @@ pub(crate) fn read_f_type(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::FTy
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::FType::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -172,7 +183,8 @@ pub(crate) fn read_lim_loc(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Li
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::LimLoc::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -186,7 +198,8 @@ pub(crate) fn read_top_bot(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::To
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::TopBot::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -200,7 +213,8 @@ pub(crate) fn read_script(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Scr
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::Script::default();
-    out.val = c.attr(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -214,7 +228,8 @@ pub(crate) fn read_style(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Styl
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::Style::default();
-    out.val = c.attr(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -228,7 +243,8 @@ pub(crate) fn read_manual_break(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::ManualBreak::default();
-    out.aln_at = c.attr_range(&mut e, "alnAt", false, 1..=255)?;
+    let name = c.attr_name(&e, NS_M, "alnAt");
+    out.aln_at = c.attr_range(&mut e, &name, false, 1..=255)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2283,7 +2299,8 @@ pub(crate) fn read_o_math_jc(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::OMathJc::default();
-    out.val = c.attr(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2323,7 +2340,8 @@ pub(crate) fn read_twips_measure(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::TwipsMeasure::default();
-    out.val = c.attr_required(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr_required(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2337,7 +2355,8 @@ pub(crate) fn read_break_bin(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::BreakBin::default();
-    out.val = c.attr(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2351,7 +2370,8 @@ pub(crate) fn read_break_bin_sub(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
     c.enter()?;
     let mut e = el.clone();
     let mut out = m::BreakBinSub::default();
-    out.val = c.attr(&mut e, "val")?;
+    let name = c.attr_name(&e, NS_M, "val");
+    out.val = c.attr(&mut e, &name)?;
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);

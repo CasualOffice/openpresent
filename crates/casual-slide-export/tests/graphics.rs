@@ -341,8 +341,8 @@ fn walk_names(deck: &str, kind: Kind, seen: &mut BTreeSet<String>, silent: &mut 
                 }
                 let mut without = tree.clone();
                 without.remove_attribute(id, &attr);
-                let gone = XmlTree::parse(&without.to_bytes(), &name, &OoxmlLimits::default())
-                    .unwrap();
+                let gone =
+                    XmlTree::parse(&without.to_bytes(), &name, &OoxmlLimits::default()).unwrap();
                 let read = read_any(kind, &gone, &name, &rels);
                 if read.as_ref() == Some(&model) {
                     silent.push(format!("{name}: {qname}/@{attr}"));
@@ -361,18 +361,31 @@ fn walk_names(deck: &str, kind: Kind, seen: &mut BTreeSet<String>, silent: &mut 
             {
                 let mut without = tree.clone();
                 without.remove_child(parent, id);
-                let gone = XmlTree::parse(&without.to_bytes(), &name, &OoxmlLimits::default())
-                    .unwrap();
+                let gone =
+                    XmlTree::parse(&without.to_bytes(), &name, &OoxmlLimits::default()).unwrap();
                 let read = read_any(kind, &gone, &name, &rels);
                 if read.as_ref() == Some(&model) {
                     silent.push(format!("{name}: {qname}"));
                 } else {
                     let mut back = gone.clone();
-                    patch_any(&mut back, &name, &rels, &model)
-                        .unwrap_or_else(|e| panic!("{name}: {qname}: {e}"));
+                    if let Err(e) = patch_any(&mut back, &name, &rels, &model) {
+                        let reread =
+                            XmlTree::parse(&back.to_bytes(), &name, &OoxmlLimits::default())
+                                .unwrap();
+                        let (x, y) = (
+                            format!("{:?}", read_any(kind, &reread, &name, &rels)),
+                            format!("{:?}", Some(&model)),
+                        );
+                        let at = x.bytes().zip(y.bytes()).take_while(|(a, b)| a == b).count();
+                        panic!(
+                            "{name}: {qname}: {e}: at {at}: {:?} against {:?}",
+                            x.get(at.saturating_sub(80)..(at + 200).min(x.len())),
+                            y.get(at.saturating_sub(80)..(at + 200).min(y.len()))
+                        );
+                    }
                     // Each element came back with what it held.
-                    let again = XmlTree::parse(&back.to_bytes(), &name, &OoxmlLimits::default())
-                        .unwrap();
+                    let again =
+                        XmlTree::parse(&back.to_bytes(), &name, &OoxmlLimits::default()).unwrap();
                     assert_eq!(
                         read_any(kind, &again, &name, &rels).as_ref(),
                         Some(&model),
@@ -437,11 +450,7 @@ fn what_nothing_models_is_reported_and_kept() {
     let name = d.part(DiagramRole::Data).unwrap().to_owned();
     let bytes = pkg.read_part(&name).unwrap();
     let text = String::from_utf8(bytes).unwrap();
-    let xml = text.replacen(
-        "<dgm:ptLst>",
-        "<dgm:unknownKid/><dgm:ptLst odd=\"1\">",
-        1,
-    );
+    let xml = text.replacen("<dgm:ptLst>", "<dgm:unknownKid/><dgm:ptLst odd=\"1\">", 1);
     let tree = XmlTree::parse(xml.as_bytes(), &name, &OoxmlLimits::default()).unwrap();
     let import = import();
     let mut findings = Findings::new(import.max_findings);
@@ -506,7 +515,10 @@ fn the_five_parts_agree_and_a_data_edit_keeps_them_so() {
     assert!(!saved.stale_drawing);
     let data = d.part(DiagramRole::Data).unwrap().to_owned();
     let drawing = d.part(DiagramRole::Drawing).unwrap().to_owned();
-    assert_eq!(saved.outcome.changed_parts, vec![data.clone(), drawing.clone()]);
+    assert_eq!(
+        saved.outcome.changed_parts,
+        vec![data.clone(), drawing.clone()]
+    );
     // Only the two text nodes, byte for byte, in two parts of five.
     let mut before_pkg = open(source);
     let mut out = open(saved.outcome.bytes.clone());
@@ -601,7 +613,10 @@ fn a_damaged_part_is_set_aside_and_the_rest_reads() {
     assert_eq!(read.style, d.style);
     assert_eq!(read.colors, d.colors);
     assert!(findings.iter().any(|f| f.kind.code() == "CS-GFF-0001"));
-    assert!(read.inconsistencies().contains(&Inconsistency::MissingPart(DiagramRole::Layout)));
+    assert!(
+        read.inconsistencies()
+            .contains(&Inconsistency::MissingPart(DiagramRole::Layout))
+    );
 
     // The deck's slide still reads, as nothing it holds was read with it.
     let s = slide(&mut pkg, SLIDE);
@@ -626,13 +641,41 @@ fn a_damaged_part_is_set_aside_and_the_rest_reads() {
 #[test]
 fn a_part_over_a_bound_is_set_aside_with_its_code() {
     for (deck, role, code) in [
-        ("hostile/graphics-limit-points.bin", DiagramRole::Data, "CS-GFX-0003"),
-        ("hostile/graphics-limit-connections.bin", DiagramRole::Data, "CS-GFX-0004"),
-        ("hostile/graphics-limit-layout-nodes.bin", DiagramRole::Layout, "CS-GFX-0005"),
-        ("hostile/graphics-limit-drawing-shapes.bin", DiagramRole::Drawing, "CS-GFX-0006"),
-        ("hostile/graphics-limit-depth.bin", DiagramRole::Layout, "CS-GFX-0001"),
-        ("hostile/graphics-wrong-root.bin", DiagramRole::Style, "CS-IMP-0003"),
-        ("hostile/graphics-wrong-root.bin", DiagramRole::Colors, "CS-IMP-0003"),
+        (
+            "hostile/graphics-limit-points.bin",
+            DiagramRole::Data,
+            "CS-GFX-0003",
+        ),
+        (
+            "hostile/graphics-limit-connections.bin",
+            DiagramRole::Data,
+            "CS-GFX-0004",
+        ),
+        (
+            "hostile/graphics-limit-layout-nodes.bin",
+            DiagramRole::Layout,
+            "CS-GFX-0005",
+        ),
+        (
+            "hostile/graphics-limit-drawing-shapes.bin",
+            DiagramRole::Drawing,
+            "CS-GFX-0006",
+        ),
+        (
+            "hostile/graphics-limit-depth.bin",
+            DiagramRole::Layout,
+            "CS-GFX-0001",
+        ),
+        (
+            "hostile/graphics-wrong-root.bin",
+            DiagramRole::Style,
+            "CS-IMP-0003",
+        ),
+        (
+            "hostile/graphics-wrong-root.bin",
+            DiagramRole::Colors,
+            "CS-IMP-0003",
+        ),
     ] {
         let mut pkg = open(fixture(deck));
         let (part, ids) = frames(&mut pkg).remove(0);
@@ -788,6 +831,22 @@ fn an_inline_equation_holds_both_its_branches() {
     assert!(run.a_r_pr.is_some());
     let omml::RItem::T(t) = &run.items[0];
     assert_eq!(t.text.as_deref(), Some("a"));
+    // `m:val` is qualified: this schema's attributes are spelled with a prefix.
+    let omml::OMathItem::R(styled) = &equation.items[1] else {
+        panic!()
+    };
+    let sty = styled.r_pr.as_ref().unwrap().sty.as_ref().unwrap();
+    assert_eq!(sty.val, Some(omml::StyleKind::P));
+    assert_eq!(
+        para.o_math_para_pr
+            .as_ref()
+            .unwrap()
+            .jc
+            .as_ref()
+            .unwrap()
+            .val,
+        Some(omml::Jc::Center)
+    );
     // A control's properties are held too.
     let ctrl = fraction.f_pr.as_ref().unwrap().ctrl_pr.as_ref().unwrap();
     assert!(ctrl.a_r_pr.is_some());
@@ -807,7 +866,9 @@ fn a_body_holding_an_equation_is_written_from_the_model() {
         .shape_tree()
         .unwrap()
         .descendants()
-        .filter(|n| n.text_body.is_some() && n.non_visual.as_ref().unwrap().name.as_deref() != Some("Whole"))
+        .filter(|n| {
+            n.text_body.is_some() && n.non_visual.as_ref().unwrap().name.as_deref() != Some("Whole")
+        })
         .map(|n| n.id)
         .collect();
     for id in &ids {
@@ -842,7 +903,14 @@ fn an_equation_edit_is_held_to_its_fallback() {
         .id;
     let edit = |math_too: bool, fallback_too: bool| {
         let mut after = part.clone();
-        let items = &mut after.node_mut(id).unwrap().text_body.as_mut().unwrap().paragraphs[0].items;
+        let items = &mut after
+            .node_mut(id)
+            .unwrap()
+            .text_body
+            .as_mut()
+            .unwrap()
+            .paragraphs[0]
+            .items;
         let TextItem::Math(math) = &mut items[1] else {
             panic!()
         };
@@ -881,9 +949,21 @@ fn an_equation_edit_is_held_to_its_fallback() {
     assert_eq!(edit(true, false).unwrap_err(), "CS-EXP-0009");
     let old = String::from_utf8(bytes.clone()).unwrap();
     let both = edit(true, true).unwrap();
+    // The first equation is the edited shape's; the same text in the "Whole" shape stays.
+    let wanted = old
+        .replacen("> + c</m:t>", "> + d</m:t>", 1)
+        .replace("a/b + c", "a/b + d");
+    let at = wanted
+        .bytes()
+        .zip(both.bytes())
+        .take_while(|(a, b)| a == b)
+        .count();
     assert_eq!(
-        old.replace("> + c</m:t>", "> + d</m:t>").replace("a/b + c", "a/b + d"),
-        both
+        wanted,
+        both,
+        "first differs at {at}: {:?} against {:?}",
+        wanted.get(at.saturating_sub(40)..at + 40),
+        both.get(at.saturating_sub(40)..at + 40)
     );
     // Only the fallback: the equation is what is true, so that is allowed.
     edit(false, true).unwrap();
@@ -913,7 +993,9 @@ fn an_equation_in_a_branch_not_taken_is_read_and_its_edit_blocked() {
     assert_eq!(branch.equations.len(), 1);
     let mut after = part.clone();
     let root_id = root.id;
-    after.node_mut(root_id).unwrap().alternates[0].equations.clear();
+    after.node_mut(root_id).unwrap().alternates[0]
+        .equations
+        .clear();
     let mut t = tree.clone();
     let err = patch_slide_part(
         &mut t,
@@ -951,7 +1033,14 @@ fn a_bare_equation_reads_and_writes() {
     assert!(math.alternate.is_none());
     let mut after = part.clone();
     let id = part.shape_tree().unwrap().children[0].id;
-    after.node_mut(id).unwrap().text_body.as_mut().unwrap().paragraphs[0].items = vec![];
+    after
+        .node_mut(id)
+        .unwrap()
+        .text_body
+        .as_mut()
+        .unwrap()
+        .paragraphs[0]
+        .items = vec![];
     let mut t = tree.clone();
     let patched = |t: &mut XmlTree, to: &SlidePart| {
         patch_slide_part(
@@ -1060,7 +1149,13 @@ fn a_damaged_ink_part_is_set_aside_and_the_slide_stands() {
     let mut pkg = open(damaged.clone());
     let import = import();
     let mut findings = Findings::new(import.max_findings);
-    let read = import_ink_part(&mut pkg, "ppt/ink/ink0.xml", &limits(), &import, &mut findings);
+    let read = import_ink_part(
+        &mut pkg,
+        "ppt/ink/ink0.xml",
+        &limits(),
+        &import,
+        &mut findings,
+    );
     assert!(read.root.is_none());
     assert!(read.set_aside.is_some());
     assert!(findings.iter().any(|f| f.kind.code() == "CS-GFF-0001"));
@@ -1069,7 +1164,13 @@ fn a_damaged_ink_part_is_set_aside_and_the_slide_stands() {
     assert_eq!(same.outcome.bytes, damaged);
     // Over a bound: set aside under its code.
     let mut pkg = open(fixture("hostile/graphics-limit-traces.bin"));
-    let read = import_ink_part(&mut pkg, "ppt/ink/ink1.xml", &limits(), &import, &mut findings);
+    let read = import_ink_part(
+        &mut pkg,
+        "ppt/ink/ink1.xml",
+        &limits(),
+        &import,
+        &mut findings,
+    );
     assert_eq!(read.set_aside.unwrap().code, "CS-GFX-0007");
 }
 
@@ -1086,15 +1187,37 @@ fn a_frames_diagram_references_are_read_and_patched() {
     assert_eq!(ids.dm.as_deref(), Some("rId2"));
     let import_limits = import();
     let mut findings = Findings::new(import_limits.max_findings);
-    let all = import_slide_diagrams(&mut pkg, SLIDE, &part, &limits(), &import_limits, &mut findings);
+    let all = import_slide_diagrams(
+        &mut pkg,
+        SLIDE,
+        &part,
+        &limits(),
+        &import_limits,
+        &mut findings,
+    );
     assert_eq!(all.len(), 1);
 
     let mut after = part.clone();
-    after.node_mut(frame.id).unwrap().diagram.as_mut().unwrap().lo = Some("rId6".to_owned());
+    after
+        .node_mut(frame.id)
+        .unwrap()
+        .diagram
+        .as_mut()
+        .unwrap()
+        .lo = Some("rId6".to_owned());
     let mut t = tree.clone();
     let (xml, slide_limits) = (OoxmlLimits::default(), SlideLimits::default());
     let patched = |t: &mut XmlTree, to: &SlidePart| {
-        patch_slide_part(t, SLIDE, false, &rels, to, &slide_limits, &import_limits, &xml)
+        patch_slide_part(
+            t,
+            SLIDE,
+            false,
+            &rels,
+            to,
+            &slide_limits,
+            &import_limits,
+            &xml,
+        )
     };
     patched(&mut t, &after).unwrap();
     let old = String::from_utf8(bytes).unwrap();
@@ -1103,11 +1226,23 @@ fn a_frames_diagram_references_are_read_and_patched() {
         String::from_utf8(t.to_bytes()).unwrap()
     );
     // A relationship the part does not have is refused.
-    after.node_mut(frame.id).unwrap().diagram.as_mut().unwrap().lo = Some("rId99".to_owned());
-    assert_eq!(patched(&mut tree.clone(), &after).unwrap_err().code(), "CS-EXP-0003");
+    after
+        .node_mut(frame.id)
+        .unwrap()
+        .diagram
+        .as_mut()
+        .unwrap()
+        .lo = Some("rId99".to_owned());
+    assert_eq!(
+        patched(&mut tree.clone(), &after).unwrap_err().code(),
+        "CS-EXP-0003"
+    );
     // And adding or removing one is an operation this tier does not have.
     after.node_mut(frame.id).unwrap().diagram = None;
-    assert_eq!(patched(&mut tree.clone(), &after).unwrap_err().code(), "CS-SLE-0001");
+    assert_eq!(
+        patched(&mut tree.clone(), &after).unwrap_err().code(),
+        "CS-SLE-0001"
+    );
 }
 
 /// Strict namespaces read and write the same.
@@ -1144,19 +1279,30 @@ fn edited_dir() -> Option<PathBuf> {
 fn f4_validates(bytes: &[u8]) {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("f4-graphics");
     std::fs::create_dir_all(&dir).unwrap();
-    let hash: u64 = bytes.iter().fold(7u64, |h, b| {
-        h.wrapping_mul(31).wrapping_add(u64::from(*b))
-    });
+    let hash: u64 = bytes
+        .iter()
+        .fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(u64::from(*b)));
     let file = dir.join(format!("edited-{hash}.pptx"));
     std::fs::write(&file, bytes).unwrap();
     let tool = repo().join("tools/f4/validate.py");
-    let out = Command::new("python3").arg("-I").arg(tool).arg(&file).output();
+    let out = Command::new("python3")
+        .arg("-I")
+        .arg(tool)
+        .arg(&file)
+        .output();
     let Ok(out) = out else {
-        assert!(std::env::var_os("F4_REQUIRED").is_none(), "python3 is missing");
+        assert!(
+            std::env::var_os("F4_REQUIRED").is_none(),
+            "python3 is missing"
+        );
         return;
     };
     std::fs::remove_file(&file).unwrap();
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stdout)
+    );
 }
 
 /// `docs/20` carries each code a part can be set aside under, by name: the walks above see
@@ -1178,4 +1324,64 @@ fn every_bound_has_its_code() {
         by.insert(b.code(), name);
     }
     assert_eq!(by.len(), 7);
+}
+
+/// The seeds of the `graphics` fuzz target with bytes changed, in a fixed order: reading
+/// never panics, and writing an unchanged model changes nothing.
+#[test]
+fn a_part_with_bytes_changed_never_panics() {
+    let mut state = 0x2545_F491_4F6C_DD1Du64;
+    let mut next = move || {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        state
+    };
+    let seeds = repo().join("fuzz/seeds/graphics");
+    let mut names: Vec<_> = std::fs::read_dir(&seeds)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    names.sort();
+    let mut parsed = 0;
+    for path in names {
+        let seed = std::fs::read(path).unwrap();
+        if seed.len() > 64 * 1024 {
+            continue;
+        }
+        for _ in 0..300 {
+            let mut bytes = seed.clone();
+            for _ in 0..1 + next() % 4 {
+                let at = usize::try_from(next()).unwrap() % bytes.len();
+                bytes[at] = b"<>/=\"' a0:"[usize::try_from(next()).unwrap() % 10];
+            }
+            let Ok(tree) = XmlTree::parse(&bytes, "p.xml", &OoxmlLimits::default()) else {
+                continue;
+            };
+            for kind in [Kind::Diagram, Kind::Math, Kind::Ink] {
+                if let Some(model) = read_any_quiet(kind, &tree) {
+                    parsed += 1;
+                    let mut same = tree.clone();
+                    assert_eq!(patch_any(&mut same, "p.xml", &[], &model).unwrap(), 0);
+                }
+            }
+        }
+    }
+    assert!(parsed > 50, "{parsed}");
+}
+
+fn read_any_quiet(kind: Kind, tree: &XmlTree) -> Option<AnyRoot> {
+    let (limits, import) = (limits(), import());
+    let mut f = Findings::new(import.max_findings);
+    Some(match kind {
+        Kind::Diagram => AnyRoot::Dgm(Box::new(
+            import_diagram_root(tree, "p.xml", &[], &limits, &import, &mut f).ok()??,
+        )),
+        Kind::Math => AnyRoot::Math(Box::new(
+            import_math_root(tree, "p.xml", &[], &limits, &import, &mut f).ok()??,
+        )),
+        Kind::Ink => AnyRoot::Ink(Box::new(
+            import_ink_root(tree, "p.xml", &[], &limits, &import, &mut f).ok()??,
+        )),
+    })
 }

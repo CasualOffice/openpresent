@@ -47,10 +47,10 @@ use crate::text::{patch_character, patch_list_style, patch_text_body};
 /// What the generated writers use.
 pub(crate) mod prelude {
     pub(crate) use super::{
-        R, attr_member, patch_character_part, patch_color_list, patch_ext_lst, patch_formatting,
-        patch_identity, patch_list_style_part, patch_nv_group, patch_nv_shape, patch_scene3d,
-        patch_sp_pr, patch_sp3d, patch_style_part, patch_text_body_part, patch_text3d,
-        patch_transform_part, rel_attr_named, sync_items, sync_many, sync_own_text,
+        R, attr_member, attr_name, patch_character_part, patch_color_list, patch_ext_lst,
+        patch_formatting, patch_identity, patch_list_style_part, patch_nv_group, patch_nv_shape,
+        patch_scene3d, patch_sp_pr, patch_sp3d, patch_style_part, patch_text_body_part,
+        patch_text3d, patch_transform_part, rel_attr_named, sync_items, sync_many, sync_own_text,
     };
     pub(crate) use crate::properties::Writer;
     pub(crate) use casual_slide_import::properties::{Elem, ns};
@@ -98,6 +98,25 @@ pub(crate) fn rel_attr_named(
     w.attr(el, &name, None::<&String>, Some(value))
 }
 
+/// How to spell a qualified attribute here: as the element has it, or under a prefix in
+/// scope, declared if it must be and only if there is a value to write.
+pub(crate) fn attr_name(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    uris: &[&str],
+    prefix: &str,
+    local: &str,
+    writing: bool,
+) -> Result<String, ExportError> {
+    if let Some(found) = el.name_of_ns(uris, local) {
+        return Ok(found.to_owned());
+    }
+    if !writing {
+        return Ok(local.to_owned());
+    }
+    Ok(format!("{}:{local}", w.declared_prefix(el, uris, prefix)?))
+}
+
 /// An attribute of a union or a list: a token the type does not admit is refused here,
 /// rather than written and found on reading it back.
 pub(crate) fn attr_member<T: Lexical + PartialEq>(
@@ -112,7 +131,8 @@ pub(crate) fn attr_member<T: Lexical + PartialEq>(
         && let Some(value) = after
     {
         let text = value.to_lexical();
-        if !text.split_ascii_whitespace().all(|t| member(name, t)) {
+        let local = name.rsplit(':').next().unwrap_or(name);
+        if !text.split_ascii_whitespace().all(|t| member(local, t)) {
             return Err(ExportError::ValueOutOfRange {
                 what: "a value its type does not admit",
                 part: w.part.to_owned(),
@@ -530,6 +550,13 @@ pub(crate) fn patch_ext_lst(
 fn patch_extension(w: &mut Writer<'_>, el: &Elem, b: Option<&Extension>, a: &Extension) -> R {
     w.attr(el, "uri", b.and_then(|b| b.uri.as_ref()), a.uri.as_ref())?;
     let (uris, prefix, local) = schema::root_name(&a.body);
+    // An `a:ext` holds one known extension, so another's goes, or the reader would find it.
+    for kid in el.children(w.tree, w.part)? {
+        if casual_slide_import::diagram::schema::is_root(&kid) && !kid.is(uris, local) {
+            w.tree.remove_child(el.id, kid.id);
+            w.changes += 1;
+        }
+    }
     let same = b.filter(|b| schema::root_name(&b.body).2 == local);
     let holder = match el.first_child(w.tree, w.part, uris, local)? {
         Some(holder) => holder,

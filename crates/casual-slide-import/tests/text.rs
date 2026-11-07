@@ -453,8 +453,14 @@ fn an_equation_in_a_paragraph_stays_in_its_place_and_is_reported() {
     let slide = s.parts.slide(0).unwrap();
     let items = &body_of(slide, "Equation").paragraphs[0].items;
     assert_eq!(items.len(), 3);
-    assert_eq!(items[1], TextItem::Retained("AlternateContent".to_owned()));
-    assert!(s.findings.has(K::RetainedElement, "AlternateContent"));
+    // Both branches are in the model (`T1K-02`), so nothing is left to report of it.
+    let TextItem::Math(math) = &items[1] else {
+        panic!("{:?}", items[1]);
+    };
+    let alternate = math.alternate.as_ref().unwrap();
+    assert_eq!(alternate.requires.as_deref(), Some("a14"));
+    assert_eq!(alternate.fallback.as_ref().unwrap().len(), 1);
+    assert!(!s.findings.has(K::RetainedElement, "AlternateContent"));
 }
 
 #[test]

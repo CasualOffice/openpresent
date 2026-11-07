@@ -1259,15 +1259,8 @@ fn every_text_body_can_be_written_from_the_model() {
     );
     assert!(tally.written > 1000, "{}", tally.written);
     // A picture bullet is made now (`T1F-04`); only what is retained is refused.
-    assert!(
-        tally
-            .refused
-            .iter()
-            .all(|r| r.contains("content this tier")),
-        "{:?}",
-        tally.refused
-    );
-    assert_eq!(tally.refused.len(), 2, "{:?}", tally.refused);
+    // `T1F-04`'s last two, the inline equations, are written from the model since `T1K-02`.
+    assert!(tally.refused.is_empty(), "{:?}", tally.refused);
 }
 
 #[test]

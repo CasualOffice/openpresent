@@ -73,6 +73,7 @@ class Attr:
     def __init__(self, name, ns, st, required, rel=False):
         self.name, self.ns, self.st, self.required, self.rel = name, ns, st, required, rel
         self.local = name.split(":")[-1]
+        self.qualified = False  # `attributeFormDefault="qualified"`: spelled with a prefix
 
 
 class Child:
@@ -121,6 +122,7 @@ class Schemas:
     def __init__(self, root=ROOT):
         self.types, self.simples, self.elements, self.groups, self.attr_groups = {}, {}, {}, {}, {}
         self.attributes = {}
+        self.attr_qualified = {}
         self.order = []
         self.prefix_of = {}
         self.tag_of = {}
@@ -138,6 +140,7 @@ class Schemas:
         for _, (p, uri) in ET.iterparse(path, events=("start-ns",)):
             prefixes.setdefault(p, uri)
         root = ET.parse(path).getroot()
+        self.attr_qualified[ns] = root.get("attributeFormDefault") == "qualified"
 
         def resolve(q):
             if not q:
@@ -245,7 +248,9 @@ class Schemas:
             else:
                 t.attrs.append(Attr(q[1], q[0], self.attributes.get(q, (XSD, "string")), required))
         else:
-            t.attrs.append(Attr(ch.get("name"), "", resolve(ch.get("type")) or (XSD, "string"), required))
+            attr = Attr(ch.get("name"), "", resolve(ch.get("type")) or (XSD, "string"), required)
+            attr.qualified = self.attr_qualified.get(t.ns, False)
+            t.attrs.append(attr)
 
     def module_types(self, module):
         return [self.types[k] for k in self.order if self.types[k].module == module]

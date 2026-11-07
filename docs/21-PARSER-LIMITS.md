@@ -227,18 +227,18 @@ Each fixture is seen to read with its bound raised by one (`raising_each_limit_b
 
 ## Diagrams, equations and ink: `GraphicLimits`
 
-`crates/casual-slide-import/src/diagram.rs`, nested in `ImportLimits` as `graphic`. Over a bound, a part of a diagram or an ink part is set aside and reported, and the deck opens; an equation in a slide's text stays in the tree and is reported (`CS-GFF-0008`). Not yet held by hostile fixtures: `T1K-01` to `T1K-03` are in progress.
+`crates/casual-slide-import/src/diagram.rs`, nested in `ImportLimits` as `graphic`. Over a bound, a part of a diagram or an ink part is set aside and reported, and the deck opens; an equation in a slide's text stays in the tree and is reported (`CS-GFF-0008`).
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Not yet tested |
-| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Not yet tested |
-| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Not yet tested |
-| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Not yet tested |
-| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Not yet tested |
-| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Not yet tested |
-| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Not yet tested |
-| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Not yet tested |
+| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Tested through the bounds below |
+| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Tested; `hostile/graphics-limit-depth.bin` |
+| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Tested; `hostile/graphics-limit-points.bin` |
+| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Tested; `hostile/graphics-limit-connections.bin` |
+| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Tested; `hostile/graphics-limit-layout-nodes.bin` |
+| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Tested; `hostile/graphics-limit-drawing-shapes.bin` |
+| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Tested; `hostile/graphics-limit-traces.bin` |
 
 ## Export
 

@@ -14,7 +14,8 @@ pub(crate) fn patch_integer255(
     b: Option<&m::Integer255>,
     a: &m::Integer255,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -26,7 +27,8 @@ pub(crate) fn patch_integer2(
     b: Option<&m::Integer2>,
     a: &m::Integer2,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -38,7 +40,8 @@ pub(crate) fn patch_spacing_rule(
     b: Option<&m::SpacingRule>,
     a: &m::SpacingRule,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -50,21 +53,24 @@ pub(crate) fn patch_un_signed_integer(
     b: Option<&m::UnSignedInteger>,
     a: &m::UnSignedInteger,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
 
 // spec-audit: owner=begChr,chr,endChr,sepChr
 pub(crate) fn patch_char(w: &mut Writer<'_>, el: &Elem, b: Option<&m::Char>, a: &m::Char) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
 
 // spec-audit: owner=aln,alnScr,degHide,diff,dispDef,grow,hideBot,hideLeft,hideRight,hideTop,lit,maxDist,noBreak,nor,objDist,opEmu,plcHide,show,smallFrac,strikeBLTR,strikeH,strikeTLBR,strikeV,subHide,supHide,transp,wrapRight,zeroAsc,zeroDesc,zeroWid
 pub(crate) fn patch_on_off(w: &mut Writer<'_>, el: &Elem, b: Option<&m::OnOff>, a: &m::OnOff) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -76,7 +82,8 @@ pub(crate) fn patch_string_type(
     b: Option<&m::StringType>,
     a: &m::StringType,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -88,7 +95,8 @@ pub(crate) fn patch_x_align(
     b: Option<&m::XAlign>,
     a: &m::XAlign,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -100,21 +108,24 @@ pub(crate) fn patch_y_align(
     b: Option<&m::YAlign>,
     a: &m::YAlign,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
 
 // spec-audit: owner=shp
 pub(crate) fn patch_shp(w: &mut Writer<'_>, el: &Elem, b: Option<&m::Shp>, a: &m::Shp) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
 
 // spec-audit: owner=type
 pub(crate) fn patch_f_type(w: &mut Writer<'_>, el: &Elem, b: Option<&m::FType>, a: &m::FType) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -126,7 +137,8 @@ pub(crate) fn patch_lim_loc(
     b: Option<&m::LimLoc>,
     a: &m::LimLoc,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -138,7 +150,8 @@ pub(crate) fn patch_top_bot(
     b: Option<&m::TopBot>,
     a: &m::TopBot,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -150,14 +163,16 @@ pub(crate) fn patch_script(
     b: Option<&m::Script>,
     a: &m::Script,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
 
 // spec-audit: owner=sty
 pub(crate) fn patch_style(w: &mut Writer<'_>, el: &Elem, b: Option<&m::Style>, a: &m::Style) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -169,9 +184,10 @@ pub(crate) fn patch_manual_break(
     b: Option<&m::ManualBreak>,
     a: &m::ManualBreak,
 ) -> R {
+    let name = attr_name(w, el, NS_M, "m", "alnAt", a.aln_at.is_some())?;
     w.attr(
         el,
-        "alnAt",
+        &name,
         b.and_then(|b| b.aln_at.as_ref()),
         a.aln_at.as_ref(),
     )?;
@@ -2313,7 +2329,8 @@ pub(crate) fn patch_o_math_jc(
     b: Option<&m::OMathJc>,
     a: &m::OMathJc,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -2347,7 +2364,8 @@ pub(crate) fn patch_twips_measure(
     b: Option<&m::TwipsMeasure>,
     a: &m::TwipsMeasure,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -2359,7 +2377,8 @@ pub(crate) fn patch_break_bin(
     b: Option<&m::BreakBin>,
     a: &m::BreakBin,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }
@@ -2371,7 +2390,8 @@ pub(crate) fn patch_break_bin_sub(
     b: Option<&m::BreakBinSub>,
     a: &m::BreakBinSub,
 ) -> R {
-    w.attr(el, "val", b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
+    let name = attr_name(w, el, NS_M, "m", "val", a.val.is_some())?;
+    w.attr(el, &name, b.and_then(|b| b.val.as_ref()), a.val.as_ref())?;
     let _ = (&b, &a);
     Ok(())
 }

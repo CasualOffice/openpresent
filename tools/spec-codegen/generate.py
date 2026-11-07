@@ -442,16 +442,19 @@ class Module:
         for a in t.attrs:
             rust, check, member = st_info(self.names, a.st)
             f = fields[id(a)]
+            if a.qualified:
+                out.append(f'    let name = c.attr_name(&e, {self.ns_const(t.ns)}, "{a.local}");\n')
+            label = "&name" if a.qualified else f'"{a.name}"'
             if a.rel:
                 out.append(f'    out.{f} = c.rel_attr(&mut e, "{a.local}");\n')
             elif member:
-                out.append(f'    out.{f} = c.attr_member(&mut e, "{a.local}", {"true" if a.required else "false"}, member_{snake(a.st[1])})?;\n')
+                out.append(f'    out.{f} = c.attr_member(&mut e, {label if a.qualified else chr(34) + a.local + chr(34)}, {"true" if a.required else "false"}, member_{snake(a.st[1])})?;\n')
             elif check:
-                out.append(f'    out.{f} = c.attr_range(&mut e, "{a.name}", {"true" if a.required else "false"}, {check})?;\n')
+                out.append(f'    out.{f} = c.attr_range(&mut e, {label}, {"true" if a.required else "false"}, {check})?;\n')
             elif a.required:
-                out.append(f'    out.{f} = c.attr_required(&mut e, "{a.name}")?;\n')
+                out.append(f'    out.{f} = c.attr_required(&mut e, {label})?;\n')
             else:
-                out.append(f'    out.{f} = c.attr(&mut e, "{a.name}")?;\n')
+                out.append(f'    out.{f} = c.attr(&mut e, {label})?;\n')
         out.append("    c.finish(&e);\n")
         if t.text is not None:
             out.append("    out.text = c.text(&e)?;\n")
@@ -568,7 +571,14 @@ class Module:
             f = fields[id(at)]
             _, _, member = st_info(self.names, at.st)
             pair = f"b.and_then(|b| b.{f}.as_ref()), a.{f}.as_ref()"
-            if at.rel:
+            if at.qualified:
+                prefix = self.s.prefix_of[t.ns]
+                out.append(f'    let name = attr_name(w, el, {self.ns_const(t.ns)}, "{prefix}", "{at.local}", a.{f}.is_some())?;\n')
+                if member:
+                    out.append(f'    attr_member(w, el, &name, {pair}, member_{snake(at.st[1])})?;\n')
+                else:
+                    out.append(f'    w.attr(el, &name, {pair})?;\n')
+            elif at.rel:
                 out.append(f'    rel_attr_named(w, el, "{at.local}", {pair})?;\n')
             elif member:
                 out.append(f'    attr_member(w, el, "{at.local}", {pair}, member_{snake(at.st[1])})?;\n')

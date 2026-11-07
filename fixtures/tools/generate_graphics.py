@@ -99,7 +99,7 @@ class Maker:
 
     def attr_value(self, a):
         if a.rel:
-            return "rId1"
+            return ""  # As Office writes `r:blip`. A named one must exist in the part's rels.
         return self.turn(a.st, self.tokens(a.st) or ["x"])
 
     def attrs(self, t, required_only=False):
@@ -108,7 +108,8 @@ class Maker:
             if required_only and not a.required:
                 continue
             value = self.attr_value(a)
-            out.append(f'{a.name}="{value}"')
+            name = f"{self.s.prefix_of[t.ns]}:{a.name}" if a.qualified else a.name
+            out.append(f'{name}="{value}"')
         return (" " + " ".join(out)) if out else ""
 
     def qname(self, ns, local):
@@ -197,7 +198,7 @@ class Maker:
                 if c.local in skip:
                     continue
                 parts.append(self.child(c, stack, False))
-                if (c.repeats or c.in_items) and len(stack) < 3:
+                if (c.repeats or c.in_items) and len(stack) < 2:
                     parts.append(self.child(c, stack, False))
             kids = "".join(parts) + self.group_children(t)
         return f"<{name}{attrs}>{kids}</{name}>" if kids else f"<{name}{attrs}/>"

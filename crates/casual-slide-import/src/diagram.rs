@@ -333,6 +333,12 @@ impl<'a, 'r> SchemaReader<'a, 'r> {
         Ok(())
     }
 
+    /// How this element spells a qualified attribute: `m:val`, under whatever prefix the part
+    /// uses. If it has none, the name to report as missing.
+    pub(crate) fn attr_name(&self, el: &Elem, uris: &[&str], local: &str) -> String {
+        el.name_of_ns(uris, local).unwrap_or(local).to_owned()
+    }
+
     pub(crate) fn attr<T: Lexical>(&mut self, el: &mut Elem, name: &str) -> Res<Option<T>> {
         Ok(self.r.attr(el, name)?)
     }
@@ -373,7 +379,8 @@ impl<'a, 'r> SchemaReader<'a, 'r> {
             if tokens.peek().is_none() {
                 return true;
             }
-            tokens.all(|t| member(name, t))
+            let local = name.rsplit(':').next().unwrap_or(name);
+            tokens.all(|t| member(local, t))
         };
         if required {
             Ok(self.r.required(el, name, allowed)?)
