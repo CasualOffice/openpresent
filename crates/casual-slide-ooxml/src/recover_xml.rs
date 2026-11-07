@@ -163,8 +163,62 @@ pub fn declaration_disagrees(bytes: &[u8]) -> bool {
     if bytes.starts_with(&[0xFF, 0xFE]) || bytes.starts_with(&[0xFE, 0xFF]) {
         return false;
     }
-    declared_encoding(bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes))
-        .is_some_and(|e| e != "utf-8" && e != "utf8")
+    let body = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
+    declaration_is_malformed(body)
+        || declared_encoding(body).is_some_and(|e| e != "utf-8" && e != "utf8")
+}
+
+/// Whether a part opens with a declaration that is not one. `walk` takes any text up to `?>`
+/// for it, and a conforming parser does not.
+fn declaration_is_malformed(bytes: &[u8]) -> bool {
+    let Some(rest) = bytes.strip_prefix(b"<?xml") else {
+        return false;
+    };
+    // `<?xml-stylesheet` and the like are instructions, not this.
+    if !rest.first().copied().is_some_and(is_xml_space) {
+        return false;
+    }
+    let Some(end) = rest.windows(2).position(|w| w == b"?>") else {
+        return true;
+    };
+    let mut at = rest.get(..end).unwrap_or_default();
+    let mut order = ["version", "encoding", "standalone"].iter();
+    let mut pairs = 0;
+    loop {
+        let trimmed = at.iter().position(|b| !is_xml_space(*b));
+        let Some(start) = trimmed else {
+            return pairs == 0;
+        };
+        at = at.get(start..).unwrap_or_default();
+        let Some(eq) = at.iter().position(|b| *b == b'=') else {
+            return true;
+        };
+        let name = at.get(..eq).unwrap_or_default();
+        let name = name.trim_ascii_end();
+        // Each at most once, in the order XML has them.
+        if !order.any(|known| known.as_bytes() == name) {
+            return true;
+        }
+        let value = at.get(eq + 1..).unwrap_or_default().trim_ascii_start();
+        let Some((quote, tail)) = value.split_first() else {
+            return true;
+        };
+        if !matches!(quote, b'"' | b'\'') {
+            return true;
+        }
+        let Some(close) = tail.iter().position(|b| b == quote) else {
+            return true;
+        };
+        let held = tail.get(..close).unwrap_or_default();
+        if !held
+            .iter()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+        {
+            return true;
+        }
+        pairs += 1;
+        at = tail.get(close + 1..).unwrap_or_default();
+    }
 }
 
 fn decode_units(rest: &[u8], word: fn([u8; 2]) -> u16) -> String {
@@ -905,8 +959,10 @@ impl Reader<'_, '_> {
             let (mut literal, mut mark) = (false, false);
             let mut value = String::with_capacity(raw_value.len());
             escape_loose(&raw_value, true, &mut value, &mut literal, &mut mark);
+            // Text can hold a literal reference. An attribute's value is typed, so one there
+            // leaves a value the schema refuses, and the element holding it is damaged.
             if literal {
-                self.repairs.insert(XmlRepair::ReferenceLiteral);
+                self.repair(XmlRepair::ReferenceLiteral);
             }
             if mark {
                 self.repair(XmlRepair::TextRepaired);

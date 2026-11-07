@@ -356,6 +356,50 @@ fn nothing_panics_at_any_cut_or_any_byte() {
     }
 }
 
+#[test]
+fn a_declaration_that_is_not_one_is_damage() {
+    for bad in [
+        &b"<?xml version=\"1.0\" enc<a b=\"1\"/>oding=\"UTF-8\"?><a/>"[..],
+        b"<?xml version=1.0?><a/>",
+        b"<?xml encoding=\"UTF-8\" version=\"1.0\"?><a/>",
+        b"<?xml version=\"1.0\" other=\"x\"?><a/>",
+        b"<?xml version=\"1.0\"",
+    ] {
+        assert!(
+            declaration_disagrees(bad),
+            "{}",
+            String::from_utf8_lossy(bad)
+        );
+    }
+    for good in [
+        &b"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><a/>"[..],
+        b"<?xml version='1.0'?><a/>",
+        b"\xEF\xBB\xBF<?xml version = \"1.0\" ?><a/>",
+        b"<?xml-stylesheet href=\"x\"?><a/>",
+        b"<a/>",
+    ] {
+        assert!(
+            !declaration_disagrees(good),
+            "{}",
+            String::from_utf8_lossy(good)
+        );
+    }
+}
+
+#[test]
+fn a_literal_reference_in_a_value_damages_its_shape_and_in_text_does_not() {
+    let in_value = format!(
+        "{SLIDE_OPEN}<p:sp><a:ln type=\"&evil;\"/></p:sp>{SHAPE}</p:spTree></p:cSld></p:sld>"
+    );
+    let out = slide_like(&in_value);
+    assert_eq!(out.left_out, 1);
+    assert!(!text(&out).contains("evil"), "{}", text(&out));
+    let in_text = format!("{SLIDE_OPEN}<p:sp><a:t>&evil;</a:t></p:sp></p:spTree></p:cSld></p:sld>");
+    let out = slide_like(&in_text);
+    assert_eq!(out.left_out, 0);
+    assert!(text(&out).contains("&amp;evil;"), "{}", text(&out));
+}
+
 /// `XmlTree` stays byte-faithful: an untouched part, damaged or not, writes back what came.
 #[test]
 fn an_untouched_recovered_tree_writes_back_the_original_bytes() {

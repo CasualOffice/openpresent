@@ -87,4 +87,8 @@ Recovering parsers are a classic attack surface, so:
 
 The gate is a **damage corpus** generated from real decks: truncations, flipped bytes, removed parts, broken XML at many offsets. Every deck must open or be refused by one of the rules above, never panic or hang, and output valid files after an edit. Tracked as `REC-*` in [14](14-EXECUTION-TRACKER.md).
 
+**Measured, 2026-11-07, sample mode** (`crates/casual-slide-export/tests/damage_corpus.rs`, the three decks in `fixtures/real` under 50 KB): 320 damaged decks. 318 opened. 2 were refused, both `CS-PKG-0005`, truncations that left no ZIP entry. No panic, no hang; the slowest deck took 3.2 seconds, unoptimized, on a loaded machine. An edit to each of the 318 was written and opens under `strict`.
+
+**The gate is not yet green.** F4 passes 316 of the 318 outputs. The other 2 are both a flipped byte in a part that still parses, where the checksum fails (`CS-REC-0104`) and the bytes are kept as the table above says: one changes a value in a slide master, one an attribute name in a layout. Telling these apart needs validation against the schema, which the engine does not do. `DAMAGE_FULL=1` over every deck has not been run, and neither has a campaign on the fuzz targets `xml_recover`, `package_salvage` and `deck_recover`, which have not been compiled either.
+
 We cannot compare with what PowerPoint refuses until `PV-01`. Claims such as "opens what PowerPoint rejects" wait for that evidence.

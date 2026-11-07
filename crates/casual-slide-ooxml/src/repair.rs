@@ -105,7 +105,9 @@ impl Role {
 
     /// The role a relationship type gives its target.
     fn of_rel(rel_type: &str) -> Option<Self> {
-        if rel_type.ends_with("/metadata/core-properties") {
+        // Exact, as import's `locate_part` is: a damaged type that still ends the same is not
+        // this relationship, and believing it left a deck with nowhere to write its title.
+        if rel_type == CORE_REL {
             return Some(Self::Core);
         }
         rel_kind(rel_type).and_then(Self::of_rel_kind)
@@ -1073,7 +1075,22 @@ impl Work<'_> {
             ) else {
                 continue;
             };
-            if !is_ncname(&id) || !ids.insert(id.clone()) || target.is_empty() {
+            // What the schema types as a URI has to be one, or the rebuilt part is invalid.
+            let uri_like = |value: &str, ascii_only: bool| {
+                !value.is_empty()
+                    && value.chars().all(|c| {
+                        !c.is_control()
+                            && !matches!(c, '<' | '>' | '"' | '{' | '}' | '|' | '\\' | '^' | '`')
+                            && (!ascii_only || (c.is_ascii() && c != ' '))
+                    })
+            };
+            let target_mode_external = tree.plain_attribute(child, "TargetMode").is_some();
+            if !is_ncname(&id)
+                || !ids.insert(id.clone())
+                || !uri_like(&rel_type, true)
+                || (!target_mode_external && !uri_like(&target, false))
+                || target.is_empty()
+            {
                 continue;
             }
             // An unknown mode is never believed to be inside the package.
@@ -2108,8 +2125,14 @@ impl Work<'_> {
     /// edit to the property would otherwise have nowhere to go.
     fn make_missing_root_target(&mut self, kind: &str, role: Role) {
         let rels = self.rels_of("");
-        let suffix = format!("/{kind}");
-        for r in rels.iter().filter(|r| r.rel_type.ends_with(&suffix)) {
+        let of_kind = |r: &Relationship| {
+            if kind == "metadata/core-properties" {
+                r.rel_type == CORE_REL
+            } else {
+                rel_kind(&r.rel_type) == Some(kind)
+            }
+        };
+        for r in rels.iter().filter(|r| of_kind(r)) {
             if self.target_of("", r).is_some() {
                 continue;
             }
@@ -2511,10 +2534,8 @@ pub(crate) fn chain_is_broken(
         |part: &str, role: Role| types.resolve(part).and_then(Role::of_content_type) == Some(role);
     let property_gone = relationships.get("").is_some_and(|rels| {
         rels.iter().any(|r| {
-            let property = r.rel_type.ends_with("/metadata/core-properties")
-                || rel_kind(&r.rel_type)
-                    .and_then(Role::of_rel_kind)
-                    .is_some_and(|role| matches!(role, Role::App | Role::Custom));
+            let property = Role::of_rel(&r.rel_type)
+                .is_some_and(|role| matches!(role, Role::Core | Role::App | Role::Custom));
             property && target("", r).is_some_and(|t| !exists(&t))
         })
     });
