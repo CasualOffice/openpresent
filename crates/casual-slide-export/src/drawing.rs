@@ -143,7 +143,7 @@ pub(crate) const POWERPOINT_COORDINATE_MAX: i64 = 2_147_483_647;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Node {
     space: Space,
-    local: &'static str,
+    pub(crate) local: &'static str,
     attrs: Vec<(&'static str, Value)>,
     kids: Vec<Node>,
     text: Option<String>,

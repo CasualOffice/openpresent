@@ -130,6 +130,7 @@ Every patched part is read back before saving.
 **Import.** `read_deck_charts`, from `import_slide_parts`: `ImportedSlides::charts`. A part is read for what its root says. A part that cannot be read, is over a bound in `ChartLimits`, or has the wrong root is set aside, reported, kept byte for byte, and **the deck opens**. An embedded workbook is recorded (`ChartWorkbook`), and no byte of it is read (`SEC-P09`).
 
 **Export.** `patch_chart_part`, `save_chart_parts`: edits patch named nodes, by one function for every type, and read back. `rewrite_from_model` writes from nothing, is never used to save, and exists so that tests hold the writer to every row. Adding or removing a chart part, or changing which chart a frame holds, is refused: those are Phase 6's.
+**Status marks.** `DGM`, `MATH` and `INK` in `docs/spec/checklist.tsv` hold what `tools/spec-audit/audit.py`'s rule allows, by a run over this tier's decks: 1076 rows `y` in model, import and export, every `extLst` `r` where a fixture holds one, and the blanks with their reasons in `docs/spec/open-rows.tsv`.
 
 ## Tier 1G: tables as built
 

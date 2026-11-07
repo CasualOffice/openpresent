@@ -169,3 +169,168 @@ x:powerpoint/2022/08/main:CT_TaskDetails/extLst	MIE	T1M-03	Not established by th
 x:drawing/2013/main/command:CT_TextCharRangeContext	MIE	T1M-03	Not established by the audit: no fixture exercises it
 x:drawing/2013/main/command:CT_TextCharRangeContext/@len	MIE	T1M-03	Not established by the audit: no fixture exercises it
 x:drawing/2013/main/command:CT_TextCharRangeContext/@hash	MIE	T1M-03	Not established by the audit: no fixture exercises it
+dgm:ST_ClrAppMethod	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_HueDir	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:CT_Colors	E	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_Colors/EG_ColorChoice	E	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_CTStyleLabel	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_ColorTransform	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_ColorTransformHeader	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:ST_PtType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:CT_Pt	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:ST_CxnType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:CT_Cxn	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_DataModel	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_Constraint	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_NumericRule	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_PresentationOf	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:ST_LayoutShapeType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_Index1	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:CT_Shape	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_Algorithm	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_LayoutNode	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_ForEach	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_When	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_Otherwise	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_DiagramDefinition	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_DiagramDefinitionHeader	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:ST_ParameterVal	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ModelId	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_PrSetCustVal	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_Direction	IEM	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_Direction/=norm	M	T1K-01	The audit keys enums by simple type name, and p:ST_Direction takes the name; the model's Direction enum holds it
+dgm:ST_Direction/=rev	M	T1K-01	The audit keys enums by simple type name, and p:ST_Direction takes the name; the model's Direction enum holds it
+dgm:ST_HierBranchStyle	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_AnimOneStr	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_AnimLvlStr	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_NodeCount	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ResizeHandlesStr	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:CT_StyleLabel	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_StyleDefinition	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:CT_StyleDefinitionHeader	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+dgm:ST_AlgorithmType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_AxisType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_AxisTypes	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_BoolOperator	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ChildOrderType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ConstraintType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ConstraintRelationship	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ElementType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ElementTypes	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ParameterId	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_Ints	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_UnsignedInts	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_Booleans	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_FunctionType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_FunctionOperator	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_DiagramHorizontalAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_VerticalAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ChildDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ChildAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_SecondaryChildAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_LinearDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_SecondaryLinearDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_StartingElement	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_RotationPath	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_CenterShapeMapping	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_BendPoint	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ConnectorRouting	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ArrowheadStyle	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ConnectorDimension	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ConnectorPoint	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_NodeHorizontalAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_NodeVerticalAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_FallbackDimension	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_TextDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_PyramidAccentPosition	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_PyramidAccentTextMargin	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_TextBlockDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_TextAnchorHorizontal	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_TextAnchorVertical	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_DiagramTextAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_AutoTextRotation	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_GrowDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_FlowDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_ContinueDirection	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_Breakpoint	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_Offset	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_HierarchyAlignment	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_FunctionValue	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_VariableType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_FunctionArgument	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+dgm:ST_OutputShapeType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_Integer255	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_Integer2	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_SpacingRule	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_UnSignedInteger	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_Char	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_Shp	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_FType	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_LimLoc	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_TopBot	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_Script	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_Style	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:CT_Text	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_Text/ST_String	IEM	T1K-02	The audit's rule: a base row has nothing of its own to check
+m:CT_R	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_R/EG_RPr	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_R/EG_RunInnerContent	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_CtrlPr	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_CtrlPr/EG_RPrMath	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:EG_OMathElements	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:EG_OMathElements/EG_PContentMath	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_OMathArg	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_OMathArg/EG_OMathElements	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:ST_Jc	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_BreakBin	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:ST_BreakBinSub	IE	T1K-02	The audit's rule: a simple type is held by the model's enum, or has no values to check
+m:CT_OMath	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+m:CT_OMath/EG_OMathElements	IEM	T1K-02	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+x:drawing/2008/diagram:CT_Shape	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+x:drawing/2008/diagram:CT_GroupShape	IEM	T1K-01	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+x:drawing/2008/diagram:<drawing>	M	T1K-01	The audit's rule: a root has no model declaration to check; the generated Root enum holds it
+x:drawing/2008/diagram:<dataModelExt>	M	T1K-01	The audit's rule: a root has no model declaration to check; the generated Root enum holds it
+x:ink/2010/main:ST_KnownCtxNodeType	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_Guid	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_Ref	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_CtxNodeType	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_Dir	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_KnownSemanticType	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_SemanticType	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_Point	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:ST_Points	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:ink/2010/main:CT_Property	IEM	T1K-03	The audit's rule: it holds extLst, a base, a Word group or another tier's type short of y; each part of it that can be marked is
+x:ink/2010/main:CT_Property/hexBinary	IEM	T1K-03	The audit's rule: a base row has nothing of its own to check
+x:ink/2010/main:<context>	M	T1K-03	The audit's rule: a root has no model declaration to check; the generated Root enum holds it
+x:drawing/2010/diagram:<recolorImg>	M	T1K-01	The audit's rule: a root has no model declaration to check; the generated Root enum holds it
+x:powerpoint/2014/inkAction:ST_DataNameReserved	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_DataNameUser	IEM	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_DataName	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_PropertyNameReserved	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_PropertyNameUser	IEM	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_PropertyName	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_PropertyValueReserved	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_PropertyValueUser	IEM	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_PropertyValue	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_ActionTypeReserved	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_ActionTypeUser	IEM	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:ST_ActionType	IE	T1K-03	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:powerpoint/2014/inkAction:<actions>	M	T1K-03	The audit's rule: a root has no model declaration to check; the generated Root enum holds it
+x:drawing/2016/11/diagram:ST_STorageType	IE	T1K-01	The audit's rule: a simple type is held by the model's enum, or has no values to check
+x:drawing/2016/11/diagram:<autoBuNodeInfoLst>	M	T1K-01	The audit's rule: a root has no model declaration to check; the generated Root enum holds it
+x:drawing/2016/ink:ST_ExtendedBrushPropertyName	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_ExtendedBrushPropertyName/=inkEffects	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_ExtendedBrushPropertyName/=anchorX	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_ExtendedBrushPropertyName/=anchorY	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_ExtendedBrushPropertyName/=scaleFactor	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=none	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=pencil	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=rainbow	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=galaxy	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=gold	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=silver	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=lava	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=ocean	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=rosegold	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it
+x:drawing/2016/ink:ST_InkEffectsType/=bronze	IEM	T1K-03	A value of inkml:brushProperty, untyped in the schema, so no attribute holds this type: read as text, and the audit's walk cannot see it

@@ -326,7 +326,7 @@ fn the_eight_extended_layouts_read_each_behind_its_fallback() {
         };
         let plot = space.chart.as_ref().unwrap().plot_area.as_ref().unwrap();
         let region = plot.plot_area_region.as_ref().unwrap();
-        layouts.push(region.series[0].layout_id.clone().unwrap());
+        layouts.push(region.series[0].layout_id.unwrap());
         let data = space.chart_data.as_ref().unwrap();
         assert_eq!(data.data.len(), 1);
     }

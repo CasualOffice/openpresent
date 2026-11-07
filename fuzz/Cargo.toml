@@ -167,3 +167,10 @@ path = "fuzz_targets/charts.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "graphics"
+path = "fuzz_targets/graphics.rs"
+test = false
+doc = false
+bench = false
