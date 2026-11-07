@@ -189,12 +189,12 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | DOC-010 | Register codes | Done | P1 | 107 codes; `check-error-codes.py` both directions | Gate seen failing |
 | F-009 | Clear rights on a Morph deck, and find Zoom and equation decks | Open | P1 | The only Morph deck stays local; Zoom and equations have no deck | Committed decks |
 | GEO-06 | Geometry labels | Done | P2 | Now GEO-02a to GEO-02e | Gate |
-| T1E-06 | Tier 1E leftovers | Open | P1 | `prstTxWarp` reader not called, `CT_FlatText`, `CT_Connection`, `DrawingLimits` not threaded through `SlideLimits`, colour findings lose `CS-CLR` on slide parts, older `2007/7/7` namespace reported not modelled | Per-tier gate |
-| DRAW-01 | `ST_PositiveCoordinate` wider than PowerPoint accepts | Open | P1 | MS-OI29500 2.1.1330: PowerPoint stops at 2147483647. We keep the schema's range, so a huge bevel could be written that it may reject | Writer refuses or clamps; test |
-| T1F-04 | Tier 1F leftovers | Open | P1 | Picture bullet with 1H; `bodyPr` `scene3d`, `sp3d`, `flatTx`; warp `avLst`; 5 bodies refused on full rewrite, assumed picture bullets, unchecked; `every_text_body_can_be_written_from_the_model` takes 75 s | Per-tier gate |
-| STYLE-01 | Inheritance gaps | Open | P0 | Theme object defaults (`txDef`, `lnDef`, `spDef`) and `p:style/fontRef` not in the chain, so text colour from a shape style resolves wrongly. MS-OI29500 2.1.1379, 1388, 1399 | BEH-02 table cases |
+| T1E-06 | Tier 1E leftovers | Done | P1 | `prstTxWarp`, `CT_FlatText`, `CT_Connection`, `DrawingLimits` through `SlideLimits`; older `2007/7/7` namespace read as `a14`, in-place edit there untested | Seen red |
+| DRAW-01 | `ST_PositiveCoordinate` limit | Done | P1 | New values above 2147483647 refused; held values kept | Tested at limit plus one |
+| T1F-04 | Tier 1F leftovers | Done | P1 | `bodyPr` 3D and warp modelled. 5 refused bodies: 3 picture bullets (1H), 2 inline equations (`T1K-02`), now pinned. The 75 s test is 19 s | Other refusals fail the test |
+| STYLE-01 | Inheritance gaps | Done | P0 | `p:style`, `txDef`, `lnDef`, `spDef`, `fontRef` in the chain. The layout's and `fontRef`'s places are Inferred; whether defaults narrow by shape kind is open until `PV-01` | BEH-02 cases seen red |
 | COLOR-04 | One rule for colour finding codes | Open | P2 | **Decided:** colour findings keep `CS-CLR` everywhere. Today 1E folds them to `CS-IMF` while `highlight` keeps `CS-CLR` | Same bad colour gives one code |
-| CLOSE-01 | Close Tiers 1E and 1F | In progress | P0 | Owner instruction 22. `T1E-06`, `T1F-04`, `STYLE-01`, `DRAW-01`; status marks for both, audited | Per-tier gate, item by item |
+| CLOSE-01 | Close Tiers 1E and 1F | In progress | P0 | Gate items 2 to 7 met. Item 1 not: of 1,399 rows, 1,128 `y y y`, 9 retained, 86 partly marked, 176 blank. 257 marks are `a14` picture effects the audit cannot place. Audit rules were made more generous; main session planted 40 false marks in unbuilt tiers and all were caught | Every row marked or with a named reason |
 | FID-04 | LibreOffice crashed on the owner's Mac | Open | P1 | 8 crash reports 2026-11-07. Of 184 writer results, 6 aborted, all from `rich-properties` and `strict-properties`, decks invalid on purpose; no baseline on unedited inputs, and a second run has no log. Tools refuse without `OPENPRESENT_ALLOW_SOFFICE=1`. F7 off here; run in a Linux container | One run with the cause recorded |
 | CLOSE-02 | Close Tiers 1A to 1D | In progress | P0 | Owner instruction 22. Export marks are low (27); many rows have no fixture | Per-tier gate, item by item |
 | F-010 | SDK refuses 6 real decks as written | Open | P2 | **Decided: `check.py` stays a report.** Signed `c:axId`, `mod` on `extLst`, `showLeaderLines`, `showDLblsOverMax`. The SDK is no stand-in for what PowerPoint writes in charts | Reviewed at `PV-01` |
@@ -205,6 +205,9 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | REC-05 | Recovery: edit and save | In progress | P0 | Unedited save returns original bytes; an edit writes a valid file through the preflight; report in plain language; host `strict` option | Damage corpus output passes F4 |
 | REC-06 | Compare with PowerPoint's refusals | Open | P1 | Claims wait for `PV-01` | Recorded per deck |
 | T1N-07 | Writer leftovers | Open | P1 | `check_zip` call in `emit` not proven by any test; 7 seeded decks do not open, save and report as docs/36 says; `fixtures/rr` not in CI's SDK job | Per-tier gate |
+| CLOSE-03 | Finish 1E and 1F marks | Open | P0 | Annotate `a14` effects for the audit; record reasons for rows left unmarked (`SPEC-09`) | Gate item 1 |
+| SPEC-09 | A place for named reasons | Open | P0 | Checklist has no column for why a row is unmarked, so "or carries a named reason" cannot be gated | `audit.py --check` fails on an unaccounted row |
+| T1C-03 | Theme default `spPr` not reported, no writer for object defaults | Open | P1 | Part of `T1C-02` | Silent-drop test covers themes |
 | GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
@@ -248,8 +251,8 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1H-01 | Pictures | In progress | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
 | T1H-02 | SVG with PNG fallback | In progress | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
 | T1H-03 | Audio and video | In progress | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
-| T1I-01 | Timing tree | Open | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
-| T1I-02 | Transitions | Open | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
+| T1I-01 | Timing tree | In progress | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
+| T1I-02 | Transitions | In progress | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
 | T1J-01 | Classic charts | Open | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |
 | T1J-02 | Chart extensions and styles | Open | P1 | `c14`, `c15`, `c16`, chart style and colour parts. BEH-26 | Retained with base chart |
 | T1J-03 | 2016+ charts | Open | P1 | `cx:` with `AlternateContent` fallback, 8 layouts | Fallback kept with chart |

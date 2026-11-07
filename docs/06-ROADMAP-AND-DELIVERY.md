@@ -82,7 +82,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 
 Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re-read from `tools/spec-audit/audit.py`, not from this page.
 
-**Where it stands (2026-11-07).** Built, not closed: 1A, 1B, 1C. Merging: 1D. Not started: 1E to 1M. Designed, not built: 1N. **No checklist row is marked `y` yet**, so the status columns are the first job (`STAT-01`): until they are filled, no tier can show its gate.
+**Where it stands (2026-11-07).** See [14](14-EXECUTION-TRACKER.md) for current state; no tier is closed until its gate is met. Status columns are filled by `tools/spec-audit`; a row needs code, a test and a fixture.
 
 **Two corrections this plan makes to the table above.**
 - **1C cannot close before 1E and 1F.** A theme's format scheme is made of fills, lines and effects, and object defaults of text and shape properties. So 1C finishes as `T1C-02` after those tiers.
