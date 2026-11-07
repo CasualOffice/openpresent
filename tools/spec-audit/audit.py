@@ -121,7 +121,7 @@ RETENTION_TESTS = (
     ("casual-slide-export/tests/retention.rs", "every_node_of_every_deck_survives_an_edit"),
     ("casual-slide-import/tests/report.rs", "an_unread_attribute_or_element_is_always_reported"),
 )
-DEFAULT_GATE = "1A,1B,1C,1D,1M"
+DEFAULT_GATE = "1A,1B,1C,1D,1E,1F,1G,1H,1I,1J,1K,1L,1M"
 TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE"),
          "1E": ("GEOM", "FILL", "LINE", "EFFECT", "D3"), "1F": ("TEXT",), "1G": ("TABLE",), "1H": ("PIC", "MEDIA"),
          "1I": ("TIMING", "TRANS"), "1J": ("CHART", "CHARTEX"), "1K": ("DGM", "MATH", "INK"), "1L": ("OLE", "VML", "MODEL3D"),
