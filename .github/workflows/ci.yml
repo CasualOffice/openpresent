@@ -3,6 +3,7 @@ name: ci
 on:
   push:
     branches: [main]
+  merge_group:
   pull_request:
 
 # A superseded PR run is thrown away; a run on main is the record, so it never is.

@@ -12,19 +12,23 @@
 # and only here, where a crash shows no dialog (owner instructions 23 and 33).
 name: phase1-exit
 
+# The triggers of OpenCalc's ci.yml: every push to main, every pull request, and the merge
+# queue's result once one is enabled; and on demand.
 on:
-  workflow_dispatch:
   push:
     branches: [main]
+  merge_group:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# Each commit's evidence is its own record, so a newer push does not cancel it.
+# As OpenCalc's ci.yml: on main each commit has its own group, so its evidence is never
+# cancelled, even while queued; a pull request's superseded run is.
 concurrency:
-  group: phase1-exit-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: phase1-exit-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: always
