@@ -89,7 +89,7 @@ Window Management API where the browser has it, falling back to a manually moved
 
 ## Budgets
 
-**Proposed, none measured, except the Phase 1 row marked measured.** The spikes replace these with evidence, and CI then asserts them on a named
+**Proposed, none measured, except the Phase 1 row marked measured.** Phase 2's render targets (time, memory, wasm size, determinism) are R5 to R8 in [06](06-ROADMAP-AND-DELIVERY.md) §Phase 2 plan. The spikes replace these with evidence, and CI then asserts them on a named
 environment, as OpenCalc's docs/30 does.
 
 | Measure | Target |
