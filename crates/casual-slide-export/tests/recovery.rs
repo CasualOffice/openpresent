@@ -550,7 +550,7 @@ fn a_recovered_deck_is_a_fixed_point() {
 /// emptied to its root and written again from its model alone, and the deck so written
 /// passes F4.
 #[test]
-#[ignore = "finding REC-08: the writer cannot add a master colour map back (CS-SLE-0001); the forced rewrite must keep it"]
+#[ignore = "REC-08: the slide writer patches node properties, not the tree (CS-SLE-0001); the forced rewrite must empty and restore each node's properties instead"]
 fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
     let dir = scratch("forced");
     let xml = OoxmlLimits::default();
@@ -566,26 +566,30 @@ fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
             let Some(part) = part else { continue };
             let (tree, _) = pkg.read_resolved(&entry.part).unwrap();
             let rels = pkg.relationships_of(&entry.part).to_vec();
-            let mut blank = tree.clone();
-            let root = blank.root();
-            // A master's layout list is not the writer's to edit (`CS-SLE-0001`): it stays.
-            for kid in blank.child_elements(root) {
-                if blank.local_name(kid) == "sldLayoutIdLst" {
-                    continue;
-                }
-                blank.remove_child(root, kid);
+            // Every shape taken out through the writer, then written back from the model
+            // alone (`WR-01`): what comes out is the writer's, not what arrived.
+            let mut emptied = part.clone();
+            let Some(shapes) = emptied.shape_tree_mut() else {
+                continue;
+            };
+            if shapes.children.is_empty() {
+                continue;
             }
-            patch_slide_part(
-                &mut blank,
-                &entry.part,
-                strict,
-                &rels,
-                part,
-                &SlideLimits::default(),
-                &ImportLimits::default(),
-                &xml,
-            )
-            .unwrap_or_else(|e| panic!("{name} {}: {e}", entry.part));
+            shapes.children.clear();
+            let mut blank = tree.clone();
+            for to in [&emptied, part] {
+                patch_slide_part(
+                    &mut blank,
+                    &entry.part,
+                    strict,
+                    &rels,
+                    to,
+                    &SlideLimits::default(),
+                    &ImportLimits::default(),
+                    &xml,
+                )
+                .unwrap_or_else(|e| panic!("{name} {}: {e}", entry.part));
+            }
             edits.replace(entry.part.clone(), blank.to_bytes());
         }
         let written = Package::open(base, Default::default())
