@@ -5,15 +5,22 @@
     python3 tools/phase1-evidence.py hostile SCRATCH   # every fixtures/hostile file, time-bounded
     python3 tools/phase1-evidence.py damage  SCRATCH   # DAMAGE_FULL=1 F4_REQUIRED=1 damage corpus
     python3 tools/phase1-evidence.py export  SCRATCH   # edited decks: F4, the SDK, LibreOffice
+    python3 tools/phase1-evidence.py merge   KEY=FILE...  # KEY from each FILE, into the record
 
 Each writes its result under its own key in tools/phase1-evidence.json, with the commit, the
 date, and the machine's load, since a time measured under load is an upper bound. Failures
 are recorded, never dropped: phase1-exit.py says MET only when the record shows none, for the
 fixtures as they are now. SCRATCH is a folder of the caller's, emptied of what this writes.
 
-LibreOffice runs only in the Docker image `openpresent-lo`, with no network, a read-only root
-and a memory cap, never on this machine itself (owner instructions 23 and 33). A deck that
-fails there is run again from its unedited input, to tell our output from LibreOffice.
+LibreOffice runs in the Docker image `openpresent-lo`, with no network, a read-only root and a
+memory cap, never on a desktop itself (owner instructions 23 and 33). On a CI runner, where a
+crash shows no dialog, `PHASE1_LO=host` with `OPENPRESENT_ALLOW_SOFFICE=1` runs the `soffice`
+installed there instead, on Linux only, inside `unshare --net`, so it has no network either
+(`.github/workflows/phase1-exit.yml`). A deck that fails is run again from its unedited input,
+to tell our output from LibreOffice.
+
+`merge` gathers what CI's parallel jobs record, each in its own copy of the record: it takes
+KEY from each FILE, and drops a KEY whose run left none, so it reads NOT MET, not stale.
 
 Exit: 0 if the record shows no failure, 1 if it does, 2 if the check could not run.
 """
@@ -27,6 +34,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -210,8 +218,35 @@ LO_SCRIPT = (
 )
 
 
+def lo_host():
+    """True when LibreOffice is to run as installed here, which only a CI runner may ask for."""
+    return os.environ.get("PHASE1_LO") == "host"
+
+
+def lo_label():
+    if not lo_host():
+        return LO_IMAGE
+    done = subprocess.run(["soffice", "--version"], capture_output=True, text=True, check=False)
+    return "host, no network: " + (done.stdout.strip() or "version unknown")[:80]
+
+
+def libreoffice_host(folder, name):
+    """As the container runs it, with this machine's soffice, in a network namespace of its own."""
+    with tempfile.TemporaryDirectory(prefix="phase1-lo-") as tmp:
+        script = LO_SCRIPT.replace("/tmp/", f"{tmp}/").replace('"/f/$DECK"', '"$FOLDER/$DECK"')
+        env = dict(os.environ, DECK=name, FOLDER=str(folder), HOME=tmp)
+        cmd = ["unshare", "--net", "--map-root-user", "sh", "-c", script]
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=LO_TIMEOUT, check=False, env=env)
+        except subprocess.TimeoutExpired:
+            return None
+
+
 def libreoffice(folder, name):
-    """LibreOffice's reading of one deck, in a container: `pdf`, or what went wrong."""
+    """LibreOffice's reading of one deck, in a container or on a CI runner: `pdf`, or what went wrong."""
+    if lo_host():
+        done = libreoffice_host(folder, name)
+        return {"status": "timeout"} if done is None else lo_result(done)
     cmd = ["docker", "run", "--rm", "--network", "none", "--read-only", "--memory", "1500m", "--pids-limit", "256",
            "--tmpfs", "/tmp:size=600m", "--tmpfs", "/root:size=100m", "-e", "HOME=/root", "-e", f"DECK={name}",
            "-v", f"{folder}:/f:ro", LO_IMAGE, "sh", "-c", LO_SCRIPT]
@@ -219,6 +254,10 @@ def libreoffice(folder, name):
         done = subprocess.run(cmd, capture_output=True, text=True, timeout=LO_TIMEOUT, check=False)
     except subprocess.TimeoutExpired:
         return {"status": "timeout"}
+    return lo_result(done)
+
+
+def lo_result(done):
     rc = next((ln.split()[1] for ln in done.stdout.splitlines() if ln.startswith("RC ")), None)
     if any(ln.startswith("PDF ") for ln in done.stdout.splitlines()) and rc == "0":
         return {"status": "pdf"}
@@ -230,6 +269,12 @@ def libreoffice(folder, name):
 
 
 def lo_ready():
+    if lo_host():
+        if os.environ.get("OPENPRESENT_ALLOW_SOFFICE") != "1" or platform.system() != "Linux":
+            print("PHASE1_LO=host runs soffice only on a Linux CI runner, with OPENPRESENT_ALLOW_SOFFICE=1",
+                  file=sys.stderr)
+            return False
+        return shutil.which("soffice") is not None and shutil.which("unshare") is not None
     probe = subprocess.run(["docker", "image", "inspect", LO_IMAGE], capture_output=True, text=True, check=False)
     return probe.returncode == 0
 
@@ -246,7 +291,8 @@ def export(scratch):
     shutil.rmtree(edited_dir, ignore_errors=True)
     edited_dir.mkdir(parents=True)
     if not lo_ready():
-        print(f"the Docker image {LO_IMAGE} is not there, so LibreOffice cannot run", file=sys.stderr)
+        where = "soffice and unshare" if lo_host() else f"the Docker image {LO_IMAGE}"
+        print(f"{where} not ready, so LibreOffice cannot run", file=sys.stderr)
         return 2
     m = meta()
     code, out = cargo_test("phase1_exit", "every_corpus_deck", {"PHASE1_EXPORT_OUT": str(edited_dir)})
@@ -310,12 +356,33 @@ def export(scratch):
         "written": int(fields(written[0])["total"]), "edits_left_out": left_out[0].split() if left_out else [],
         "f4_and_sdk_checked": len(packages), "libreoffice_checked": len(lo), "libreoffice": lo_counts,
         "sdk_known_only": len(sdk_known), "libreoffice_not_decks": not_decks,
-        "libreoffice_image": LO_IMAGE, "failures": failures,
+        "libreoffice_image": lo_label(), "failures": failures,
     })
 
 
+def merge(pairs):
+    """Each KEY=FILE: what FILE records under KEY, into this record. A missing run is said, not skipped."""
+    data = json.loads(EVIDENCE.read_text(encoding="utf8")) if EVIDENCE.exists() else {}
+    missing = []
+    for pair in pairs:
+        key, _, path = pair.partition("=")
+        source = pathlib.Path(path)
+        got = json.loads(source.read_text(encoding="utf8")).get(key) if source.is_file() else None
+        if got is None:
+            missing.append(key)
+            data.pop(key, None)
+        else:
+            data[key] = got
+    EVIDENCE.write_text(json.dumps(data, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf8")
+    for key in missing:
+        print(f"no {key} run to merge: its record is dropped, so phase1-exit.py says NOT MET", file=sys.stderr)
+    return 1 if missing else 0
+
+
 def main(argv):
-    checks = {"budget": budget, "hostile": hostile, "damage": damage, "export": export}
+    if len(argv) >= 3 and argv[1] == "merge" and all("=" in a for a in argv[2:]):
+        return merge(argv[2:])
+    checks ={"budget": budget, "hostile": hostile, "damage": damage, "export": export}
     if len(argv) != 3 or argv[1] not in checks:
         print(__doc__, file=sys.stderr)
         return 2

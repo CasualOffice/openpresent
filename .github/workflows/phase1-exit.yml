@@ -1,0 +1,156 @@
+# Phase 1's exit evidence, made on GitHub's runners (P1X-01, owner instruction 38).
+#
+# Nothing runs on the owner's machine: the 500-slide budget and the hostile run, the
+# DAMAGE_FULL=1 F4_REQUIRED=1 damage corpus, the export run (every corpus deck written out
+# edited, then F4, the Open XML SDK and LibreOffice), and the gates in CLAUDE.md all run
+# here. Each evidence job runs tools/phase1-evidence.py and keeps its copy of
+# tools/phase1-evidence.json; the last job merges them, keeps the record as an artifact, and
+# prints `phase1-exit.py --quick`. A run that failed still keeps its record: a failure is
+# evidence, and phase1-exit.py reads it as NOT MET.
+#
+# LibreOffice comes from apt and runs headless under `unshare --net`, so it has no network,
+# and only here, where a crash shows no dialog (owner instructions 23 and 33).
+name: phase1-exit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Each commit's evidence is its own record, so a newer push does not cancel it.
+concurrency:
+  group: phase1-exit-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  p1-budget-hostile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # Start from no record, so a run that writes none cannot pass on the committed one.
+      - run: rm -f tools/phase1-evidence.json && mkdir -p "$RUNNER_TEMP/p1"
+      - run: python3 tools/phase1-evidence.py budget "$RUNNER_TEMP/p1"
+      - if: always()
+        run: python3 tools/phase1-evidence.py hostile "$RUNNER_TEMP/p1"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: p1-budget-hostile
+          path: tools/phase1-evidence.json
+          retention-days: 90
+
+  p1-damage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      F4_REQUIRED: "1"
+      DAMAGE_THREADS: "4"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # F4 needs xmllint, and F4_REQUIRED=1 fails the run without it.
+      - run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      # Start from no record, so a run that writes none cannot pass on the committed one.
+      - run: rm -f tools/phase1-evidence.json && mkdir -p "$RUNNER_TEMP/p1"
+      # The tool sets DAMAGE_FULL=1 and F4_REQUIRED=1 itself.
+      - run: python3 tools/phase1-evidence.py damage "$RUNNER_TEMP/p1"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: p1-damage
+          path: tools/phase1-evidence.json
+          retention-days: 90
+
+  p1-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      F4_REQUIRED: "1"
+      OOXML_SDK_REQUIRED: "1"
+      PHASE1_LO: host
+      OPENPRESENT_ALLOW_SOFFICE: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libxml2-utils libreoffice-impress
+      # Ubuntu's AppArmor refuses unprivileged user namespaces by default; `unshare --net`
+      # needs one to take LibreOffice's network away without root.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: soffice --version
+      # The validator restores its packages once, with the network, before any deck is read.
+      - run: python3 tools/ooxml-sdk/validate.py --self-test
+      # Start from no record, so a run that writes none cannot pass on the committed one.
+      - run: rm -f tools/phase1-evidence.json && mkdir -p "$RUNNER_TEMP/p1"
+      - run: python3 tools/phase1-evidence.py export "$RUNNER_TEMP/p1"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: p1-export
+          path: tools/phase1-evidence.json
+          retention-days: 90
+
+  # The gates in CLAUDE.md, exactly as listed there.
+  p1-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      F4_REQUIRED: "1"
+      OOXML_SDK_REQUIRED: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      - run: rustup target add wasm32-unknown-unknown
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --workspace --all-features --locked
+      - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
+      - run: cargo check --target wasm32-unknown-unknown --workspace --locked
+      - run: python3 tools/check-repo.py
+      - run: python3 tools/spec-checklist/generate.py --check
+      - run: python3 fixtures/tools/generate.py --check
+      - run: python3 tools/spec-audit/audit.py --check
+      - run: python3 tools/ooxml-sdk/validate.py fixtures/generated
+
+  p1-evidence:
+    needs: [p1-budget-hostile, p1-damage, p1-export, p1-gates]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: p1-*
+          path: ${{ runner.temp }}/runs
+      # A run that left no record is dropped from the merged one, so it reads NOT MET.
+      - name: Merge each job's record into tools/phase1-evidence.json
+        run: |
+          runs="$RUNNER_TEMP/runs"
+          rm -f tools/phase1-evidence.json
+          python3 tools/phase1-evidence.py merge \
+            "budget=$runs/p1-budget-hostile/phase1-evidence.json" \
+            "hostile=$runs/p1-budget-hostile/phase1-evidence.json" \
+            "damage=$runs/p1-damage/phase1-evidence.json" \
+            "export=$runs/p1-export/phase1-evidence.json"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: phase1-evidence
+          path: tools/phase1-evidence.json
+          retention-days: 90
+      - name: Gates job result
+        if: always()
+        run: echo "p1-gates ${{ needs.p1-gates.result }}"
+      - name: Phase 1's closing list
+        if: always()
+        run: python3 tools/phase1-exit.py --quick
