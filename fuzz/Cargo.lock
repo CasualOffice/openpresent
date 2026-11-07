@@ -44,9 +44,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "casual-slide-geometry"
+version = "0.0.0"
+
+[[package]]
 name = "casual-slide-import"
 version = "0.0.0"
 dependencies = [
+ "casual-slide-geometry",
  "casual-slide-model",
  "casual-slide-ooxml",
 ]

@@ -7,7 +7,8 @@
 //!
 //! What this tier writes: a node's transform, `cNvPr` attributes, hyperlink
 //! attributes, locks, `txBox`, placeholder attributes, `isPhoto`, `userDrawn`,
-//! `useBgFill` and `bwMode`; a part's root attributes, `cSld/@name`, `clrMap`
+//! `useBgFill`, `bwMode`, and through [`crate::drawing`] its geometry, fill, line,
+//! effects and 3D; a part's root attributes, `cSld/@name`, `clrMap`
 //! slots, `clrMapOvr` and `hf`. Anything else that differs (a node added, removed
 //! or reordered, a background, a layout list) is refused as `CS-SLE-0001`, and
 //! nothing is saved: those edits belong to the writer tier (1N) and to Phase 4.
@@ -356,6 +357,7 @@ impl Patch<'_, '_> {
             || b.transform != a.transform
             || b.bw_mode != a.bw_mode
             || b.use_bg_fill != a.use_bg_fill
+            || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
             || b.rel_id != a.rel_id;
         if own_changed {
@@ -404,6 +406,15 @@ impl Patch<'_, '_> {
         }
         if b.transform != a.transform || b.bw_mode != a.bw_mode {
             self.transform(el, b, a)?;
+        }
+        if b.properties != a.properties {
+            crate::drawing::patch_properties(
+                &mut self.w,
+                el,
+                a.kind,
+                &b.properties,
+                &a.properties,
+            )?;
         }
         Ok(())
     }

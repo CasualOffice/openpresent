@@ -18,6 +18,7 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 name = "casual-slide-export"
 version = "0.0.0"
 dependencies = [
+ "casual-slide-geometry",
  "casual-slide-import",
  "casual-slide-model",
  "casual-slide-ooxml",
@@ -32,6 +33,7 @@ version = "0.0.0"
 name = "casual-slide-import"
 version = "0.0.0"
 dependencies = [
+ "casual-slide-geometry",
  "casual-slide-model",
  "casual-slide-ooxml",
  "casual-slide-package",
