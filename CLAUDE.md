@@ -17,6 +17,7 @@ Sister repo `../opencalc` is the architecture reference: copy from it with prove
 - Say "stopped", "done" or "tested" only after checking by running. Read gate output before committing.
 - Nothing that can pop up or crash on the owner's desktop.
 - Check machine load (`uptime`) before adding a session and at every merge. Above twice the core count, start nothing and land finished work. Sessions run only `cargo test -p` on what they changed, with `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`, and never the full gates: the main session runs those once at merge.
+- No new gates, audit rules or repository checks unless the owner asks (instruction 31).
 - Decide, record it, carry on. Commit often, merge as soon as gates pass, keep the disk clear.
 
 ## What this is

@@ -39,6 +39,7 @@ by saying so.
 | 28 | 2026-11-07 | Write the rule for not overloading the machine and keep it in memory, so the owner need not repeat it | [04](04-MISTAKES-AND-RULES.md) rule 22, [CLAUDE.md](../CLAUDE.md) |
 | 29 | 2026-11-07 | Waste no time and no tokens | [04](04-MISTAKES-AND-RULES.md) rule 23 |
 | 30 | 2026-11-07 | Sessions do not run all the gates: they finish their work. Stop wasting system resources, money and time | [CLAUDE.md](../CLAUDE.md), `openslide-worker` skill |
+| 31 | 2026-11-07 | Stop writing gates for every little thing. No new gate without the owner asking for it | [CLAUDE.md](../CLAUDE.md) |
 
 ## Boundaries set by the environment
 
