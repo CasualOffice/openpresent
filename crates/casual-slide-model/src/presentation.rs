@@ -488,6 +488,8 @@ pub struct Presentation {
     pub photo_album: Option<PhotoAlbum>,
     /// `custDataLst`.
     pub customer_data: Option<CustomerDataList>,
+    /// `p14:sectionLst`, from `extLst`. Anything else in `extLst` stays in the tree.
+    pub sections: Option<crate::section::SectionList>,
     /// `defaultTextStyle`.
     pub default_text_style: Option<crate::text::TextListStyle>,
     /// `kinsoku`.

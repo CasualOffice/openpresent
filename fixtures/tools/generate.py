@@ -263,6 +263,8 @@ def fixtures():
     yield from media_fixtures()
     from generate_shapes import fixtures as shape_fixtures  # imports this module, so not at the top
     yield from shape_fixtures()
+    from generate_review import fixtures as review_fixtures  # imports this module, so not at the top
+    yield from review_fixtures()
     from generate_close import fixtures as close_fixtures  # as above
     yield from close_fixtures()
     from generate_timing import fixtures as timing_fixtures  # imports this module, so not at the top

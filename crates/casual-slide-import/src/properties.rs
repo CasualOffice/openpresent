@@ -299,6 +299,8 @@ pub enum ImportFindingKind {
     Media(crate::media::MediaFinding),
     /// What the colour reader noticed in a shape's properties, under its own codes.
     Color(crate::color::FindingKind),
+    /// What this tier's readers noticed in comments, sections and retained parts.
+    Review(crate::comment::ReviewFinding),
     /// What the timing reader noticed, under its own codes.
     Timing(crate::timing::TimingFinding),
 }
@@ -326,6 +328,7 @@ impl ImportFindingKind {
             Self::Table(finding) => finding.code(),
             Self::Media(finding) => finding.code(),
             Self::Color(finding) => finding.code(),
+            Self::Review(finding) => finding.code(),
             Self::Timing(finding) => finding.code(),
         }
     }

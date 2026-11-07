@@ -1,6 +1,8 @@
 //! `casual-slide-model`. See docs/19 and docs/28 (ADR-013).
 
 pub mod color;
+pub mod comment;
+pub mod custom_data;
 pub mod d3;
 pub mod drawing;
 pub mod effect;
@@ -12,6 +14,7 @@ pub mod picture;
 pub mod presentation;
 pub mod properties;
 pub mod retained;
+pub mod section;
 pub mod shape;
 pub mod slide;
 pub mod table;

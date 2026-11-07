@@ -542,7 +542,14 @@ pub fn import_presentation_with_colors(
                 };
                 p.default_text_style = Some(text.list_style(&el)?);
             }
-            // `extLst` and whatever else: preserved, not modelled.
+            "extLst" => {
+                p.sections = crate::section::read_presentation_extensions(
+                    r,
+                    &el,
+                    &crate::comment::ReviewLimits::default(),
+                )?;
+            }
+            // Whatever else: preserved, not modelled.
             _ => r.retained(&el),
         }
     }
@@ -1270,6 +1277,7 @@ pub fn import_deck(
         properties: DocumentProperties { core, app, custom },
     };
     cross_check(&deck, &main, &mut findings);
+    crate::section::check_sections(&deck.presentation, &main, &mut findings);
     Ok(ImportedDeck {
         deck,
         findings,

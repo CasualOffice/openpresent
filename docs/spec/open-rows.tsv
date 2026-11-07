@@ -115,3 +115,57 @@ r:@link	M	CLOSE-01	The field is in fill.rs, owned by CLOSE-01: `spec-audit: r:@l
 p:CT_GraphicalObjectFrame/a:graphic	E	T1N-04	Patched in place; a required structural node a save does not create
 a:CT_GraphicalObject/graphicData	E	T1N-04	Patched in place; a required structural node a save does not create
 p:CT_GraphicalObjectFrame	E	T1N-04	Its `a:graphic` child is patched in place and a save does not create it, so the type cannot be marked for export
+x:powerpoint/2010/main:CT_PrismTransition	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2010/main:CT_PrismTransition/@isContent	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2010/main:CT_PrismTransition/@isInverted	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2010/main:CT_FlyThroughTransition	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2010/main:CT_FlyThroughTransition/@hasBounce	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2010/main:CT_RevealTransition	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2010/main:CT_RevealTransition/@thruBlk	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2010/main:CT_MediaBookmarkList	M	T1H-01	Read and written by Tier 1H's media.rs; the model's declaration does not name this row
+x:powerpoint/2010/main:CT_MediaBookmarkList/bmk	M	T1H-01	Read and written by Tier 1H's media.rs; the model's declaration does not name this row
+x:powerpoint/2012/main:CT_PresetTransition	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2012/main:CT_PresetTransition/@invX	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2012/main:CT_PresetTransition/@invY	E	T1I-02	Written by Tier 1I's transition.rs; its tests do not name this attribute
+x:powerpoint/2012/main:CT_ExtendedGuide	M	T1M-02	Read by the view reader; the model names it under another field. Retained where it is not read
+x:powerpoint/2012/main:CT_ExtendedGuide/@orient	M	T1M-02	Read by the view reader; the model names it under another field. Retained where it is not read
+x:powerpoint/2012/main:CT_ExtendedGuide/@pos	M	T1M-02	Read by the view reader; the model names it under another field. Retained where it is not read
+x:powerpoint/2013/main/command:ST_CreationId	M	T1M-03	A moniker list's content is xsd:any and this type has no global element, so the audit's walk cannot reach it. In the fixtures and real decks as text, and retained; moniker_types_are_in_the_fixtures_and_kept
+x:powerpoint/2018/8/main:CT_Author	MIE	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2018/8/main:CT_Author/extLst
+x:powerpoint/2018/8/main:CT_Author/extLst	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:powerpoint/2018/8/main:CT_CommentReplyList	M	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2018/8/main:CT_CommentReplyList/reply
+x:powerpoint/2018/8/main:CT_CommentReplyList/reply	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2018/8/main:CT_CommentRelationship	M	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2018/8/main:CT_CommentRelationship/@r:id
+x:powerpoint/2018/8/main:CT_CommentRelationship/@r:id	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2020/02/main:CT_DesignerTagList	M	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2020/02/main:CT_DesignerTagList/designTag
+x:powerpoint/2020/02/main:CT_DesignerTagList/designTag	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2020/02/main:CT_DesignerDrawingProps	MIE	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2020/02/main:CT_DesignerDrawingProps/extLst
+x:powerpoint/2020/02/main:CT_DesignerDrawingProps/extLst	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:powerpoint/2022/03/main:CT_ReactionInstance	MIE	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/03/main:CT_ReactionInstance/extLst
+x:powerpoint/2022/03/main:CT_ReactionInstance/extLst	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:powerpoint/2022/08/main:CT_TaskProgressEventInfo	M	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/08/main:CT_TaskProgressEventInfo/@val
+x:powerpoint/2022/08/main:CT_TaskProgressEventInfo/@val	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskTitleEventInfo	M	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/08/main:CT_TaskTitleEventInfo/@val
+x:powerpoint/2022/08/main:CT_TaskTitleEventInfo/@val	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskAssignUnassignUser	M	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/08/main:CT_TaskAssignUnassignUser/@authorId
+x:powerpoint/2022/08/main:CT_TaskAssignUnassignUser/@authorId	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskAnchor	MIE	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/08/main:CT_TaskAnchor/comment
+x:powerpoint/2022/08/main:CT_TaskAnchor/comment	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskAnchor/extLst	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:powerpoint/2022/08/main:CT_TaskUndo	M	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/08/main:CT_TaskUndo/@id
+x:powerpoint/2022/08/main:CT_TaskUndo/@id	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent	MIE	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/08/main:CT_TaskHistoryEvent/asgn
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/asgn	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/add	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/title	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/date	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/pcntCmplt	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/unasgnAll	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/undo	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/unknown	M	T1M-03	Not established by the audit: no declaration in casual-slide-model says this is the row (see the rule in audit.py)
+x:powerpoint/2022/08/main:CT_TaskHistoryEvent/extLst	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:powerpoint/2022/08/main:CT_TaskDetails	MIE	T1M-03	Not established by the audit: not all it declares is done, such as x:powerpoint/2022/08/main:CT_TaskDetails/extLst
+x:powerpoint/2022/08/main:CT_TaskDetails/extLst	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:drawing/2013/main/command:CT_TextCharRangeContext	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:drawing/2013/main/command:CT_TextCharRangeContext/@len	MIE	T1M-03	Not established by the audit: no fixture exercises it
+x:drawing/2013/main/command:CT_TextCharRangeContext/@hash	MIE	T1M-03	Not established by the audit: no fixture exercises it
