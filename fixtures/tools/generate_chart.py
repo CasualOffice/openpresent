@@ -104,6 +104,17 @@ XSDS = {p: Xsd(p, *SCHEMAS[p]) for p in SCHEMAS}
 BY_URI = {x.uri: x for x in XSDS.values()}
 
 
+# Where each enumeration, union and choice has reached, across one deck's walk: what is under a
+# branch only some parts take would otherwise be missed. Same order, same bytes, each run.
+NEXT_VALUE = {}
+
+
+def next_of(node):
+    at = NEXT_VALUE.get(id(node), 0)
+    NEXT_VALUE[id(node)] = at + 1
+    return at
+
+
 def many(node):
     m = node.get("maxOccurs", "1")
     return m == "unbounded" or int(m) > 1
@@ -141,9 +152,7 @@ def simple_node_value(x, node, variant):
     if restriction is not None:
         values = [e.get("value") for e in restriction.findall(XS + "enumeration")]
         if values:
-            at = NEXT_VALUE.get(id(node), variant)
-            NEXT_VALUE[id(node)] = at + 1
-            return values[at % len(values)]
+            return values[next_of(node) % len(values)]
         bounds = {c.tag.replace(XS, ""): c.get("value") for c in restriction}
         base = restriction.get("base")
         if "pattern" in bounds:
@@ -170,14 +179,13 @@ def simple_node_value(x, node, variant):
     # A percent spelling is the first member, numeric form beside it; show both by turns.
     has_percent = any(kind == "n" and x.q(m)[1] in x.simple and x.simple[x.q(m)[1]].find(XS + "restriction") is not None
                       and x.simple[x.q(m)[1]].find(XS + "restriction").find(XS + "pattern") is not None for kind, m in members)
-    if has_percent and variant % 2:
+    turn = next_of(node)
+    if has_percent and turn % 2:
         return chosen[0] + "%"
-    return chosen[variant % len(chosen)]
+    # Two turns on the first member, whose own counter moves each turn, so its values all show.
+    return chosen[0 if turn % 4 < 2 else turn % len(chosen)]
 
 
-# Where each enumeration has reached, for one deck's walk: a value at a branch only some
-# variants take would otherwise be missed. Same order, same bytes, each run.
-NEXT_VALUE = {}
 
 
 class Instance:
@@ -212,7 +220,8 @@ class Instance:
             if name == "idx" and element_local == "pt":
                 value = str(self.idx)
                 self.idx += 1
-            qualified = x.attr_qualified or (x.prefix, name) == ("cx", "autoUpdate")
+            # `cx:autoUpdate` as PowerPoint writes it, and bare as the schema has it, by turns.
+            qualified = x.attr_qualified or ((x.prefix, name) == ("cx", "autoUpdate") and self.variant % 2 == 1)
             out.append(f'{x.prefix + ":" if qualified else ""}{name}="{value}"')
         return " ".join(out)
 
@@ -257,8 +266,9 @@ class Instance:
             branches = list(node)
             if many(node):
                 return "".join(self.particle(x, ch, owner) for ch in branches)
+            start = next_of(node)
             for i in range(len(branches)):
-                out = self.particle(x, branches[(self.variant + i) % len(branches)], owner)
+                out = self.particle(x, branches[(start + i) % len(branches)], owner)
                 if out:
                     return out
             return ""
@@ -513,7 +523,7 @@ def chart_ex_deck():
 
 def every_row_decks():
     """A deck per kind of root, with a part per value of the longest enumeration."""
-    longest = {"c": 16, "cx": 13, "cs": 10}
+    longest = {"c": 24, "cx": 20, "cs": 10}
     NEXT_VALUE.clear()
     c_charts = []
     extra_parts, extra_types = [], []
