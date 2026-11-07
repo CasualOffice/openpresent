@@ -56,6 +56,14 @@ the central directory, before anything is inflated.
 | `MAX_UP_FRONT` | `1 << 20` | Capacity allocated before decompressing, whatever the entry declares, so a forged size cannot abort a WebAssembly instance (`SEC-P04`). Nothing proves `read_part` uses it (`SEC-017`) | none: allocation only | Partial |
 | `read_part_capped` | caller's `max` | A caller-chosen ceiling for one part, refused on the declaration with nothing inflated. `PresentationPackage::read_part` does not use it, so optional parts are bounded only by the budget (`PKG-04`) | CS-PKG-0009 | Tested |
 
+## The recovering reader
+
+`crates/casual-slide-package/src/salvage.rs` (`REC-01`), which reads what `Package::open` refuses. It holds to `PackageLimits`: `max_input_bytes` still refuses (the one limit that does, since it protects the machine); `max_entries` stops the scan and says so (`CS-REC-0109`); `max_total_uncompressed` is one budget for everything inflated, however many entries point at one stream; `max_expansion_ratio` and `max_path_bytes` set an entry aside as an opaque blob (`CS-REC-0107`, `CS-REC-0106`). Nothing allocates from a number in the file, and a scan only moves forward.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `MAX_SCRUBBED_NAME` | `200` | Characters of a damaged entry's name repeated in a report or a retained name | none: text only | Tested by `an_unsafe_name_never_becomes_a_part` |
+
 ## XML and graph: `OoxmlLimits`
 
 `crates/casual-slide-ooxml/src/limits.rs`. Includes `PackageLimits` as `package`.
