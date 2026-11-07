@@ -11,7 +11,7 @@
 //! and refuses the save if it does not read as asked, so a value the reader would not
 //! believe is refused by the reader's own rule, as `CS-EXP-0007`.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use casual_slide_import::drawing::{A14, ASK};
 use casual_slide_import::properties::{Elem, ns};
@@ -34,6 +34,8 @@ pub(crate) enum Space {
     A14,
     Ask,
 }
+
+const SPACES: [Space; 4] = [Space::Dml, Space::Pml, Space::A14, Space::Ask];
 
 impl Space {
     fn uris(self) -> &'static [&'static str] {
@@ -438,7 +440,7 @@ fn patch_kids(
     {
         let mut by_name: HashMap<(&str, Space), VecDeque<usize>> = HashMap::new();
         for (i, kid) in tree_kids.iter().enumerate() {
-            for space in [Space::Dml, Space::Pml, Space::A14, Space::Ask] {
+            for space in SPACES {
                 if kid.in_namespace(space.uris()) {
                     by_name
                         .entry((kid.local.as_str(), space))
@@ -511,25 +513,53 @@ fn patch_kids(
             *slot = false;
         }
     }
-    for n in before {
-        if !after.iter().any(|a| a.same_name(n)) {
-            for (i, kid) in tree_kids.iter().enumerate() {
-                if keep.get(i).copied().unwrap_or(false) && n.is(kid) {
-                    w.tree.remove_child(el.id, kid.id);
-                    w.changes += 1;
-                    if let Some(slot) = keep.get_mut(i) {
-                        *slot = false;
-                    }
-                }
+    // Each name once, so a long list costs its length and not its square.
+    let wanted: HashSet<(Space, &str)> = after.iter().map(|a| (a.space, a.local)).collect();
+    let mut seen_names = HashSet::new();
+    let unwanted: Vec<&Node> = before
+        .iter()
+        .filter(|n| !wanted.contains(&(n.space, n.local)) && seen_names.insert((n.space, n.local)))
+        .collect();
+    for (i, kid) in tree_kids.iter().enumerate() {
+        if keep.get(i).copied().unwrap_or(false) && unwanted.iter().any(|n| n.is(kid)) {
+            w.tree.remove_child(el.id, kid.id);
+            w.changes += 1;
+            if let Some(slot) = keep.get_mut(i) {
+                *slot = false;
             }
         }
     }
 
-    // In order, so what follows a new child is known when it is placed.
-    let owned: std::collections::HashSet<usize> = element_of.iter().flatten().copied().collect();
+    // What the model could not see, by name, for a new child of that name to use.
+    let owned: HashSet<usize> = element_of.iter().flatten().copied().collect();
+    let mut unseen: HashMap<(Space, &str), VecDeque<usize>> = HashMap::new();
+    for (i, kid) in tree_kids.iter().enumerate() {
+        if owned.contains(&i) || !keep.get(i).copied().unwrap_or(false) {
+            continue;
+        }
+        for space in SPACES {
+            if kid.in_namespace(space.uris()) {
+                unseen
+                    .entry((space, kid.local.as_str()))
+                    .or_default()
+                    .push_back(i);
+            }
+        }
+    }
+    // For each `after` child, the tree child of the next one that stays.
+    let mut following: Vec<Option<usize>> = vec![None; after.len()];
+    let mut next = None;
+    for j in (0..after.len()).rev() {
+        if let Some(slot) = following.get_mut(j) {
+            *slot = next;
+        }
+        if let Some(i) = paired.get(j).copied().flatten() {
+            next = element_of.get(i).copied().flatten().or(next);
+        }
+    }
+
     for (j, n) in after.iter().enumerate() {
-        let pairing = paired.get(j).copied().flatten();
-        if let Some(i) = pairing {
+        if let Some(i) = paired.get(j).copied().flatten() {
             let kid = element_of
                 .get(i)
                 .copied()
@@ -540,28 +570,21 @@ fn patch_kids(
             }
             continue;
         }
-        // One the model could not see, of this name: use it.
-        let adopted = tree_kids
-            .iter()
-            .enumerate()
-            .find(|(i, k)| !owned.contains(i) && keep.get(*i).copied().unwrap_or(false) && n.is(k));
-        if let Some((i, kid)) = adopted {
-            if let Some(slot) = keep.get_mut(i) {
-                *slot = false;
-            }
+        let adopted = unseen
+            .get_mut(&(n.space, n.local))
+            .and_then(VecDeque::pop_front)
+            .and_then(|i| tree_kids.get(i));
+        if let Some(kid) = adopted {
             patch(w, kid, None, n)?;
             continue;
         }
         // Before the next child that stays, or by the schema if none does.
-        let next = paired
-            .get(j + 1..)
-            .unwrap_or_default()
-            .iter()
+        let before_kid = following
+            .get(j)
+            .copied()
             .flatten()
-            .next()
-            .and_then(|i| element_of.get(*i).copied().flatten())
             .and_then(|o| tree_kids.get(o));
-        insert_new(w, el, next, n)?;
+        insert_new(w, el, before_kid, n)?;
     }
     Ok(())
 }

@@ -1202,3 +1202,54 @@ fn a_node_in_alternate_content_is_not_edited_for_its_fill() {
     let mut tree = r.tree.clone();
     assert_eq!(patch(&mut tree, &after).unwrap_err(), "CS-SLE-0002");
 }
+
+#[test]
+fn a_sketch_and_a_hidden_fill_can_be_added_where_a_uri_is_known() {
+    let new = edit_every_element(|part| {
+        let node = named(part, "pattern");
+        node.properties.line.as_mut().unwrap().sketch =
+            Some(casual_slide_model::line::LineSketch {
+                seed_attribute: Some(9),
+                sketch_type: Some(Some(casual_slide_model::line::LineSketchType::Curved)),
+                ..Default::default()
+            });
+        node.properties.hidden = Some(Box::new(casual_slide_model::drawing::HiddenProperties {
+            fill: Some(Fill::None),
+            ..Default::default()
+        }));
+    });
+    let at = new.find(r#"name="pattern""#).unwrap();
+    let slice = &new[at..new.find(r#"name="tiled picture""#).unwrap()];
+    assert!(slice.contains("<ask:lineSketchCurved/>"), "{slice}");
+    assert!(
+        slice.contains("</a:ln><a:extLst>"),
+        "extLst last, after ln: {slice}"
+    );
+    assert!(slice.contains("hiddenFill"), "{slice}");
+}
+
+#[test]
+fn a_long_path_is_replaced_without_costing_its_square() {
+    // Every name-keyed step here would be 400 000 000 compares as a scan of a scan.
+    let cmds = r#"<a:lnTo><a:pt x="1" y="1"/></a:lnTo>"#.repeat(20_000);
+    let xml = spt(&format!(
+        "<a:custGeom><a:pathLst><a:path>{cmds}</a:path></a:pathLst></a:custGeom>"
+    ));
+    let r = read(&xml);
+    let mut after = r.part.clone();
+    let node = after
+        .shape_tree_mut()
+        .unwrap()
+        .children
+        .first_mut()
+        .unwrap();
+    let Some(Geometry::Custom(g)) = node.properties.geometry.as_mut() else {
+        panic!()
+    };
+    g.paths.as_mut().unwrap()[0].commands = vec![PathCommand::Close; 20_000];
+    let mut tree = r.tree.clone();
+    patch(&mut tree, &after).unwrap();
+    let new = String::from_utf8(tree.to_bytes()).unwrap();
+    assert_eq!(new.matches("<a:close/>").count(), 20_000);
+    assert!(!new.contains("lnTo"));
+}

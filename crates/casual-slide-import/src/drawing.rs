@@ -39,8 +39,6 @@ pub const A14: &[&str] = &["http://schemas.microsoft.com/office/drawing/2010/mai
 /// `ask:`, Office 2018 sketched lines.
 pub const ASK: &[&str] = &["http://schemas.microsoft.com/office/drawing/2018/sketchyshapes"];
 
-/// The largest `ST_Coordinate`.
-const COORDINATE_LIMIT: i64 = 27_273_042_316_900;
 /// `ST_FixedAngle` is exclusive of this, on both sides.
 const FIXED_ANGLE_LIMIT: i32 = 5_400_000;
 /// The largest `ST_FOVAngle`.
@@ -379,18 +377,19 @@ impl<'c, 'r> Ctx<'c, 'r> {
     /// `ST_Coordinate`.
     pub fn coord(&mut self, e: &mut Elem, name: &str) -> Res<Option<Coordinate>> {
         Ok(self.r.attr_in::<Coordinate>(e, name, |c| {
-            (COORDINATE_MIN..=COORDINATE_LIMIT).contains(&c.0)
+            (COORDINATE_MIN..=POSITIVE_COORDINATE_MAX).contains(&c.0)
         })?)
     }
 
     /// `ST_Coordinate`, required.
     pub fn req_coord(&mut self, e: &mut Elem, name: &str) -> Res<Option<Coordinate>> {
         Ok(self.r.required::<Coordinate>(e, name, |c| {
-            (COORDINATE_MIN..=COORDINATE_LIMIT).contains(&c.0)
+            (COORDINATE_MIN..=POSITIVE_COORDINATE_MAX).contains(&c.0)
         })?)
     }
 
-    /// `ST_PositiveCoordinate`.
+    /// `ST_PositiveCoordinate`, by the schema. `MS-OI29500` 2.1.1330: PowerPoint itself
+    /// stops at 2147483647, which is not this reader's to enforce on a file.
     pub fn pos_coord(&mut self, e: &mut Elem, name: &str) -> Res<Option<Coordinate>> {
         Ok(self
             .r
