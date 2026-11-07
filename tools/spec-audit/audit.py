@@ -121,9 +121,10 @@ RETENTION_TESTS = (
     ("casual-slide-export/tests/retention.rs", "every_node_of_every_deck_survives_an_edit"),
     ("casual-slide-import/tests/report.rs", "an_unread_attribute_or_element_is_always_reported"),
 )
-DEFAULT_GATE = "1A,1B,1C,1D"
+DEFAULT_GATE = "1A,1B,1C,1D,1M"
 TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE"),
-         "1E": ("GEOM", "FILL", "LINE", "EFFECT", "D3"), "1F": ("TEXT",), "1H": ("PIC", "MEDIA"), "1I": ("TIMING", "TRANS")}
+         "1E": ("GEOM", "FILL", "LINE", "EFFECT", "D3"), "1F": ("TEXT",), "1H": ("PIC", "MEDIA"), "1I": ("TIMING", "TRANS"),
+         "1M": ("COMMENT", "EXT", "REVIEW", "DESIGN", "CUSTOM")}
 LEAF_KINDS = ("element", "attribute", "root", "rootattr", "value")
 # Model fields too generic to say anything about which attribute they hold.
 GENERIC_FIELDS = frozenset("id name type val value uri ref kind data text index key".split())
@@ -891,6 +892,8 @@ def checklist_driven(crate_dir, areas):
 class ModelDeclarations:
     """What the model crate declares, read from its source."""
 
+    noted = frozenset()  # row ids a `spec-audit` comment on a public field declares
+
     def __init__(self, *crate_dirs):
         self.enums = {}    # simple type name -> (enum name, its values)
         self.structs = {}  # normalised struct name -> its public fields, normalised
@@ -1442,7 +1445,9 @@ class FixtureCoverage:
             if token in s["values"]:
                 self.mark(s["values"][token])
             for member in s["members"]:
-                self.mark_simple(member, token, seen)
+                # Its own copy per token: `seen` guards a cycle, and a list's second token
+                # reaches the same item type as its first.
+                self.mark_simple(member, token, set(seen))
 
     def enter(self, typ):
         t = self.schema.types.get(typ)

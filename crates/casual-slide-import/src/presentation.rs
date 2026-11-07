@@ -542,7 +542,14 @@ pub fn import_presentation_with_colors(
                 };
                 p.default_text_style = Some(text.list_style(&el)?);
             }
-            // `extLst` and whatever else: preserved, not modelled.
+            "extLst" => {
+                p.sections = crate::section::read_presentation_extensions(
+                    r,
+                    &el,
+                    &crate::comment::ReviewLimits::default(),
+                )?;
+            }
+            // Whatever else: preserved, not modelled.
             _ => r.retained(&el),
         }
     }
@@ -1143,7 +1150,7 @@ fn read_optional<T>(
     source: &str,
     rel_types: &[&str],
     findings: &mut Findings,
-    read: impl FnOnce(&XmlTree, &str, &[Relationship], &mut Findings) -> Result<T, ImportError>,
+    read: impl Fn(&XmlTree, &str, &[Relationship], &mut Findings) -> Result<T, ImportError>,
 ) -> Result<Option<T>, ImportError> {
     let PartLocation::At(part) = locate_part(package, source, rel_types, findings) else {
         return Ok(None);
@@ -1156,11 +1163,24 @@ fn read_optional<T>(
         .and_then(|tree| read(&tree, &part, &rels, findings));
     match result {
         Ok(value) => Ok(Some(value)),
-        Err(err) if is_optional_part_fault(&err) => {
-            findings.note(ImportFindingKind::UnreadablePart, &part, "", None);
-            Ok(None)
+        Err(err) if package.is_strict() => {
+            if is_optional_part_fault(&err) {
+                findings.note(ImportFindingKind::UnreadablePart, &part, "", None);
+                Ok(None)
+            } else {
+                Err(err)
+            }
         }
-        Err(err) => Err(err),
+        // Whatever stopped this part, it is retained, and what stands in its place is what
+        // the model holds, so a save does not take the difference for a removal.
+        Err(_) => {
+            findings.note(ImportFindingKind::UnreadablePart, &part, "", None);
+            package.set_part_aside(&part)?;
+            let bytes = package.read_xml_part(&part)?;
+            let rels = package.relationships_of(&part).to_vec();
+            let tree = XmlTree::parse(&bytes, &part, &limits)?;
+            Ok(Some(read(&tree, &part, &rels, findings)?))
+        }
     }
 }
 
@@ -1220,14 +1240,34 @@ pub fn import_deck(
     let bytes = package.read_xml_part(&main)?;
     let tree = XmlTree::parse(&bytes, &main, package.limits())?;
     let mut color_findings = ColorFindings::default();
-    let presentation = import_presentation_with_colors(
+    let read = import_presentation_with_colors(
         &tree,
         &main,
         package.relationships_of(&main),
         limits,
         &mut findings,
         &mut color_findings,
-    )?;
+    );
+    let presentation = match read {
+        Ok(presentation) => presentation,
+        Err(err) if package.is_strict() => return Err(err),
+        // A limit stops work on the part, not on the deck: it is rebuilt from what exists,
+        // and its bytes are retained (`docs/29`).
+        Err(_) => {
+            package.set_parts_aside(std::slice::from_ref(&main), limits.max_slides)?;
+            findings.note(ImportFindingKind::UnreadablePart, &main, "", None);
+            let bytes = package.read_xml_part(&main)?;
+            let tree = XmlTree::parse(&bytes, &main, package.limits())?;
+            import_presentation_with_colors(
+                &tree,
+                &main,
+                package.relationships_of(&main),
+                limits,
+                &mut findings,
+                &mut color_findings,
+            )?
+        }
+    };
     let presentation_properties = read_optional(
         package,
         &main,
@@ -1270,6 +1310,7 @@ pub fn import_deck(
         properties: DocumentProperties { core, app, custom },
     };
     cross_check(&deck, &main, &mut findings);
+    crate::section::check_sections(&deck.presentation, &main, &mut findings);
     Ok(ImportedDeck {
         deck,
         findings,

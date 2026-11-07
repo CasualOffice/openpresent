@@ -57,6 +57,7 @@ dependencies = [
 name = "casual-slide-package"
 version = "0.0.0"
 dependencies = [
+ "flate2",
  "zip",
 ]
 

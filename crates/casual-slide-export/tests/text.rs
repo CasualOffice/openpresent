@@ -780,20 +780,22 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
                 .items
                 .push(TextItem::Retained("x".to_owned()))
         },
-        |s| {
-            named_mut(s, "Equation")
-                .text_body
-                .as_mut()
-                .unwrap()
-                .paragraphs[0]
-                .items
-                .truncate(1)
-        },
         // A new body with nothing the schema requires.
         |s| named_mut(s, "Whitespace").text_body = Some(Box::default()),
     ] {
         assert_eq!(refused(change), "CS-EXP-0009");
     }
+    // An equation is in the model since `T1K-02`, so taking it away is an edit like another.
+    edit_slide(&source, |s| {
+        named_mut(s, "Equation")
+            .text_body
+            .as_mut()
+            .unwrap()
+            .paragraphs[0]
+            .items
+            .truncate(1)
+    })
+    .unwrap();
     // Over a type's range: not written, and the read-back says so.
     let code = edit_slide(&source, |s| {
         first_run_of_mut(named_mut(s, "No Autofit")).properties =
@@ -1259,15 +1261,8 @@ fn every_text_body_can_be_written_from_the_model() {
     );
     assert!(tally.written > 1000, "{}", tally.written);
     // A picture bullet is made now (`T1F-04`); only what is retained is refused.
-    assert!(
-        tally
-            .refused
-            .iter()
-            .all(|r| r.contains("content this tier")),
-        "{:?}",
-        tally.refused
-    );
-    assert_eq!(tally.refused.len(), 2, "{:?}", tally.refused);
+    // `T1F-04`'s last two, the inline equations, are written from the model since `T1K-02`.
+    assert!(tally.refused.is_empty(), "{:?}", tally.refused);
 }
 
 #[test]

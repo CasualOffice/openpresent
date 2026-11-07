@@ -26,6 +26,7 @@ use casual_slide_ooxml::{
     resolve_compatibility, resolve_internal,
 };
 
+use crate::chart::ChartLimits;
 use crate::color::Findings as ColorFindings;
 use crate::drawing::DrawingLimits;
 use crate::presentation::is_optional_part_fault;
@@ -60,6 +61,8 @@ pub struct SlideLimits {
     pub max_layout_ids: usize,
     /// Bounds on tables and table styles.
     pub table: TableLimits,
+    /// Bounds on chart parts.
+    pub chart: ChartLimits,
     /// Bounds on one drawing property of a shape or a run. `CS-DRW-0001`.
     pub drawing: DrawingLimits,
     /// Bounds on a part's timing and transition. `CS-TMG-0001`.
@@ -75,6 +78,7 @@ impl Default for SlideLimits {
             max_parts: 250_000,
             max_layout_ids: 10_000,
             table: TableLimits::default(),
+            chart: ChartLimits::default(),
             drawing: DrawingLimits::default(),
             timing: TimingLimits::default(),
         }
@@ -216,6 +220,9 @@ pub struct ImportedPart {
     pub findings: Findings,
     /// What the colour map readers noticed.
     pub color_findings: ColorFindings,
+    /// The part arrived damaged: what is here is what could be read, and an empty part if
+    /// nothing could (`REC-04`). Its original bytes are retained.
+    pub damaged: bool,
 }
 
 fn finish_children(r: &mut Reader<'_>, el: &Elem) -> Result<(), SlideError> {
@@ -705,6 +712,11 @@ impl Indexer<'_> {
             return Ok(Some(ordinal));
         }
         if self.structure.parts.len() >= self.limits.max_parts {
+            // A limit stops the indexing, not the deck, unless the host wants refusal.
+            if !self.package.is_strict() {
+                findings.note_role(K::UnresolvedReference, source, kind.rel_type());
+                return Ok(None);
+            }
             return Err(SlideError::TooManyParts {
                 what: "slide-like parts",
                 limit: self.limits.max_parts,
@@ -829,12 +841,15 @@ pub fn index_deck(
     // Slides, each one's layout and notes.
     let slide_count = presentation.slides.as_ref().map_or(0, Vec::len);
     if slide_count > limits.max_slides {
-        return Err(SlideError::TooManySlides {
-            limit: limits.max_slides,
-        });
+        if package.is_strict() {
+            return Err(SlideError::TooManySlides {
+                limit: limits.max_slides,
+            });
+        }
+        findings.note_role(K::UnresolvedReference, &main, "slide");
     }
     let mut seen_slides = HashSet::new();
-    for entry in presentation.slides.iter().flatten() {
+    for entry in presentation.slides.iter().flatten().take(limits.max_slides) {
         let Some(part) = reach(&ix, &entry.rel_id, SlideKind::Slide, findings) else {
             continue;
         };
@@ -956,7 +971,33 @@ pub fn load_part(
         value,
         findings,
         color_findings: color,
+        damaged: package.is_damaged(&entry.part),
     })
+}
+
+/// Read one part as [`load_part`] does, except that a part this cannot use, whatever the
+/// reason, is set aside and read as the empty part in its place, so slide order survives
+/// (`REC-04`). Under `strict`, the refusal stands.
+pub fn load_part_recovering(
+    package: &mut PresentationPackage,
+    structure: &DeckStructure,
+    ordinal: u32,
+    limits: &SlideLimits,
+    import_limits: &ImportLimits,
+) -> Result<ImportedPart, SlideError> {
+    match load_part(package, structure, ordinal, limits, import_limits) {
+        Err(err) if !package.is_strict() && !matches!(err, SlideError::NoSuchPart { .. }) => {
+            let entry = structure
+                .entry(ordinal)
+                .ok_or(SlideError::NoSuchPart { ordinal })?;
+            package.set_part_aside(&entry.part)?;
+            let mut part = load_part(package, structure, ordinal, limits, import_limits)?;
+            part.findings.note(K::UnreadablePart, &entry.part, "", None);
+            part.damaged = true;
+            Ok(part)
+        }
+        other => other,
+    }
 }
 
 /// The deck's slide-like parts, each read when first asked for and kept.
@@ -993,7 +1034,7 @@ impl LazySlides {
             .get(at)
             .ok_or(SlideError::NoSuchPart { ordinal })?;
         if slot.is_none() {
-            let part = load_part(
+            let part = load_part_recovering(
                 package,
                 &self.structure,
                 ordinal,
@@ -1048,11 +1089,16 @@ pub struct ImportedSlides {
     pub color_findings: ColorFindings,
     /// The `tableStyles` part, if there is one and it can be read.
     pub table_styles: Option<casual_slide_model::table::TableStyleList>,
+    /// The parts that arrived damaged, by ordinal, so a host can mark them.
+    pub damaged: Vec<u32>,
+    /// Every chart-family part, each read or set aside, and each embedded workbook unread.
+    pub charts: crate::chart::DeckCharts,
 }
 
-/// Index the deck and read every slide-like part. A part that is malformed or not
-/// the kind its relationship says is reported as `CS-IMF-0012` and left out; a
-/// bound refuses the deck.
+/// Index the deck and read every slide-like part. A part that cannot be used, by being
+/// malformed, the wrong kind, or over a bound, is reported as `CS-IMF-0012`, set aside and
+/// read as an empty part, so slide order survives (`REC-04`). Under `strict`, a part with
+/// a fault is left out, and a bound refuses the deck.
 pub fn import_slide_parts(
     package: &mut PresentationPackage,
     presentation: &Presentation,
@@ -1063,9 +1109,44 @@ pub fn import_slide_parts(
     let structure = index_deck(package, presentation, limits, &mut findings)?;
     let mut color_findings = ColorFindings::default();
     let mut parts = Vec::with_capacity(structure.parts.len());
+    let mut damaged = Vec::new();
+    let mut loaded = Vec::with_capacity(structure.parts.len());
     for entry in &structure.parts {
-        match load_part(package, &structure, entry.id.part, limits, import_limits) {
+        loaded.push(load_part(
+            package,
+            &structure,
+            entry.id.part,
+            limits,
+            import_limits,
+        ));
+    }
+    // Everything that will not read is set aside at once, which is one repair however many.
+    if !package.is_strict() {
+        let unusable: Vec<String> = structure
+            .parts
+            .iter()
+            .zip(&loaded)
+            .filter(|(_, read)| read.is_err())
+            .map(|(entry, _)| entry.part.clone())
+            .collect();
+        if !unusable.is_empty() {
+            package.set_parts_aside(&unusable, usize::MAX)?;
+            for part in &unusable {
+                findings.note(K::UnreadablePart, part, "", None);
+            }
+            for (entry, read) in structure.parts.iter().zip(&mut loaded) {
+                if read.is_err() {
+                    *read = load_part(package, &structure, entry.id.part, limits, import_limits);
+                }
+            }
+        }
+    }
+    for (entry, read) in structure.parts.iter().zip(loaded) {
+        match read {
             Ok(part) => {
+                if part.damaged {
+                    damaged.push(entry.id.part);
+                }
                 for f in part.findings.iter() {
                     findings.note(f.kind, &f.part, &f.element, f.attribute.as_deref());
                 }
@@ -1099,10 +1180,20 @@ pub fn import_slide_parts(
     )?;
     let parts = SlideParts { structure, parts };
     check_style_references(&parts, table_styles.as_ref(), &mut findings);
+    let charts = crate::chart::read_deck_charts(
+        package,
+        &limits.chart,
+        limits.drawing,
+        import_limits,
+        &mut findings,
+        &mut color_findings,
+    );
     Ok(ImportedSlides {
         parts,
         findings,
         color_findings,
         table_styles,
+        damaged,
+        charts,
     })
 }

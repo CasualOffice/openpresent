@@ -400,7 +400,7 @@ fn every_input_of_this_tier_meets_its_manifest_row() {
         }
         seen += 1;
         let bytes = std::fs::read(root().join("fixtures").join(cols[0])).unwrap();
-        let result = PresentationPackage::open(bytes, OoxmlLimits::default());
+        let result = PresentationPackage::open_strict(bytes, OoxmlLimits::default());
         if let Some(code) = cols[2].strip_prefix("refuse:") {
             assert_eq!(result.unwrap_err().code(), code, "{}", cols[0]);
             continue;

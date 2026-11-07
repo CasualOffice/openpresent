@@ -1,10 +1,10 @@
 id	invariant	base	good	seeded
 RR-PN-01	INV-PN-01	generated/three-slides.pptx	good/RR-PN-01.pptx	cannot be written: CS-PKG-0004
 RR-PN-02	INV-PN-02	generated/three-slides.pptx	good/RR-PN-02.pptx	opens, saves, reports
-RR-PN-03	INV-PN-03	generated/case-differs.pptx	good/RR-PN-03.pptx	seeded in the ZIP; strict open refused CS-PKG-0007; waits for REC-01
+RR-PN-03	INV-PN-03	generated/case-differs.pptx	good/RR-PN-03.pptx	seeded in the ZIP; opens by repair, saves, reports
 RR-PN-04	INV-PN-04	generated/three-slides.pptx	good/RR-PN-04.pptx	opens, saves, reports
 RR-PN-05	INV-PN-05	generated/three-slides.pptx	good/RR-PN-05.pptx	opens and saves; one package does not show it
-RR-PN-06	INV-PN-06	generated/three-slides.pptx	good/RR-PN-06.pptx	opens and saves; one package does not show it
+RR-PN-06	INV-PN-06	generated/three-slides.pptx	good/RR-PN-06.pptx	opens by repair, saves, reports
 RR-PN-07	INV-PN-07	generated/three-slides.pptx	good/RR-PN-07.pptx	opens, saves, reports
 RR-PN-08	INV-PN-08	generated/percent-encoded-names.pptx	good/RR-PN-08.pptx	seeded in the ZIP; opens, saves, reports
 RR-PN-09	INV-PN-09	generated/stored-not-deflated.pptx	good/RR-PN-09.pptx	seeded in the ZIP; opens, saves, reports
@@ -27,14 +27,14 @@ RR-CT-04	INV-CT-04	generated/three-slides.pptx	good/RR-CT-04.pptx	opens and save
 RR-CT-05	INV-CT-05	generated/three-slides.pptx	good/RR-CT-05.pptx	opens, saves, reports
 RR-CT-06	INV-CT-06	generated/rr-vba.pptm	good/RR-CT-06.pptx	opens and saves; one package does not show it
 RR-CT-07	INV-CT-07	generated/three-slides.pptx	good/RR-CT-07.pptx	opens, saves, reports
-RR-CT-08	INV-CT-08	generated/three-slides.pptx	good/RR-CT-08.pptx	opens and saves; one package does not show it
+RR-CT-08	INV-CT-08	generated/three-slides.pptx	good/RR-CT-08.pptx	opens by repair, saves, reports
 RR-CT-10	INV-CT-10	generated/three-slides.pptx	good/RR-CT-10.pptx	opens and saves; one package does not show it
 RR-CT-09	INV-CT-09	generated/three-slides.pptx	good/RR-CT-09.pptx	opens and saves; one package does not show it
 RR-SP-01	INV-SP-01	generated/rr-orphan.pptx	good/RR-SP-01.pptx	opens and saves; one package does not show it
 RR-SP-02	INV-SP-02	generated/rr-shared-media.pptx	good/RR-SP-02.pptx	opens and saves; one package does not show it
 RR-SP-03	INV-SP-03	generated/rr-shared-media.pptx	good/RR-SP-03.pptx	opens and saves; one package does not show it
 RR-SP-04	INV-SP-04	generated/rr-shared-media.pptx	good/RR-SP-04.pptx	opens and saves; one package does not show it
-RR-SP-05	INV-SP-05	generated/three-slides.pptx	good/RR-SP-05.pptx	opens, saves, reports
+RR-SP-05	INV-SP-05	generated/three-slides.pptx	good/RR-SP-05.pptx	opens by repair, saves, reports
 RR-SP-06	INV-SP-06	generated/rr-two-masters.pptx	good/RR-SP-06.pptx	opens, saves, reports
 RR-SP-07	INV-SP-07	generated/three-slides.pptx	good/RR-SP-07.pptx	opens, saves, reports
 RR-SP-08	INV-SP-08	generated/rr-two-masters.pptx	good/RR-SP-08.pptx	opens, saves, reports
@@ -70,7 +70,7 @@ RR-SG-05	INV-SG-05	generated/rr-signed.pptx	good/RR-SG-05.pptx	opens and saves; 
 RR-SG-06	INV-SG-06	generated/rr-signed.pptx	good/RR-SG-06.pptx	no seed: nothing dirty means the input bytes; a_signed_deck_with_its_edit_undone_keeps_its_bytes
 RR-SG-07	INV-SG-07	generated/rr-signed.pptx	good/RR-SG-07.pptx	opens and saves; one package does not show it
 RR-SG-08	INV-SG-08	generated/rr-signed-vba.pptm	good/RR-SG-08.pptx	opens and saves; one package does not show it
-RR-SA-01	INV-SA-01	generated/three-slides.pptx	good/RR-SA-01.pptx	strict open refused CS-OPC-0004; waits for REC-02
+RR-SA-01	INV-SA-01	generated/three-slides.pptx	good/RR-SA-01.pptx	opens by repair, saves, reports
 RR-SA-02	INV-SA-02	generated/three-slides.pptx	good/RR-SA-02.pptx	opens and saves; one package does not show it
 RR-SA-03	INV-SA-03	generated/rr-vba.pptm	good/RR-SA-03.pptx	opens, saves, reports
 RR-SA-04	INV-SA-04	generated/rr-macro-action.pptm	good/RR-SA-04.pptx	opens and saves; one package does not show it

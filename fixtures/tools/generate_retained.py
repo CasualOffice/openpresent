@@ -264,17 +264,15 @@ def hostile_deck():
                # Never parsed, so neither this entity nor the broken markup can do anything.
                ("ppt/drawings/vmlDrawing1.vml", '<!DOCTYPE x [<!ENTITY a SYSTEM "file:///etc/passwd">]><xml>&a;<v:shape')])
     entries = replace_slide(entries, slide(bad, controls))
-    data = bytearray(zipped(entries, 0))
-    # The object's stored bytes, changed after its checksum was written.
-    at = bytes(data).find(OLE_BYTES)
-    data[at] ^= 0xFF
-    return bytes(data)
+    # Stored, so a test can damage the object's bytes after its checksum: the corpus tests
+    # read every part of a deck they open, so the deck on disk stays readable.
+    return zipped(entries, 0)
 
 
 def fixtures():
     schema = audit.Schema(ROOT)
     entries, frames, control = ole_deck()
-    yield "generated/area-ole.pptx", zipped(replace_slide(entries, slide("".join(frames), control))), "open"
+    yield "generated/area-ole.pptx", zipped(replace_slide(entries, slide("".join(frames), control))), "open CS-FND-0001 CS-FND-0007 CS-FND-0010"
     yield "generated/area-vml.pptx", zipped(vml_deck(schema)), "open"
-    yield "generated/area-model3d.pptx", zipped(model_deck(schema)), "open"
-    yield "hostile/retained-objects-damaged.bin", hostile_deck(), "open"
+    yield "generated/area-model3d.pptx", zipped(model_deck(schema)), "open CS-FND-0007"
+    yield "hostile/retained-objects-damaged.bin", hostile_deck(), "open CS-FND-0001 CS-FND-0003 CS-FND-0004 CS-FND-0007 CS-FND-0010"

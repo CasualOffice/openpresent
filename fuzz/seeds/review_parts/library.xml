@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sl:schemaLibrary xmlns:sl="http://schemas.openxmlformats.org/schemaLibrary/2006/main"><sl:schema sl:uri="urn:example:note" sl:manifestLocation="m.xml" sl:schemaLocation="n.xsd" sl:schemaLanguage="http://www.w3.org/2001/XMLSchema"/></sl:schemaLibrary>

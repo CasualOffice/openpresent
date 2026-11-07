@@ -26,8 +26,8 @@ the one beneath it.
 2. **Reading a part**, `casual-slide-package`: decompression held to the declared size
    and to the whole-package budget.
 3. **XML**, `casual-slide-ooxml`: one bounded walker and one tree, which every XML part
-   goes through. DOCTYPE is refused outright (`CS-XML-0005`), so entity expansion never
-   arises.
+   goes through. Under `strict`, DOCTYPE is refused outright (`CS-XML-0005`). By default the
+   recovering reader skips it uninterpreted, so entity expansion never arises either way.
 4. **Graph**, `casual-slide-ooxml`: relationships and content types.
 5. **Import**, `casual-slide-import`: counts the model would allocate for.
 6. **Values**: per-construct caps in the model, geometry and export.
@@ -55,6 +55,18 @@ the central directory, before anything is inflated.
 | Whole-package budget | `max_total_uncompressed` | Every read is charged; once spent, reads refuse. **Cumulative over the package's life**, so a long editing session can exhaust it on a legitimate deck (`PKG-01`) | CS-PKG-0003 | Tested |
 | `MAX_UP_FRONT` | `1 << 20` | Capacity allocated before decompressing, whatever the entry declares, so a forged size cannot abort a WebAssembly instance (`SEC-P04`). Nothing proves `read_part` uses it (`SEC-017`) | none: allocation only | Partial |
 | `read_part_capped` | caller's `max` | A caller-chosen ceiling for one part, refused on the declaration with nothing inflated. `PresentationPackage::read_part_capped` exposes it for binary parts. `PresentationPackage::read_part` does not use it, so optional parts are bounded only by the budget (`PKG-04`) | CS-PKG-0009 | Tested |
+
+## The recovering reader
+
+`crates/casual-slide-package/src/salvage.rs` (`REC-01`), which reads what `Package::open` refuses. It holds to `PackageLimits`: `max_input_bytes` still refuses (the one limit that does, since it protects the machine); `max_entries` stops the scan and says so (`CS-REC-0109`); `max_total_uncompressed` is one budget for everything inflated, however many entries point at one stream; `max_expansion_ratio` and `max_path_bytes` set an entry aside as an opaque blob (`CS-REC-0107`, `CS-REC-0106`). Nothing allocates from a number in the file, and a scan only moves forward.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `MAX_SCRUBBED_NAME` | `200` | Characters of a damaged entry's name repeated in a report or a retained name | none: text only | Tested by `an_unsafe_name_never_becomes_a_part` |
+| `MAX_CHOOSING_BYTES` | `256 << 20` | The most of one entry inflated into memory to choose between entries naming one part | none: that entry is not chosen on its content | Untested |
+| `MAX_REFERENCE` | `32` | How far the recovering XML reader looks for a reference's `;`. Past it, the `&` is literal text | none: text only | Tested by `broken_nesting_is_closed` |
+
+The recovering XML reader, `crates/casual-slide-ooxml/src/recover_xml.rs` (`REC-03`), holds to `OoxmlLimits` as `walk` does, with one difference: `max_xml_elements`, `max_xml_depth` and `max_xml_attributes` stop the reading of that part and keep what was read (`CS-REC-0307`), and a reading over `max_xml_part_bytes` is given up, so the part is set aside. `max_part_relationships`, `max_total_relationships` and `max_content_types` keep what fits.
 
 ## XML and graph: `OoxmlLimits`
 
@@ -223,7 +235,40 @@ A part in a catalog is read by `PresentationPackage::read_part_capped`, which re
 | `max_templates` | `64` | `tmpl` in one `tmplLst`. Between the schema's 9 and this, they are kept | CS-TMG-0001 | Tested; `hostile/timing-limit-templates.bin` |
 | `max_branches` | `64` | Branches in one `mc:AlternateContent` holding timing or a transition | CS-TMG-0001 | Tested; `hostile/timing-limit-branches.bin` |
 
-Each fixture is seen to read with its bound raised by one (`raising_each_limit_by_one_reads_what_it_refused`). `hostile/timing-long-value.bin` is `CS-TMG-0002` under a lowered `max_value_bytes`. Past `max_xml_depth`, `hostile/timing-beyond-xml-depth.bin` fails in the XML reader before this one sees it: that slide is left out and reported as `CS-IMF-0012`, the deck opens, and `REC-03` and `REC-04` will read more of it. Nothing here evaluates a path or a formula, runs a command, or plays anything. Infinite repeats and a timeline's time budget are Phase 8's (`SEC-C10`).
+Each fixture is seen to read with its bound raised by one (`raising_each_limit_by_one_reads_what_it_refused`). `hostile/timing-long-value.bin` is `CS-TMG-0002` under a lowered `max_value_bytes`. Past `max_xml_depth` a part fails in the XML reader before this one sees it, shown with that limit lowered: that slide is left out and reported as `CS-IMF-0012`, the deck opens, and `REC-03` and `REC-04` will read more of it. Nothing here evaluates a path or a formula, runs a command, or plays anything. Infinite repeats and a timeline's time budget are Phase 8's (`SEC-C10`).
+
+## Charts: `ChartLimits` (Tier 1J)
+
+`crates/casual-slide-import/src/chart.rs`, nested in `SlideLimits` as `chart`. Over a bound, that one part is set aside, reported under the bound's code and `CS-IMF-0012`, and kept byte for byte; **the deck opens** (owner instruction 24). Each is beyond what Office's interface makes. An embedded workbook is never read, so it spends nothing here and has no limit here (`SEC-P09`). No count in the file sizes anything: `ptCount` is compared, never allocated by.
+
+| Field | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_chart_parts` | `8_192` | Chart-family parts read in one deck | CS-CHT-0001 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_series` | `4_096` | Series in one part | CS-CHT-0002 | Tested; `hostile/chart-limit-series.bin` |
+| `max_points` | `1_048_576` | Cached points in one part | CS-CHT-0003 | Tested; `hostile/chart-limit-points.bin` |
+| `max_data_points` | `262_144` | `dPt` and `cx:dataPoint` in one part | CS-CHT-0004 | Tested; `hostile/chart-limit-data-points.bin` |
+| `max_data_labels` | `262_144` | `dLbl` and `cx:dataLabel` in one part | CS-CHT-0005 | Tested; `hostile/chart-limit-data-labels.bin` |
+| `max_levels` | `4_096` | `lvl` in one part | CS-CHT-0006 | Tested; `hostile/chart-limit-levels.bin` |
+| `max_anchors` | `65_536` | Anchors in one chart drawing | CS-CHT-0007 | Tested; `hostile/chart-limit-anchors.bin` |
+| `max_extensions` | `262_144` | `ext` in one part | CS-CHT-0008 | Tested; `hostile/chart-limit-extensions.bin` |
+| `max_group_depth` | `64` | Groups nested in one chart drawing, the one recursion in these schemas | CS-CHT-0009 | Tested; `hostile/chart-limit-group-depth.bin` |
+
+What is damaged but not over a bound is read as far as it goes and reported: `hostile/chart-bad-structure.bin`. What is rooted wrongly is set aside: `hostile/chart-wrong-root.bin`; what is not XML likewise, built in `crates/casual-slide-export/tests/chart.rs`, as every `open` deck in the corpus is held to parse part by part. A workbook that could not be read if anyone tried is untouched: `hostile/chart-workbook-corrupt.bin`.
+
+## Diagrams, equations and ink: `GraphicLimits`
+
+`crates/casual-slide-import/src/diagram.rs`, nested in `ImportLimits` as `graphic`. Over a bound, a part of a diagram or an ink part is set aside and reported, and the deck opens; an equation in a slide's text stays in the tree and is reported (`CS-GFF-0008`).
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Tested through the bounds below |
+| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Tested; `hostile/graphics-limit-depth.bin` |
+| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Tested; `hostile/graphics-limit-points.bin` |
+| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Tested; `hostile/graphics-limit-connections.bin` |
+| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Tested; `hostile/graphics-limit-layout-nodes.bin` |
+| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Tested; `hostile/graphics-limit-drawing-shapes.bin` |
+| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Tested; `hostile/graphics-limit-traces.bin` |
 
 ## Export
 
@@ -245,6 +290,26 @@ Each of these is a known gap with an owner, not an oversight:
 - **Layout and rendering** limits arrive with Tier 2D: glyphs per frame, image pixel dimensions
   before decode.
 - **Legacy `.ppt`** has no reader; a Compound File is refused as `CS-OPC-0005` (`CFB-01`, `PPT-01`).
+
+## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
+
+Past one of these the part is set aside and named, or the list left out, and the deck opens (owner instruction 24): the bytes stay, and the report says `CS-RVW-0001`.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Tested; `hostile/comment-limit-comments.bin` |
+| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Tested; `hostile/comment-limit-authors.bin` |
+| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Tested; `hostile/comment-limit-replies.bin` |
+| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Tested; `hostile/comment-limit-reactions.bin` |
+| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Tested; `hostile/comment-limit-task-events.bin` |
+| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Tested; `hostile/comment-limit-monikers.bin` |
+| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Tested at a lowered bound: 100,001 parts is past `CS-PKG-0002` first |
+| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Tested; `hostile/section-limit-sections.bin` |
+| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Tested; `hostile/section-limit-slides.bin` |
+| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Tested; `hostile/tags-limit-tags.bin` |
+| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Tested; `hostile/marks-limit-part.bin` |
+| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Tested; `hostile/custom-limit-schema-refs.bin` |
+| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Tested; `hostile/custom-limit-labels.bin` |
 
 ## Tools
 

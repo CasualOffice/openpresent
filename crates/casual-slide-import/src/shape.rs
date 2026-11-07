@@ -17,10 +17,11 @@ use casual_slide_model::presentation::{
     COORDINATE_MIN, Coordinate, POSITIVE_COORDINATE_MAX, Point,
 };
 use casual_slide_model::shape::{
-    AppNonVisual, Connection, Hyperlink, Locks, NodeKind, NonVisualDrawing, ObjectId, Placeholder,
-    ShapeNode, Transform,
+    AlternateBranch, AppNonVisual, Connection, Hyperlink, Locks, NodeKind, NonVisualDrawing,
+    ObjectId, Placeholder, ShapeNode, Transform,
 };
 use casual_slide_model::table::Table;
+use casual_slide_model::text::TextItem;
 use casual_slide_ooxml::{AlternateResolution, Branch, MARKUP_COMPATIBILITY, Relationship};
 
 use crate::color::Findings as ColorFindings;
@@ -212,7 +213,15 @@ impl ShapeReader<'_, '_, '_> {
                 }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
                 "graphic" => {
-                    n.graphic_uri = self.graphic(&child, &mut n.table, &mut n.retained)?;
+                    let mut diagram = None;
+                    n.graphic_uri = self.graphic(
+                        &child,
+                        &mut n.table,
+                        &mut diagram,
+                        &mut n.retained,
+                        &mut n.chart,
+                    )?;
+                    n.diagram = diagram;
                 }
                 "txBody" => {
                     let mut text = TextReader {
@@ -257,6 +266,11 @@ impl ShapeReader<'_, '_, '_> {
         let Some(resolution) = self.alternates.get(at) else {
             return Ok(());
         };
+        let not_taken = resolution.not_taken.clone();
+        self.not_taken_branches(el, &not_taken, group)?;
+        let Some(resolution) = self.alternates.get(at) else {
+            return Ok(());
+        };
         let branch = match resolution.branch {
             Branch::Choice { element, .. } | Branch::Fallback { element } => element,
             Branch::None => {
@@ -282,6 +296,74 @@ impl ShapeReader<'_, '_, '_> {
                     group.children.push(c);
                 }
                 None => self.r.retained(&child),
+            }
+        }
+        Ok(())
+    }
+
+    /// Read what a branch not taken holds of an equation or of ink. The branch stays in
+    /// the tree, and is reported as before.
+    fn not_taken_branches(
+        &mut self,
+        el: &Elem,
+        not_taken: &[casual_slide_ooxml::ElementId],
+        group: &mut ShapeNode,
+    ) -> Result<(), SlideError> {
+        for branch in self.r.children(el)? {
+            if !not_taken.contains(&branch.id) || !branch.is(MC, "Choice") {
+                continue;
+            }
+            let mut found = AlternateBranch {
+                requires: branch.get("Requires").map(str::to_owned),
+                ..AlternateBranch::default()
+            };
+            for child in self.r.children(&branch)? {
+                if child.is(ns::PML, "contentPart") {
+                    if let Some(id) = child.clone().take_ns(ns::REL, "id") {
+                        self.check_rel(&child, &id);
+                        found.content_parts.push(id);
+                    }
+                } else if child.is(ns::PML, "sp") {
+                    self.branch_equations(&child, &mut found)?;
+                }
+            }
+            if !found.content_parts.is_empty() || !found.equations.is_empty() {
+                group.alternates.push(found);
+            }
+        }
+        Ok(())
+    }
+
+    fn branch_equations(
+        &mut self,
+        sp: &Elem,
+        found: &mut AlternateBranch,
+    ) -> Result<(), SlideError> {
+        for body in self.r.children(sp)? {
+            if !body.is(ns::PML, "txBody") {
+                continue;
+            }
+            for paragraph in self.r.children(&body)? {
+                if !paragraph.is(ns::DML, "p") {
+                    continue;
+                }
+                for item in self.r.children(&paragraph)? {
+                    if !item.is(crate::math::A14, "m") {
+                        continue;
+                    }
+                    let mut text = TextReader {
+                        r: &mut *self.r,
+                        rels: self.rels,
+                        color: &mut *self.color,
+                        counts: &mut self.text_counts,
+                        drawing: self.limits.drawing,
+                    };
+                    if let TextItem::Math(math) = text.inline_math(&item)?
+                        && let Some(math) = math.math
+                    {
+                        found.equations.push(math);
+                    }
+                }
             }
         }
         Ok(())
@@ -600,13 +682,42 @@ impl ShapeReader<'_, '_, '_> {
         Ok(t)
     }
 
+    fn rel_ids(
+        &mut self,
+        el: &Elem,
+    ) -> Result<casual_slide_model::diagram::schema::RelIds, SlideError> {
+        let limits = self.r.limits.graphic;
+        let mut text_counts = TextCounts::default();
+        let mut c = crate::diagram::SchemaReader::new(
+            &mut *self.r,
+            self.rels,
+            &mut *self.color,
+            &mut text_counts,
+            self.limits.drawing,
+            limits,
+        );
+        crate::diagram::schema::read_rel_ids(&mut c, el).map_err(|err| match err {
+            crate::diagram::GraphicError::Import(err) => SlideError::from(err),
+            // One element, with no children to count.
+            crate::diagram::GraphicError::Bound { part, .. } => {
+                SlideError::from(ImportError::TooMany {
+                    what: "diagram references",
+                    part,
+                    limit: 1,
+                })
+            }
+        })
+    }
+
     // spec-audit: owner=graphic
     // spec-audit: a:<graphic>
     fn graphic(
         &mut self,
         el: &Elem,
         table: &mut Option<Box<Table>>,
+        diagram: &mut Option<Box<casual_slide_model::diagram::schema::RelIds>>,
         retained: &mut Option<Box<RetainedObject>>,
+        chart: &mut Option<casual_slide_model::chart::ChartReference>,
     ) -> Result<Option<String>, SlideError> {
         self.r.finish(el);
         let mut uri = None;
@@ -618,9 +729,21 @@ impl ShapeReader<'_, '_, '_> {
             let mut data = child.clone();
             uri = self.r.required::<String>(&mut data, "uri", |_| true)?;
             self.r.finish(&data);
-            // A chart reference, a diagram, an OLE object: later tiers.
+            // A diagram, an OLE object: later tiers.
             for inner in self.r.children(&data)? {
-                if !inner.is(ns::DML, "tbl") {
+                if let Some(found) = crate::chart::read_chart_reference(self.r, self.rels, &inner) {
+                    if chart.is_some() {
+                        self.r.note(K::DuplicateElement, &inner, None);
+                    } else {
+                        *chart = Some(found);
+                    }
+                } else if inner.is(crate::diagram::schema::NS_DGM, "relIds") {
+                    if diagram.is_some() {
+                        self.r.note(K::DuplicateElement, &inner, None);
+                    } else {
+                        *diagram = Some(Box::new(self.rel_ids(&inner)?));
+                    }
+                } else if !inner.is(ns::DML, "tbl") {
                     self.r.retained(&inner);
                     if retained.is_none() {
                         *retained = read_frame_content(self.r, self.rels, &inner)?.map(Box::new);

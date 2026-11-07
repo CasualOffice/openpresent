@@ -632,6 +632,7 @@ pub fn patch_presentation(
         crate::text::patch_list_style
     );
     child!("modifyVerifier", modify_verifier, patch_modify_verifier);
+    crate::section::patch_sections(w, &root, before.sections.as_ref(), after.sections.as_ref())?;
     Ok(w.changes)
 }
 

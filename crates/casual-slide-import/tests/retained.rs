@@ -26,6 +26,17 @@ fn fixture(path: &str) -> Vec<u8> {
     .unwrap()
 }
 
+/// The hostile deck's object, its stored bytes changed after its checksum was written.
+fn damaged(path: &str) -> Vec<u8> {
+    let mut bytes = fixture(path);
+    let at = bytes
+        .windows(4)
+        .position(|w| w == [0xd0, 0xcf, 0x11, 0xe0])
+        .unwrap();
+    bytes[at] ^= 0xFF;
+    bytes
+}
+
 fn open(path: &str) -> PresentationPackage {
     PresentationPackage::open(fixture(path), OoxmlLimits::default()).unwrap()
 }
@@ -141,6 +152,7 @@ fn the_report_names_every_retained_part() {
         "ppt/activeX/activeX1.xml"
     );
     assert_eq!(part(&report, "ppt/drawings/vmlDrawing1.vml").kind, K::Vml);
+    assert_eq!(part(&report, "ppt/drawings/vmlDrawing1.vml").source, source);
     let link = report
         .iter()
         .find(|p| p.status == RetainedStatus::External)
@@ -218,7 +230,8 @@ fn importing_a_whole_deck_opens_no_retained_part() {
 #[test]
 fn damaged_and_missing_parts_are_set_aside_and_the_deck_opens() {
     let path = "hostile/retained-objects-damaged.bin";
-    let package = open(path);
+    let bytes = damaged(path);
+    let package = PresentationPackage::open(bytes.clone(), OoxmlLimits::default()).unwrap();
     let report = retained_report(&package);
     let damaged = part(&report, "ppt/embeddings/oleObject1.bin");
     assert!(
@@ -259,5 +272,28 @@ fn damaged_and_missing_parts_are_set_aside_and_the_deck_opens() {
         );
     }
     // Saved unedited, the damage is still exactly what arrived.
-    assert_eq!(package.save_unedited(), fixture(path));
+    assert_eq!(package.save_unedited(), bytes);
+}
+
+/// The shape-wide silent drop test reads with no relationships, so a dangling `r:id` names
+/// every object for it. With the deck's own, each kept element has to be named for itself.
+#[test]
+fn every_kept_element_of_an_object_is_named_with_its_relationships_in_place() {
+    let (_, _, report) = read("generated/area-ole.pptx");
+    assert!(
+        !report.iter().any(|f| f.starts_with("CS-IMF-0006")),
+        "{report:?}"
+    );
+    for name in ["oleObj", "embed", "link", "pic", "control", "controls"] {
+        let named = format!(" {name} ");
+        assert!(
+            report.iter().any(|f| f.contains(&named)),
+            "{name}: {report:?}"
+        );
+    }
+    let (_, _, report) = read("generated/area-model3d.pptx");
+    assert!(
+        report.iter().any(|f| f.contains(" AlternateContent ")),
+        "{report:?}"
+    );
 }

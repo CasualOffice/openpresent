@@ -4,7 +4,9 @@
 Fixed timestamps and order, so a checksum changes only when a fixture does.
 
 Manifest columns: path, sha256, expectation, and optionally limits. Expectation is
-`refuse:<code>`, or `open` plus any `<code>` findings the deck must produce,
+`refuse:<code>`, which only what docs/29 lists keeps; `recover:<code> <findings>`, where the
+deck opens with those findings and the attack does nothing, while a host asking for
+`strict` still gets `<code>`; or `open` plus any `<code>` findings the deck must produce,
 space-separated. Limits, comma-separated `field=value` pairs of `OoxmlLimits`, are
 what the deck is opened under, where the default bound is too large for a fixture
 to cross at a sensible size; without them, the defaults. The corpus test in
@@ -261,8 +263,14 @@ def fixtures():
     yield from table_fixtures()
     from generate_media import fixtures as media_fixtures  # imports this module, so not at the top
     yield from media_fixtures()
+    from generate_chart import fixtures as chart_fixtures  # imports this module, so not at the top
+    yield from chart_fixtures()
     from generate_shapes import fixtures as shape_fixtures  # imports this module, so not at the top
     yield from shape_fixtures()
+    from generate_review import fixtures as review_fixtures  # imports this module, so not at the top
+    yield from review_fixtures()
+    from generate_graphics import fixtures as graphics_fixtures  # imports this module, so not at the top
+    yield from graphics_fixtures()
     from generate_close import fixtures as close_fixtures  # as above
     yield from close_fixtures()
     from generate_timing import fixtures as timing_fixtures  # imports this module, so not at the top
@@ -1050,12 +1058,59 @@ def check():
     print(f"fixtures match manifest: {len(rows)}")
 
 
+# REC-*: what used to refuse, or now does more, under recovery (docs/29, ADR-015). Each fixture is
+# unchanged; what is expected of it is not. A `recover:` row's first code is what `strict` still
+# refuses with, and the rest are what the default reports while the attack does nothing.
+RECOVERS = {
+    "hostile/doctype-billion-laughs.bin": "recover:CS-XML-0005 CS-FND-0005 CS-REC-0204 CS-REC-0301 CS-REC-0305",
+    "hostile/doctype-xxe-in-rels.bin": "recover:CS-XML-0005 CS-FND-0005 CS-REC-0202 CS-REC-0301",
+    "hostile/doctype-xxe-in-content-types.bin": "recover:CS-XML-0005 CS-REC-0201 CS-REC-0205 CS-REC-0301",
+    "hostile/undeclared-entity.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0305",
+    "hostile/deep-nesting.bin": "recover:CS-XML-0002 CS-FND-0005 CS-REC-0204 CS-REC-0302 CS-REC-0307",
+    "hostile/unclosed-element.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0302",
+    "hostile/two-roots.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0306",
+    "hostile/wrong-main-root.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0205",
+    "hostile/repeated-relationship-id.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0202",
+    "hostile/content-type-conflict.bin": "recover:CS-XML-0004 CS-REC-0201 CS-REC-0205",
+    "hostile/main-is-workbook.bin": "recover:CS-OPC-0004 CS-REC-0205",
+    "hostile/no-content-types.bin": "recover:CS-OPC-0001 CS-REC-0201 CS-REC-0205",
+    "hostile/no-root-rels.bin": "recover:CS-OPC-0001 CS-REC-0203",
+    "hostile/main-part-missing.bin": "recover:CS-OPC-0001 CS-REC-0204",
+    "hostile/spoofed-office-document-type.bin": "recover:CS-OPC-0001 CS-FND-0007 CS-REC-0203",
+    "hostile/path-traversal.bin": "recover:CS-PKG-0004 CS-FND-0005 CS-REC-0106",
+    "hostile/path-too-long.bin": "recover:CS-PKG-0004 CS-FND-0005 CS-REC-0106",
+    "hostile/case-colliding-parts.bin": "recover:CS-PKG-0007 CS-FND-0005 CS-REC-0105",
+    "hostile/zip-bomb.bin": "recover:CS-PKG-0003 CS-FND-0005 CS-REC-0107",
+    "hostile/percent-equivalent-parts.bin": "recover:CS-PKG-0007 CS-FND-0005 CS-REC-0105",
+    "hostile/mce-must-understand-unknown.bin": "recover:CS-MCE-0001 CS-FND-0005 CS-REC-0206",
+    "hostile/xml-repeated-attribute.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303",
+    "hostile/xml-repeated-expanded-attribute.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303",
+    "hostile/xml-attribute-without-value.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303",
+    "hostile/xml-attributes-run-together.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303",
+    "hostile/xml-undeclared-prefix.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303",
+    "hostile/xml-nul-in-name.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0303 CS-REC-0304",
+    "hostile/xml-text-outside-root.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0306",
+    "hostile/xml-second-byte-order-mark.bin": "recover:CS-XML-0004 CS-FND-0005 CS-REC-0204 CS-REC-0304",
+    "hostile/xml-too-many-attributes.bin": "recover:CS-XML-0003 CS-FND-0005 CS-REC-0204 CS-REC-0307",
+    "hostile/xml-too-many-elements.bin": "recover:CS-XML-0001 CS-FND-0005 CS-REC-0204 CS-REC-0302 CS-REC-0307",
+    "hostile/xml-part-over-size.bin": "recover:CS-PKG-0009 CS-FND-0005 CS-REC-0204",
+    "hostile/rels-per-part.bin": "recover:CS-OPC-0002 CS-FND-0005 CS-REC-0202 CS-REC-0307",
+    "hostile/rels-total.bin": "recover:CS-OPC-0002 CS-REC-0307",
+    "hostile/content-types-flood.bin": "recover:CS-OPC-0003 CS-REC-0201 CS-REC-0307",
+    "hostile/slide-layout-cycle.bin": "open CS-REC-0205 CS-REC-0403 CS-REC-0404",
+    "hostile/slide-layout-wrong-kind.bin": "open CS-REC-0403",
+    "hostile/slide-no-layout.bin": "open CS-REC-0402",
+    "hostile/slide-missing-layout.bin": "open CS-REC-0205 CS-REC-0402 CS-REC-0403",
+}
+
+
 def main():
     if "--check" in sys.argv:
         check()
         return
     lines = ["path\tsha256\texpect\n"]
     for rel, data, expect, *limits in fixtures():
+        expect = RECOVERS.get(rel, expect)
         path = ROOT / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)

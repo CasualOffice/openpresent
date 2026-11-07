@@ -30,6 +30,14 @@ unimplemented = "deny"
 # Inherited from OpenCalc for the same reason: arithmetic here runs on numbers
 # from an untrusted file, and a wrapped index in release is a wrong read that the
 # debug tests would have caught.
+# A deck's streams and parts are inflated and walked on every first save (`docs/29`), and the
+# corpus tests do that thousands of times. Unoptimized, the two crates doing it cost minutes.
+[profile.dev.package.zlib-rs]
+opt-level = 3
+
+[profile.dev.package.quick-xml]
+opt-level = 3
+
 [profile.release]
 lto = "thin"
 codegen-units = 1

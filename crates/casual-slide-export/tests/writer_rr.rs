@@ -2163,21 +2163,13 @@ fn write_seeded(source: &[u8], case: &Case, seed: Seed) -> Result<Vec<u8>, Strin
     pkg.save_with(&edits).map_err(|e| e.code().to_owned())
 }
 
-/// Seeded decks the strict reader refuses, each waiting on the recovering reader of
-/// `docs/29`, which is not the writer's. Any other refusal fails the test.
-const WAITS_FOR_RECOVERY: &[(&str, &str)] = &[("RR-PN-03", "REC-01"), ("RR-SA-01", "REC-02")];
-
 /// Given as an input deck, a seeded file opens, saves after an unrelated edit, and reports
-/// the break where one package can show it (`docs/36`, `docs/29`). What became of it.
+/// the break where one package can show it: from the writer, or, for what the reader had to
+/// repair, in the recovery report (`docs/36`, `docs/29`). What became of it.
 fn benign_save(seeded: &[u8], case: &Case) -> String {
-    let mut pkg = match PresentationPackage::open(seeded.to_vec(), OoxmlLimits::default()) {
-        Ok(pkg) => pkg,
-        Err(err) => {
-            let row = WAITS_FOR_RECOVERY.iter().find(|(id, _)| *id == case.id);
-            let (_, row) = row.unwrap_or_else(|| panic!("{}: open refused: {err}", case.id));
-            return format!("strict open refused {}; waits for {row}", err.code());
-        }
-    };
+    let mut pkg = PresentationPackage::open(seeded.to_vec(), OoxmlLimits::default())
+        .unwrap_or_else(|err| panic!("{}: open refused: {err}", case.id));
+    let repaired = !pkg.recovery_report().is_empty();
     let outcome = SavePlan::new()
         .acknowledge_signature()
         .op(Op::AddCommentAuthor {
@@ -2191,12 +2183,14 @@ fn benign_save(seeded: &[u8], case: &Case) -> String {
         .iter()
         .any(|e| e.code == "CS-SAV-0021" && e.rule == case.rule);
     assert!(
-        reported || !case.arrives,
+        reported || repaired || !case.arrives,
         "{}: as input the break is reported: {:?}",
         case.id,
         outcome.report
     );
-    if reported {
+    if repaired {
+        String::from("opens by repair, saves, reports")
+    } else if reported {
         String::from("opens, saves, reports")
     } else {
         String::from("opens and saves; one package does not show it")
@@ -2358,16 +2352,35 @@ fn a_written_zip_with_disagreeing_headers_is_refused_by_emit() {
     assert!(err.names_rule("INV-PN-10"), "{err}");
 }
 
-/// A deck with two relationships of one id is `REC-02`'s to read. Until it can, the writer's
-/// own seed stays refused by preflight, and this says what the strict reader does.
+/// Two relationships of one id: the reader repairs it, the save works, and the report says.
 #[test]
-fn a_duplicate_relationship_id_waits_for_the_recovering_reader() {
+fn a_duplicate_relationship_id_opens_by_repair_saves_and_reports() {
     let source = std::fs::read(fixtures().join(THREE)).unwrap();
     let case = cases().into_iter().find(|c| c.id == "RR-RI-01").unwrap();
     let (_, duplicate) = case.seeds[1];
     let bytes = write_seeded(&source, &case, duplicate).unwrap();
-    let err = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap_err();
-    assert_eq!(err.code(), "CS-XML-0004", "{err}");
+    assert_eq!(
+        benign_save(&bytes, &case),
+        "opens by repair, saves, reports"
+    );
+}
+
+/// `RR-PN-01`: `Package::rewrite` will not write these names, so they are put in the ZIP by
+/// hand. The deck opens, saves, and says so.
+#[test]
+fn a_part_name_breaking_opc_opens_saves_and_reports() {
+    let source = std::fs::read(fixtures().join(THREE)).unwrap();
+    let case = cases().into_iter().find(|c| c.id == "RR-PN-01").unwrap();
+    for name in ["ppt/custom/thing.", "ppt/custom/a%2Fb.xml"] {
+        let mut entries = stored_copy(&source);
+        entries.push((name.to_owned(), VALID_XML.to_vec()));
+        let bytes = stored_zip(&as_refs(&entries));
+        let note = benign_save(&bytes, &case);
+        assert_ne!(
+            note, "opens and saves; one package does not show it",
+            "{name}"
+        );
+    }
 }
 
 /// F4 on every good deck.

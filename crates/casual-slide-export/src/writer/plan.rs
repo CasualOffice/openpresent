@@ -38,6 +38,30 @@ impl Default for WriterLimits {
     }
 }
 
+/// Repair a deck with nothing edited: the clean file, through the same preflight an edit
+/// goes through (`docs/29`). What it found is in the outcome's report; nothing is saved over
+/// the bytes that arrived, which [`PresentationPackage::save_unedited`] still returns.
+pub fn repair_deck(
+    package: &mut PresentationPackage,
+    limits: WriterLimits,
+) -> Result<WriterOutcome, WriterError> {
+    package.prepare_for_edit()?;
+    let bytes = package.base_bytes().to_vec();
+    let mut draft = Draft::new(package, limits);
+    let verdict = draft.preflight()?;
+    let mut outcome = draft.emit()?;
+    outcome.bytes = bytes;
+    outcome
+        .report
+        .extend(verdict.arrived.iter().map(|v| super::draft::ReportEntry {
+            code: "CS-SAV-0021",
+            rule: v.rule,
+            part: v.part.clone(),
+            detail: v.detail.clone(),
+        }));
+    Ok(outcome)
+}
+
 #[derive(Debug, Clone)]
 struct SlidePatches<'a> {
     structure: &'a DeckStructure,
@@ -150,6 +174,8 @@ impl<'a> SavePlan<'a> {
                 limit: self.limits.max_plan_ops as u64,
             });
         }
+        // What an edit writes from is sound, so what it writes is (`docs/29`).
+        package.prepare_for_edit()?;
         // Model patches read the input as it stands, before the draft holds it.
         let deck_edits = match self.deck {
             Some(deck) => deck_changes(package, deck, &self.import_limits)?,

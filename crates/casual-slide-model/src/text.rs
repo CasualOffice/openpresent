@@ -635,8 +635,10 @@ pub enum TextItem {
     Break(LineBreak),
     /// `fld`.
     Field(TextField),
-    /// Anything else, such as an `mc:AlternateContent` holding an equation, by its
-    /// local name. It stays in the tree where it was, and is reported.
+    /// An equation: `a14:m`, or the `mc:AlternateContent` around one, with its fallback.
+    Math(Box<crate::math::InlineMath>),
+    /// Anything else, by its local name. It stays in the tree where it was, and is
+    /// reported.
     Retained(String),
 }
 

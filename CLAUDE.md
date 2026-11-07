@@ -16,7 +16,8 @@ Sister repo `../opencalc` is the architecture reference: copy from it with prove
 - Every status update gives the phase percentage, from the checklist, merged only. Short, plain language.
 - Say "stopped", "done" or "tested" only after checking by running. Read gate output before committing.
 - Nothing that can pop up or crash on the owner's desktop.
-- Check machine load (`uptime`) before adding a session and at every merge. Above twice the core count, start nothing and land finished work. Sessions run cargo with `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`.
+- Check machine load (`uptime`) before adding a session and at every merge. Above twice the core count, start nothing and land finished work. Sessions run only `cargo test -p` on what they changed, with `CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2`, and never the full gates: the main session runs those once at merge.
+- No new gates, audit rules or repository checks unless the owner asks (instruction 31).
 - Decide, record it, carry on. Commit often, merge as soon as gates pass, keep the disk clear.
 
 ## What this is
@@ -98,7 +99,9 @@ Industry-standard practice applies everywhere, with these specifics.
 - **Work lands directly on `main`, with no pull requests for now** (owner instruction 17). Parallel workers still use their own worktree branches; the main session verifies and merges them to `main`, then pushes. Never force-push `main`. Never skip hooks. Enable them with `git config core.hooksPath .githooks`.
 - Never commit build output, confidential decks, or unreviewed third-party files.
 
-**Gates before any commit**
+**One broad gate (owner instruction 32).** CI on `main` runs the list below. A merge needs only to compile, then push, and a red CI is fixed first. Sessions do not run this list.
+
+**The list CI runs**
 
 ```sh
 cargo fmt --all -- --check

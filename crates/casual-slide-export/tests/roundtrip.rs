@@ -769,21 +769,41 @@ fn a_value_that_would_corrupt_the_deck_is_refused_and_nothing_is_saved() {
 }
 
 #[test]
-fn a_part_that_cannot_be_read_is_left_alone_and_not_written_over() {
+fn a_part_that_cannot_be_read_is_retained_and_a_clean_one_stands_in() {
     let source = read(RICH);
     let mut pkg = open(source);
     let mut edits = PartEdits::default();
     edits.replace(CORE, b"<workbook/>".to_vec());
     let broken = pkg.save_with(&edits).unwrap();
-    // Editing elsewhere leaves it as it is.
-    let edited = edit(&broken, |d| d.presentation.first_slide_num = Some(9));
-    assert_eq!(parts(&edited)[CORE], b"<workbook/>");
-    // A value for it is refused, rather than replacing what is there.
-    assert_eq!(
-        code_of(&broken, |d| d.properties.core =
-            Some(CoreProperties::default())),
-        "CS-EXP-0006"
+    // An edit writes a valid file, and what was there is kept (`docs/29`).
+    let mut repaired = open(broken.clone());
+    let mut deck = import_deck(&mut repaired, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    deck.presentation.first_slide_num = Some(9);
+    let edited = save_deck(&mut repaired, &deck, &ImportLimits::default())
+        .unwrap()
+        .bytes;
+    let written = parts(&edited);
+    assert!(
+        String::from_utf8_lossy(&written[CORE]).contains("coreProperties"),
+        "{:?}",
+        written[CORE]
     );
+    assert!(
+        written
+            .iter()
+            .any(|(name, bytes)| name.starts_with("recovered/") && bytes == b"<workbook/>")
+    );
+    // Under `strict`, it is what it always was: not read, and not replaced.
+    let mut strict = PresentationPackage::open_strict(broken, OoxmlLimits::default()).unwrap();
+    let mut deck = import_deck(&mut strict, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    assert_eq!(deck.properties.core, None);
+    deck.properties.core = Some(CoreProperties::default());
+    let err = save_deck(&mut strict, &deck, &ImportLimits::default()).unwrap_err();
+    assert_eq!(err.code(), "CS-EXP-0006");
 }
 
 #[test]
