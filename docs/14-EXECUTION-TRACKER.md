@@ -101,7 +101,7 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged. All 12 committed real decks import through slide import. Open: `T1D-03`. Most spec rows still lack fixtures, so the tier gate is not met | Per-tier gate in 06 |
 | T-1E | Geometry, fills, lines, effects, 3D | In progress | P0 | Built and merged: 362 tests, 13 hostile decks, fuzz target, 12 real decks clean. No shape-level gradient or pattern in the real decks, only generated ones. Status marks need the audit to see `token_enum!` values (`STAT-01`) | Per-tier gate in 06 |
 | T-1F | Text model | In progress | P0 | Built and merged: text bodies, all properties, 41 autonumber schemes, inheritance chain, fuzz target. Real decks are fixed points. Open: `T1F-04` | Per-tier gate in 06 |
-| T-1G | Tables | Open | P0 | 113 rows | Per-tier gate |
+| T-1G | Tables | In progress | P0 | Gate met except item 1's reasons: 96 rows marked, 17 blank with reasons only in the report until `SPEC-09` can gate them | Per-tier gate in 06 |
 | T-1H | Pictures and media | Open | P0 | 116 rows | Per-tier gate |
 | T-1I | Timing and transitions | Open | P0 | 522 rows | Per-tier gate |
 | T-1J | Charts | Open | P0 | 1764 rows | Per-tier gate |
@@ -208,6 +208,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | CLOSE-03 | Finish 1E and 1F marks | Open | P0 | Annotate `a14` effects for the audit; record reasons for rows left unmarked (`SPEC-09`) | Gate item 1 |
 | SPEC-09 | A place for named reasons | Open | P0 | Checklist has no column for why a row is unmarked, so "or carries a named reason" cannot be gated | `audit.py --check` fails on an unaccounted row |
 | T1C-03 | Theme default `spPr` not reported, no writer for object defaults | Open | P1 | Part of `T1C-02` | Silent-drop test covers themes |
+| T2E-01 | Built-in table style definitions | Open | P1 | Real decks name built-in GUIDs with an empty `tableStyles.xml`, so tables would look unstyled when rendered. Phase 2. Definitions must be ours, not copied | Styled tables render |
 | GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
@@ -246,8 +247,8 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1F-01 | Text structure | Done | P0 | `txBody`, `bodyPr`, `lstStyle`, paragraphs, runs, breaks, fields; `defaultTextStyle`, master text styles. Fills, lines and effects on runs go through 1E | Fixed point on real decks |
 | T1F-02 | Text properties | Done | P0 | Every run and paragraph property; fonts as the file states them, with no metrics | All enum values read from the checklist |
 | T1F-03 | Autofit properties | Done | P0 | Stored as written; recomputation is 2D6 | Stored values round-trip |
-| T1G-01 | Tables | In progress | P0 | `tbl`, grid, rows, cells, merges, cell properties, text via 1F | Fixed point; merged-cell fixtures |
-| T1G-02 | Table styles | In progress | P1 | `tableStyles.xml`, unknown style GUID reported (BEH-29) | Unknown GUID never crashes |
+| T1G-01 | Tables | Done | P0 | `a:tbl`, grid, rows, cells, merges, cell properties. Merge behaviour rests on synthetic fixtures only: no real deck has a merged table. Adding or removing rows, cells or columns is refused until Phase 6 | Fixed point; 20 mutants red |
+| T1G-02 | Table styles | Done | P1 | `tableStyles.xml`; unknown GUID reported. Real decks name built-in styles and we hold no definitions: `T2E-01` | Unknown GUID never crashes |
 | T1H-01 | Pictures | In progress | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
 | T1H-02 | SVG with PNG fallback | In progress | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
 | T1H-03 | Audio and video | In progress | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
@@ -262,9 +263,9 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1L-01 | OLE and controls | Open | P1 | Retained with fallback image; never opened; `SEC-C07` | Bytes compared |
 | T1L-02 | VML | Open | P2 | Legacy drawing parts retained; schema-checked in F4 | Bytes compared |
 | T1L-03 | 3D models | Open | P2 | Retained with fallback until `D3-01` | Bytes compared |
-| T1M-01 | Comments | Open | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
-| T1M-02 | Sections, zoom, classification | Open | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
-| T1M-03 | Review and custom data | Open | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
+| T1M-01 | Comments | In progress | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
+| T1M-02 | Sections, zoom, classification | In progress | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
+| T1M-03 | Review and custom data | In progress | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
 | T1N-01 | Writer: part naming and rIds | Done | P0 | 11 PN and 10 RI rules, each with a seeded `RR-*` fixture. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
 | T1N-02 | Writer: content types and shared parts | Done | P0 | 10 CT and 10 SP rules, with fixtures. 3D models shared like media. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
 | T1N-03 | Writer: id rules and sections | Done | P0 | 9 ID and 5 NM rules, with fixtures. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
