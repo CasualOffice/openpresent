@@ -10,6 +10,7 @@ mod line;
 pub mod media;
 pub mod presentation;
 pub mod properties;
+mod retained;
 pub mod slide;
 pub mod table;
 pub mod text;

@@ -173,7 +173,7 @@ pub struct Background {
     pub fill: Option<BackgroundFill>,
 }
 
-/// `p:CT_CommonSlideData`, `cSld`. `custDataLst`, `controls` and `extLst` stay in
+/// `p:CT_CommonSlideData`, `cSld`. `custDataLst` and `extLst` stay in
 /// the tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommonSlideData {
@@ -183,6 +183,9 @@ pub struct CommonSlideData {
     pub background: Option<Background>,
     /// `spTree`, a group whose id is node 1 of the part.
     pub shape_tree: Option<ShapeNode>,
+    /// `p:controls`: identity and fallback of each ActiveX control, which has no node of its
+    /// own in the shape tree. Never instantiated.
+    pub controls: Vec<crate::retained::RetainedObject>,
 }
 
 /// `p:CT_SlideLayoutIdListEntry`. An id out of range is kept and reported, as the

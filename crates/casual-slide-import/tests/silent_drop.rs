@@ -16,13 +16,15 @@ use casual_slide_ooxml::{ElementId, OoxmlLimits, PresentationPackage, XmlTree};
 const PART: &str = "ppt/slides/slide1.xml";
 /// The decks walked. Anything with a body-level `extLst` or a foreign child is here too, as
 /// retention must be reported as much as anything else.
-const DECKS: [&str; 6] = [
+const DECKS: [&str; 8] = [
     "drawing-every-element",
     "drawing-extension-lists",
     "text-every-property",
     "text-warp-and-3d",
     "text-object-defaults",
     "shape-fills",
+    "area-ole",
+    "area-model3d",
 ];
 /// Read on purpose by something other than its text, each with why.
 const NAMELESS: [(&str, &str, &str); 1] = [
@@ -32,12 +34,13 @@ const NAMELESS: [(&str, &str, &str); 1] = [
 
 /// Required by the schema and holding nothing when empty: taking one away loses nothing, so
 /// there is nothing to notice. Each is still kept by the tree.
-const EMPTY_HOLDERS: [&str; 6] = [
+const EMPTY_HOLDERS: [&str; 7] = [
     "p:spPr",
     "p:cNvSpPr",
     "p:cNvGrpSpPr",
     "p:cNvPicPr",
     "p:cNvCxnSpPr",
+    "p:cNvGraphicFramePr",
     "p:grpSpPr",
 ];
 

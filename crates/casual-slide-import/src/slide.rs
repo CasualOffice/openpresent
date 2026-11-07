@@ -429,12 +429,17 @@ fn read_common(
         name,
         background: None,
         shape_tree: None,
+        controls: Vec::new(),
     };
     let mut seen = HashSet::new();
     for child in shapes.r.children(&el)? {
+        if child.is(ns::PML, "controls") && common.controls.is_empty() {
+            common.controls = crate::retained::read_controls(shapes.r, shapes.rels, &child)?;
+            continue;
+        }
         let known = child.in_namespace(ns::PML) && matches!(child.local.as_str(), "bg" | "spTree");
         if !known {
-            // `custDataLst`, `controls`, `extLst`: Tier 1L and 1M.
+            // `custDataLst`, `extLst`: Tier 1M.
             shapes.r.retained(&child);
             continue;
         }

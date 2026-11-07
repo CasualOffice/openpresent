@@ -510,36 +510,36 @@ p:CT_Comment/@idx	COMMENT	CT_Comment	attribute	@idx	ST_Index	required			.	.	.	.	
 p:CT_CommentList	COMMENT		type	CT_CommentList					.	.	.	.	.
 p:CT_CommentList/cm	COMMENT	CT_CommentList	element	cm	CT_Comment	0..unbounded			.	.	.	.	.
 p:<cmLst>	COMMENT		root	<cmLst>	CT_CommentList				.	.	.	.	.
-p:AG_Ole	OLE		type	AG_Ole					.	.	.	.	.
-p:AG_Ole/@spid	OLE	AG_Ole	attribute	@spid	ST_ShapeID	optional			.	.	.	.	.
-p:AG_Ole/@name	OLE	AG_Ole	attribute	@name	string	optional			.	.	.	.	.
-p:AG_Ole/@showAsIcon	OLE	AG_Ole	attribute	@showAsIcon	boolean	optional	false		.	.	.	.	.
-p:AG_Ole/@r:id	OLE	AG_Ole	attribute	@r:id	id	optional			.	.	.	.	.
-p:AG_Ole/@imgW	OLE	AG_Ole	attribute	@imgW	ST_PositiveCoordinate32	optional			.	.	.	.	.
-p:AG_Ole/@imgH	OLE	AG_Ole	attribute	@imgH	ST_PositiveCoordinate32	optional			.	.	.	.	.
-p:ST_OleObjectFollowColorScheme	OLE		simple	ST_OleObjectFollowColorScheme				base=token	.	.	.	.	.
-p:ST_OleObjectFollowColorScheme/=none	OLE	ST_OleObjectFollowColorScheme	value	=none					.	.	.	.	.
-p:ST_OleObjectFollowColorScheme/=full	OLE	ST_OleObjectFollowColorScheme	value	=full					.	.	.	.	.
-p:ST_OleObjectFollowColorScheme/=textAndBackground	OLE	ST_OleObjectFollowColorScheme	value	=textAndBackground					.	.	.	.	.
-p:CT_OleObjectEmbed	OLE		type	CT_OleObjectEmbed					.	.	.	.	.
-p:CT_OleObjectEmbed/extLst	OLE	CT_OleObjectEmbed	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_OleObjectEmbed/@followColorScheme	OLE	CT_OleObjectEmbed	attribute	@followColorScheme	ST_OleObjectFollowColorScheme	optional	none		.	.	.	.	.
-p:CT_OleObjectLink	OLE		type	CT_OleObjectLink					.	.	.	.	.
-p:CT_OleObjectLink/extLst	OLE	CT_OleObjectLink	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_OleObjectLink/@updateAutomatic	OLE	CT_OleObjectLink	attribute	@updateAutomatic	boolean	optional	false		.	.	.	.	.
-p:CT_OleObject	OLE		type	CT_OleObject					.	.	.	.	.
-p:CT_OleObject/embed	OLE	CT_OleObject	element	embed	CT_OleObjectEmbed	choice			.	.	.	.	.
-p:CT_OleObject/link	OLE	CT_OleObject	element	link	CT_OleObjectLink	choice			.	.	.	.	.
-p:CT_OleObject/pic	OLE	CT_OleObject	element	pic	CT_Picture	0..1			.	.	.	.	.
-p:CT_OleObject/AG_Ole	OLE	CT_OleObject	attrgroup	AG_Ole	AG_Ole				.	.	.	.	.
-p:CT_OleObject/@progId	OLE	CT_OleObject	attribute	@progId	string	optional			.	.	.	.	.
-p:<oleObj>	OLE		root	<oleObj>	CT_OleObject				.	.	.	.	.
-p:CT_Control	OLE		type	CT_Control					.	.	.	.	.
-p:CT_Control/extLst	OLE	CT_Control	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_Control/pic	OLE	CT_Control	element	pic	CT_Picture	0..1			.	.	.	.	.
-p:CT_Control/AG_Ole	OLE	CT_Control	attrgroup	AG_Ole	AG_Ole				.	.	.	.	.
-p:CT_ControlList	OLE		type	CT_ControlList					.	.	.	.	.
-p:CT_ControlList/control	OLE	CT_ControlList	element	control	CT_Control	0..unbounded			.	.	.	.	.
+p:AG_Ole	OLE		type	AG_Ole					r	r	r	.	.
+p:AG_Ole/@spid	OLE	AG_Ole	attribute	@spid	ST_ShapeID	optional			y	y	r	.	.
+p:AG_Ole/@name	OLE	AG_Ole	attribute	@name	string	optional			y	y	r	.	.
+p:AG_Ole/@showAsIcon	OLE	AG_Ole	attribute	@showAsIcon	boolean	optional	false		y	y	r	.	.
+p:AG_Ole/@r:id	OLE	AG_Ole	attribute	@r:id	id	optional			y	y	r	.	.
+p:AG_Ole/@imgW	OLE	AG_Ole	attribute	@imgW	ST_PositiveCoordinate32	optional			y	y	r	.	.
+p:AG_Ole/@imgH	OLE	AG_Ole	attribute	@imgH	ST_PositiveCoordinate32	optional			y	y	r	.	.
+p:ST_OleObjectFollowColorScheme	OLE		simple	ST_OleObjectFollowColorScheme				base=token	r	r	r	.	.
+p:ST_OleObjectFollowColorScheme/=none	OLE	ST_OleObjectFollowColorScheme	value	=none					r	r	r	.	.
+p:ST_OleObjectFollowColorScheme/=full	OLE	ST_OleObjectFollowColorScheme	value	=full					r	r	r	.	.
+p:ST_OleObjectFollowColorScheme/=textAndBackground	OLE	ST_OleObjectFollowColorScheme	value	=textAndBackground					r	r	r	.	.
+p:CT_OleObjectEmbed	OLE		type	CT_OleObjectEmbed					r	r	r	.	.
+p:CT_OleObjectEmbed/extLst	OLE	CT_OleObjectEmbed	element	extLst	CT_ExtensionList	0..1			r	r	r	.	.
+p:CT_OleObjectEmbed/@followColorScheme	OLE	CT_OleObjectEmbed	attribute	@followColorScheme	ST_OleObjectFollowColorScheme	optional	none		r	r	r	.	.
+p:CT_OleObjectLink	OLE		type	CT_OleObjectLink					r	r	r	.	.
+p:CT_OleObjectLink/extLst	OLE	CT_OleObjectLink	element	extLst	CT_ExtensionList	0..1			r	r	r	.	.
+p:CT_OleObjectLink/@updateAutomatic	OLE	CT_OleObjectLink	attribute	@updateAutomatic	boolean	optional	false		r	r	r	.	.
+p:CT_OleObject	OLE		type	CT_OleObject					r	r	r	.	.
+p:CT_OleObject/embed	OLE	CT_OleObject	element	embed	CT_OleObjectEmbed	choice			y	r	r	.	.
+p:CT_OleObject/link	OLE	CT_OleObject	element	link	CT_OleObjectLink	choice			r	r	r	.	.
+p:CT_OleObject/pic	OLE	CT_OleObject	element	pic	CT_Picture	0..1			y	y	r	.	.
+p:CT_OleObject/AG_Ole	OLE	CT_OleObject	attrgroup	AG_Ole	AG_Ole				r	r	r	.	.
+p:CT_OleObject/@progId	OLE	CT_OleObject	attribute	@progId	string	optional			y	y	r	.	.
+p:<oleObj>	OLE		root	<oleObj>	CT_OleObject				r	r	r	.	.
+p:CT_Control	OLE		type	CT_Control					r	r	r	.	.
+p:CT_Control/extLst	OLE	CT_Control	element	extLst	CT_ExtensionList	0..1			r	r	r	.	.
+p:CT_Control/pic	OLE	CT_Control	element	pic	CT_Picture	0..1			y	y	r	.	.
+p:CT_Control/AG_Ole	OLE	CT_Control	attrgroup	AG_Ole	AG_Ole				r	r	r	.	.
+p:CT_ControlList	OLE		type	CT_ControlList					r	r	r	.	.
+p:CT_ControlList/control	OLE	CT_ControlList	element	control	CT_Control	0..unbounded			r	y	r	.	.
 p:ST_SlideId	SLIDE		simple	ST_SlideId				base=unsignedInt minInclusive=256 maxExclusive=2147483648	y	n/a	n/a	.	.
 p:CT_SlideIdListEntry	SLIDE		type	CT_SlideIdListEntry					r	r	r	.	.
 p:CT_SlideIdListEntry/extLst	SLIDE	CT_SlideIdListEntry	element	extLst	CT_ExtensionList	0..1			r	r	r	.	.
@@ -5602,830 +5602,830 @@ sl:CT_Schema/@schemaLanguage	CUSTOM	CT_Schema	attribute	@schemaLanguage	token	op
 sl:CT_SchemaLibrary	CUSTOM		type	CT_SchemaLibrary					.	.	.	.	.
 sl:CT_SchemaLibrary/schema	CUSTOM	CT_SchemaLibrary	element	schema	CT_Schema	0..unbounded			.	.	.	.	.
 sl:<schemaLibrary>	CUSTOM		root	<schemaLibrary>	CT_SchemaLibrary				.	.	.	.	.
-v:AG_Id	VML		type	AG_Id					.	.	.	.	.
-v:AG_Id/@id	VML	AG_Id	attribute	@id	string	optional			.	.	.	.	.
-v:AG_Style	VML		type	AG_Style					.	.	.	.	.
-v:AG_Style/@style	VML	AG_Style	attribute	@style	string	optional			.	.	.	.	.
-v:AG_Type	VML		type	AG_Type					.	.	.	.	.
-v:AG_Type/@type	VML	AG_Type	attribute	@type	string	optional			.	.	.	.	.
-v:AG_Adj	VML		type	AG_Adj					.	.	.	.	.
-v:AG_Adj/@adj	VML	AG_Adj	attribute	@adj	string	optional			.	.	.	.	.
-v:AG_Path	VML		type	AG_Path					.	.	.	.	.
-v:AG_Path/@path	VML	AG_Path	attribute	@path	string	optional			.	.	.	.	.
-v:AG_Fill	VML		type	AG_Fill					.	.	.	.	.
-v:AG_Fill/@filled	VML	AG_Fill	attribute	@filled	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_Fill/@fillcolor	VML	AG_Fill	attribute	@fillcolor	ST_ColorType	optional			.	.	.	.	.
-v:AG_Chromakey	VML		type	AG_Chromakey					.	.	.	.	.
-v:AG_Chromakey/@chromakey	VML	AG_Chromakey	attribute	@chromakey	ST_ColorType	optional			.	.	.	.	.
-v:AG_Ext	VML		type	AG_Ext					.	.	.	.	.
-v:AG_Ext/@ext	VML	AG_Ext	attribute	@ext	ST_Ext	optional			.	.	.	.	.
-v:AG_CoreAttributes	VML		type	AG_CoreAttributes					.	.	.	.	.
-v:AG_CoreAttributes/AG_Id	VML	AG_CoreAttributes	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:AG_CoreAttributes/AG_Style	VML	AG_CoreAttributes	attrgroup	AG_Style	AG_Style				.	.	.	.	.
-v:AG_CoreAttributes/@href	VML	AG_CoreAttributes	attribute	@href	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@target	VML	AG_CoreAttributes	attribute	@target	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@class	VML	AG_CoreAttributes	attribute	@class	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@title	VML	AG_CoreAttributes	attribute	@title	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@alt	VML	AG_CoreAttributes	attribute	@alt	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@coordsize	VML	AG_CoreAttributes	attribute	@coordsize	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@coordorigin	VML	AG_CoreAttributes	attribute	@coordorigin	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@wrapcoords	VML	AG_CoreAttributes	attribute	@wrapcoords	string	optional			.	.	.	.	.
-v:AG_CoreAttributes/@print	VML	AG_CoreAttributes	attribute	@print	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_ShapeAttributes	VML		type	AG_ShapeAttributes					.	.	.	.	.
-v:AG_ShapeAttributes/AG_Chromakey	VML	AG_ShapeAttributes	attrgroup	AG_Chromakey	AG_Chromakey				.	.	.	.	.
-v:AG_ShapeAttributes/AG_Fill	VML	AG_ShapeAttributes	attrgroup	AG_Fill	AG_Fill				.	.	.	.	.
-v:AG_ShapeAttributes/@opacity	VML	AG_ShapeAttributes	attribute	@opacity	string	optional			.	.	.	.	.
-v:AG_ShapeAttributes/@stroked	VML	AG_ShapeAttributes	attribute	@stroked	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_ShapeAttributes/@strokecolor	VML	AG_ShapeAttributes	attribute	@strokecolor	ST_ColorType	optional			.	.	.	.	.
-v:AG_ShapeAttributes/@strokeweight	VML	AG_ShapeAttributes	attribute	@strokeweight	string	optional			.	.	.	.	.
-v:AG_ShapeAttributes/@insetpen	VML	AG_ShapeAttributes	attribute	@insetpen	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes	VML		type	AG_OfficeCoreAttributes					.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:spid	VML	AG_OfficeCoreAttributes	attribute	@o:spid	spid	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:oned	VML	AG_OfficeCoreAttributes	attribute	@o:oned	oned	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:regroupid	VML	AG_OfficeCoreAttributes	attribute	@o:regroupid	regroupid	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:doubleclicknotify	VML	AG_OfficeCoreAttributes	attribute	@o:doubleclicknotify	doubleclicknotify	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:button	VML	AG_OfficeCoreAttributes	attribute	@o:button	button	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:userhidden	VML	AG_OfficeCoreAttributes	attribute	@o:userhidden	userhidden	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:bullet	VML	AG_OfficeCoreAttributes	attribute	@o:bullet	bullet	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:hr	VML	AG_OfficeCoreAttributes	attribute	@o:hr	hr	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:hrstd	VML	AG_OfficeCoreAttributes	attribute	@o:hrstd	hrstd	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:hrnoshade	VML	AG_OfficeCoreAttributes	attribute	@o:hrnoshade	hrnoshade	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:hrpct	VML	AG_OfficeCoreAttributes	attribute	@o:hrpct	hrpct	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:hralign	VML	AG_OfficeCoreAttributes	attribute	@o:hralign	hralign	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:allowincell	VML	AG_OfficeCoreAttributes	attribute	@o:allowincell	allowincell	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:allowoverlap	VML	AG_OfficeCoreAttributes	attribute	@o:allowoverlap	allowoverlap	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:userdrawn	VML	AG_OfficeCoreAttributes	attribute	@o:userdrawn	userdrawn	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:bordertopcolor	VML	AG_OfficeCoreAttributes	attribute	@o:bordertopcolor	bordertopcolor	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:borderleftcolor	VML	AG_OfficeCoreAttributes	attribute	@o:borderleftcolor	borderleftcolor	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:borderbottomcolor	VML	AG_OfficeCoreAttributes	attribute	@o:borderbottomcolor	borderbottomcolor	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:borderrightcolor	VML	AG_OfficeCoreAttributes	attribute	@o:borderrightcolor	borderrightcolor	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:dgmlayout	VML	AG_OfficeCoreAttributes	attribute	@o:dgmlayout	dgmlayout	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:dgmnodekind	VML	AG_OfficeCoreAttributes	attribute	@o:dgmnodekind	dgmnodekind	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:dgmlayoutmru	VML	AG_OfficeCoreAttributes	attribute	@o:dgmlayoutmru	dgmlayoutmru	optional			.	.	.	.	.
-v:AG_OfficeCoreAttributes/@o:insetmode	VML	AG_OfficeCoreAttributes	attribute	@o:insetmode	insetmode	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes	VML		type	AG_OfficeShapeAttributes					.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:spt	VML	AG_OfficeShapeAttributes	attribute	@o:spt	spt	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:connectortype	VML	AG_OfficeShapeAttributes	attribute	@o:connectortype	connectortype	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:bwmode	VML	AG_OfficeShapeAttributes	attribute	@o:bwmode	bwmode	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:bwpure	VML	AG_OfficeShapeAttributes	attribute	@o:bwpure	bwpure	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:bwnormal	VML	AG_OfficeShapeAttributes	attribute	@o:bwnormal	bwnormal	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:forcedash	VML	AG_OfficeShapeAttributes	attribute	@o:forcedash	forcedash	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:oleicon	VML	AG_OfficeShapeAttributes	attribute	@o:oleicon	oleicon	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:ole	VML	AG_OfficeShapeAttributes	attribute	@o:ole	ole	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:preferrelative	VML	AG_OfficeShapeAttributes	attribute	@o:preferrelative	preferrelative	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:cliptowrap	VML	AG_OfficeShapeAttributes	attribute	@o:cliptowrap	cliptowrap	optional			.	.	.	.	.
-v:AG_OfficeShapeAttributes/@o:clip	VML	AG_OfficeShapeAttributes	attribute	@o:clip	clip	optional			.	.	.	.	.
-v:AG_AllCoreAttributes	VML		type	AG_AllCoreAttributes					.	.	.	.	.
-v:AG_AllCoreAttributes/AG_CoreAttributes	VML	AG_AllCoreAttributes	attrgroup	AG_CoreAttributes	AG_CoreAttributes				.	.	.	.	.
-v:AG_AllCoreAttributes/AG_OfficeCoreAttributes	VML	AG_AllCoreAttributes	attrgroup	AG_OfficeCoreAttributes	AG_OfficeCoreAttributes				.	.	.	.	.
-v:AG_AllShapeAttributes	VML		type	AG_AllShapeAttributes					.	.	.	.	.
-v:AG_AllShapeAttributes/AG_ShapeAttributes	VML	AG_AllShapeAttributes	attrgroup	AG_ShapeAttributes	AG_ShapeAttributes				.	.	.	.	.
-v:AG_AllShapeAttributes/AG_OfficeShapeAttributes	VML	AG_AllShapeAttributes	attrgroup	AG_OfficeShapeAttributes	AG_OfficeShapeAttributes				.	.	.	.	.
-v:AG_ImageAttributes	VML		type	AG_ImageAttributes					.	.	.	.	.
-v:AG_ImageAttributes/@src	VML	AG_ImageAttributes	attribute	@src	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@cropleft	VML	AG_ImageAttributes	attribute	@cropleft	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@croptop	VML	AG_ImageAttributes	attribute	@croptop	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@cropright	VML	AG_ImageAttributes	attribute	@cropright	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@cropbottom	VML	AG_ImageAttributes	attribute	@cropbottom	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@gain	VML	AG_ImageAttributes	attribute	@gain	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@blacklevel	VML	AG_ImageAttributes	attribute	@blacklevel	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@gamma	VML	AG_ImageAttributes	attribute	@gamma	string	optional			.	.	.	.	.
-v:AG_ImageAttributes/@grayscale	VML	AG_ImageAttributes	attribute	@grayscale	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_ImageAttributes/@bilevel	VML	AG_ImageAttributes	attribute	@bilevel	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_StrokeAttributes	VML		type	AG_StrokeAttributes					.	.	.	.	.
-v:AG_StrokeAttributes/@on	VML	AG_StrokeAttributes	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@weight	VML	AG_StrokeAttributes	attribute	@weight	string	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@color	VML	AG_StrokeAttributes	attribute	@color	ST_ColorType	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@opacity	VML	AG_StrokeAttributes	attribute	@opacity	string	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@linestyle	VML	AG_StrokeAttributes	attribute	@linestyle	ST_StrokeLineStyle	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@miterlimit	VML	AG_StrokeAttributes	attribute	@miterlimit	decimal	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@joinstyle	VML	AG_StrokeAttributes	attribute	@joinstyle	ST_StrokeJoinStyle	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@endcap	VML	AG_StrokeAttributes	attribute	@endcap	ST_StrokeEndCap	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@dashstyle	VML	AG_StrokeAttributes	attribute	@dashstyle	string	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@filltype	VML	AG_StrokeAttributes	attribute	@filltype	ST_FillType	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@src	VML	AG_StrokeAttributes	attribute	@src	string	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@imageaspect	VML	AG_StrokeAttributes	attribute	@imageaspect	ST_ImageAspect	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@imagesize	VML	AG_StrokeAttributes	attribute	@imagesize	string	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@imagealignshape	VML	AG_StrokeAttributes	attribute	@imagealignshape	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@color2	VML	AG_StrokeAttributes	attribute	@color2	ST_ColorType	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@startarrow	VML	AG_StrokeAttributes	attribute	@startarrow	ST_StrokeArrowType	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@startarrowwidth	VML	AG_StrokeAttributes	attribute	@startarrowwidth	ST_StrokeArrowWidth	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@startarrowlength	VML	AG_StrokeAttributes	attribute	@startarrowlength	ST_StrokeArrowLength	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@endarrow	VML	AG_StrokeAttributes	attribute	@endarrow	ST_StrokeArrowType	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@endarrowwidth	VML	AG_StrokeAttributes	attribute	@endarrowwidth	ST_StrokeArrowWidth	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@endarrowlength	VML	AG_StrokeAttributes	attribute	@endarrowlength	ST_StrokeArrowLength	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@o:href	VML	AG_StrokeAttributes	attribute	@o:href	href	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@o:althref	VML	AG_StrokeAttributes	attribute	@o:althref	althref	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@o:title	VML	AG_StrokeAttributes	attribute	@o:title	title	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@o:forcedash	VML	AG_StrokeAttributes	attribute	@o:forcedash	forcedash	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@r:id	VML	AG_StrokeAttributes	attribute	@r:id	id	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@insetpen	VML	AG_StrokeAttributes	attribute	@insetpen	ST_TrueFalse	optional			.	.	.	.	.
-v:AG_StrokeAttributes/@o:relid	VML	AG_StrokeAttributes	attribute	@o:relid	relid	optional			.	.	.	.	.
-v:EG_ShapeElements	VML		type	EG_ShapeElements					.	.	.	.	.
-v:EG_ShapeElements/path	VML	EG_ShapeElements	element	path	path	choice			.	.	.	.	.
-v:EG_ShapeElements/formulas	VML	EG_ShapeElements	element	formulas	formulas	choice			.	.	.	.	.
-v:EG_ShapeElements/handles	VML	EG_ShapeElements	element	handles	handles	choice			.	.	.	.	.
-v:EG_ShapeElements/fill	VML	EG_ShapeElements	element	fill	fill	choice			.	.	.	.	.
-v:EG_ShapeElements/stroke	VML	EG_ShapeElements	element	stroke	stroke	choice			.	.	.	.	.
-v:EG_ShapeElements/shadow	VML	EG_ShapeElements	element	shadow	shadow	choice			.	.	.	.	.
-v:EG_ShapeElements/textbox	VML	EG_ShapeElements	element	textbox	textbox	choice			.	.	.	.	.
-v:EG_ShapeElements/textpath	VML	EG_ShapeElements	element	textpath	textpath	choice			.	.	.	.	.
-v:EG_ShapeElements/imagedata	VML	EG_ShapeElements	element	imagedata	imagedata	choice			.	.	.	.	.
-v:EG_ShapeElements/o:skew	VML	EG_ShapeElements	element	o:skew	skew	choice			.	.	.	.	.
-v:EG_ShapeElements/o:extrusion	VML	EG_ShapeElements	element	o:extrusion	extrusion	choice			.	.	.	.	.
-v:EG_ShapeElements/o:callout	VML	EG_ShapeElements	element	o:callout	callout	choice			.	.	.	.	.
-v:EG_ShapeElements/o:lock	VML	EG_ShapeElements	element	o:lock	lock	choice			.	.	.	.	.
-v:EG_ShapeElements/o:clippath	VML	EG_ShapeElements	element	o:clippath	clippath	choice			.	.	.	.	.
-v:EG_ShapeElements/o:signatureline	VML	EG_ShapeElements	element	o:signatureline	signatureline	choice			.	.	.	.	.
-v:EG_ShapeElements/w10:wrap	VML	EG_ShapeElements	element	w10:wrap	wrap	choice			.	.	.	.	.
-v:EG_ShapeElements/w10:anchorlock	VML	EG_ShapeElements	element	w10:anchorlock	anchorlock	choice			.	.	.	.	.
-v:EG_ShapeElements/w10:bordertop	VML	EG_ShapeElements	element	w10:bordertop	bordertop	choice			.	.	.	.	.
-v:EG_ShapeElements/w10:borderbottom	VML	EG_ShapeElements	element	w10:borderbottom	borderbottom	choice			.	.	.	.	.
-v:EG_ShapeElements/w10:borderleft	VML	EG_ShapeElements	element	w10:borderleft	borderleft	choice			.	.	.	.	.
-v:EG_ShapeElements/w10:borderright	VML	EG_ShapeElements	element	w10:borderright	borderright	choice			.	.	.	.	.
-v:EG_ShapeElements/x:ClientData	VML	EG_ShapeElements	element	x:ClientData	ClientData	0..1			.	.	.	.	.
-v:EG_ShapeElements/pvml:textdata	VML	EG_ShapeElements	element	pvml:textdata	textdata	0..1			.	.	.	.	.
-v:<shape>	VML		root	<shape>	CT_Shape				.	.	.	.	.
-v:<shapetype>	VML		root	<shapetype>	CT_Shapetype				.	.	.	.	.
-v:<group>	VML		root	<group>	CT_Group				.	.	.	.	.
-v:<background>	VML		root	<background>	CT_Background				.	.	.	.	.
-v:CT_Shape	VML		type	CT_Shape					.	.	.	.	.
-v:CT_Shape/EG_ShapeElements	VML	CT_Shape	group	EG_ShapeElements	EG_ShapeElements	choice			.	.	.	.	.
-v:CT_Shape/o:ink	VML	CT_Shape	element	o:ink	ink	choice			.	.	.	.	.
-v:CT_Shape/pvml:iscomment	VML	CT_Shape	element	pvml:iscomment	iscomment	choice			.	.	.	.	.
-v:CT_Shape/o:equationxml	VML	CT_Shape	element	o:equationxml	equationxml	choice			.	.	.	.	.
-v:CT_Shape/AG_AllCoreAttributes	VML	CT_Shape	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Shape/AG_AllShapeAttributes	VML	CT_Shape	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_Shape/AG_Type	VML	CT_Shape	attrgroup	AG_Type	AG_Type				.	.	.	.	.
-v:CT_Shape/AG_Adj	VML	CT_Shape	attrgroup	AG_Adj	AG_Adj				.	.	.	.	.
-v:CT_Shape/AG_Path	VML	CT_Shape	attrgroup	AG_Path	AG_Path				.	.	.	.	.
-v:CT_Shape/@o:gfxdata	VML	CT_Shape	attribute	@o:gfxdata	gfxdata	optional			.	.	.	.	.
-v:CT_Shape/@equationxml	VML	CT_Shape	attribute	@equationxml	string	optional			.	.	.	.	.
-v:CT_Shapetype	VML		type	CT_Shapetype					.	.	.	.	.
-v:CT_Shapetype/EG_ShapeElements	VML	CT_Shapetype	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_Shapetype/o:complex	VML	CT_Shapetype	element	o:complex	complex	0..1			.	.	.	.	.
-v:CT_Shapetype/AG_AllCoreAttributes	VML	CT_Shapetype	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Shapetype/AG_AllShapeAttributes	VML	CT_Shapetype	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_Shapetype/AG_Adj	VML	CT_Shapetype	attrgroup	AG_Adj	AG_Adj				.	.	.	.	.
-v:CT_Shapetype/AG_Path	VML	CT_Shapetype	attrgroup	AG_Path	AG_Path				.	.	.	.	.
-v:CT_Shapetype/@o:master	VML	CT_Shapetype	attribute	@o:master	master	optional			.	.	.	.	.
-v:CT_Group	VML		type	CT_Group					.	.	.	.	.
-v:CT_Group/EG_ShapeElements	VML	CT_Group	group	EG_ShapeElements	EG_ShapeElements	choice			.	.	.	.	.
-v:CT_Group/group	VML	CT_Group	element	group	group	choice			.	.	.	.	.
-v:CT_Group/shape	VML	CT_Group	element	shape	shape	choice			.	.	.	.	.
-v:CT_Group/shapetype	VML	CT_Group	element	shapetype	shapetype	choice			.	.	.	.	.
-v:CT_Group/arc	VML	CT_Group	element	arc	arc	choice			.	.	.	.	.
-v:CT_Group/curve	VML	CT_Group	element	curve	curve	choice			.	.	.	.	.
-v:CT_Group/image	VML	CT_Group	element	image	image	choice			.	.	.	.	.
-v:CT_Group/line	VML	CT_Group	element	line	line	choice			.	.	.	.	.
-v:CT_Group/oval	VML	CT_Group	element	oval	oval	choice			.	.	.	.	.
-v:CT_Group/polyline	VML	CT_Group	element	polyline	polyline	choice			.	.	.	.	.
-v:CT_Group/rect	VML	CT_Group	element	rect	rect	choice			.	.	.	.	.
-v:CT_Group/roundrect	VML	CT_Group	element	roundrect	roundrect	choice			.	.	.	.	.
-v:CT_Group/o:diagram	VML	CT_Group	element	o:diagram	diagram	choice			.	.	.	.	.
-v:CT_Group/AG_AllCoreAttributes	VML	CT_Group	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Group/AG_Fill	VML	CT_Group	attrgroup	AG_Fill	AG_Fill				.	.	.	.	.
-v:CT_Group/@editas	VML	CT_Group	attribute	@editas	ST_EditAs	optional			.	.	.	.	.
-v:CT_Group/@o:tableproperties	VML	CT_Group	attribute	@o:tableproperties	tableproperties	optional			.	.	.	.	.
-v:CT_Group/@o:tablelimits	VML	CT_Group	attribute	@o:tablelimits	tablelimits	optional			.	.	.	.	.
-v:CT_Background	VML		type	CT_Background					.	.	.	.	.
-v:CT_Background/fill	VML	CT_Background	element	fill	fill	0..1			.	.	.	.	.
-v:CT_Background/AG_Id	VML	CT_Background	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_Background/AG_Fill	VML	CT_Background	attrgroup	AG_Fill	AG_Fill				.	.	.	.	.
-v:CT_Background/@o:bwmode	VML	CT_Background	attribute	@o:bwmode	bwmode	optional			.	.	.	.	.
-v:CT_Background/@o:bwpure	VML	CT_Background	attribute	@o:bwpure	bwpure	optional			.	.	.	.	.
-v:CT_Background/@o:bwnormal	VML	CT_Background	attribute	@o:bwnormal	bwnormal	optional			.	.	.	.	.
-v:CT_Background/@o:targetscreensize	VML	CT_Background	attribute	@o:targetscreensize	targetscreensize	optional			.	.	.	.	.
-v:<fill>	VML		root	<fill>	CT_Fill				.	.	.	.	.
-v:<formulas>	VML		root	<formulas>	CT_Formulas				.	.	.	.	.
-v:<handles>	VML		root	<handles>	CT_Handles				.	.	.	.	.
-v:<imagedata>	VML		root	<imagedata>	CT_ImageData				.	.	.	.	.
-v:<path>	VML		root	<path>	CT_Path				.	.	.	.	.
-v:<textbox>	VML		root	<textbox>	CT_Textbox				.	.	.	.	.
-v:<shadow>	VML		root	<shadow>	CT_Shadow				.	.	.	.	.
-v:<stroke>	VML		root	<stroke>	CT_Stroke				.	.	.	.	.
-v:<textpath>	VML		root	<textpath>	CT_TextPath				.	.	.	.	.
-v:CT_Fill	VML		type	CT_Fill					.	.	.	.	.
-v:CT_Fill/o:fill	VML	CT_Fill	element	o:fill	fill	0..1			.	.	.	.	.
-v:CT_Fill/AG_Id	VML	CT_Fill	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_Fill/@type	VML	CT_Fill	attribute	@type	ST_FillType	optional			.	.	.	.	.
-v:CT_Fill/@on	VML	CT_Fill	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Fill/@color	VML	CT_Fill	attribute	@color	ST_ColorType	optional			.	.	.	.	.
-v:CT_Fill/@opacity	VML	CT_Fill	attribute	@opacity	string	optional			.	.	.	.	.
-v:CT_Fill/@color2	VML	CT_Fill	attribute	@color2	ST_ColorType	optional			.	.	.	.	.
-v:CT_Fill/@src	VML	CT_Fill	attribute	@src	string	optional			.	.	.	.	.
-v:CT_Fill/@o:href	VML	CT_Fill	attribute	@o:href	href	optional			.	.	.	.	.
-v:CT_Fill/@o:althref	VML	CT_Fill	attribute	@o:althref	althref	optional			.	.	.	.	.
-v:CT_Fill/@size	VML	CT_Fill	attribute	@size	string	optional			.	.	.	.	.
-v:CT_Fill/@origin	VML	CT_Fill	attribute	@origin	string	optional			.	.	.	.	.
-v:CT_Fill/@position	VML	CT_Fill	attribute	@position	string	optional			.	.	.	.	.
-v:CT_Fill/@aspect	VML	CT_Fill	attribute	@aspect	ST_ImageAspect	optional			.	.	.	.	.
-v:CT_Fill/@colors	VML	CT_Fill	attribute	@colors	string	optional			.	.	.	.	.
-v:CT_Fill/@angle	VML	CT_Fill	attribute	@angle	decimal	optional			.	.	.	.	.
-v:CT_Fill/@alignshape	VML	CT_Fill	attribute	@alignshape	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Fill/@focus	VML	CT_Fill	attribute	@focus	string	optional			.	.	.	.	.
-v:CT_Fill/@focussize	VML	CT_Fill	attribute	@focussize	string	optional			.	.	.	.	.
-v:CT_Fill/@focusposition	VML	CT_Fill	attribute	@focusposition	string	optional			.	.	.	.	.
-v:CT_Fill/@method	VML	CT_Fill	attribute	@method	ST_FillMethod	optional			.	.	.	.	.
-v:CT_Fill/@o:detectmouseclick	VML	CT_Fill	attribute	@o:detectmouseclick	detectmouseclick	optional			.	.	.	.	.
-v:CT_Fill/@o:title	VML	CT_Fill	attribute	@o:title	title	optional			.	.	.	.	.
-v:CT_Fill/@o:opacity2	VML	CT_Fill	attribute	@o:opacity2	opacity2	optional			.	.	.	.	.
-v:CT_Fill/@recolor	VML	CT_Fill	attribute	@recolor	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Fill/@rotate	VML	CT_Fill	attribute	@rotate	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Fill/@r:id	VML	CT_Fill	attribute	@r:id	id	optional			.	.	.	.	.
-v:CT_Fill/@o:relid	VML	CT_Fill	attribute	@o:relid	relid	optional			.	.	.	.	.
-v:CT_Formulas	VML		type	CT_Formulas					.	.	.	.	.
-v:CT_Formulas/f	VML	CT_Formulas	element	f	CT_F	0..unbounded			.	.	.	.	.
-v:CT_F	VML		type	CT_F					.	.	.	.	.
-v:CT_F/@eqn	VML	CT_F	attribute	@eqn	string	optional			.	.	.	.	.
-v:CT_Handles	VML		type	CT_Handles					.	.	.	.	.
-v:CT_Handles/h	VML	CT_Handles	element	h	CT_H	0..unbounded			.	.	.	.	.
-v:CT_H	VML		type	CT_H					.	.	.	.	.
-v:CT_H/@position	VML	CT_H	attribute	@position	string	optional			.	.	.	.	.
-v:CT_H/@polar	VML	CT_H	attribute	@polar	string	optional			.	.	.	.	.
-v:CT_H/@map	VML	CT_H	attribute	@map	string	optional			.	.	.	.	.
-v:CT_H/@invx	VML	CT_H	attribute	@invx	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_H/@invy	VML	CT_H	attribute	@invy	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_H/@switch	VML	CT_H	attribute	@switch	ST_TrueFalseBlank	optional			.	.	.	.	.
-v:CT_H/@xrange	VML	CT_H	attribute	@xrange	string	optional			.	.	.	.	.
-v:CT_H/@yrange	VML	CT_H	attribute	@yrange	string	optional			.	.	.	.	.
-v:CT_H/@radiusrange	VML	CT_H	attribute	@radiusrange	string	optional			.	.	.	.	.
-v:CT_ImageData	VML		type	CT_ImageData					.	.	.	.	.
-v:CT_ImageData/AG_Id	VML	CT_ImageData	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_ImageData/AG_ImageAttributes	VML	CT_ImageData	attrgroup	AG_ImageAttributes	AG_ImageAttributes				.	.	.	.	.
-v:CT_ImageData/AG_Chromakey	VML	CT_ImageData	attrgroup	AG_Chromakey	AG_Chromakey				.	.	.	.	.
-v:CT_ImageData/@embosscolor	VML	CT_ImageData	attribute	@embosscolor	ST_ColorType	optional			.	.	.	.	.
-v:CT_ImageData/@recolortarget	VML	CT_ImageData	attribute	@recolortarget	ST_ColorType	optional			.	.	.	.	.
-v:CT_ImageData/@o:href	VML	CT_ImageData	attribute	@o:href	href	optional			.	.	.	.	.
-v:CT_ImageData/@o:althref	VML	CT_ImageData	attribute	@o:althref	althref	optional			.	.	.	.	.
-v:CT_ImageData/@o:title	VML	CT_ImageData	attribute	@o:title	title	optional			.	.	.	.	.
-v:CT_ImageData/@o:oleid	VML	CT_ImageData	attribute	@o:oleid	oleid	optional			.	.	.	.	.
-v:CT_ImageData/@o:detectmouseclick	VML	CT_ImageData	attribute	@o:detectmouseclick	detectmouseclick	optional			.	.	.	.	.
-v:CT_ImageData/@o:movie	VML	CT_ImageData	attribute	@o:movie	movie	optional			.	.	.	.	.
-v:CT_ImageData/@o:relid	VML	CT_ImageData	attribute	@o:relid	relid	optional			.	.	.	.	.
-v:CT_ImageData/@r:id	VML	CT_ImageData	attribute	@r:id	id	optional			.	.	.	.	.
-v:CT_ImageData/@r:pict	VML	CT_ImageData	attribute	@r:pict	pict	optional			.	.	.	.	.
-v:CT_ImageData/@r:href	VML	CT_ImageData	attribute	@r:href	href	optional			.	.	.	.	.
-v:CT_Path	VML		type	CT_Path					.	.	.	.	.
-v:CT_Path/AG_Id	VML	CT_Path	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_Path/@v	VML	CT_Path	attribute	@v	string	optional			.	.	.	.	.
-v:CT_Path/@limo	VML	CT_Path	attribute	@limo	string	optional			.	.	.	.	.
-v:CT_Path/@textboxrect	VML	CT_Path	attribute	@textboxrect	string	optional			.	.	.	.	.
-v:CT_Path/@fillok	VML	CT_Path	attribute	@fillok	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Path/@strokeok	VML	CT_Path	attribute	@strokeok	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Path/@shadowok	VML	CT_Path	attribute	@shadowok	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Path/@arrowok	VML	CT_Path	attribute	@arrowok	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Path/@gradientshapeok	VML	CT_Path	attribute	@gradientshapeok	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Path/@textpathok	VML	CT_Path	attribute	@textpathok	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Path/@insetpenok	VML	CT_Path	attribute	@insetpenok	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Path/@o:connecttype	VML	CT_Path	attribute	@o:connecttype	connecttype	optional			.	.	.	.	.
-v:CT_Path/@o:connectlocs	VML	CT_Path	attribute	@o:connectlocs	connectlocs	optional			.	.	.	.	.
-v:CT_Path/@o:connectangles	VML	CT_Path	attribute	@o:connectangles	connectangles	optional			.	.	.	.	.
-v:CT_Path/@o:extrusionok	VML	CT_Path	attribute	@o:extrusionok	extrusionok	optional			.	.	.	.	.
-v:CT_Shadow	VML		type	CT_Shadow					.	.	.	.	.
-v:CT_Shadow/AG_Id	VML	CT_Shadow	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_Shadow/@on	VML	CT_Shadow	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Shadow/@type	VML	CT_Shadow	attribute	@type	ST_ShadowType	optional			.	.	.	.	.
-v:CT_Shadow/@obscured	VML	CT_Shadow	attribute	@obscured	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_Shadow/@color	VML	CT_Shadow	attribute	@color	ST_ColorType	optional			.	.	.	.	.
-v:CT_Shadow/@opacity	VML	CT_Shadow	attribute	@opacity	string	optional			.	.	.	.	.
-v:CT_Shadow/@offset	VML	CT_Shadow	attribute	@offset	string	optional			.	.	.	.	.
-v:CT_Shadow/@color2	VML	CT_Shadow	attribute	@color2	ST_ColorType	optional			.	.	.	.	.
-v:CT_Shadow/@offset2	VML	CT_Shadow	attribute	@offset2	string	optional			.	.	.	.	.
-v:CT_Shadow/@origin	VML	CT_Shadow	attribute	@origin	string	optional			.	.	.	.	.
-v:CT_Shadow/@matrix	VML	CT_Shadow	attribute	@matrix	string	optional			.	.	.	.	.
-v:CT_Stroke	VML		type	CT_Stroke					.	.	.	.	.
-v:CT_Stroke/o:left	VML	CT_Stroke	element	o:left	left	0..1			.	.	.	.	.
-v:CT_Stroke/o:top	VML	CT_Stroke	element	o:top	top	0..1			.	.	.	.	.
-v:CT_Stroke/o:right	VML	CT_Stroke	element	o:right	right	0..1			.	.	.	.	.
-v:CT_Stroke/o:bottom	VML	CT_Stroke	element	o:bottom	bottom	0..1			.	.	.	.	.
-v:CT_Stroke/o:column	VML	CT_Stroke	element	o:column	column	0..1			.	.	.	.	.
-v:CT_Stroke/AG_Id	VML	CT_Stroke	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_Stroke/AG_StrokeAttributes	VML	CT_Stroke	attrgroup	AG_StrokeAttributes	AG_StrokeAttributes				.	.	.	.	.
-v:CT_Textbox	VML		type	CT_Textbox					.	.	.	.	.
-v:CT_Textbox/w:txbxContent	VML	CT_Textbox	element	w:txbxContent	txbxContent	0..1			.	.	.	.	.
-v:CT_Textbox/xsd:any	VML	CT_Textbox	any	xsd:any	##local			skip	.	.	.	.	.
-v:CT_Textbox/AG_Id	VML	CT_Textbox	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_Textbox/AG_Style	VML	CT_Textbox	attrgroup	AG_Style	AG_Style				.	.	.	.	.
-v:CT_Textbox/@inset	VML	CT_Textbox	attribute	@inset	string	optional			.	.	.	.	.
-v:CT_Textbox/@o:singleclick	VML	CT_Textbox	attribute	@o:singleclick	singleclick	optional			.	.	.	.	.
-v:CT_Textbox/@o:insetmode	VML	CT_Textbox	attribute	@o:insetmode	insetmode	optional			.	.	.	.	.
-v:CT_TextPath	VML		type	CT_TextPath					.	.	.	.	.
-v:CT_TextPath/AG_Id	VML	CT_TextPath	attrgroup	AG_Id	AG_Id				.	.	.	.	.
-v:CT_TextPath/AG_Style	VML	CT_TextPath	attrgroup	AG_Style	AG_Style				.	.	.	.	.
-v:CT_TextPath/@on	VML	CT_TextPath	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_TextPath/@fitshape	VML	CT_TextPath	attribute	@fitshape	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_TextPath/@fitpath	VML	CT_TextPath	attribute	@fitpath	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_TextPath/@trim	VML	CT_TextPath	attribute	@trim	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_TextPath/@xscale	VML	CT_TextPath	attribute	@xscale	ST_TrueFalse	optional			.	.	.	.	.
-v:CT_TextPath/@string	VML	CT_TextPath	attribute	@string	string	optional			.	.	.	.	.
-v:<arc>	VML		root	<arc>	CT_Arc				.	.	.	.	.
-v:<curve>	VML		root	<curve>	CT_Curve				.	.	.	.	.
-v:<image>	VML		root	<image>	CT_Image				.	.	.	.	.
-v:<line>	VML		root	<line>	CT_Line				.	.	.	.	.
-v:<oval>	VML		root	<oval>	CT_Oval				.	.	.	.	.
-v:<polyline>	VML		root	<polyline>	CT_PolyLine				.	.	.	.	.
-v:<rect>	VML		root	<rect>	CT_Rect				.	.	.	.	.
-v:<roundrect>	VML		root	<roundrect>	CT_RoundRect				.	.	.	.	.
-v:CT_Arc	VML		type	CT_Arc					.	.	.	.	.
-v:CT_Arc/EG_ShapeElements	VML	CT_Arc	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_Arc/AG_AllCoreAttributes	VML	CT_Arc	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Arc/AG_AllShapeAttributes	VML	CT_Arc	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_Arc/@startAngle	VML	CT_Arc	attribute	@startAngle	decimal	optional			.	.	.	.	.
-v:CT_Arc/@endAngle	VML	CT_Arc	attribute	@endAngle	decimal	optional			.	.	.	.	.
-v:CT_Curve	VML		type	CT_Curve					.	.	.	.	.
-v:CT_Curve/EG_ShapeElements	VML	CT_Curve	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_Curve/AG_AllCoreAttributes	VML	CT_Curve	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Curve/AG_AllShapeAttributes	VML	CT_Curve	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_Curve/@from	VML	CT_Curve	attribute	@from	string	optional			.	.	.	.	.
-v:CT_Curve/@control1	VML	CT_Curve	attribute	@control1	string	optional			.	.	.	.	.
-v:CT_Curve/@control2	VML	CT_Curve	attribute	@control2	string	optional			.	.	.	.	.
-v:CT_Curve/@to	VML	CT_Curve	attribute	@to	string	optional			.	.	.	.	.
-v:CT_Image	VML		type	CT_Image					.	.	.	.	.
-v:CT_Image/EG_ShapeElements	VML	CT_Image	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_Image/AG_AllCoreAttributes	VML	CT_Image	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Image/AG_AllShapeAttributes	VML	CT_Image	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_Image/AG_ImageAttributes	VML	CT_Image	attrgroup	AG_ImageAttributes	AG_ImageAttributes				.	.	.	.	.
-v:CT_Line	VML		type	CT_Line					.	.	.	.	.
-v:CT_Line/EG_ShapeElements	VML	CT_Line	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_Line/AG_AllCoreAttributes	VML	CT_Line	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Line/AG_AllShapeAttributes	VML	CT_Line	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_Line/@from	VML	CT_Line	attribute	@from	string	optional			.	.	.	.	.
-v:CT_Line/@to	VML	CT_Line	attribute	@to	string	optional			.	.	.	.	.
-v:CT_Oval	VML		type	CT_Oval					.	.	.	.	.
-v:CT_Oval/EG_ShapeElements	VML	CT_Oval	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_Oval/AG_AllCoreAttributes	VML	CT_Oval	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Oval/AG_AllShapeAttributes	VML	CT_Oval	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_PolyLine	VML		type	CT_PolyLine					.	.	.	.	.
-v:CT_PolyLine/EG_ShapeElements	VML	CT_PolyLine	group	EG_ShapeElements	EG_ShapeElements	choice			.	.	.	.	.
-v:CT_PolyLine/o:ink	VML	CT_PolyLine	element	o:ink	ink	choice			.	.	.	.	.
-v:CT_PolyLine/AG_AllCoreAttributes	VML	CT_PolyLine	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_PolyLine/AG_AllShapeAttributes	VML	CT_PolyLine	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_PolyLine/@points	VML	CT_PolyLine	attribute	@points	string	optional			.	.	.	.	.
-v:CT_Rect	VML		type	CT_Rect					.	.	.	.	.
-v:CT_Rect/EG_ShapeElements	VML	CT_Rect	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_Rect/AG_AllCoreAttributes	VML	CT_Rect	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_Rect/AG_AllShapeAttributes	VML	CT_Rect	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_RoundRect	VML		type	CT_RoundRect					.	.	.	.	.
-v:CT_RoundRect/EG_ShapeElements	VML	CT_RoundRect	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			.	.	.	.	.
-v:CT_RoundRect/AG_AllCoreAttributes	VML	CT_RoundRect	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				.	.	.	.	.
-v:CT_RoundRect/AG_AllShapeAttributes	VML	CT_RoundRect	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				.	.	.	.	.
-v:CT_RoundRect/@arcsize	VML	CT_RoundRect	attribute	@arcsize	string	optional			.	.	.	.	.
-v:ST_Ext	VML		simple	ST_Ext				base=string	.	.	.	.	.
-v:ST_Ext/=view	VML	ST_Ext	value	=view					.	.	.	.	.
-v:ST_Ext/=edit	VML	ST_Ext	value	=edit					.	.	.	.	.
-v:ST_Ext/=backwardCompatible	VML	ST_Ext	value	=backwardCompatible					.	.	.	.	.
-v:ST_FillType	VML		simple	ST_FillType				base=string	.	.	.	.	.
-v:ST_FillType/=solid	VML	ST_FillType	value	=solid					.	.	.	.	.
-v:ST_FillType/=gradient	VML	ST_FillType	value	=gradient					.	.	.	.	.
-v:ST_FillType/=gradientRadial	VML	ST_FillType	value	=gradientRadial					.	.	.	.	.
-v:ST_FillType/=tile	VML	ST_FillType	value	=tile					.	.	.	.	.
-v:ST_FillType/=pattern	VML	ST_FillType	value	=pattern					.	.	.	.	.
-v:ST_FillType/=frame	VML	ST_FillType	value	=frame					.	.	.	.	.
-v:ST_FillMethod	VML		simple	ST_FillMethod				base=string	.	.	.	.	.
-v:ST_FillMethod/=none	VML	ST_FillMethod	value	=none					.	.	.	.	.
-v:ST_FillMethod/=linear	VML	ST_FillMethod	value	=linear					.	.	.	.	.
-v:ST_FillMethod/=sigma	VML	ST_FillMethod	value	=sigma					.	.	.	.	.
-v:ST_FillMethod/=any	VML	ST_FillMethod	value	=any					.	.	.	.	.
-v:ST_FillMethod/=linear sigma	VML	ST_FillMethod	value	=linear sigma					.	.	.	.	.
-v:ST_ShadowType	VML		simple	ST_ShadowType				base=string	.	.	.	.	.
-v:ST_ShadowType/=single	VML	ST_ShadowType	value	=single					.	.	.	.	.
-v:ST_ShadowType/=double	VML	ST_ShadowType	value	=double					.	.	.	.	.
-v:ST_ShadowType/=emboss	VML	ST_ShadowType	value	=emboss					.	.	.	.	.
-v:ST_ShadowType/=perspective	VML	ST_ShadowType	value	=perspective					.	.	.	.	.
-v:ST_StrokeLineStyle	VML		simple	ST_StrokeLineStyle				base=string	.	.	.	.	.
-v:ST_StrokeLineStyle/=single	VML	ST_StrokeLineStyle	value	=single					.	.	.	.	.
-v:ST_StrokeLineStyle/=thinThin	VML	ST_StrokeLineStyle	value	=thinThin					.	.	.	.	.
-v:ST_StrokeLineStyle/=thinThick	VML	ST_StrokeLineStyle	value	=thinThick					.	.	.	.	.
-v:ST_StrokeLineStyle/=thickThin	VML	ST_StrokeLineStyle	value	=thickThin					.	.	.	.	.
-v:ST_StrokeLineStyle/=thickBetweenThin	VML	ST_StrokeLineStyle	value	=thickBetweenThin					.	.	.	.	.
-v:ST_StrokeJoinStyle	VML		simple	ST_StrokeJoinStyle				base=string	.	.	.	.	.
-v:ST_StrokeJoinStyle/=round	VML	ST_StrokeJoinStyle	value	=round					.	.	.	.	.
-v:ST_StrokeJoinStyle/=bevel	VML	ST_StrokeJoinStyle	value	=bevel					.	.	.	.	.
-v:ST_StrokeJoinStyle/=miter	VML	ST_StrokeJoinStyle	value	=miter					.	.	.	.	.
-v:ST_StrokeEndCap	VML		simple	ST_StrokeEndCap				base=string	.	.	.	.	.
-v:ST_StrokeEndCap/=flat	VML	ST_StrokeEndCap	value	=flat					.	.	.	.	.
-v:ST_StrokeEndCap/=square	VML	ST_StrokeEndCap	value	=square					.	.	.	.	.
-v:ST_StrokeEndCap/=round	VML	ST_StrokeEndCap	value	=round					.	.	.	.	.
-v:ST_StrokeArrowLength	VML		simple	ST_StrokeArrowLength				base=string	.	.	.	.	.
-v:ST_StrokeArrowLength/=short	VML	ST_StrokeArrowLength	value	=short					.	.	.	.	.
-v:ST_StrokeArrowLength/=medium	VML	ST_StrokeArrowLength	value	=medium					.	.	.	.	.
-v:ST_StrokeArrowLength/=long	VML	ST_StrokeArrowLength	value	=long					.	.	.	.	.
-v:ST_StrokeArrowWidth	VML		simple	ST_StrokeArrowWidth				base=string	.	.	.	.	.
-v:ST_StrokeArrowWidth/=narrow	VML	ST_StrokeArrowWidth	value	=narrow					.	.	.	.	.
-v:ST_StrokeArrowWidth/=medium	VML	ST_StrokeArrowWidth	value	=medium					.	.	.	.	.
-v:ST_StrokeArrowWidth/=wide	VML	ST_StrokeArrowWidth	value	=wide					.	.	.	.	.
-v:ST_StrokeArrowType	VML		simple	ST_StrokeArrowType				base=string	.	.	.	.	.
-v:ST_StrokeArrowType/=none	VML	ST_StrokeArrowType	value	=none					.	.	.	.	.
-v:ST_StrokeArrowType/=block	VML	ST_StrokeArrowType	value	=block					.	.	.	.	.
-v:ST_StrokeArrowType/=classic	VML	ST_StrokeArrowType	value	=classic					.	.	.	.	.
-v:ST_StrokeArrowType/=oval	VML	ST_StrokeArrowType	value	=oval					.	.	.	.	.
-v:ST_StrokeArrowType/=diamond	VML	ST_StrokeArrowType	value	=diamond					.	.	.	.	.
-v:ST_StrokeArrowType/=open	VML	ST_StrokeArrowType	value	=open					.	.	.	.	.
-v:ST_ImageAspect	VML		simple	ST_ImageAspect				base=string	.	.	.	.	.
-v:ST_ImageAspect/=ignore	VML	ST_ImageAspect	value	=ignore					.	.	.	.	.
-v:ST_ImageAspect/=atMost	VML	ST_ImageAspect	value	=atMost					.	.	.	.	.
-v:ST_ImageAspect/=atLeast	VML	ST_ImageAspect	value	=atLeast					.	.	.	.	.
-v:ST_EditAs	VML		simple	ST_EditAs				base=string	.	.	.	.	.
-v:ST_EditAs/=canvas	VML	ST_EditAs	value	=canvas					.	.	.	.	.
-v:ST_EditAs/=orgchart	VML	ST_EditAs	value	=orgchart					.	.	.	.	.
-v:ST_EditAs/=radial	VML	ST_EditAs	value	=radial					.	.	.	.	.
-v:ST_EditAs/=cycle	VML	ST_EditAs	value	=cycle					.	.	.	.	.
-v:ST_EditAs/=stacked	VML	ST_EditAs	value	=stacked					.	.	.	.	.
-v:ST_EditAs/=venn	VML	ST_EditAs	value	=venn					.	.	.	.	.
-v:ST_EditAs/=bullseye	VML	ST_EditAs	value	=bullseye					.	.	.	.	.
-o:@bwmode	VML		rootattr	@bwmode	ST_BWMode	optional			.	.	.	.	.
-o:@bwpure	VML		rootattr	@bwpure	ST_BWMode	optional			.	.	.	.	.
-o:@bwnormal	VML		rootattr	@bwnormal	ST_BWMode	optional			.	.	.	.	.
-o:@targetscreensize	VML		rootattr	@targetscreensize	ST_ScreenSize	optional			.	.	.	.	.
-o:@insetmode	VML		rootattr	@insetmode	ST_InsetMode	optional	custom		.	.	.	.	.
-o:@spt	VML		rootattr	@spt	float	optional			.	.	.	.	.
-o:@wrapcoords	VML		rootattr	@wrapcoords	string	optional			.	.	.	.	.
-o:@oned	VML		rootattr	@oned	ST_TrueFalse	optional			.	.	.	.	.
-o:@regroupid	VML		rootattr	@regroupid	integer	optional			.	.	.	.	.
-o:@doubleclicknotify	VML		rootattr	@doubleclicknotify	ST_TrueFalse	optional			.	.	.	.	.
-o:@connectortype	VML		rootattr	@connectortype	ST_ConnectorType	optional	straight		.	.	.	.	.
-o:@button	VML		rootattr	@button	ST_TrueFalse	optional			.	.	.	.	.
-o:@userhidden	VML		rootattr	@userhidden	ST_TrueFalse	optional			.	.	.	.	.
-o:@forcedash	VML		rootattr	@forcedash	ST_TrueFalse	optional			.	.	.	.	.
-o:@oleicon	VML		rootattr	@oleicon	ST_TrueFalse	optional			.	.	.	.	.
-o:@ole	VML		rootattr	@ole	ST_TrueFalseBlank	optional			.	.	.	.	.
-o:@preferrelative	VML		rootattr	@preferrelative	ST_TrueFalse	optional			.	.	.	.	.
-o:@cliptowrap	VML		rootattr	@cliptowrap	ST_TrueFalse	optional			.	.	.	.	.
-o:@clip	VML		rootattr	@clip	ST_TrueFalse	optional			.	.	.	.	.
-o:@bullet	VML		rootattr	@bullet	ST_TrueFalse	optional			.	.	.	.	.
-o:@hr	VML		rootattr	@hr	ST_TrueFalse	optional			.	.	.	.	.
-o:@hrstd	VML		rootattr	@hrstd	ST_TrueFalse	optional			.	.	.	.	.
-o:@hrnoshade	VML		rootattr	@hrnoshade	ST_TrueFalse	optional			.	.	.	.	.
-o:@hrpct	VML		rootattr	@hrpct	float	optional			.	.	.	.	.
-o:@hralign	VML		rootattr	@hralign	ST_HrAlign	optional	left		.	.	.	.	.
-o:@allowincell	VML		rootattr	@allowincell	ST_TrueFalse	optional			.	.	.	.	.
-o:@allowoverlap	VML		rootattr	@allowoverlap	ST_TrueFalse	optional			.	.	.	.	.
-o:@userdrawn	VML		rootattr	@userdrawn	ST_TrueFalse	optional			.	.	.	.	.
-o:@bordertopcolor	VML		rootattr	@bordertopcolor	string	optional			.	.	.	.	.
-o:@borderleftcolor	VML		rootattr	@borderleftcolor	string	optional			.	.	.	.	.
-o:@borderbottomcolor	VML		rootattr	@borderbottomcolor	string	optional			.	.	.	.	.
-o:@borderrightcolor	VML		rootattr	@borderrightcolor	string	optional			.	.	.	.	.
-o:@connecttype	VML		rootattr	@connecttype	ST_ConnectType	optional			.	.	.	.	.
-o:@connectlocs	VML		rootattr	@connectlocs	string	optional			.	.	.	.	.
-o:@connectangles	VML		rootattr	@connectangles	string	optional			.	.	.	.	.
-o:@master	VML		rootattr	@master	string	optional			.	.	.	.	.
-o:@extrusionok	VML		rootattr	@extrusionok	ST_TrueFalse	optional			.	.	.	.	.
-o:@href	VML		rootattr	@href	string	optional			.	.	.	.	.
-o:@althref	VML		rootattr	@althref	string	optional			.	.	.	.	.
-o:@title	VML		rootattr	@title	string	optional			.	.	.	.	.
-o:@singleclick	VML		rootattr	@singleclick	ST_TrueFalse	optional			.	.	.	.	.
-o:@oleid	VML		rootattr	@oleid	float	optional			.	.	.	.	.
-o:@detectmouseclick	VML		rootattr	@detectmouseclick	ST_TrueFalse	optional			.	.	.	.	.
-o:@movie	VML		rootattr	@movie	float	optional			.	.	.	.	.
-o:@spid	VML		rootattr	@spid	string	optional			.	.	.	.	.
-o:@opacity2	VML		rootattr	@opacity2	string	optional			.	.	.	.	.
-o:@relid	VML		rootattr	@relid	ST_RelationshipId	optional			.	.	.	.	.
-o:@dgmlayout	VML		rootattr	@dgmlayout	ST_DiagramLayout	optional			.	.	.	.	.
-o:@dgmnodekind	VML		rootattr	@dgmnodekind	integer	optional			.	.	.	.	.
-o:@dgmlayoutmru	VML		rootattr	@dgmlayoutmru	ST_DiagramLayout	optional			.	.	.	.	.
-o:@gfxdata	VML		rootattr	@gfxdata	base64Binary	optional			.	.	.	.	.
-o:@tableproperties	VML		rootattr	@tableproperties	string	optional			.	.	.	.	.
-o:@tablelimits	VML		rootattr	@tablelimits	string	optional			.	.	.	.	.
-o:<shapedefaults>	VML		root	<shapedefaults>	CT_ShapeDefaults				.	.	.	.	.
-o:<shapelayout>	VML		root	<shapelayout>	CT_ShapeLayout				.	.	.	.	.
-o:<signatureline>	VML		root	<signatureline>	CT_SignatureLine				.	.	.	.	.
-o:<ink>	VML		root	<ink>	CT_Ink				.	.	.	.	.
-o:<diagram>	VML		root	<diagram>	CT_Diagram				.	.	.	.	.
-o:<equationxml>	VML		root	<equationxml>	CT_EquationXml				.	.	.	.	.
-o:CT_ShapeDefaults	VML		type	CT_ShapeDefaults					.	.	.	.	.
-o:CT_ShapeDefaults/v:fill	VML	CT_ShapeDefaults	element	v:fill	fill	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/v:stroke	VML	CT_ShapeDefaults	element	v:stroke	stroke	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/v:textbox	VML	CT_ShapeDefaults	element	v:textbox	textbox	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/v:shadow	VML	CT_ShapeDefaults	element	v:shadow	shadow	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/skew	VML	CT_ShapeDefaults	element	skew	skew	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/extrusion	VML	CT_ShapeDefaults	element	extrusion	extrusion	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/callout	VML	CT_ShapeDefaults	element	callout	callout	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/lock	VML	CT_ShapeDefaults	element	lock	lock	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/colormru	VML	CT_ShapeDefaults	element	colormru	CT_ColorMru	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/colormenu	VML	CT_ShapeDefaults	element	colormenu	CT_ColorMenu	0..1			.	.	.	.	.
-o:CT_ShapeDefaults/AG_Ext	VML	CT_ShapeDefaults	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_ShapeDefaults/@spidmax	VML	CT_ShapeDefaults	attribute	@spidmax	integer	optional			.	.	.	.	.
-o:CT_ShapeDefaults/@style	VML	CT_ShapeDefaults	attribute	@style	string	optional			.	.	.	.	.
-o:CT_ShapeDefaults/@fill	VML	CT_ShapeDefaults	attribute	@fill	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_ShapeDefaults/@fillcolor	VML	CT_ShapeDefaults	attribute	@fillcolor	ST_ColorType	optional			.	.	.	.	.
-o:CT_ShapeDefaults/@stroke	VML	CT_ShapeDefaults	attribute	@stroke	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_ShapeDefaults/@strokecolor	VML	CT_ShapeDefaults	attribute	@strokecolor	ST_ColorType	optional			.	.	.	.	.
-o:CT_ShapeDefaults/@allowincell	VML	CT_ShapeDefaults	attribute	@allowincell	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Ink	VML		type	CT_Ink					.	.	.	.	.
-o:CT_Ink/@i	VML	CT_Ink	attribute	@i	string	optional			.	.	.	.	.
-o:CT_Ink/@annotation	VML	CT_Ink	attribute	@annotation	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Ink/@contentType	VML	CT_Ink	attribute	@contentType	ST_ContentType	optional			.	.	.	.	.
-o:CT_SignatureLine	VML		type	CT_SignatureLine					.	.	.	.	.
-o:CT_SignatureLine/AG_Ext	VML	CT_SignatureLine	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_SignatureLine/@issignatureline	VML	CT_SignatureLine	attribute	@issignatureline	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_SignatureLine/@id	VML	CT_SignatureLine	attribute	@id	ST_Guid	optional			.	.	.	.	.
-o:CT_SignatureLine/@provid	VML	CT_SignatureLine	attribute	@provid	ST_Guid	optional			.	.	.	.	.
-o:CT_SignatureLine/@signinginstructionsset	VML	CT_SignatureLine	attribute	@signinginstructionsset	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_SignatureLine/@allowcomments	VML	CT_SignatureLine	attribute	@allowcomments	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_SignatureLine/@showsigndate	VML	CT_SignatureLine	attribute	@showsigndate	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_SignatureLine/@suggestedsigner	VML	CT_SignatureLine	attribute	@suggestedsigner	string	optional			.	.	.	.	.
-o:CT_SignatureLine/@suggestedsigner2	VML	CT_SignatureLine	attribute	@suggestedsigner2	string	optional			.	.	.	.	.
-o:CT_SignatureLine/@suggestedsigneremail	VML	CT_SignatureLine	attribute	@suggestedsigneremail	string	optional			.	.	.	.	.
-o:CT_SignatureLine/@signinginstructions	VML	CT_SignatureLine	attribute	@signinginstructions	string	optional			.	.	.	.	.
-o:CT_SignatureLine/@addlxml	VML	CT_SignatureLine	attribute	@addlxml	string	optional			.	.	.	.	.
-o:CT_SignatureLine/@sigprovurl	VML	CT_SignatureLine	attribute	@sigprovurl	string	optional			.	.	.	.	.
-o:CT_ShapeLayout	VML		type	CT_ShapeLayout					.	.	.	.	.
-o:CT_ShapeLayout/idmap	VML	CT_ShapeLayout	element	idmap	CT_IdMap	0..1			.	.	.	.	.
-o:CT_ShapeLayout/regrouptable	VML	CT_ShapeLayout	element	regrouptable	CT_RegroupTable	0..1			.	.	.	.	.
-o:CT_ShapeLayout/rules	VML	CT_ShapeLayout	element	rules	CT_Rules	0..1			.	.	.	.	.
-o:CT_ShapeLayout/AG_Ext	VML	CT_ShapeLayout	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_IdMap	VML		type	CT_IdMap					.	.	.	.	.
-o:CT_IdMap/AG_Ext	VML	CT_IdMap	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_IdMap/@data	VML	CT_IdMap	attribute	@data	string	optional			.	.	.	.	.
-o:CT_RegroupTable	VML		type	CT_RegroupTable					.	.	.	.	.
-o:CT_RegroupTable/entry	VML	CT_RegroupTable	element	entry	CT_Entry	0..unbounded			.	.	.	.	.
-o:CT_RegroupTable/AG_Ext	VML	CT_RegroupTable	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Entry	VML		type	CT_Entry					.	.	.	.	.
-o:CT_Entry/@new	VML	CT_Entry	attribute	@new	int	optional			.	.	.	.	.
-o:CT_Entry/@old	VML	CT_Entry	attribute	@old	int	optional			.	.	.	.	.
-o:CT_Rules	VML		type	CT_Rules					.	.	.	.	.
-o:CT_Rules/r	VML	CT_Rules	element	r	CT_R	0..unbounded			.	.	.	.	.
-o:CT_Rules/AG_Ext	VML	CT_Rules	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_R	VML		type	CT_R					.	.	.	.	.
-o:CT_R/proxy	VML	CT_R	element	proxy	CT_Proxy	0..unbounded			.	.	.	.	.
-o:CT_R/@id	VML	CT_R	attribute	@id	string	required			.	.	.	.	.
-o:CT_R/@type	VML	CT_R	attribute	@type	ST_RType	optional			.	.	.	.	.
-o:CT_R/@how	VML	CT_R	attribute	@how	ST_How	optional			.	.	.	.	.
-o:CT_R/@idref	VML	CT_R	attribute	@idref	string	optional			.	.	.	.	.
-o:CT_Proxy	VML		type	CT_Proxy					.	.	.	.	.
-o:CT_Proxy/@start	VML	CT_Proxy	attribute	@start	ST_TrueFalseBlank	optional	false		.	.	.	.	.
-o:CT_Proxy/@end	VML	CT_Proxy	attribute	@end	ST_TrueFalseBlank	optional	false		.	.	.	.	.
-o:CT_Proxy/@idref	VML	CT_Proxy	attribute	@idref	string	optional			.	.	.	.	.
-o:CT_Proxy/@connectloc	VML	CT_Proxy	attribute	@connectloc	int	optional			.	.	.	.	.
-o:CT_Diagram	VML		type	CT_Diagram					.	.	.	.	.
-o:CT_Diagram/relationtable	VML	CT_Diagram	element	relationtable	CT_RelationTable	0..1			.	.	.	.	.
-o:CT_Diagram/AG_Ext	VML	CT_Diagram	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Diagram/@dgmstyle	VML	CT_Diagram	attribute	@dgmstyle	integer	optional			.	.	.	.	.
-o:CT_Diagram/@autoformat	VML	CT_Diagram	attribute	@autoformat	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Diagram/@reverse	VML	CT_Diagram	attribute	@reverse	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Diagram/@autolayout	VML	CT_Diagram	attribute	@autolayout	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Diagram/@dgmscalex	VML	CT_Diagram	attribute	@dgmscalex	integer	optional			.	.	.	.	.
-o:CT_Diagram/@dgmscaley	VML	CT_Diagram	attribute	@dgmscaley	integer	optional			.	.	.	.	.
-o:CT_Diagram/@dgmfontsize	VML	CT_Diagram	attribute	@dgmfontsize	integer	optional			.	.	.	.	.
-o:CT_Diagram/@constrainbounds	VML	CT_Diagram	attribute	@constrainbounds	string	optional			.	.	.	.	.
-o:CT_Diagram/@dgmbasetextscale	VML	CT_Diagram	attribute	@dgmbasetextscale	integer	optional			.	.	.	.	.
-o:CT_EquationXml	VML		type	CT_EquationXml					.	.	.	.	.
-o:CT_EquationXml/xsd:any	VML	CT_EquationXml	any	xsd:any	##any				.	.	.	.	.
-o:CT_EquationXml/@contentType	VML	CT_EquationXml	attribute	@contentType	ST_AlternateMathContentType	optional			.	.	.	.	.
-o:ST_AlternateMathContentType	VML		simple	ST_AlternateMathContentType				base=string	.	.	.	.	.
-o:CT_RelationTable	VML		type	CT_RelationTable					.	.	.	.	.
-o:CT_RelationTable/rel	VML	CT_RelationTable	element	rel	CT_Relation	0..unbounded			.	.	.	.	.
-o:CT_RelationTable/AG_Ext	VML	CT_RelationTable	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Relation	VML		type	CT_Relation					.	.	.	.	.
-o:CT_Relation/AG_Ext	VML	CT_Relation	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Relation/@idsrc	VML	CT_Relation	attribute	@idsrc	string	optional			.	.	.	.	.
-o:CT_Relation/@iddest	VML	CT_Relation	attribute	@iddest	string	optional			.	.	.	.	.
-o:CT_Relation/@idcntr	VML	CT_Relation	attribute	@idcntr	string	optional			.	.	.	.	.
-o:CT_ColorMru	VML		type	CT_ColorMru					.	.	.	.	.
-o:CT_ColorMru/AG_Ext	VML	CT_ColorMru	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_ColorMru/@colors	VML	CT_ColorMru	attribute	@colors	string	optional			.	.	.	.	.
-o:CT_ColorMenu	VML		type	CT_ColorMenu					.	.	.	.	.
-o:CT_ColorMenu/AG_Ext	VML	CT_ColorMenu	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_ColorMenu/@strokecolor	VML	CT_ColorMenu	attribute	@strokecolor	ST_ColorType	optional			.	.	.	.	.
-o:CT_ColorMenu/@fillcolor	VML	CT_ColorMenu	attribute	@fillcolor	ST_ColorType	optional			.	.	.	.	.
-o:CT_ColorMenu/@shadowcolor	VML	CT_ColorMenu	attribute	@shadowcolor	ST_ColorType	optional			.	.	.	.	.
-o:CT_ColorMenu/@extrusioncolor	VML	CT_ColorMenu	attribute	@extrusioncolor	ST_ColorType	optional			.	.	.	.	.
-o:<skew>	VML		root	<skew>	CT_Skew				.	.	.	.	.
-o:<extrusion>	VML		root	<extrusion>	CT_Extrusion				.	.	.	.	.
-o:<callout>	VML		root	<callout>	CT_Callout				.	.	.	.	.
-o:<lock>	VML		root	<lock>	CT_Lock				.	.	.	.	.
-o:<OLEObject>	VML		root	<OLEObject>	CT_OLEObject				.	.	.	.	.
-o:<complex>	VML		root	<complex>	CT_Complex				.	.	.	.	.
-o:<left>	VML		root	<left>	CT_StrokeChild				.	.	.	.	.
-o:<top>	VML		root	<top>	CT_StrokeChild				.	.	.	.	.
-o:<right>	VML		root	<right>	CT_StrokeChild				.	.	.	.	.
-o:<bottom>	VML		root	<bottom>	CT_StrokeChild				.	.	.	.	.
-o:<column>	VML		root	<column>	CT_StrokeChild				.	.	.	.	.
-o:<clippath>	VML		root	<clippath>	CT_ClipPath				.	.	.	.	.
-o:<fill>	VML		root	<fill>	CT_Fill				.	.	.	.	.
-o:CT_Skew	VML		type	CT_Skew					.	.	.	.	.
-o:CT_Skew/AG_Ext	VML	CT_Skew	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Skew/@id	VML	CT_Skew	attribute	@id	string	optional			.	.	.	.	.
-o:CT_Skew/@on	VML	CT_Skew	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Skew/@offset	VML	CT_Skew	attribute	@offset	string	optional			.	.	.	.	.
-o:CT_Skew/@origin	VML	CT_Skew	attribute	@origin	string	optional			.	.	.	.	.
-o:CT_Skew/@matrix	VML	CT_Skew	attribute	@matrix	string	optional			.	.	.	.	.
-o:CT_Extrusion	VML		type	CT_Extrusion					.	.	.	.	.
-o:CT_Extrusion/AG_Ext	VML	CT_Extrusion	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Extrusion/@on	VML	CT_Extrusion	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Extrusion/@type	VML	CT_Extrusion	attribute	@type	ST_ExtrusionType	optional	parallel		.	.	.	.	.
-o:CT_Extrusion/@render	VML	CT_Extrusion	attribute	@render	ST_ExtrusionRender	optional	solid		.	.	.	.	.
-o:CT_Extrusion/@viewpointorigin	VML	CT_Extrusion	attribute	@viewpointorigin	string	optional			.	.	.	.	.
-o:CT_Extrusion/@viewpoint	VML	CT_Extrusion	attribute	@viewpoint	string	optional			.	.	.	.	.
-o:CT_Extrusion/@plane	VML	CT_Extrusion	attribute	@plane	ST_ExtrusionPlane	optional	XY		.	.	.	.	.
-o:CT_Extrusion/@skewangle	VML	CT_Extrusion	attribute	@skewangle	float	optional			.	.	.	.	.
-o:CT_Extrusion/@skewamt	VML	CT_Extrusion	attribute	@skewamt	string	optional			.	.	.	.	.
-o:CT_Extrusion/@foredepth	VML	CT_Extrusion	attribute	@foredepth	string	optional			.	.	.	.	.
-o:CT_Extrusion/@backdepth	VML	CT_Extrusion	attribute	@backdepth	string	optional			.	.	.	.	.
-o:CT_Extrusion/@orientation	VML	CT_Extrusion	attribute	@orientation	string	optional			.	.	.	.	.
-o:CT_Extrusion/@orientationangle	VML	CT_Extrusion	attribute	@orientationangle	float	optional			.	.	.	.	.
-o:CT_Extrusion/@lockrotationcenter	VML	CT_Extrusion	attribute	@lockrotationcenter	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Extrusion/@autorotationcenter	VML	CT_Extrusion	attribute	@autorotationcenter	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Extrusion/@rotationcenter	VML	CT_Extrusion	attribute	@rotationcenter	string	optional			.	.	.	.	.
-o:CT_Extrusion/@rotationangle	VML	CT_Extrusion	attribute	@rotationangle	string	optional			.	.	.	.	.
-o:CT_Extrusion/@colormode	VML	CT_Extrusion	attribute	@colormode	ST_ColorMode	optional			.	.	.	.	.
-o:CT_Extrusion/@color	VML	CT_Extrusion	attribute	@color	ST_ColorType	optional			.	.	.	.	.
-o:CT_Extrusion/@shininess	VML	CT_Extrusion	attribute	@shininess	float	optional			.	.	.	.	.
-o:CT_Extrusion/@specularity	VML	CT_Extrusion	attribute	@specularity	string	optional			.	.	.	.	.
-o:CT_Extrusion/@diffusity	VML	CT_Extrusion	attribute	@diffusity	string	optional			.	.	.	.	.
-o:CT_Extrusion/@metal	VML	CT_Extrusion	attribute	@metal	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Extrusion/@edge	VML	CT_Extrusion	attribute	@edge	string	optional			.	.	.	.	.
-o:CT_Extrusion/@facet	VML	CT_Extrusion	attribute	@facet	string	optional			.	.	.	.	.
-o:CT_Extrusion/@lightface	VML	CT_Extrusion	attribute	@lightface	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Extrusion/@brightness	VML	CT_Extrusion	attribute	@brightness	string	optional			.	.	.	.	.
-o:CT_Extrusion/@lightposition	VML	CT_Extrusion	attribute	@lightposition	string	optional			.	.	.	.	.
-o:CT_Extrusion/@lightlevel	VML	CT_Extrusion	attribute	@lightlevel	string	optional			.	.	.	.	.
-o:CT_Extrusion/@lightharsh	VML	CT_Extrusion	attribute	@lightharsh	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Extrusion/@lightposition2	VML	CT_Extrusion	attribute	@lightposition2	string	optional			.	.	.	.	.
-o:CT_Extrusion/@lightlevel2	VML	CT_Extrusion	attribute	@lightlevel2	string	optional			.	.	.	.	.
-o:CT_Extrusion/@lightharsh2	VML	CT_Extrusion	attribute	@lightharsh2	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Callout	VML		type	CT_Callout					.	.	.	.	.
-o:CT_Callout/AG_Ext	VML	CT_Callout	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Callout/@on	VML	CT_Callout	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Callout/@type	VML	CT_Callout	attribute	@type	string	optional			.	.	.	.	.
-o:CT_Callout/@gap	VML	CT_Callout	attribute	@gap	string	optional			.	.	.	.	.
-o:CT_Callout/@angle	VML	CT_Callout	attribute	@angle	ST_Angle	optional			.	.	.	.	.
-o:CT_Callout/@dropauto	VML	CT_Callout	attribute	@dropauto	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Callout/@drop	VML	CT_Callout	attribute	@drop	ST_CalloutDrop	optional			.	.	.	.	.
-o:CT_Callout/@distance	VML	CT_Callout	attribute	@distance	string	optional			.	.	.	.	.
-o:CT_Callout/@lengthspecified	VML	CT_Callout	attribute	@lengthspecified	ST_TrueFalse	optional	f		.	.	.	.	.
-o:CT_Callout/@length	VML	CT_Callout	attribute	@length	string	optional			.	.	.	.	.
-o:CT_Callout/@accentbar	VML	CT_Callout	attribute	@accentbar	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Callout/@textborder	VML	CT_Callout	attribute	@textborder	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Callout/@minusx	VML	CT_Callout	attribute	@minusx	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Callout/@minusy	VML	CT_Callout	attribute	@minusy	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock	VML		type	CT_Lock					.	.	.	.	.
-o:CT_Lock/AG_Ext	VML	CT_Lock	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Lock/@position	VML	CT_Lock	attribute	@position	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@selection	VML	CT_Lock	attribute	@selection	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@grouping	VML	CT_Lock	attribute	@grouping	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@ungrouping	VML	CT_Lock	attribute	@ungrouping	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@rotation	VML	CT_Lock	attribute	@rotation	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@cropping	VML	CT_Lock	attribute	@cropping	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@verticies	VML	CT_Lock	attribute	@verticies	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@adjusthandles	VML	CT_Lock	attribute	@adjusthandles	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@text	VML	CT_Lock	attribute	@text	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@aspectratio	VML	CT_Lock	attribute	@aspectratio	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_Lock/@shapetype	VML	CT_Lock	attribute	@shapetype	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_OLEObject	VML		type	CT_OLEObject					.	.	.	.	.
-o:CT_OLEObject/LinkType	VML	CT_OLEObject	element	LinkType	ST_OLELinkType	0..1			.	.	.	.	.
-o:CT_OLEObject/LockedField	VML	CT_OLEObject	element	LockedField	ST_TrueFalseBlank	0..1			.	.	.	.	.
-o:CT_OLEObject/FieldCodes	VML	CT_OLEObject	element	FieldCodes	string	0..1			.	.	.	.	.
-o:CT_OLEObject/@Type	VML	CT_OLEObject	attribute	@Type	ST_OLEType	optional			.	.	.	.	.
-o:CT_OLEObject/@ProgID	VML	CT_OLEObject	attribute	@ProgID	string	optional			.	.	.	.	.
-o:CT_OLEObject/@ShapeID	VML	CT_OLEObject	attribute	@ShapeID	string	optional			.	.	.	.	.
-o:CT_OLEObject/@DrawAspect	VML	CT_OLEObject	attribute	@DrawAspect	ST_OLEDrawAspect	optional			.	.	.	.	.
-o:CT_OLEObject/@ObjectID	VML	CT_OLEObject	attribute	@ObjectID	string	optional			.	.	.	.	.
-o:CT_OLEObject/@r:id	VML	CT_OLEObject	attribute	@r:id	id	optional			.	.	.	.	.
-o:CT_OLEObject/@UpdateMode	VML	CT_OLEObject	attribute	@UpdateMode	ST_OLEUpdateMode	optional			.	.	.	.	.
-o:CT_Complex	VML		type	CT_Complex					.	.	.	.	.
-o:CT_Complex/AG_Ext	VML	CT_Complex	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_StrokeChild	VML		type	CT_StrokeChild					.	.	.	.	.
-o:CT_StrokeChild/AG_Ext	VML	CT_StrokeChild	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_StrokeChild/@on	VML	CT_StrokeChild	attribute	@on	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_StrokeChild/@weight	VML	CT_StrokeChild	attribute	@weight	string	optional			.	.	.	.	.
-o:CT_StrokeChild/@color	VML	CT_StrokeChild	attribute	@color	ST_ColorType	optional			.	.	.	.	.
-o:CT_StrokeChild/@color2	VML	CT_StrokeChild	attribute	@color2	ST_ColorType	optional			.	.	.	.	.
-o:CT_StrokeChild/@opacity	VML	CT_StrokeChild	attribute	@opacity	string	optional			.	.	.	.	.
-o:CT_StrokeChild/@linestyle	VML	CT_StrokeChild	attribute	@linestyle	ST_StrokeLineStyle	optional			.	.	.	.	.
-o:CT_StrokeChild/@miterlimit	VML	CT_StrokeChild	attribute	@miterlimit	decimal	optional			.	.	.	.	.
-o:CT_StrokeChild/@joinstyle	VML	CT_StrokeChild	attribute	@joinstyle	ST_StrokeJoinStyle	optional			.	.	.	.	.
-o:CT_StrokeChild/@endcap	VML	CT_StrokeChild	attribute	@endcap	ST_StrokeEndCap	optional			.	.	.	.	.
-o:CT_StrokeChild/@dashstyle	VML	CT_StrokeChild	attribute	@dashstyle	string	optional			.	.	.	.	.
-o:CT_StrokeChild/@insetpen	VML	CT_StrokeChild	attribute	@insetpen	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_StrokeChild/@filltype	VML	CT_StrokeChild	attribute	@filltype	ST_FillType	optional			.	.	.	.	.
-o:CT_StrokeChild/@src	VML	CT_StrokeChild	attribute	@src	string	optional			.	.	.	.	.
-o:CT_StrokeChild/@imageaspect	VML	CT_StrokeChild	attribute	@imageaspect	ST_ImageAspect	optional			.	.	.	.	.
-o:CT_StrokeChild/@imagesize	VML	CT_StrokeChild	attribute	@imagesize	string	optional			.	.	.	.	.
-o:CT_StrokeChild/@imagealignshape	VML	CT_StrokeChild	attribute	@imagealignshape	ST_TrueFalse	optional			.	.	.	.	.
-o:CT_StrokeChild/@startarrow	VML	CT_StrokeChild	attribute	@startarrow	ST_StrokeArrowType	optional			.	.	.	.	.
-o:CT_StrokeChild/@startarrowwidth	VML	CT_StrokeChild	attribute	@startarrowwidth	ST_StrokeArrowWidth	optional			.	.	.	.	.
-o:CT_StrokeChild/@startarrowlength	VML	CT_StrokeChild	attribute	@startarrowlength	ST_StrokeArrowLength	optional			.	.	.	.	.
-o:CT_StrokeChild/@endarrow	VML	CT_StrokeChild	attribute	@endarrow	ST_StrokeArrowType	optional			.	.	.	.	.
-o:CT_StrokeChild/@endarrowwidth	VML	CT_StrokeChild	attribute	@endarrowwidth	ST_StrokeArrowWidth	optional			.	.	.	.	.
-o:CT_StrokeChild/@endarrowlength	VML	CT_StrokeChild	attribute	@endarrowlength	ST_StrokeArrowLength	optional			.	.	.	.	.
-o:CT_StrokeChild/@href	VML	CT_StrokeChild	attribute	@href	href	optional			.	.	.	.	.
-o:CT_StrokeChild/@althref	VML	CT_StrokeChild	attribute	@althref	althref	optional			.	.	.	.	.
-o:CT_StrokeChild/@title	VML	CT_StrokeChild	attribute	@title	title	optional			.	.	.	.	.
-o:CT_StrokeChild/@forcedash	VML	CT_StrokeChild	attribute	@forcedash	forcedash	optional			.	.	.	.	.
-o:CT_ClipPath	VML		type	CT_ClipPath					.	.	.	.	.
-o:CT_ClipPath/@v	VML	CT_ClipPath	attribute	@v	string	required			.	.	.	.	.
-o:CT_Fill	VML		type	CT_Fill					.	.	.	.	.
-o:CT_Fill/AG_Ext	VML	CT_Fill	attrgroup	AG_Ext	AG_Ext				.	.	.	.	.
-o:CT_Fill/@type	VML	CT_Fill	attribute	@type	ST_FillType	optional			.	.	.	.	.
-o:ST_RType	VML		simple	ST_RType				base=string	.	.	.	.	.
-o:ST_RType/=arc	VML	ST_RType	value	=arc					.	.	.	.	.
-o:ST_RType/=callout	VML	ST_RType	value	=callout					.	.	.	.	.
-o:ST_RType/=connector	VML	ST_RType	value	=connector					.	.	.	.	.
-o:ST_RType/=align	VML	ST_RType	value	=align					.	.	.	.	.
-o:ST_How	VML		simple	ST_How				base=string	.	.	.	.	.
-o:ST_How/=top	VML	ST_How	value	=top					.	.	.	.	.
-o:ST_How/=middle	VML	ST_How	value	=middle					.	.	.	.	.
-o:ST_How/=bottom	VML	ST_How	value	=bottom					.	.	.	.	.
-o:ST_How/=left	VML	ST_How	value	=left					.	.	.	.	.
-o:ST_How/=center	VML	ST_How	value	=center					.	.	.	.	.
-o:ST_How/=right	VML	ST_How	value	=right					.	.	.	.	.
-o:ST_BWMode	VML		simple	ST_BWMode				base=string	.	.	.	.	.
-o:ST_BWMode/=color	VML	ST_BWMode	value	=color					.	.	.	.	.
-o:ST_BWMode/=auto	VML	ST_BWMode	value	=auto					.	.	.	.	.
-o:ST_BWMode/=grayScale	VML	ST_BWMode	value	=grayScale					.	.	.	.	.
-o:ST_BWMode/=lightGrayscale	VML	ST_BWMode	value	=lightGrayscale					.	.	.	.	.
-o:ST_BWMode/=inverseGray	VML	ST_BWMode	value	=inverseGray					.	.	.	.	.
-o:ST_BWMode/=grayOutline	VML	ST_BWMode	value	=grayOutline					.	.	.	.	.
-o:ST_BWMode/=highContrast	VML	ST_BWMode	value	=highContrast					.	.	.	.	.
-o:ST_BWMode/=black	VML	ST_BWMode	value	=black					.	.	.	.	.
-o:ST_BWMode/=white	VML	ST_BWMode	value	=white					.	.	.	.	.
-o:ST_BWMode/=hide	VML	ST_BWMode	value	=hide					.	.	.	.	.
-o:ST_BWMode/=undrawn	VML	ST_BWMode	value	=undrawn					.	.	.	.	.
-o:ST_BWMode/=blackTextAndLines	VML	ST_BWMode	value	=blackTextAndLines					.	.	.	.	.
-o:ST_ScreenSize	VML		simple	ST_ScreenSize				base=string	.	.	.	.	.
-o:ST_ScreenSize/=544,376	VML	ST_ScreenSize	value	=544,376					.	.	.	.	.
-o:ST_ScreenSize/=640,480	VML	ST_ScreenSize	value	=640,480					.	.	.	.	.
-o:ST_ScreenSize/=720,512	VML	ST_ScreenSize	value	=720,512					.	.	.	.	.
-o:ST_ScreenSize/=800,600	VML	ST_ScreenSize	value	=800,600					.	.	.	.	.
-o:ST_ScreenSize/=1024,768	VML	ST_ScreenSize	value	=1024,768					.	.	.	.	.
-o:ST_ScreenSize/=1152,862	VML	ST_ScreenSize	value	=1152,862					.	.	.	.	.
-o:ST_InsetMode	VML		simple	ST_InsetMode				base=string	.	.	.	.	.
-o:ST_InsetMode/=auto	VML	ST_InsetMode	value	=auto					.	.	.	.	.
-o:ST_InsetMode/=custom	VML	ST_InsetMode	value	=custom					.	.	.	.	.
-o:ST_ColorMode	VML		simple	ST_ColorMode				base=string	.	.	.	.	.
-o:ST_ColorMode/=auto	VML	ST_ColorMode	value	=auto					.	.	.	.	.
-o:ST_ColorMode/=custom	VML	ST_ColorMode	value	=custom					.	.	.	.	.
-o:ST_ContentType	VML		simple	ST_ContentType				base=string	.	.	.	.	.
-o:ST_DiagramLayout	VML		simple	ST_DiagramLayout				base=integer	.	.	.	.	.
-o:ST_DiagramLayout/=0	VML	ST_DiagramLayout	value	=0					.	.	.	.	.
-o:ST_DiagramLayout/=1	VML	ST_DiagramLayout	value	=1					.	.	.	.	.
-o:ST_DiagramLayout/=2	VML	ST_DiagramLayout	value	=2					.	.	.	.	.
-o:ST_DiagramLayout/=3	VML	ST_DiagramLayout	value	=3					.	.	.	.	.
-o:ST_ExtrusionType	VML		simple	ST_ExtrusionType				base=string	.	.	.	.	.
-o:ST_ExtrusionType/=perspective	VML	ST_ExtrusionType	value	=perspective					.	.	.	.	.
-o:ST_ExtrusionType/=parallel	VML	ST_ExtrusionType	value	=parallel					.	.	.	.	.
-o:ST_ExtrusionRender	VML		simple	ST_ExtrusionRender				base=string	.	.	.	.	.
-o:ST_ExtrusionRender/=solid	VML	ST_ExtrusionRender	value	=solid					.	.	.	.	.
-o:ST_ExtrusionRender/=wireFrame	VML	ST_ExtrusionRender	value	=wireFrame					.	.	.	.	.
-o:ST_ExtrusionRender/=boundingCube	VML	ST_ExtrusionRender	value	=boundingCube					.	.	.	.	.
-o:ST_ExtrusionPlane	VML		simple	ST_ExtrusionPlane				base=string	.	.	.	.	.
-o:ST_ExtrusionPlane/=XY	VML	ST_ExtrusionPlane	value	=XY					.	.	.	.	.
-o:ST_ExtrusionPlane/=ZX	VML	ST_ExtrusionPlane	value	=ZX					.	.	.	.	.
-o:ST_ExtrusionPlane/=YZ	VML	ST_ExtrusionPlane	value	=YZ					.	.	.	.	.
-o:ST_Angle	VML		simple	ST_Angle				base=string	.	.	.	.	.
-o:ST_Angle/=any	VML	ST_Angle	value	=any					.	.	.	.	.
-o:ST_Angle/=30	VML	ST_Angle	value	=30					.	.	.	.	.
-o:ST_Angle/=45	VML	ST_Angle	value	=45					.	.	.	.	.
-o:ST_Angle/=60	VML	ST_Angle	value	=60					.	.	.	.	.
-o:ST_Angle/=90	VML	ST_Angle	value	=90					.	.	.	.	.
-o:ST_Angle/=auto	VML	ST_Angle	value	=auto					.	.	.	.	.
-o:ST_CalloutDrop	VML		simple	ST_CalloutDrop				base=string	.	.	.	.	.
+v:AG_Id	VML		type	AG_Id					r	r	r	.	.
+v:AG_Id/@id	VML	AG_Id	attribute	@id	string	optional			r	r	r	.	.
+v:AG_Style	VML		type	AG_Style					r	r	r	.	.
+v:AG_Style/@style	VML	AG_Style	attribute	@style	string	optional			r	r	r	.	.
+v:AG_Type	VML		type	AG_Type					r	r	r	.	.
+v:AG_Type/@type	VML	AG_Type	attribute	@type	string	optional			r	r	r	.	.
+v:AG_Adj	VML		type	AG_Adj					r	r	r	.	.
+v:AG_Adj/@adj	VML	AG_Adj	attribute	@adj	string	optional			r	r	r	.	.
+v:AG_Path	VML		type	AG_Path					r	r	r	.	.
+v:AG_Path/@path	VML	AG_Path	attribute	@path	string	optional			r	r	r	.	.
+v:AG_Fill	VML		type	AG_Fill					r	r	r	.	.
+v:AG_Fill/@filled	VML	AG_Fill	attribute	@filled	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_Fill/@fillcolor	VML	AG_Fill	attribute	@fillcolor	ST_ColorType	optional			r	r	r	.	.
+v:AG_Chromakey	VML		type	AG_Chromakey					r	r	r	.	.
+v:AG_Chromakey/@chromakey	VML	AG_Chromakey	attribute	@chromakey	ST_ColorType	optional			r	r	r	.	.
+v:AG_Ext	VML		type	AG_Ext					r	r	r	.	.
+v:AG_Ext/@ext	VML	AG_Ext	attribute	@ext	ST_Ext	optional			r	r	r	.	.
+v:AG_CoreAttributes	VML		type	AG_CoreAttributes					r	r	r	.	.
+v:AG_CoreAttributes/AG_Id	VML	AG_CoreAttributes	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:AG_CoreAttributes/AG_Style	VML	AG_CoreAttributes	attrgroup	AG_Style	AG_Style				r	r	r	.	.
+v:AG_CoreAttributes/@href	VML	AG_CoreAttributes	attribute	@href	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@target	VML	AG_CoreAttributes	attribute	@target	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@class	VML	AG_CoreAttributes	attribute	@class	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@title	VML	AG_CoreAttributes	attribute	@title	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@alt	VML	AG_CoreAttributes	attribute	@alt	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@coordsize	VML	AG_CoreAttributes	attribute	@coordsize	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@coordorigin	VML	AG_CoreAttributes	attribute	@coordorigin	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@wrapcoords	VML	AG_CoreAttributes	attribute	@wrapcoords	string	optional			r	r	r	.	.
+v:AG_CoreAttributes/@print	VML	AG_CoreAttributes	attribute	@print	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_ShapeAttributes	VML		type	AG_ShapeAttributes					r	r	r	.	.
+v:AG_ShapeAttributes/AG_Chromakey	VML	AG_ShapeAttributes	attrgroup	AG_Chromakey	AG_Chromakey				r	r	r	.	.
+v:AG_ShapeAttributes/AG_Fill	VML	AG_ShapeAttributes	attrgroup	AG_Fill	AG_Fill				r	r	r	.	.
+v:AG_ShapeAttributes/@opacity	VML	AG_ShapeAttributes	attribute	@opacity	string	optional			r	r	r	.	.
+v:AG_ShapeAttributes/@stroked	VML	AG_ShapeAttributes	attribute	@stroked	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_ShapeAttributes/@strokecolor	VML	AG_ShapeAttributes	attribute	@strokecolor	ST_ColorType	optional			r	r	r	.	.
+v:AG_ShapeAttributes/@strokeweight	VML	AG_ShapeAttributes	attribute	@strokeweight	string	optional			r	r	r	.	.
+v:AG_ShapeAttributes/@insetpen	VML	AG_ShapeAttributes	attribute	@insetpen	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes	VML		type	AG_OfficeCoreAttributes					r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:spid	VML	AG_OfficeCoreAttributes	attribute	@o:spid	spid	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:oned	VML	AG_OfficeCoreAttributes	attribute	@o:oned	oned	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:regroupid	VML	AG_OfficeCoreAttributes	attribute	@o:regroupid	regroupid	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:doubleclicknotify	VML	AG_OfficeCoreAttributes	attribute	@o:doubleclicknotify	doubleclicknotify	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:button	VML	AG_OfficeCoreAttributes	attribute	@o:button	button	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:userhidden	VML	AG_OfficeCoreAttributes	attribute	@o:userhidden	userhidden	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:bullet	VML	AG_OfficeCoreAttributes	attribute	@o:bullet	bullet	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:hr	VML	AG_OfficeCoreAttributes	attribute	@o:hr	hr	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:hrstd	VML	AG_OfficeCoreAttributes	attribute	@o:hrstd	hrstd	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:hrnoshade	VML	AG_OfficeCoreAttributes	attribute	@o:hrnoshade	hrnoshade	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:hrpct	VML	AG_OfficeCoreAttributes	attribute	@o:hrpct	hrpct	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:hralign	VML	AG_OfficeCoreAttributes	attribute	@o:hralign	hralign	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:allowincell	VML	AG_OfficeCoreAttributes	attribute	@o:allowincell	allowincell	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:allowoverlap	VML	AG_OfficeCoreAttributes	attribute	@o:allowoverlap	allowoverlap	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:userdrawn	VML	AG_OfficeCoreAttributes	attribute	@o:userdrawn	userdrawn	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:bordertopcolor	VML	AG_OfficeCoreAttributes	attribute	@o:bordertopcolor	bordertopcolor	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:borderleftcolor	VML	AG_OfficeCoreAttributes	attribute	@o:borderleftcolor	borderleftcolor	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:borderbottomcolor	VML	AG_OfficeCoreAttributes	attribute	@o:borderbottomcolor	borderbottomcolor	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:borderrightcolor	VML	AG_OfficeCoreAttributes	attribute	@o:borderrightcolor	borderrightcolor	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:dgmlayout	VML	AG_OfficeCoreAttributes	attribute	@o:dgmlayout	dgmlayout	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:dgmnodekind	VML	AG_OfficeCoreAttributes	attribute	@o:dgmnodekind	dgmnodekind	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:dgmlayoutmru	VML	AG_OfficeCoreAttributes	attribute	@o:dgmlayoutmru	dgmlayoutmru	optional			r	r	r	.	.
+v:AG_OfficeCoreAttributes/@o:insetmode	VML	AG_OfficeCoreAttributes	attribute	@o:insetmode	insetmode	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes	VML		type	AG_OfficeShapeAttributes					r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:spt	VML	AG_OfficeShapeAttributes	attribute	@o:spt	spt	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:connectortype	VML	AG_OfficeShapeAttributes	attribute	@o:connectortype	connectortype	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:bwmode	VML	AG_OfficeShapeAttributes	attribute	@o:bwmode	bwmode	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:bwpure	VML	AG_OfficeShapeAttributes	attribute	@o:bwpure	bwpure	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:bwnormal	VML	AG_OfficeShapeAttributes	attribute	@o:bwnormal	bwnormal	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:forcedash	VML	AG_OfficeShapeAttributes	attribute	@o:forcedash	forcedash	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:oleicon	VML	AG_OfficeShapeAttributes	attribute	@o:oleicon	oleicon	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:ole	VML	AG_OfficeShapeAttributes	attribute	@o:ole	ole	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:preferrelative	VML	AG_OfficeShapeAttributes	attribute	@o:preferrelative	preferrelative	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:cliptowrap	VML	AG_OfficeShapeAttributes	attribute	@o:cliptowrap	cliptowrap	optional			r	r	r	.	.
+v:AG_OfficeShapeAttributes/@o:clip	VML	AG_OfficeShapeAttributes	attribute	@o:clip	clip	optional			r	r	r	.	.
+v:AG_AllCoreAttributes	VML		type	AG_AllCoreAttributes					r	r	r	.	.
+v:AG_AllCoreAttributes/AG_CoreAttributes	VML	AG_AllCoreAttributes	attrgroup	AG_CoreAttributes	AG_CoreAttributes				r	r	r	.	.
+v:AG_AllCoreAttributes/AG_OfficeCoreAttributes	VML	AG_AllCoreAttributes	attrgroup	AG_OfficeCoreAttributes	AG_OfficeCoreAttributes				r	r	r	.	.
+v:AG_AllShapeAttributes	VML		type	AG_AllShapeAttributes					r	r	r	.	.
+v:AG_AllShapeAttributes/AG_ShapeAttributes	VML	AG_AllShapeAttributes	attrgroup	AG_ShapeAttributes	AG_ShapeAttributes				r	r	r	.	.
+v:AG_AllShapeAttributes/AG_OfficeShapeAttributes	VML	AG_AllShapeAttributes	attrgroup	AG_OfficeShapeAttributes	AG_OfficeShapeAttributes				r	r	r	.	.
+v:AG_ImageAttributes	VML		type	AG_ImageAttributes					r	r	r	.	.
+v:AG_ImageAttributes/@src	VML	AG_ImageAttributes	attribute	@src	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@cropleft	VML	AG_ImageAttributes	attribute	@cropleft	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@croptop	VML	AG_ImageAttributes	attribute	@croptop	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@cropright	VML	AG_ImageAttributes	attribute	@cropright	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@cropbottom	VML	AG_ImageAttributes	attribute	@cropbottom	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@gain	VML	AG_ImageAttributes	attribute	@gain	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@blacklevel	VML	AG_ImageAttributes	attribute	@blacklevel	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@gamma	VML	AG_ImageAttributes	attribute	@gamma	string	optional			r	r	r	.	.
+v:AG_ImageAttributes/@grayscale	VML	AG_ImageAttributes	attribute	@grayscale	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_ImageAttributes/@bilevel	VML	AG_ImageAttributes	attribute	@bilevel	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_StrokeAttributes	VML		type	AG_StrokeAttributes					r	r	r	.	.
+v:AG_StrokeAttributes/@on	VML	AG_StrokeAttributes	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@weight	VML	AG_StrokeAttributes	attribute	@weight	string	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@color	VML	AG_StrokeAttributes	attribute	@color	ST_ColorType	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@opacity	VML	AG_StrokeAttributes	attribute	@opacity	string	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@linestyle	VML	AG_StrokeAttributes	attribute	@linestyle	ST_StrokeLineStyle	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@miterlimit	VML	AG_StrokeAttributes	attribute	@miterlimit	decimal	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@joinstyle	VML	AG_StrokeAttributes	attribute	@joinstyle	ST_StrokeJoinStyle	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@endcap	VML	AG_StrokeAttributes	attribute	@endcap	ST_StrokeEndCap	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@dashstyle	VML	AG_StrokeAttributes	attribute	@dashstyle	string	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@filltype	VML	AG_StrokeAttributes	attribute	@filltype	ST_FillType	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@src	VML	AG_StrokeAttributes	attribute	@src	string	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@imageaspect	VML	AG_StrokeAttributes	attribute	@imageaspect	ST_ImageAspect	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@imagesize	VML	AG_StrokeAttributes	attribute	@imagesize	string	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@imagealignshape	VML	AG_StrokeAttributes	attribute	@imagealignshape	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@color2	VML	AG_StrokeAttributes	attribute	@color2	ST_ColorType	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@startarrow	VML	AG_StrokeAttributes	attribute	@startarrow	ST_StrokeArrowType	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@startarrowwidth	VML	AG_StrokeAttributes	attribute	@startarrowwidth	ST_StrokeArrowWidth	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@startarrowlength	VML	AG_StrokeAttributes	attribute	@startarrowlength	ST_StrokeArrowLength	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@endarrow	VML	AG_StrokeAttributes	attribute	@endarrow	ST_StrokeArrowType	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@endarrowwidth	VML	AG_StrokeAttributes	attribute	@endarrowwidth	ST_StrokeArrowWidth	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@endarrowlength	VML	AG_StrokeAttributes	attribute	@endarrowlength	ST_StrokeArrowLength	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@o:href	VML	AG_StrokeAttributes	attribute	@o:href	href	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@o:althref	VML	AG_StrokeAttributes	attribute	@o:althref	althref	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@o:title	VML	AG_StrokeAttributes	attribute	@o:title	title	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@o:forcedash	VML	AG_StrokeAttributes	attribute	@o:forcedash	forcedash	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@r:id	VML	AG_StrokeAttributes	attribute	@r:id	id	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@insetpen	VML	AG_StrokeAttributes	attribute	@insetpen	ST_TrueFalse	optional			r	r	r	.	.
+v:AG_StrokeAttributes/@o:relid	VML	AG_StrokeAttributes	attribute	@o:relid	relid	optional			r	r	r	.	.
+v:EG_ShapeElements	VML		type	EG_ShapeElements					r	r	r	.	.
+v:EG_ShapeElements/path	VML	EG_ShapeElements	element	path	path	choice			r	r	r	.	.
+v:EG_ShapeElements/formulas	VML	EG_ShapeElements	element	formulas	formulas	choice			r	r	r	.	.
+v:EG_ShapeElements/handles	VML	EG_ShapeElements	element	handles	handles	choice			r	r	r	.	.
+v:EG_ShapeElements/fill	VML	EG_ShapeElements	element	fill	fill	choice			r	r	r	.	.
+v:EG_ShapeElements/stroke	VML	EG_ShapeElements	element	stroke	stroke	choice			r	r	r	.	.
+v:EG_ShapeElements/shadow	VML	EG_ShapeElements	element	shadow	shadow	choice			r	r	r	.	.
+v:EG_ShapeElements/textbox	VML	EG_ShapeElements	element	textbox	textbox	choice			r	r	r	.	.
+v:EG_ShapeElements/textpath	VML	EG_ShapeElements	element	textpath	textpath	choice			r	r	r	.	.
+v:EG_ShapeElements/imagedata	VML	EG_ShapeElements	element	imagedata	imagedata	choice			r	r	r	.	.
+v:EG_ShapeElements/o:skew	VML	EG_ShapeElements	element	o:skew	skew	choice			r	r	r	.	.
+v:EG_ShapeElements/o:extrusion	VML	EG_ShapeElements	element	o:extrusion	extrusion	choice			r	r	r	.	.
+v:EG_ShapeElements/o:callout	VML	EG_ShapeElements	element	o:callout	callout	choice			r	r	r	.	.
+v:EG_ShapeElements/o:lock	VML	EG_ShapeElements	element	o:lock	lock	choice			r	r	r	.	.
+v:EG_ShapeElements/o:clippath	VML	EG_ShapeElements	element	o:clippath	clippath	choice			r	r	r	.	.
+v:EG_ShapeElements/o:signatureline	VML	EG_ShapeElements	element	o:signatureline	signatureline	choice			r	r	r	.	.
+v:EG_ShapeElements/w10:wrap	VML	EG_ShapeElements	element	w10:wrap	wrap	choice			r	r	r	.	.
+v:EG_ShapeElements/w10:anchorlock	VML	EG_ShapeElements	element	w10:anchorlock	anchorlock	choice			r	r	r	.	.
+v:EG_ShapeElements/w10:bordertop	VML	EG_ShapeElements	element	w10:bordertop	bordertop	choice			r	r	r	.	.
+v:EG_ShapeElements/w10:borderbottom	VML	EG_ShapeElements	element	w10:borderbottom	borderbottom	choice			r	r	r	.	.
+v:EG_ShapeElements/w10:borderleft	VML	EG_ShapeElements	element	w10:borderleft	borderleft	choice			r	r	r	.	.
+v:EG_ShapeElements/w10:borderright	VML	EG_ShapeElements	element	w10:borderright	borderright	choice			r	r	r	.	.
+v:EG_ShapeElements/x:ClientData	VML	EG_ShapeElements	element	x:ClientData	ClientData	0..1			r	r	r	.	.
+v:EG_ShapeElements/pvml:textdata	VML	EG_ShapeElements	element	pvml:textdata	textdata	0..1			r	r	r	.	.
+v:<shape>	VML		root	<shape>	CT_Shape				r	r	r	.	.
+v:<shapetype>	VML		root	<shapetype>	CT_Shapetype				r	r	r	.	.
+v:<group>	VML		root	<group>	CT_Group				r	r	r	.	.
+v:<background>	VML		root	<background>	CT_Background				r	r	r	.	.
+v:CT_Shape	VML		type	CT_Shape					r	r	r	.	.
+v:CT_Shape/EG_ShapeElements	VML	CT_Shape	group	EG_ShapeElements	EG_ShapeElements	choice			r	r	r	.	.
+v:CT_Shape/o:ink	VML	CT_Shape	element	o:ink	ink	choice			r	r	r	.	.
+v:CT_Shape/pvml:iscomment	VML	CT_Shape	element	pvml:iscomment	iscomment	choice			r	r	r	.	.
+v:CT_Shape/o:equationxml	VML	CT_Shape	element	o:equationxml	equationxml	choice			r	r	r	.	.
+v:CT_Shape/AG_AllCoreAttributes	VML	CT_Shape	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Shape/AG_AllShapeAttributes	VML	CT_Shape	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_Shape/AG_Type	VML	CT_Shape	attrgroup	AG_Type	AG_Type				r	r	r	.	.
+v:CT_Shape/AG_Adj	VML	CT_Shape	attrgroup	AG_Adj	AG_Adj				r	r	r	.	.
+v:CT_Shape/AG_Path	VML	CT_Shape	attrgroup	AG_Path	AG_Path				r	r	r	.	.
+v:CT_Shape/@o:gfxdata	VML	CT_Shape	attribute	@o:gfxdata	gfxdata	optional			r	r	r	.	.
+v:CT_Shape/@equationxml	VML	CT_Shape	attribute	@equationxml	string	optional			r	r	r	.	.
+v:CT_Shapetype	VML		type	CT_Shapetype					r	r	r	.	.
+v:CT_Shapetype/EG_ShapeElements	VML	CT_Shapetype	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_Shapetype/o:complex	VML	CT_Shapetype	element	o:complex	complex	0..1			r	r	r	.	.
+v:CT_Shapetype/AG_AllCoreAttributes	VML	CT_Shapetype	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Shapetype/AG_AllShapeAttributes	VML	CT_Shapetype	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_Shapetype/AG_Adj	VML	CT_Shapetype	attrgroup	AG_Adj	AG_Adj				r	r	r	.	.
+v:CT_Shapetype/AG_Path	VML	CT_Shapetype	attrgroup	AG_Path	AG_Path				r	r	r	.	.
+v:CT_Shapetype/@o:master	VML	CT_Shapetype	attribute	@o:master	master	optional			r	r	r	.	.
+v:CT_Group	VML		type	CT_Group					r	r	r	.	.
+v:CT_Group/EG_ShapeElements	VML	CT_Group	group	EG_ShapeElements	EG_ShapeElements	choice			r	r	r	.	.
+v:CT_Group/group	VML	CT_Group	element	group	group	choice			r	r	r	.	.
+v:CT_Group/shape	VML	CT_Group	element	shape	shape	choice			r	r	r	.	.
+v:CT_Group/shapetype	VML	CT_Group	element	shapetype	shapetype	choice			r	r	r	.	.
+v:CT_Group/arc	VML	CT_Group	element	arc	arc	choice			r	r	r	.	.
+v:CT_Group/curve	VML	CT_Group	element	curve	curve	choice			r	r	r	.	.
+v:CT_Group/image	VML	CT_Group	element	image	image	choice			r	r	r	.	.
+v:CT_Group/line	VML	CT_Group	element	line	line	choice			r	r	r	.	.
+v:CT_Group/oval	VML	CT_Group	element	oval	oval	choice			r	r	r	.	.
+v:CT_Group/polyline	VML	CT_Group	element	polyline	polyline	choice			r	r	r	.	.
+v:CT_Group/rect	VML	CT_Group	element	rect	rect	choice			r	r	r	.	.
+v:CT_Group/roundrect	VML	CT_Group	element	roundrect	roundrect	choice			r	r	r	.	.
+v:CT_Group/o:diagram	VML	CT_Group	element	o:diagram	diagram	choice			r	r	r	.	.
+v:CT_Group/AG_AllCoreAttributes	VML	CT_Group	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Group/AG_Fill	VML	CT_Group	attrgroup	AG_Fill	AG_Fill				r	r	r	.	.
+v:CT_Group/@editas	VML	CT_Group	attribute	@editas	ST_EditAs	optional			r	r	r	.	.
+v:CT_Group/@o:tableproperties	VML	CT_Group	attribute	@o:tableproperties	tableproperties	optional			r	r	r	.	.
+v:CT_Group/@o:tablelimits	VML	CT_Group	attribute	@o:tablelimits	tablelimits	optional			r	r	r	.	.
+v:CT_Background	VML		type	CT_Background					r	r	r	.	.
+v:CT_Background/fill	VML	CT_Background	element	fill	fill	0..1			r	r	r	.	.
+v:CT_Background/AG_Id	VML	CT_Background	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_Background/AG_Fill	VML	CT_Background	attrgroup	AG_Fill	AG_Fill				r	r	r	.	.
+v:CT_Background/@o:bwmode	VML	CT_Background	attribute	@o:bwmode	bwmode	optional			r	r	r	.	.
+v:CT_Background/@o:bwpure	VML	CT_Background	attribute	@o:bwpure	bwpure	optional			r	r	r	.	.
+v:CT_Background/@o:bwnormal	VML	CT_Background	attribute	@o:bwnormal	bwnormal	optional			r	r	r	.	.
+v:CT_Background/@o:targetscreensize	VML	CT_Background	attribute	@o:targetscreensize	targetscreensize	optional			r	r	r	.	.
+v:<fill>	VML		root	<fill>	CT_Fill				r	r	r	.	.
+v:<formulas>	VML		root	<formulas>	CT_Formulas				r	r	r	.	.
+v:<handles>	VML		root	<handles>	CT_Handles				r	r	r	.	.
+v:<imagedata>	VML		root	<imagedata>	CT_ImageData				r	r	r	.	.
+v:<path>	VML		root	<path>	CT_Path				r	r	r	.	.
+v:<textbox>	VML		root	<textbox>	CT_Textbox				r	r	r	.	.
+v:<shadow>	VML		root	<shadow>	CT_Shadow				r	r	r	.	.
+v:<stroke>	VML		root	<stroke>	CT_Stroke				r	r	r	.	.
+v:<textpath>	VML		root	<textpath>	CT_TextPath				r	r	r	.	.
+v:CT_Fill	VML		type	CT_Fill					r	r	r	.	.
+v:CT_Fill/o:fill	VML	CT_Fill	element	o:fill	fill	0..1			r	r	r	.	.
+v:CT_Fill/AG_Id	VML	CT_Fill	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_Fill/@type	VML	CT_Fill	attribute	@type	ST_FillType	optional			r	r	r	.	.
+v:CT_Fill/@on	VML	CT_Fill	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Fill/@color	VML	CT_Fill	attribute	@color	ST_ColorType	optional			r	r	r	.	.
+v:CT_Fill/@opacity	VML	CT_Fill	attribute	@opacity	string	optional			r	r	r	.	.
+v:CT_Fill/@color2	VML	CT_Fill	attribute	@color2	ST_ColorType	optional			r	r	r	.	.
+v:CT_Fill/@src	VML	CT_Fill	attribute	@src	string	optional			r	r	r	.	.
+v:CT_Fill/@o:href	VML	CT_Fill	attribute	@o:href	href	optional			r	r	r	.	.
+v:CT_Fill/@o:althref	VML	CT_Fill	attribute	@o:althref	althref	optional			r	r	r	.	.
+v:CT_Fill/@size	VML	CT_Fill	attribute	@size	string	optional			r	r	r	.	.
+v:CT_Fill/@origin	VML	CT_Fill	attribute	@origin	string	optional			r	r	r	.	.
+v:CT_Fill/@position	VML	CT_Fill	attribute	@position	string	optional			r	r	r	.	.
+v:CT_Fill/@aspect	VML	CT_Fill	attribute	@aspect	ST_ImageAspect	optional			r	r	r	.	.
+v:CT_Fill/@colors	VML	CT_Fill	attribute	@colors	string	optional			r	r	r	.	.
+v:CT_Fill/@angle	VML	CT_Fill	attribute	@angle	decimal	optional			r	r	r	.	.
+v:CT_Fill/@alignshape	VML	CT_Fill	attribute	@alignshape	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Fill/@focus	VML	CT_Fill	attribute	@focus	string	optional			r	r	r	.	.
+v:CT_Fill/@focussize	VML	CT_Fill	attribute	@focussize	string	optional			r	r	r	.	.
+v:CT_Fill/@focusposition	VML	CT_Fill	attribute	@focusposition	string	optional			r	r	r	.	.
+v:CT_Fill/@method	VML	CT_Fill	attribute	@method	ST_FillMethod	optional			r	r	r	.	.
+v:CT_Fill/@o:detectmouseclick	VML	CT_Fill	attribute	@o:detectmouseclick	detectmouseclick	optional			r	r	r	.	.
+v:CT_Fill/@o:title	VML	CT_Fill	attribute	@o:title	title	optional			r	r	r	.	.
+v:CT_Fill/@o:opacity2	VML	CT_Fill	attribute	@o:opacity2	opacity2	optional			r	r	r	.	.
+v:CT_Fill/@recolor	VML	CT_Fill	attribute	@recolor	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Fill/@rotate	VML	CT_Fill	attribute	@rotate	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Fill/@r:id	VML	CT_Fill	attribute	@r:id	id	optional			r	r	r	.	.
+v:CT_Fill/@o:relid	VML	CT_Fill	attribute	@o:relid	relid	optional			r	r	r	.	.
+v:CT_Formulas	VML		type	CT_Formulas					r	r	r	.	.
+v:CT_Formulas/f	VML	CT_Formulas	element	f	CT_F	0..unbounded			r	r	r	.	.
+v:CT_F	VML		type	CT_F					r	r	r	.	.
+v:CT_F/@eqn	VML	CT_F	attribute	@eqn	string	optional			r	r	r	.	.
+v:CT_Handles	VML		type	CT_Handles					r	r	r	.	.
+v:CT_Handles/h	VML	CT_Handles	element	h	CT_H	0..unbounded			r	r	r	.	.
+v:CT_H	VML		type	CT_H					r	r	r	.	.
+v:CT_H/@position	VML	CT_H	attribute	@position	string	optional			r	r	r	.	.
+v:CT_H/@polar	VML	CT_H	attribute	@polar	string	optional			r	r	r	.	.
+v:CT_H/@map	VML	CT_H	attribute	@map	string	optional			r	r	r	.	.
+v:CT_H/@invx	VML	CT_H	attribute	@invx	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_H/@invy	VML	CT_H	attribute	@invy	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_H/@switch	VML	CT_H	attribute	@switch	ST_TrueFalseBlank	optional			r	r	r	.	.
+v:CT_H/@xrange	VML	CT_H	attribute	@xrange	string	optional			r	r	r	.	.
+v:CT_H/@yrange	VML	CT_H	attribute	@yrange	string	optional			r	r	r	.	.
+v:CT_H/@radiusrange	VML	CT_H	attribute	@radiusrange	string	optional			r	r	r	.	.
+v:CT_ImageData	VML		type	CT_ImageData					r	r	r	.	.
+v:CT_ImageData/AG_Id	VML	CT_ImageData	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_ImageData/AG_ImageAttributes	VML	CT_ImageData	attrgroup	AG_ImageAttributes	AG_ImageAttributes				r	r	r	.	.
+v:CT_ImageData/AG_Chromakey	VML	CT_ImageData	attrgroup	AG_Chromakey	AG_Chromakey				r	r	r	.	.
+v:CT_ImageData/@embosscolor	VML	CT_ImageData	attribute	@embosscolor	ST_ColorType	optional			r	r	r	.	.
+v:CT_ImageData/@recolortarget	VML	CT_ImageData	attribute	@recolortarget	ST_ColorType	optional			r	r	r	.	.
+v:CT_ImageData/@o:href	VML	CT_ImageData	attribute	@o:href	href	optional			r	r	r	.	.
+v:CT_ImageData/@o:althref	VML	CT_ImageData	attribute	@o:althref	althref	optional			r	r	r	.	.
+v:CT_ImageData/@o:title	VML	CT_ImageData	attribute	@o:title	title	optional			r	r	r	.	.
+v:CT_ImageData/@o:oleid	VML	CT_ImageData	attribute	@o:oleid	oleid	optional			r	r	r	.	.
+v:CT_ImageData/@o:detectmouseclick	VML	CT_ImageData	attribute	@o:detectmouseclick	detectmouseclick	optional			r	r	r	.	.
+v:CT_ImageData/@o:movie	VML	CT_ImageData	attribute	@o:movie	movie	optional			r	r	r	.	.
+v:CT_ImageData/@o:relid	VML	CT_ImageData	attribute	@o:relid	relid	optional			r	r	r	.	.
+v:CT_ImageData/@r:id	VML	CT_ImageData	attribute	@r:id	id	optional			r	r	r	.	.
+v:CT_ImageData/@r:pict	VML	CT_ImageData	attribute	@r:pict	pict	optional			r	r	r	.	.
+v:CT_ImageData/@r:href	VML	CT_ImageData	attribute	@r:href	href	optional			r	r	r	.	.
+v:CT_Path	VML		type	CT_Path					r	r	r	.	.
+v:CT_Path/AG_Id	VML	CT_Path	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_Path/@v	VML	CT_Path	attribute	@v	string	optional			r	r	r	.	.
+v:CT_Path/@limo	VML	CT_Path	attribute	@limo	string	optional			r	r	r	.	.
+v:CT_Path/@textboxrect	VML	CT_Path	attribute	@textboxrect	string	optional			r	r	r	.	.
+v:CT_Path/@fillok	VML	CT_Path	attribute	@fillok	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Path/@strokeok	VML	CT_Path	attribute	@strokeok	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Path/@shadowok	VML	CT_Path	attribute	@shadowok	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Path/@arrowok	VML	CT_Path	attribute	@arrowok	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Path/@gradientshapeok	VML	CT_Path	attribute	@gradientshapeok	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Path/@textpathok	VML	CT_Path	attribute	@textpathok	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Path/@insetpenok	VML	CT_Path	attribute	@insetpenok	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Path/@o:connecttype	VML	CT_Path	attribute	@o:connecttype	connecttype	optional			r	r	r	.	.
+v:CT_Path/@o:connectlocs	VML	CT_Path	attribute	@o:connectlocs	connectlocs	optional			r	r	r	.	.
+v:CT_Path/@o:connectangles	VML	CT_Path	attribute	@o:connectangles	connectangles	optional			r	r	r	.	.
+v:CT_Path/@o:extrusionok	VML	CT_Path	attribute	@o:extrusionok	extrusionok	optional			r	r	r	.	.
+v:CT_Shadow	VML		type	CT_Shadow					r	r	r	.	.
+v:CT_Shadow/AG_Id	VML	CT_Shadow	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_Shadow/@on	VML	CT_Shadow	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Shadow/@type	VML	CT_Shadow	attribute	@type	ST_ShadowType	optional			r	r	r	.	.
+v:CT_Shadow/@obscured	VML	CT_Shadow	attribute	@obscured	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_Shadow/@color	VML	CT_Shadow	attribute	@color	ST_ColorType	optional			r	r	r	.	.
+v:CT_Shadow/@opacity	VML	CT_Shadow	attribute	@opacity	string	optional			r	r	r	.	.
+v:CT_Shadow/@offset	VML	CT_Shadow	attribute	@offset	string	optional			r	r	r	.	.
+v:CT_Shadow/@color2	VML	CT_Shadow	attribute	@color2	ST_ColorType	optional			r	r	r	.	.
+v:CT_Shadow/@offset2	VML	CT_Shadow	attribute	@offset2	string	optional			r	r	r	.	.
+v:CT_Shadow/@origin	VML	CT_Shadow	attribute	@origin	string	optional			r	r	r	.	.
+v:CT_Shadow/@matrix	VML	CT_Shadow	attribute	@matrix	string	optional			r	r	r	.	.
+v:CT_Stroke	VML		type	CT_Stroke					r	r	r	.	.
+v:CT_Stroke/o:left	VML	CT_Stroke	element	o:left	left	0..1			r	r	r	.	.
+v:CT_Stroke/o:top	VML	CT_Stroke	element	o:top	top	0..1			r	r	r	.	.
+v:CT_Stroke/o:right	VML	CT_Stroke	element	o:right	right	0..1			r	r	r	.	.
+v:CT_Stroke/o:bottom	VML	CT_Stroke	element	o:bottom	bottom	0..1			r	r	r	.	.
+v:CT_Stroke/o:column	VML	CT_Stroke	element	o:column	column	0..1			r	r	r	.	.
+v:CT_Stroke/AG_Id	VML	CT_Stroke	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_Stroke/AG_StrokeAttributes	VML	CT_Stroke	attrgroup	AG_StrokeAttributes	AG_StrokeAttributes				r	r	r	.	.
+v:CT_Textbox	VML		type	CT_Textbox					r	r	r	.	.
+v:CT_Textbox/w:txbxContent	VML	CT_Textbox	element	w:txbxContent	txbxContent	0..1			r	r	r	.	.
+v:CT_Textbox/xsd:any	VML	CT_Textbox	any	xsd:any	##local			skip	r	r	r	.	.
+v:CT_Textbox/AG_Id	VML	CT_Textbox	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_Textbox/AG_Style	VML	CT_Textbox	attrgroup	AG_Style	AG_Style				r	r	r	.	.
+v:CT_Textbox/@inset	VML	CT_Textbox	attribute	@inset	string	optional			r	r	r	.	.
+v:CT_Textbox/@o:singleclick	VML	CT_Textbox	attribute	@o:singleclick	singleclick	optional			r	r	r	.	.
+v:CT_Textbox/@o:insetmode	VML	CT_Textbox	attribute	@o:insetmode	insetmode	optional			r	r	r	.	.
+v:CT_TextPath	VML		type	CT_TextPath					r	r	r	.	.
+v:CT_TextPath/AG_Id	VML	CT_TextPath	attrgroup	AG_Id	AG_Id				r	r	r	.	.
+v:CT_TextPath/AG_Style	VML	CT_TextPath	attrgroup	AG_Style	AG_Style				r	r	r	.	.
+v:CT_TextPath/@on	VML	CT_TextPath	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_TextPath/@fitshape	VML	CT_TextPath	attribute	@fitshape	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_TextPath/@fitpath	VML	CT_TextPath	attribute	@fitpath	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_TextPath/@trim	VML	CT_TextPath	attribute	@trim	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_TextPath/@xscale	VML	CT_TextPath	attribute	@xscale	ST_TrueFalse	optional			r	r	r	.	.
+v:CT_TextPath/@string	VML	CT_TextPath	attribute	@string	string	optional			r	r	r	.	.
+v:<arc>	VML		root	<arc>	CT_Arc				r	r	r	.	.
+v:<curve>	VML		root	<curve>	CT_Curve				r	r	r	.	.
+v:<image>	VML		root	<image>	CT_Image				r	r	r	.	.
+v:<line>	VML		root	<line>	CT_Line				r	r	r	.	.
+v:<oval>	VML		root	<oval>	CT_Oval				r	r	r	.	.
+v:<polyline>	VML		root	<polyline>	CT_PolyLine				r	r	r	.	.
+v:<rect>	VML		root	<rect>	CT_Rect				r	r	r	.	.
+v:<roundrect>	VML		root	<roundrect>	CT_RoundRect				r	r	r	.	.
+v:CT_Arc	VML		type	CT_Arc					r	r	r	.	.
+v:CT_Arc/EG_ShapeElements	VML	CT_Arc	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_Arc/AG_AllCoreAttributes	VML	CT_Arc	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Arc/AG_AllShapeAttributes	VML	CT_Arc	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_Arc/@startAngle	VML	CT_Arc	attribute	@startAngle	decimal	optional			r	r	r	.	.
+v:CT_Arc/@endAngle	VML	CT_Arc	attribute	@endAngle	decimal	optional			r	r	r	.	.
+v:CT_Curve	VML		type	CT_Curve					r	r	r	.	.
+v:CT_Curve/EG_ShapeElements	VML	CT_Curve	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_Curve/AG_AllCoreAttributes	VML	CT_Curve	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Curve/AG_AllShapeAttributes	VML	CT_Curve	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_Curve/@from	VML	CT_Curve	attribute	@from	string	optional			r	r	r	.	.
+v:CT_Curve/@control1	VML	CT_Curve	attribute	@control1	string	optional			r	r	r	.	.
+v:CT_Curve/@control2	VML	CT_Curve	attribute	@control2	string	optional			r	r	r	.	.
+v:CT_Curve/@to	VML	CT_Curve	attribute	@to	string	optional			r	r	r	.	.
+v:CT_Image	VML		type	CT_Image					r	r	r	.	.
+v:CT_Image/EG_ShapeElements	VML	CT_Image	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_Image/AG_AllCoreAttributes	VML	CT_Image	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Image/AG_AllShapeAttributes	VML	CT_Image	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_Image/AG_ImageAttributes	VML	CT_Image	attrgroup	AG_ImageAttributes	AG_ImageAttributes				r	r	r	.	.
+v:CT_Line	VML		type	CT_Line					r	r	r	.	.
+v:CT_Line/EG_ShapeElements	VML	CT_Line	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_Line/AG_AllCoreAttributes	VML	CT_Line	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Line/AG_AllShapeAttributes	VML	CT_Line	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_Line/@from	VML	CT_Line	attribute	@from	string	optional			r	r	r	.	.
+v:CT_Line/@to	VML	CT_Line	attribute	@to	string	optional			r	r	r	.	.
+v:CT_Oval	VML		type	CT_Oval					r	r	r	.	.
+v:CT_Oval/EG_ShapeElements	VML	CT_Oval	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_Oval/AG_AllCoreAttributes	VML	CT_Oval	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Oval/AG_AllShapeAttributes	VML	CT_Oval	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_PolyLine	VML		type	CT_PolyLine					r	r	r	.	.
+v:CT_PolyLine/EG_ShapeElements	VML	CT_PolyLine	group	EG_ShapeElements	EG_ShapeElements	choice			r	r	r	.	.
+v:CT_PolyLine/o:ink	VML	CT_PolyLine	element	o:ink	ink	choice			r	r	r	.	.
+v:CT_PolyLine/AG_AllCoreAttributes	VML	CT_PolyLine	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_PolyLine/AG_AllShapeAttributes	VML	CT_PolyLine	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_PolyLine/@points	VML	CT_PolyLine	attribute	@points	string	optional			r	r	r	.	.
+v:CT_Rect	VML		type	CT_Rect					r	r	r	.	.
+v:CT_Rect/EG_ShapeElements	VML	CT_Rect	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_Rect/AG_AllCoreAttributes	VML	CT_Rect	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_Rect/AG_AllShapeAttributes	VML	CT_Rect	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_RoundRect	VML		type	CT_RoundRect					r	r	r	.	.
+v:CT_RoundRect/EG_ShapeElements	VML	CT_RoundRect	group	EG_ShapeElements	EG_ShapeElements	0..unbounded			r	r	r	.	.
+v:CT_RoundRect/AG_AllCoreAttributes	VML	CT_RoundRect	attrgroup	AG_AllCoreAttributes	AG_AllCoreAttributes				r	r	r	.	.
+v:CT_RoundRect/AG_AllShapeAttributes	VML	CT_RoundRect	attrgroup	AG_AllShapeAttributes	AG_AllShapeAttributes				r	r	r	.	.
+v:CT_RoundRect/@arcsize	VML	CT_RoundRect	attribute	@arcsize	string	optional			r	r	r	.	.
+v:ST_Ext	VML		simple	ST_Ext				base=string	r	r	r	.	.
+v:ST_Ext/=view	VML	ST_Ext	value	=view					r	r	r	.	.
+v:ST_Ext/=edit	VML	ST_Ext	value	=edit					r	r	r	.	.
+v:ST_Ext/=backwardCompatible	VML	ST_Ext	value	=backwardCompatible					r	r	r	.	.
+v:ST_FillType	VML		simple	ST_FillType				base=string	r	r	r	.	.
+v:ST_FillType/=solid	VML	ST_FillType	value	=solid					r	r	r	.	.
+v:ST_FillType/=gradient	VML	ST_FillType	value	=gradient					r	r	r	.	.
+v:ST_FillType/=gradientRadial	VML	ST_FillType	value	=gradientRadial					r	r	r	.	.
+v:ST_FillType/=tile	VML	ST_FillType	value	=tile					r	r	r	.	.
+v:ST_FillType/=pattern	VML	ST_FillType	value	=pattern					r	r	r	.	.
+v:ST_FillType/=frame	VML	ST_FillType	value	=frame					r	r	r	.	.
+v:ST_FillMethod	VML		simple	ST_FillMethod				base=string	r	r	r	.	.
+v:ST_FillMethod/=none	VML	ST_FillMethod	value	=none					r	r	r	.	.
+v:ST_FillMethod/=linear	VML	ST_FillMethod	value	=linear					r	r	r	.	.
+v:ST_FillMethod/=sigma	VML	ST_FillMethod	value	=sigma					r	r	r	.	.
+v:ST_FillMethod/=any	VML	ST_FillMethod	value	=any					r	r	r	.	.
+v:ST_FillMethod/=linear sigma	VML	ST_FillMethod	value	=linear sigma					r	r	r	.	.
+v:ST_ShadowType	VML		simple	ST_ShadowType				base=string	r	r	r	.	.
+v:ST_ShadowType/=single	VML	ST_ShadowType	value	=single					r	r	r	.	.
+v:ST_ShadowType/=double	VML	ST_ShadowType	value	=double					r	r	r	.	.
+v:ST_ShadowType/=emboss	VML	ST_ShadowType	value	=emboss					r	r	r	.	.
+v:ST_ShadowType/=perspective	VML	ST_ShadowType	value	=perspective					r	r	r	.	.
+v:ST_StrokeLineStyle	VML		simple	ST_StrokeLineStyle				base=string	r	r	r	.	.
+v:ST_StrokeLineStyle/=single	VML	ST_StrokeLineStyle	value	=single					r	r	r	.	.
+v:ST_StrokeLineStyle/=thinThin	VML	ST_StrokeLineStyle	value	=thinThin					r	r	r	.	.
+v:ST_StrokeLineStyle/=thinThick	VML	ST_StrokeLineStyle	value	=thinThick					r	r	r	.	.
+v:ST_StrokeLineStyle/=thickThin	VML	ST_StrokeLineStyle	value	=thickThin					r	r	r	.	.
+v:ST_StrokeLineStyle/=thickBetweenThin	VML	ST_StrokeLineStyle	value	=thickBetweenThin					r	r	r	.	.
+v:ST_StrokeJoinStyle	VML		simple	ST_StrokeJoinStyle				base=string	r	r	r	.	.
+v:ST_StrokeJoinStyle/=round	VML	ST_StrokeJoinStyle	value	=round					r	r	r	.	.
+v:ST_StrokeJoinStyle/=bevel	VML	ST_StrokeJoinStyle	value	=bevel					r	r	r	.	.
+v:ST_StrokeJoinStyle/=miter	VML	ST_StrokeJoinStyle	value	=miter					r	r	r	.	.
+v:ST_StrokeEndCap	VML		simple	ST_StrokeEndCap				base=string	r	r	r	.	.
+v:ST_StrokeEndCap/=flat	VML	ST_StrokeEndCap	value	=flat					r	r	r	.	.
+v:ST_StrokeEndCap/=square	VML	ST_StrokeEndCap	value	=square					r	r	r	.	.
+v:ST_StrokeEndCap/=round	VML	ST_StrokeEndCap	value	=round					r	r	r	.	.
+v:ST_StrokeArrowLength	VML		simple	ST_StrokeArrowLength				base=string	r	r	r	.	.
+v:ST_StrokeArrowLength/=short	VML	ST_StrokeArrowLength	value	=short					r	r	r	.	.
+v:ST_StrokeArrowLength/=medium	VML	ST_StrokeArrowLength	value	=medium					r	r	r	.	.
+v:ST_StrokeArrowLength/=long	VML	ST_StrokeArrowLength	value	=long					r	r	r	.	.
+v:ST_StrokeArrowWidth	VML		simple	ST_StrokeArrowWidth				base=string	r	r	r	.	.
+v:ST_StrokeArrowWidth/=narrow	VML	ST_StrokeArrowWidth	value	=narrow					r	r	r	.	.
+v:ST_StrokeArrowWidth/=medium	VML	ST_StrokeArrowWidth	value	=medium					r	r	r	.	.
+v:ST_StrokeArrowWidth/=wide	VML	ST_StrokeArrowWidth	value	=wide					r	r	r	.	.
+v:ST_StrokeArrowType	VML		simple	ST_StrokeArrowType				base=string	r	r	r	.	.
+v:ST_StrokeArrowType/=none	VML	ST_StrokeArrowType	value	=none					r	r	r	.	.
+v:ST_StrokeArrowType/=block	VML	ST_StrokeArrowType	value	=block					r	r	r	.	.
+v:ST_StrokeArrowType/=classic	VML	ST_StrokeArrowType	value	=classic					r	r	r	.	.
+v:ST_StrokeArrowType/=oval	VML	ST_StrokeArrowType	value	=oval					r	r	r	.	.
+v:ST_StrokeArrowType/=diamond	VML	ST_StrokeArrowType	value	=diamond					r	r	r	.	.
+v:ST_StrokeArrowType/=open	VML	ST_StrokeArrowType	value	=open					r	r	r	.	.
+v:ST_ImageAspect	VML		simple	ST_ImageAspect				base=string	r	r	r	.	.
+v:ST_ImageAspect/=ignore	VML	ST_ImageAspect	value	=ignore					r	r	r	.	.
+v:ST_ImageAspect/=atMost	VML	ST_ImageAspect	value	=atMost					r	r	r	.	.
+v:ST_ImageAspect/=atLeast	VML	ST_ImageAspect	value	=atLeast					r	r	r	.	.
+v:ST_EditAs	VML		simple	ST_EditAs				base=string	r	r	r	.	.
+v:ST_EditAs/=canvas	VML	ST_EditAs	value	=canvas					r	r	r	.	.
+v:ST_EditAs/=orgchart	VML	ST_EditAs	value	=orgchart					r	r	r	.	.
+v:ST_EditAs/=radial	VML	ST_EditAs	value	=radial					r	r	r	.	.
+v:ST_EditAs/=cycle	VML	ST_EditAs	value	=cycle					r	r	r	.	.
+v:ST_EditAs/=stacked	VML	ST_EditAs	value	=stacked					r	r	r	.	.
+v:ST_EditAs/=venn	VML	ST_EditAs	value	=venn					r	r	r	.	.
+v:ST_EditAs/=bullseye	VML	ST_EditAs	value	=bullseye					r	r	r	.	.
+o:@bwmode	VML		rootattr	@bwmode	ST_BWMode	optional			r	r	r	.	.
+o:@bwpure	VML		rootattr	@bwpure	ST_BWMode	optional			r	r	r	.	.
+o:@bwnormal	VML		rootattr	@bwnormal	ST_BWMode	optional			r	r	r	.	.
+o:@targetscreensize	VML		rootattr	@targetscreensize	ST_ScreenSize	optional			r	r	r	.	.
+o:@insetmode	VML		rootattr	@insetmode	ST_InsetMode	optional	custom		r	r	r	.	.
+o:@spt	VML		rootattr	@spt	float	optional			r	r	r	.	.
+o:@wrapcoords	VML		rootattr	@wrapcoords	string	optional			r	r	r	.	.
+o:@oned	VML		rootattr	@oned	ST_TrueFalse	optional			r	r	r	.	.
+o:@regroupid	VML		rootattr	@regroupid	integer	optional			r	r	r	.	.
+o:@doubleclicknotify	VML		rootattr	@doubleclicknotify	ST_TrueFalse	optional			r	r	r	.	.
+o:@connectortype	VML		rootattr	@connectortype	ST_ConnectorType	optional	straight		r	r	r	.	.
+o:@button	VML		rootattr	@button	ST_TrueFalse	optional			r	r	r	.	.
+o:@userhidden	VML		rootattr	@userhidden	ST_TrueFalse	optional			r	r	r	.	.
+o:@forcedash	VML		rootattr	@forcedash	ST_TrueFalse	optional			r	r	r	.	.
+o:@oleicon	VML		rootattr	@oleicon	ST_TrueFalse	optional			r	r	r	.	.
+o:@ole	VML		rootattr	@ole	ST_TrueFalseBlank	optional			r	r	r	.	.
+o:@preferrelative	VML		rootattr	@preferrelative	ST_TrueFalse	optional			r	r	r	.	.
+o:@cliptowrap	VML		rootattr	@cliptowrap	ST_TrueFalse	optional			r	r	r	.	.
+o:@clip	VML		rootattr	@clip	ST_TrueFalse	optional			r	r	r	.	.
+o:@bullet	VML		rootattr	@bullet	ST_TrueFalse	optional			r	r	r	.	.
+o:@hr	VML		rootattr	@hr	ST_TrueFalse	optional			r	r	r	.	.
+o:@hrstd	VML		rootattr	@hrstd	ST_TrueFalse	optional			r	r	r	.	.
+o:@hrnoshade	VML		rootattr	@hrnoshade	ST_TrueFalse	optional			r	r	r	.	.
+o:@hrpct	VML		rootattr	@hrpct	float	optional			r	r	r	.	.
+o:@hralign	VML		rootattr	@hralign	ST_HrAlign	optional	left		r	r	r	.	.
+o:@allowincell	VML		rootattr	@allowincell	ST_TrueFalse	optional			r	r	r	.	.
+o:@allowoverlap	VML		rootattr	@allowoverlap	ST_TrueFalse	optional			r	r	r	.	.
+o:@userdrawn	VML		rootattr	@userdrawn	ST_TrueFalse	optional			r	r	r	.	.
+o:@bordertopcolor	VML		rootattr	@bordertopcolor	string	optional			r	r	r	.	.
+o:@borderleftcolor	VML		rootattr	@borderleftcolor	string	optional			r	r	r	.	.
+o:@borderbottomcolor	VML		rootattr	@borderbottomcolor	string	optional			r	r	r	.	.
+o:@borderrightcolor	VML		rootattr	@borderrightcolor	string	optional			r	r	r	.	.
+o:@connecttype	VML		rootattr	@connecttype	ST_ConnectType	optional			r	r	r	.	.
+o:@connectlocs	VML		rootattr	@connectlocs	string	optional			r	r	r	.	.
+o:@connectangles	VML		rootattr	@connectangles	string	optional			r	r	r	.	.
+o:@master	VML		rootattr	@master	string	optional			r	r	r	.	.
+o:@extrusionok	VML		rootattr	@extrusionok	ST_TrueFalse	optional			r	r	r	.	.
+o:@href	VML		rootattr	@href	string	optional			r	r	r	.	.
+o:@althref	VML		rootattr	@althref	string	optional			r	r	r	.	.
+o:@title	VML		rootattr	@title	string	optional			r	r	r	.	.
+o:@singleclick	VML		rootattr	@singleclick	ST_TrueFalse	optional			r	r	r	.	.
+o:@oleid	VML		rootattr	@oleid	float	optional			r	r	r	.	.
+o:@detectmouseclick	VML		rootattr	@detectmouseclick	ST_TrueFalse	optional			r	r	r	.	.
+o:@movie	VML		rootattr	@movie	float	optional			r	r	r	.	.
+o:@spid	VML		rootattr	@spid	string	optional			r	r	r	.	.
+o:@opacity2	VML		rootattr	@opacity2	string	optional			r	r	r	.	.
+o:@relid	VML		rootattr	@relid	ST_RelationshipId	optional			r	r	r	.	.
+o:@dgmlayout	VML		rootattr	@dgmlayout	ST_DiagramLayout	optional			r	r	r	.	.
+o:@dgmnodekind	VML		rootattr	@dgmnodekind	integer	optional			r	r	r	.	.
+o:@dgmlayoutmru	VML		rootattr	@dgmlayoutmru	ST_DiagramLayout	optional			r	r	r	.	.
+o:@gfxdata	VML		rootattr	@gfxdata	base64Binary	optional			r	r	r	.	.
+o:@tableproperties	VML		rootattr	@tableproperties	string	optional			r	r	r	.	.
+o:@tablelimits	VML		rootattr	@tablelimits	string	optional			r	r	r	.	.
+o:<shapedefaults>	VML		root	<shapedefaults>	CT_ShapeDefaults				r	r	r	.	.
+o:<shapelayout>	VML		root	<shapelayout>	CT_ShapeLayout				r	r	r	.	.
+o:<signatureline>	VML		root	<signatureline>	CT_SignatureLine				r	r	r	.	.
+o:<ink>	VML		root	<ink>	CT_Ink				r	r	r	.	.
+o:<diagram>	VML		root	<diagram>	CT_Diagram				r	r	r	.	.
+o:<equationxml>	VML		root	<equationxml>	CT_EquationXml				r	r	r	.	.
+o:CT_ShapeDefaults	VML		type	CT_ShapeDefaults					r	r	r	.	.
+o:CT_ShapeDefaults/v:fill	VML	CT_ShapeDefaults	element	v:fill	fill	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/v:stroke	VML	CT_ShapeDefaults	element	v:stroke	stroke	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/v:textbox	VML	CT_ShapeDefaults	element	v:textbox	textbox	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/v:shadow	VML	CT_ShapeDefaults	element	v:shadow	shadow	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/skew	VML	CT_ShapeDefaults	element	skew	skew	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/extrusion	VML	CT_ShapeDefaults	element	extrusion	extrusion	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/callout	VML	CT_ShapeDefaults	element	callout	callout	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/lock	VML	CT_ShapeDefaults	element	lock	lock	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/colormru	VML	CT_ShapeDefaults	element	colormru	CT_ColorMru	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/colormenu	VML	CT_ShapeDefaults	element	colormenu	CT_ColorMenu	0..1			r	r	r	.	.
+o:CT_ShapeDefaults/AG_Ext	VML	CT_ShapeDefaults	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_ShapeDefaults/@spidmax	VML	CT_ShapeDefaults	attribute	@spidmax	integer	optional			r	r	r	.	.
+o:CT_ShapeDefaults/@style	VML	CT_ShapeDefaults	attribute	@style	string	optional			r	r	r	.	.
+o:CT_ShapeDefaults/@fill	VML	CT_ShapeDefaults	attribute	@fill	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_ShapeDefaults/@fillcolor	VML	CT_ShapeDefaults	attribute	@fillcolor	ST_ColorType	optional			r	r	r	.	.
+o:CT_ShapeDefaults/@stroke	VML	CT_ShapeDefaults	attribute	@stroke	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_ShapeDefaults/@strokecolor	VML	CT_ShapeDefaults	attribute	@strokecolor	ST_ColorType	optional			r	r	r	.	.
+o:CT_ShapeDefaults/@allowincell	VML	CT_ShapeDefaults	attribute	@allowincell	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Ink	VML		type	CT_Ink					r	r	r	.	.
+o:CT_Ink/@i	VML	CT_Ink	attribute	@i	string	optional			r	r	r	.	.
+o:CT_Ink/@annotation	VML	CT_Ink	attribute	@annotation	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Ink/@contentType	VML	CT_Ink	attribute	@contentType	ST_ContentType	optional			r	r	r	.	.
+o:CT_SignatureLine	VML		type	CT_SignatureLine					r	r	r	.	.
+o:CT_SignatureLine/AG_Ext	VML	CT_SignatureLine	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_SignatureLine/@issignatureline	VML	CT_SignatureLine	attribute	@issignatureline	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_SignatureLine/@id	VML	CT_SignatureLine	attribute	@id	ST_Guid	optional			r	r	r	.	.
+o:CT_SignatureLine/@provid	VML	CT_SignatureLine	attribute	@provid	ST_Guid	optional			r	r	r	.	.
+o:CT_SignatureLine/@signinginstructionsset	VML	CT_SignatureLine	attribute	@signinginstructionsset	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_SignatureLine/@allowcomments	VML	CT_SignatureLine	attribute	@allowcomments	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_SignatureLine/@showsigndate	VML	CT_SignatureLine	attribute	@showsigndate	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_SignatureLine/@suggestedsigner	VML	CT_SignatureLine	attribute	@suggestedsigner	string	optional			r	r	r	.	.
+o:CT_SignatureLine/@suggestedsigner2	VML	CT_SignatureLine	attribute	@suggestedsigner2	string	optional			r	r	r	.	.
+o:CT_SignatureLine/@suggestedsigneremail	VML	CT_SignatureLine	attribute	@suggestedsigneremail	string	optional			r	r	r	.	.
+o:CT_SignatureLine/@signinginstructions	VML	CT_SignatureLine	attribute	@signinginstructions	string	optional			r	r	r	.	.
+o:CT_SignatureLine/@addlxml	VML	CT_SignatureLine	attribute	@addlxml	string	optional			r	r	r	.	.
+o:CT_SignatureLine/@sigprovurl	VML	CT_SignatureLine	attribute	@sigprovurl	string	optional			r	r	r	.	.
+o:CT_ShapeLayout	VML		type	CT_ShapeLayout					r	r	r	.	.
+o:CT_ShapeLayout/idmap	VML	CT_ShapeLayout	element	idmap	CT_IdMap	0..1			r	r	r	.	.
+o:CT_ShapeLayout/regrouptable	VML	CT_ShapeLayout	element	regrouptable	CT_RegroupTable	0..1			r	r	r	.	.
+o:CT_ShapeLayout/rules	VML	CT_ShapeLayout	element	rules	CT_Rules	0..1			r	r	r	.	.
+o:CT_ShapeLayout/AG_Ext	VML	CT_ShapeLayout	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_IdMap	VML		type	CT_IdMap					r	r	r	.	.
+o:CT_IdMap/AG_Ext	VML	CT_IdMap	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_IdMap/@data	VML	CT_IdMap	attribute	@data	string	optional			r	r	r	.	.
+o:CT_RegroupTable	VML		type	CT_RegroupTable					r	r	r	.	.
+o:CT_RegroupTable/entry	VML	CT_RegroupTable	element	entry	CT_Entry	0..unbounded			r	r	r	.	.
+o:CT_RegroupTable/AG_Ext	VML	CT_RegroupTable	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Entry	VML		type	CT_Entry					r	r	r	.	.
+o:CT_Entry/@new	VML	CT_Entry	attribute	@new	int	optional			r	r	r	.	.
+o:CT_Entry/@old	VML	CT_Entry	attribute	@old	int	optional			r	r	r	.	.
+o:CT_Rules	VML		type	CT_Rules					r	r	r	.	.
+o:CT_Rules/r	VML	CT_Rules	element	r	CT_R	0..unbounded			r	r	r	.	.
+o:CT_Rules/AG_Ext	VML	CT_Rules	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_R	VML		type	CT_R					r	r	r	.	.
+o:CT_R/proxy	VML	CT_R	element	proxy	CT_Proxy	0..unbounded			r	r	r	.	.
+o:CT_R/@id	VML	CT_R	attribute	@id	string	required			r	r	r	.	.
+o:CT_R/@type	VML	CT_R	attribute	@type	ST_RType	optional			r	r	r	.	.
+o:CT_R/@how	VML	CT_R	attribute	@how	ST_How	optional			r	r	r	.	.
+o:CT_R/@idref	VML	CT_R	attribute	@idref	string	optional			r	r	r	.	.
+o:CT_Proxy	VML		type	CT_Proxy					r	r	r	.	.
+o:CT_Proxy/@start	VML	CT_Proxy	attribute	@start	ST_TrueFalseBlank	optional	false		r	r	r	.	.
+o:CT_Proxy/@end	VML	CT_Proxy	attribute	@end	ST_TrueFalseBlank	optional	false		r	r	r	.	.
+o:CT_Proxy/@idref	VML	CT_Proxy	attribute	@idref	string	optional			r	r	r	.	.
+o:CT_Proxy/@connectloc	VML	CT_Proxy	attribute	@connectloc	int	optional			r	r	r	.	.
+o:CT_Diagram	VML		type	CT_Diagram					r	r	r	.	.
+o:CT_Diagram/relationtable	VML	CT_Diagram	element	relationtable	CT_RelationTable	0..1			r	r	r	.	.
+o:CT_Diagram/AG_Ext	VML	CT_Diagram	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Diagram/@dgmstyle	VML	CT_Diagram	attribute	@dgmstyle	integer	optional			r	r	r	.	.
+o:CT_Diagram/@autoformat	VML	CT_Diagram	attribute	@autoformat	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Diagram/@reverse	VML	CT_Diagram	attribute	@reverse	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Diagram/@autolayout	VML	CT_Diagram	attribute	@autolayout	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Diagram/@dgmscalex	VML	CT_Diagram	attribute	@dgmscalex	integer	optional			r	r	r	.	.
+o:CT_Diagram/@dgmscaley	VML	CT_Diagram	attribute	@dgmscaley	integer	optional			r	r	r	.	.
+o:CT_Diagram/@dgmfontsize	VML	CT_Diagram	attribute	@dgmfontsize	integer	optional			r	r	r	.	.
+o:CT_Diagram/@constrainbounds	VML	CT_Diagram	attribute	@constrainbounds	string	optional			r	r	r	.	.
+o:CT_Diagram/@dgmbasetextscale	VML	CT_Diagram	attribute	@dgmbasetextscale	integer	optional			r	r	r	.	.
+o:CT_EquationXml	VML		type	CT_EquationXml					r	r	r	.	.
+o:CT_EquationXml/xsd:any	VML	CT_EquationXml	any	xsd:any	##any				r	r	r	.	.
+o:CT_EquationXml/@contentType	VML	CT_EquationXml	attribute	@contentType	ST_AlternateMathContentType	optional			r	r	r	.	.
+o:ST_AlternateMathContentType	VML		simple	ST_AlternateMathContentType				base=string	r	r	r	.	.
+o:CT_RelationTable	VML		type	CT_RelationTable					r	r	r	.	.
+o:CT_RelationTable/rel	VML	CT_RelationTable	element	rel	CT_Relation	0..unbounded			r	r	r	.	.
+o:CT_RelationTable/AG_Ext	VML	CT_RelationTable	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Relation	VML		type	CT_Relation					r	r	r	.	.
+o:CT_Relation/AG_Ext	VML	CT_Relation	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Relation/@idsrc	VML	CT_Relation	attribute	@idsrc	string	optional			r	r	r	.	.
+o:CT_Relation/@iddest	VML	CT_Relation	attribute	@iddest	string	optional			r	r	r	.	.
+o:CT_Relation/@idcntr	VML	CT_Relation	attribute	@idcntr	string	optional			r	r	r	.	.
+o:CT_ColorMru	VML		type	CT_ColorMru					r	r	r	.	.
+o:CT_ColorMru/AG_Ext	VML	CT_ColorMru	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_ColorMru/@colors	VML	CT_ColorMru	attribute	@colors	string	optional			r	r	r	.	.
+o:CT_ColorMenu	VML		type	CT_ColorMenu					r	r	r	.	.
+o:CT_ColorMenu/AG_Ext	VML	CT_ColorMenu	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_ColorMenu/@strokecolor	VML	CT_ColorMenu	attribute	@strokecolor	ST_ColorType	optional			r	r	r	.	.
+o:CT_ColorMenu/@fillcolor	VML	CT_ColorMenu	attribute	@fillcolor	ST_ColorType	optional			r	r	r	.	.
+o:CT_ColorMenu/@shadowcolor	VML	CT_ColorMenu	attribute	@shadowcolor	ST_ColorType	optional			r	r	r	.	.
+o:CT_ColorMenu/@extrusioncolor	VML	CT_ColorMenu	attribute	@extrusioncolor	ST_ColorType	optional			r	r	r	.	.
+o:<skew>	VML		root	<skew>	CT_Skew				r	r	r	.	.
+o:<extrusion>	VML		root	<extrusion>	CT_Extrusion				r	r	r	.	.
+o:<callout>	VML		root	<callout>	CT_Callout				r	r	r	.	.
+o:<lock>	VML		root	<lock>	CT_Lock				r	r	r	.	.
+o:<OLEObject>	VML		root	<OLEObject>	CT_OLEObject				r	r	r	.	.
+o:<complex>	VML		root	<complex>	CT_Complex				r	r	r	.	.
+o:<left>	VML		root	<left>	CT_StrokeChild				r	r	r	.	.
+o:<top>	VML		root	<top>	CT_StrokeChild				r	r	r	.	.
+o:<right>	VML		root	<right>	CT_StrokeChild				r	r	r	.	.
+o:<bottom>	VML		root	<bottom>	CT_StrokeChild				r	r	r	.	.
+o:<column>	VML		root	<column>	CT_StrokeChild				r	r	r	.	.
+o:<clippath>	VML		root	<clippath>	CT_ClipPath				r	r	r	.	.
+o:<fill>	VML		root	<fill>	CT_Fill				r	r	r	.	.
+o:CT_Skew	VML		type	CT_Skew					r	r	r	.	.
+o:CT_Skew/AG_Ext	VML	CT_Skew	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Skew/@id	VML	CT_Skew	attribute	@id	string	optional			r	r	r	.	.
+o:CT_Skew/@on	VML	CT_Skew	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Skew/@offset	VML	CT_Skew	attribute	@offset	string	optional			r	r	r	.	.
+o:CT_Skew/@origin	VML	CT_Skew	attribute	@origin	string	optional			r	r	r	.	.
+o:CT_Skew/@matrix	VML	CT_Skew	attribute	@matrix	string	optional			r	r	r	.	.
+o:CT_Extrusion	VML		type	CT_Extrusion					r	r	r	.	.
+o:CT_Extrusion/AG_Ext	VML	CT_Extrusion	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Extrusion/@on	VML	CT_Extrusion	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Extrusion/@type	VML	CT_Extrusion	attribute	@type	ST_ExtrusionType	optional	parallel		r	r	r	.	.
+o:CT_Extrusion/@render	VML	CT_Extrusion	attribute	@render	ST_ExtrusionRender	optional	solid		r	r	r	.	.
+o:CT_Extrusion/@viewpointorigin	VML	CT_Extrusion	attribute	@viewpointorigin	string	optional			r	r	r	.	.
+o:CT_Extrusion/@viewpoint	VML	CT_Extrusion	attribute	@viewpoint	string	optional			r	r	r	.	.
+o:CT_Extrusion/@plane	VML	CT_Extrusion	attribute	@plane	ST_ExtrusionPlane	optional	XY		r	r	r	.	.
+o:CT_Extrusion/@skewangle	VML	CT_Extrusion	attribute	@skewangle	float	optional			r	r	r	.	.
+o:CT_Extrusion/@skewamt	VML	CT_Extrusion	attribute	@skewamt	string	optional			r	r	r	.	.
+o:CT_Extrusion/@foredepth	VML	CT_Extrusion	attribute	@foredepth	string	optional			r	r	r	.	.
+o:CT_Extrusion/@backdepth	VML	CT_Extrusion	attribute	@backdepth	string	optional			r	r	r	.	.
+o:CT_Extrusion/@orientation	VML	CT_Extrusion	attribute	@orientation	string	optional			r	r	r	.	.
+o:CT_Extrusion/@orientationangle	VML	CT_Extrusion	attribute	@orientationangle	float	optional			r	r	r	.	.
+o:CT_Extrusion/@lockrotationcenter	VML	CT_Extrusion	attribute	@lockrotationcenter	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Extrusion/@autorotationcenter	VML	CT_Extrusion	attribute	@autorotationcenter	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Extrusion/@rotationcenter	VML	CT_Extrusion	attribute	@rotationcenter	string	optional			r	r	r	.	.
+o:CT_Extrusion/@rotationangle	VML	CT_Extrusion	attribute	@rotationangle	string	optional			r	r	r	.	.
+o:CT_Extrusion/@colormode	VML	CT_Extrusion	attribute	@colormode	ST_ColorMode	optional			r	r	r	.	.
+o:CT_Extrusion/@color	VML	CT_Extrusion	attribute	@color	ST_ColorType	optional			r	r	r	.	.
+o:CT_Extrusion/@shininess	VML	CT_Extrusion	attribute	@shininess	float	optional			r	r	r	.	.
+o:CT_Extrusion/@specularity	VML	CT_Extrusion	attribute	@specularity	string	optional			r	r	r	.	.
+o:CT_Extrusion/@diffusity	VML	CT_Extrusion	attribute	@diffusity	string	optional			r	r	r	.	.
+o:CT_Extrusion/@metal	VML	CT_Extrusion	attribute	@metal	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Extrusion/@edge	VML	CT_Extrusion	attribute	@edge	string	optional			r	r	r	.	.
+o:CT_Extrusion/@facet	VML	CT_Extrusion	attribute	@facet	string	optional			r	r	r	.	.
+o:CT_Extrusion/@lightface	VML	CT_Extrusion	attribute	@lightface	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Extrusion/@brightness	VML	CT_Extrusion	attribute	@brightness	string	optional			r	r	r	.	.
+o:CT_Extrusion/@lightposition	VML	CT_Extrusion	attribute	@lightposition	string	optional			r	r	r	.	.
+o:CT_Extrusion/@lightlevel	VML	CT_Extrusion	attribute	@lightlevel	string	optional			r	r	r	.	.
+o:CT_Extrusion/@lightharsh	VML	CT_Extrusion	attribute	@lightharsh	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Extrusion/@lightposition2	VML	CT_Extrusion	attribute	@lightposition2	string	optional			r	r	r	.	.
+o:CT_Extrusion/@lightlevel2	VML	CT_Extrusion	attribute	@lightlevel2	string	optional			r	r	r	.	.
+o:CT_Extrusion/@lightharsh2	VML	CT_Extrusion	attribute	@lightharsh2	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Callout	VML		type	CT_Callout					r	r	r	.	.
+o:CT_Callout/AG_Ext	VML	CT_Callout	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Callout/@on	VML	CT_Callout	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Callout/@type	VML	CT_Callout	attribute	@type	string	optional			r	r	r	.	.
+o:CT_Callout/@gap	VML	CT_Callout	attribute	@gap	string	optional			r	r	r	.	.
+o:CT_Callout/@angle	VML	CT_Callout	attribute	@angle	ST_Angle	optional			r	r	r	.	.
+o:CT_Callout/@dropauto	VML	CT_Callout	attribute	@dropauto	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Callout/@drop	VML	CT_Callout	attribute	@drop	ST_CalloutDrop	optional			r	r	r	.	.
+o:CT_Callout/@distance	VML	CT_Callout	attribute	@distance	string	optional			r	r	r	.	.
+o:CT_Callout/@lengthspecified	VML	CT_Callout	attribute	@lengthspecified	ST_TrueFalse	optional	f		r	r	r	.	.
+o:CT_Callout/@length	VML	CT_Callout	attribute	@length	string	optional			r	r	r	.	.
+o:CT_Callout/@accentbar	VML	CT_Callout	attribute	@accentbar	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Callout/@textborder	VML	CT_Callout	attribute	@textborder	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Callout/@minusx	VML	CT_Callout	attribute	@minusx	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Callout/@minusy	VML	CT_Callout	attribute	@minusy	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock	VML		type	CT_Lock					r	r	r	.	.
+o:CT_Lock/AG_Ext	VML	CT_Lock	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Lock/@position	VML	CT_Lock	attribute	@position	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@selection	VML	CT_Lock	attribute	@selection	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@grouping	VML	CT_Lock	attribute	@grouping	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@ungrouping	VML	CT_Lock	attribute	@ungrouping	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@rotation	VML	CT_Lock	attribute	@rotation	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@cropping	VML	CT_Lock	attribute	@cropping	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@verticies	VML	CT_Lock	attribute	@verticies	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@adjusthandles	VML	CT_Lock	attribute	@adjusthandles	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@text	VML	CT_Lock	attribute	@text	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@aspectratio	VML	CT_Lock	attribute	@aspectratio	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_Lock/@shapetype	VML	CT_Lock	attribute	@shapetype	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_OLEObject	VML		type	CT_OLEObject					r	r	r	.	.
+o:CT_OLEObject/LinkType	VML	CT_OLEObject	element	LinkType	ST_OLELinkType	0..1			r	r	r	.	.
+o:CT_OLEObject/LockedField	VML	CT_OLEObject	element	LockedField	ST_TrueFalseBlank	0..1			r	r	r	.	.
+o:CT_OLEObject/FieldCodes	VML	CT_OLEObject	element	FieldCodes	string	0..1			r	r	r	.	.
+o:CT_OLEObject/@Type	VML	CT_OLEObject	attribute	@Type	ST_OLEType	optional			r	r	r	.	.
+o:CT_OLEObject/@ProgID	VML	CT_OLEObject	attribute	@ProgID	string	optional			r	r	r	.	.
+o:CT_OLEObject/@ShapeID	VML	CT_OLEObject	attribute	@ShapeID	string	optional			r	r	r	.	.
+o:CT_OLEObject/@DrawAspect	VML	CT_OLEObject	attribute	@DrawAspect	ST_OLEDrawAspect	optional			r	r	r	.	.
+o:CT_OLEObject/@ObjectID	VML	CT_OLEObject	attribute	@ObjectID	string	optional			r	r	r	.	.
+o:CT_OLEObject/@r:id	VML	CT_OLEObject	attribute	@r:id	id	optional			r	r	r	.	.
+o:CT_OLEObject/@UpdateMode	VML	CT_OLEObject	attribute	@UpdateMode	ST_OLEUpdateMode	optional			r	r	r	.	.
+o:CT_Complex	VML		type	CT_Complex					r	r	r	.	.
+o:CT_Complex/AG_Ext	VML	CT_Complex	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_StrokeChild	VML		type	CT_StrokeChild					r	r	r	.	.
+o:CT_StrokeChild/AG_Ext	VML	CT_StrokeChild	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_StrokeChild/@on	VML	CT_StrokeChild	attribute	@on	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_StrokeChild/@weight	VML	CT_StrokeChild	attribute	@weight	string	optional			r	r	r	.	.
+o:CT_StrokeChild/@color	VML	CT_StrokeChild	attribute	@color	ST_ColorType	optional			r	r	r	.	.
+o:CT_StrokeChild/@color2	VML	CT_StrokeChild	attribute	@color2	ST_ColorType	optional			r	r	r	.	.
+o:CT_StrokeChild/@opacity	VML	CT_StrokeChild	attribute	@opacity	string	optional			r	r	r	.	.
+o:CT_StrokeChild/@linestyle	VML	CT_StrokeChild	attribute	@linestyle	ST_StrokeLineStyle	optional			r	r	r	.	.
+o:CT_StrokeChild/@miterlimit	VML	CT_StrokeChild	attribute	@miterlimit	decimal	optional			r	r	r	.	.
+o:CT_StrokeChild/@joinstyle	VML	CT_StrokeChild	attribute	@joinstyle	ST_StrokeJoinStyle	optional			r	r	r	.	.
+o:CT_StrokeChild/@endcap	VML	CT_StrokeChild	attribute	@endcap	ST_StrokeEndCap	optional			r	r	r	.	.
+o:CT_StrokeChild/@dashstyle	VML	CT_StrokeChild	attribute	@dashstyle	string	optional			r	r	r	.	.
+o:CT_StrokeChild/@insetpen	VML	CT_StrokeChild	attribute	@insetpen	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_StrokeChild/@filltype	VML	CT_StrokeChild	attribute	@filltype	ST_FillType	optional			r	r	r	.	.
+o:CT_StrokeChild/@src	VML	CT_StrokeChild	attribute	@src	string	optional			r	r	r	.	.
+o:CT_StrokeChild/@imageaspect	VML	CT_StrokeChild	attribute	@imageaspect	ST_ImageAspect	optional			r	r	r	.	.
+o:CT_StrokeChild/@imagesize	VML	CT_StrokeChild	attribute	@imagesize	string	optional			r	r	r	.	.
+o:CT_StrokeChild/@imagealignshape	VML	CT_StrokeChild	attribute	@imagealignshape	ST_TrueFalse	optional			r	r	r	.	.
+o:CT_StrokeChild/@startarrow	VML	CT_StrokeChild	attribute	@startarrow	ST_StrokeArrowType	optional			r	r	r	.	.
+o:CT_StrokeChild/@startarrowwidth	VML	CT_StrokeChild	attribute	@startarrowwidth	ST_StrokeArrowWidth	optional			r	r	r	.	.
+o:CT_StrokeChild/@startarrowlength	VML	CT_StrokeChild	attribute	@startarrowlength	ST_StrokeArrowLength	optional			r	r	r	.	.
+o:CT_StrokeChild/@endarrow	VML	CT_StrokeChild	attribute	@endarrow	ST_StrokeArrowType	optional			r	r	r	.	.
+o:CT_StrokeChild/@endarrowwidth	VML	CT_StrokeChild	attribute	@endarrowwidth	ST_StrokeArrowWidth	optional			r	r	r	.	.
+o:CT_StrokeChild/@endarrowlength	VML	CT_StrokeChild	attribute	@endarrowlength	ST_StrokeArrowLength	optional			r	r	r	.	.
+o:CT_StrokeChild/@href	VML	CT_StrokeChild	attribute	@href	href	optional			r	r	r	.	.
+o:CT_StrokeChild/@althref	VML	CT_StrokeChild	attribute	@althref	althref	optional			r	r	r	.	.
+o:CT_StrokeChild/@title	VML	CT_StrokeChild	attribute	@title	title	optional			r	r	r	.	.
+o:CT_StrokeChild/@forcedash	VML	CT_StrokeChild	attribute	@forcedash	forcedash	optional			r	r	r	.	.
+o:CT_ClipPath	VML		type	CT_ClipPath					r	r	r	.	.
+o:CT_ClipPath/@v	VML	CT_ClipPath	attribute	@v	string	required			r	r	r	.	.
+o:CT_Fill	VML		type	CT_Fill					r	r	r	.	.
+o:CT_Fill/AG_Ext	VML	CT_Fill	attrgroup	AG_Ext	AG_Ext				r	r	r	.	.
+o:CT_Fill/@type	VML	CT_Fill	attribute	@type	ST_FillType	optional			r	r	r	.	.
+o:ST_RType	VML		simple	ST_RType				base=string	r	r	r	.	.
+o:ST_RType/=arc	VML	ST_RType	value	=arc					r	r	r	.	.
+o:ST_RType/=callout	VML	ST_RType	value	=callout					r	r	r	.	.
+o:ST_RType/=connector	VML	ST_RType	value	=connector					r	r	r	.	.
+o:ST_RType/=align	VML	ST_RType	value	=align					r	r	r	.	.
+o:ST_How	VML		simple	ST_How				base=string	r	r	r	.	.
+o:ST_How/=top	VML	ST_How	value	=top					r	r	r	.	.
+o:ST_How/=middle	VML	ST_How	value	=middle					r	r	r	.	.
+o:ST_How/=bottom	VML	ST_How	value	=bottom					r	r	r	.	.
+o:ST_How/=left	VML	ST_How	value	=left					r	r	r	.	.
+o:ST_How/=center	VML	ST_How	value	=center					r	r	r	.	.
+o:ST_How/=right	VML	ST_How	value	=right					r	r	r	.	.
+o:ST_BWMode	VML		simple	ST_BWMode				base=string	r	r	r	.	.
+o:ST_BWMode/=color	VML	ST_BWMode	value	=color					r	r	r	.	.
+o:ST_BWMode/=auto	VML	ST_BWMode	value	=auto					r	r	r	.	.
+o:ST_BWMode/=grayScale	VML	ST_BWMode	value	=grayScale					r	r	r	.	.
+o:ST_BWMode/=lightGrayscale	VML	ST_BWMode	value	=lightGrayscale					r	r	r	.	.
+o:ST_BWMode/=inverseGray	VML	ST_BWMode	value	=inverseGray					r	r	r	.	.
+o:ST_BWMode/=grayOutline	VML	ST_BWMode	value	=grayOutline					r	r	r	.	.
+o:ST_BWMode/=highContrast	VML	ST_BWMode	value	=highContrast					r	r	r	.	.
+o:ST_BWMode/=black	VML	ST_BWMode	value	=black					r	r	r	.	.
+o:ST_BWMode/=white	VML	ST_BWMode	value	=white					r	r	r	.	.
+o:ST_BWMode/=hide	VML	ST_BWMode	value	=hide					r	r	r	.	.
+o:ST_BWMode/=undrawn	VML	ST_BWMode	value	=undrawn					r	r	r	.	.
+o:ST_BWMode/=blackTextAndLines	VML	ST_BWMode	value	=blackTextAndLines					r	r	r	.	.
+o:ST_ScreenSize	VML		simple	ST_ScreenSize				base=string	r	r	r	.	.
+o:ST_ScreenSize/=544,376	VML	ST_ScreenSize	value	=544,376					r	r	r	.	.
+o:ST_ScreenSize/=640,480	VML	ST_ScreenSize	value	=640,480					r	r	r	.	.
+o:ST_ScreenSize/=720,512	VML	ST_ScreenSize	value	=720,512					r	r	r	.	.
+o:ST_ScreenSize/=800,600	VML	ST_ScreenSize	value	=800,600					r	r	r	.	.
+o:ST_ScreenSize/=1024,768	VML	ST_ScreenSize	value	=1024,768					r	r	r	.	.
+o:ST_ScreenSize/=1152,862	VML	ST_ScreenSize	value	=1152,862					r	r	r	.	.
+o:ST_InsetMode	VML		simple	ST_InsetMode				base=string	r	r	r	.	.
+o:ST_InsetMode/=auto	VML	ST_InsetMode	value	=auto					r	r	r	.	.
+o:ST_InsetMode/=custom	VML	ST_InsetMode	value	=custom					r	r	r	.	.
+o:ST_ColorMode	VML		simple	ST_ColorMode				base=string	r	r	r	.	.
+o:ST_ColorMode/=auto	VML	ST_ColorMode	value	=auto					r	r	r	.	.
+o:ST_ColorMode/=custom	VML	ST_ColorMode	value	=custom					r	r	r	.	.
+o:ST_ContentType	VML		simple	ST_ContentType				base=string	r	r	r	.	.
+o:ST_DiagramLayout	VML		simple	ST_DiagramLayout				base=integer	r	r	r	.	.
+o:ST_DiagramLayout/=0	VML	ST_DiagramLayout	value	=0					r	r	r	.	.
+o:ST_DiagramLayout/=1	VML	ST_DiagramLayout	value	=1					r	r	r	.	.
+o:ST_DiagramLayout/=2	VML	ST_DiagramLayout	value	=2					r	r	r	.	.
+o:ST_DiagramLayout/=3	VML	ST_DiagramLayout	value	=3					r	r	r	.	.
+o:ST_ExtrusionType	VML		simple	ST_ExtrusionType				base=string	r	r	r	.	.
+o:ST_ExtrusionType/=perspective	VML	ST_ExtrusionType	value	=perspective					r	r	r	.	.
+o:ST_ExtrusionType/=parallel	VML	ST_ExtrusionType	value	=parallel					r	r	r	.	.
+o:ST_ExtrusionRender	VML		simple	ST_ExtrusionRender				base=string	r	r	r	.	.
+o:ST_ExtrusionRender/=solid	VML	ST_ExtrusionRender	value	=solid					r	r	r	.	.
+o:ST_ExtrusionRender/=wireFrame	VML	ST_ExtrusionRender	value	=wireFrame					r	r	r	.	.
+o:ST_ExtrusionRender/=boundingCube	VML	ST_ExtrusionRender	value	=boundingCube					r	r	r	.	.
+o:ST_ExtrusionPlane	VML		simple	ST_ExtrusionPlane				base=string	r	r	r	.	.
+o:ST_ExtrusionPlane/=XY	VML	ST_ExtrusionPlane	value	=XY					r	r	r	.	.
+o:ST_ExtrusionPlane/=ZX	VML	ST_ExtrusionPlane	value	=ZX					r	r	r	.	.
+o:ST_ExtrusionPlane/=YZ	VML	ST_ExtrusionPlane	value	=YZ					r	r	r	.	.
+o:ST_Angle	VML		simple	ST_Angle				base=string	r	r	r	.	.
+o:ST_Angle/=any	VML	ST_Angle	value	=any					r	r	r	.	.
+o:ST_Angle/=30	VML	ST_Angle	value	=30					r	r	r	.	.
+o:ST_Angle/=45	VML	ST_Angle	value	=45					r	r	r	.	.
+o:ST_Angle/=60	VML	ST_Angle	value	=60					r	r	r	.	.
+o:ST_Angle/=90	VML	ST_Angle	value	=90					r	r	r	.	.
+o:ST_Angle/=auto	VML	ST_Angle	value	=auto					r	r	r	.	.
+o:ST_CalloutDrop	VML		simple	ST_CalloutDrop				base=string	r	r	r	.	.
 o:ST_CalloutPlacement	VML		simple	ST_CalloutPlacement				base=string	.	.	.	.	.
 o:ST_CalloutPlacement/=top	VML	ST_CalloutPlacement	value	=top					.	.	.	.	.
 o:ST_CalloutPlacement/=center	VML	ST_CalloutPlacement	value	=center					.	.	.	.	.
 o:ST_CalloutPlacement/=bottom	VML	ST_CalloutPlacement	value	=bottom					.	.	.	.	.
 o:ST_CalloutPlacement/=user	VML	ST_CalloutPlacement	value	=user					.	.	.	.	.
-o:ST_ConnectorType	VML		simple	ST_ConnectorType				base=string	.	.	.	.	.
-o:ST_ConnectorType/=none	VML	ST_ConnectorType	value	=none					.	.	.	.	.
-o:ST_ConnectorType/=straight	VML	ST_ConnectorType	value	=straight					.	.	.	.	.
-o:ST_ConnectorType/=elbow	VML	ST_ConnectorType	value	=elbow					.	.	.	.	.
-o:ST_ConnectorType/=curved	VML	ST_ConnectorType	value	=curved					.	.	.	.	.
-o:ST_HrAlign	VML		simple	ST_HrAlign				base=string	.	.	.	.	.
-o:ST_HrAlign/=left	VML	ST_HrAlign	value	=left					.	.	.	.	.
-o:ST_HrAlign/=right	VML	ST_HrAlign	value	=right					.	.	.	.	.
-o:ST_HrAlign/=center	VML	ST_HrAlign	value	=center					.	.	.	.	.
-o:ST_ConnectType	VML		simple	ST_ConnectType				base=string	.	.	.	.	.
-o:ST_ConnectType/=none	VML	ST_ConnectType	value	=none					.	.	.	.	.
-o:ST_ConnectType/=rect	VML	ST_ConnectType	value	=rect					.	.	.	.	.
-o:ST_ConnectType/=segments	VML	ST_ConnectType	value	=segments					.	.	.	.	.
-o:ST_ConnectType/=custom	VML	ST_ConnectType	value	=custom					.	.	.	.	.
-o:ST_OLELinkType	VML		simple	ST_OLELinkType				base=string	.	.	.	.	.
-o:ST_OLEType	VML		simple	ST_OLEType				base=string	.	.	.	.	.
-o:ST_OLEType/=Embed	VML	ST_OLEType	value	=Embed					.	.	.	.	.
-o:ST_OLEType/=Link	VML	ST_OLEType	value	=Link					.	.	.	.	.
-o:ST_OLEDrawAspect	VML		simple	ST_OLEDrawAspect				base=string	.	.	.	.	.
-o:ST_OLEDrawAspect/=Content	VML	ST_OLEDrawAspect	value	=Content					.	.	.	.	.
-o:ST_OLEDrawAspect/=Icon	VML	ST_OLEDrawAspect	value	=Icon					.	.	.	.	.
-o:ST_OLEUpdateMode	VML		simple	ST_OLEUpdateMode				base=string	.	.	.	.	.
-o:ST_OLEUpdateMode/=Always	VML	ST_OLEUpdateMode	value	=Always					.	.	.	.	.
-o:ST_OLEUpdateMode/=OnCall	VML	ST_OLEUpdateMode	value	=OnCall					.	.	.	.	.
-o:ST_FillType	VML		simple	ST_FillType				base=string	.	.	.	.	.
-o:ST_FillType/=gradientCenter	VML	ST_FillType	value	=gradientCenter					.	.	.	.	.
-o:ST_FillType/=solid	VML	ST_FillType	value	=solid					.	.	.	.	.
-o:ST_FillType/=pattern	VML	ST_FillType	value	=pattern					.	.	.	.	.
-o:ST_FillType/=tile	VML	ST_FillType	value	=tile					.	.	.	.	.
-o:ST_FillType/=frame	VML	ST_FillType	value	=frame					.	.	.	.	.
-o:ST_FillType/=gradientUnscaled	VML	ST_FillType	value	=gradientUnscaled					.	.	.	.	.
-o:ST_FillType/=gradientRadial	VML	ST_FillType	value	=gradientRadial					.	.	.	.	.
-o:ST_FillType/=gradient	VML	ST_FillType	value	=gradient					.	.	.	.	.
-o:ST_FillType/=background	VML	ST_FillType	value	=background					.	.	.	.	.
-pvml:<iscomment>	VML		root	<iscomment>	CT_Empty				.	.	.	.	.
-pvml:<textdata>	VML		root	<textdata>	CT_Rel				.	.	.	.	.
-pvml:CT_Empty	VML		type	CT_Empty					.	.	.	.	.
-pvml:CT_Rel	VML		type	CT_Rel					.	.	.	.	.
-pvml:CT_Rel/@id	VML	CT_Rel	attribute	@id	string	optional			.	.	.	.	.
+o:ST_ConnectorType	VML		simple	ST_ConnectorType				base=string	r	r	r	.	.
+o:ST_ConnectorType/=none	VML	ST_ConnectorType	value	=none					r	r	r	.	.
+o:ST_ConnectorType/=straight	VML	ST_ConnectorType	value	=straight					r	r	r	.	.
+o:ST_ConnectorType/=elbow	VML	ST_ConnectorType	value	=elbow					r	r	r	.	.
+o:ST_ConnectorType/=curved	VML	ST_ConnectorType	value	=curved					r	r	r	.	.
+o:ST_HrAlign	VML		simple	ST_HrAlign				base=string	r	r	r	.	.
+o:ST_HrAlign/=left	VML	ST_HrAlign	value	=left					r	r	r	.	.
+o:ST_HrAlign/=right	VML	ST_HrAlign	value	=right					r	r	r	.	.
+o:ST_HrAlign/=center	VML	ST_HrAlign	value	=center					r	r	r	.	.
+o:ST_ConnectType	VML		simple	ST_ConnectType				base=string	r	r	r	.	.
+o:ST_ConnectType/=none	VML	ST_ConnectType	value	=none					r	r	r	.	.
+o:ST_ConnectType/=rect	VML	ST_ConnectType	value	=rect					r	r	r	.	.
+o:ST_ConnectType/=segments	VML	ST_ConnectType	value	=segments					r	r	r	.	.
+o:ST_ConnectType/=custom	VML	ST_ConnectType	value	=custom					r	r	r	.	.
+o:ST_OLELinkType	VML		simple	ST_OLELinkType				base=string	r	r	r	.	.
+o:ST_OLEType	VML		simple	ST_OLEType				base=string	r	r	r	.	.
+o:ST_OLEType/=Embed	VML	ST_OLEType	value	=Embed					r	r	r	.	.
+o:ST_OLEType/=Link	VML	ST_OLEType	value	=Link					r	r	r	.	.
+o:ST_OLEDrawAspect	VML		simple	ST_OLEDrawAspect				base=string	r	r	r	.	.
+o:ST_OLEDrawAspect/=Content	VML	ST_OLEDrawAspect	value	=Content					r	r	r	.	.
+o:ST_OLEDrawAspect/=Icon	VML	ST_OLEDrawAspect	value	=Icon					r	r	r	.	.
+o:ST_OLEUpdateMode	VML		simple	ST_OLEUpdateMode				base=string	r	r	r	.	.
+o:ST_OLEUpdateMode/=Always	VML	ST_OLEUpdateMode	value	=Always					r	r	r	.	.
+o:ST_OLEUpdateMode/=OnCall	VML	ST_OLEUpdateMode	value	=OnCall					r	r	r	.	.
+o:ST_FillType	VML		simple	ST_FillType				base=string	r	r	r	.	.
+o:ST_FillType/=gradientCenter	VML	ST_FillType	value	=gradientCenter					r	r	r	.	.
+o:ST_FillType/=solid	VML	ST_FillType	value	=solid					r	r	r	.	.
+o:ST_FillType/=pattern	VML	ST_FillType	value	=pattern					r	r	r	.	.
+o:ST_FillType/=tile	VML	ST_FillType	value	=tile					r	r	r	.	.
+o:ST_FillType/=frame	VML	ST_FillType	value	=frame					r	r	r	.	.
+o:ST_FillType/=gradientUnscaled	VML	ST_FillType	value	=gradientUnscaled					r	r	r	.	.
+o:ST_FillType/=gradientRadial	VML	ST_FillType	value	=gradientRadial					r	r	r	.	.
+o:ST_FillType/=gradient	VML	ST_FillType	value	=gradient					r	r	r	.	.
+o:ST_FillType/=background	VML	ST_FillType	value	=background					r	r	r	.	.
+pvml:<iscomment>	VML		root	<iscomment>	CT_Empty				r	r	r	.	.
+pvml:<textdata>	VML		root	<textdata>	CT_Rel				r	r	r	.	.
+pvml:CT_Empty	VML		type	CT_Empty					r	r	r	.	.
+pvml:CT_Rel	VML		type	CT_Rel					r	r	r	.	.
+pvml:CT_Rel/@id	VML	CT_Rel	attribute	@id	string	optional			r	r	r	.	.
 ct:<Types>	PKG		root	<Types>	CT_Types				.	.	r	.	.
 ct:<Default>	PKG		root	<Default>	CT_Default				.	.	r	.	.
 ct:<Override>	PKG		root	<Override>	CT_Override				.	.	r	.	.
@@ -8543,93 +8543,93 @@ x:drawing/2016/ink:ST_InkEffectsType/=lava	INK	ST_InkEffectsType	value	=lava				
 x:drawing/2016/ink:ST_InkEffectsType/=ocean	INK	ST_InkEffectsType	value	=ocean					.	.	.	.	.
 x:drawing/2016/ink:ST_InkEffectsType/=rosegold	INK	ST_InkEffectsType	value	=rosegold					.	.	.	.	.
 x:drawing/2016/ink:ST_InkEffectsType/=bronze	INK	ST_InkEffectsType	value	=bronze					.	.	.	.	.
-x:drawing/2017/model3d:CT_PositiveRatio	MODEL3D		type	CT_PositiveRatio					.	.	.	.	.
-x:drawing/2017/model3d:CT_PositiveRatio/@n	MODEL3D	CT_PositiveRatio	attribute	@n	unsignedLong	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_PositiveRatio/@d	MODEL3D	CT_PositiveRatio	attribute	@d	unsignedLong	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_Rotate3D	MODEL3D		type	CT_Rotate3D					.	.	.	.	.
-x:drawing/2017/model3d:CT_Rotate3D/@ax	MODEL3D	CT_Rotate3D	attribute	@ax	ST_Angle	optional	0		.	.	.	.	.
-x:drawing/2017/model3d:CT_Rotate3D/@ay	MODEL3D	CT_Rotate3D	attribute	@ay	ST_Angle	optional	0		.	.	.	.	.
-x:drawing/2017/model3d:CT_Rotate3D/@az	MODEL3D	CT_Rotate3D	attribute	@az	ST_Angle	optional	0		.	.	.	.	.
-x:drawing/2017/model3d:CT_Scale3D	MODEL3D		type	CT_Scale3D					.	.	.	.	.
-x:drawing/2017/model3d:CT_Scale3D/sx	MODEL3D	CT_Scale3D	element	sx	CT_Ratio				.	.	.	.	.
-x:drawing/2017/model3d:CT_Scale3D/sy	MODEL3D	CT_Scale3D	element	sy	CT_Ratio				.	.	.	.	.
-x:drawing/2017/model3d:CT_Scale3D/sz	MODEL3D	CT_Scale3D	element	sz	CT_Ratio				.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DTransform	MODEL3D		type	CT_Model3DTransform					.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DTransform/meterPerModelUnit	MODEL3D	CT_Model3DTransform	element	meterPerModelUnit	CT_PositiveRatio	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DTransform/preTrans	MODEL3D	CT_Model3DTransform	element	preTrans	CT_Vector3D	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DTransform/scale	MODEL3D	CT_Model3DTransform	element	scale	CT_Scale3D	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DTransform/rot	MODEL3D	CT_Model3DTransform	element	rot	CT_Rotate3D	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DTransform/postTrans	MODEL3D	CT_Model3DTransform	element	postTrans	CT_Vector3D	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DTransform/extLst	MODEL3D	CT_Model3DTransform	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_OrthographicProjection	MODEL3D		type	CT_OrthographicProjection					.	.	.	.	.
-x:drawing/2017/model3d:CT_OrthographicProjection/sz	MODEL3D	CT_OrthographicProjection	element	sz	CT_PositiveRatio				.	.	.	.	.
-x:drawing/2017/model3d:CT_OrthographicProjection/extLst	MODEL3D	CT_OrthographicProjection	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_PerspectiveProjection	MODEL3D		type	CT_PerspectiveProjection					.	.	.	.	.
-x:drawing/2017/model3d:CT_PerspectiveProjection/extLst	MODEL3D	CT_PerspectiveProjection	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_PerspectiveProjection/@fov	MODEL3D	CT_PerspectiveProjection	attribute	@fov	ST_FOVAngle	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DCamera	MODEL3D		type	CT_Model3DCamera					.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DCamera/pos	MODEL3D	CT_Model3DCamera	element	pos	CT_Point3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DCamera/up	MODEL3D	CT_Model3DCamera	element	up	CT_Vector3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DCamera/lookAt	MODEL3D	CT_Model3DCamera	element	lookAt	CT_Point3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DCamera/orthographic	MODEL3D	CT_Model3DCamera	element	orthographic	CT_OrthographicProjection	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DCamera/perspective	MODEL3D	CT_Model3DCamera	element	perspective	CT_PerspectiveProjection	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DCamera/extLst	MODEL3D	CT_Model3DCamera	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DRaster	MODEL3D		type	CT_Model3DRaster					.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DRaster/blip	MODEL3D	CT_Model3DRaster	element	blip	CT_Blip	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DRaster/@rName	MODEL3D	CT_Model3DRaster	attribute	@rName	string	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3DRaster/@rVer	MODEL3D	CT_Model3DRaster	attribute	@rVer	string	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_ObjectViewport	MODEL3D		type	CT_ObjectViewport					.	.	.	.	.
-x:drawing/2017/model3d:CT_ObjectViewport/extLst	MODEL3D	CT_ObjectViewport	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_ObjectViewport/@viewportSz	MODEL3D	CT_ObjectViewport	attribute	@viewportSz	ST_PositiveCoordinate	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_WindowViewport	MODEL3D		type	CT_WindowViewport					.	.	.	.	.
-x:drawing/2017/model3d:CT_WindowViewport/extLst	MODEL3D	CT_WindowViewport	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_AmbientLight	MODEL3D		type	CT_AmbientLight					.	.	.	.	.
-x:drawing/2017/model3d:CT_AmbientLight/clr	MODEL3D	CT_AmbientLight	element	clr	CT_Color				.	.	.	.	.
-x:drawing/2017/model3d:CT_AmbientLight/illuminance	MODEL3D	CT_AmbientLight	element	illuminance	CT_PositiveRatio				.	.	.	.	.
-x:drawing/2017/model3d:CT_AmbientLight/extLst	MODEL3D	CT_AmbientLight	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_AmbientLight/@enabled	MODEL3D	CT_AmbientLight	attribute	@enabled	boolean	optional	true		.	.	.	.	.
-x:drawing/2017/model3d:CT_PointLight	MODEL3D		type	CT_PointLight					.	.	.	.	.
-x:drawing/2017/model3d:CT_PointLight/clr	MODEL3D	CT_PointLight	element	clr	CT_Color				.	.	.	.	.
-x:drawing/2017/model3d:CT_PointLight/intensity	MODEL3D	CT_PointLight	element	intensity	CT_PositiveRatio				.	.	.	.	.
-x:drawing/2017/model3d:CT_PointLight/pos	MODEL3D	CT_PointLight	element	pos	CT_Point3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_PointLight/extLst	MODEL3D	CT_PointLight	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_PointLight/@enabled	MODEL3D	CT_PointLight	attribute	@enabled	boolean	optional	true		.	.	.	.	.
-x:drawing/2017/model3d:CT_PointLight/@rad	MODEL3D	CT_PointLight	attribute	@rad	ST_PositiveCoordinate	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight	MODEL3D		type	CT_SpotLight					.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/clr	MODEL3D	CT_SpotLight	element	clr	CT_Color				.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/intensity	MODEL3D	CT_SpotLight	element	intensity	CT_PositiveRatio				.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/pos	MODEL3D	CT_SpotLight	element	pos	CT_Point3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/lookAt	MODEL3D	CT_SpotLight	element	lookAt	CT_Point3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/extLst	MODEL3D	CT_SpotLight	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/@enabled	MODEL3D	CT_SpotLight	attribute	@enabled	boolean	optional	true		.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/@rad	MODEL3D	CT_SpotLight	attribute	@rad	ST_PositiveCoordinate	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_SpotLight/@spotAng	MODEL3D	CT_SpotLight	attribute	@spotAng	ST_FOVAngle	required			.	.	.	.	.
-x:drawing/2017/model3d:ST_AngularRadius	MODEL3D		simple	ST_AngularRadius				base=ST_Angle minInclusive=0 maxInclusive=5400000	.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight	MODEL3D		type	CT_DirectionalLight					.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight/clr	MODEL3D	CT_DirectionalLight	element	clr	CT_Color				.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight/illuminance	MODEL3D	CT_DirectionalLight	element	illuminance	CT_PositiveRatio				.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight/pos	MODEL3D	CT_DirectionalLight	element	pos	CT_Point3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight/lookAt	MODEL3D	CT_DirectionalLight	element	lookAt	CT_Point3D				.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight/extLst	MODEL3D	CT_DirectionalLight	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight/@enabled	MODEL3D	CT_DirectionalLight	attribute	@enabled	boolean	optional	true		.	.	.	.	.
-x:drawing/2017/model3d:CT_DirectionalLight/@angularRad	MODEL3D	CT_DirectionalLight	attribute	@angularRad	ST_AngularRadius	required			.	.	.	.	.
-x:drawing/2017/model3d:CT_UnknownLight	MODEL3D		type	CT_UnknownLight					.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D	MODEL3D		type	CT_Model3D					.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/spPr	MODEL3D	CT_Model3D	element	spPr	CT_ShapeProperties				.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/camera	MODEL3D	CT_Model3D	element	camera	CT_Model3DCamera				.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/trans	MODEL3D	CT_Model3D	element	trans	CT_Model3DTransform				.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/attrSrcUrl	MODEL3D	CT_Model3D	element	attrSrcUrl	CT_PictureAttributionSourceURL	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/raster	MODEL3D	CT_Model3D	element	raster	CT_Model3DRaster	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/extLst	MODEL3D	CT_Model3D	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/objViewport	MODEL3D	CT_Model3D	element	objViewport	CT_ObjectViewport	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/winViewport	MODEL3D	CT_Model3D	element	winViewport	CT_WindowViewport	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/ambientLight	MODEL3D	CT_Model3D	element	ambientLight	CT_AmbientLight	0..1			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/ptLight	MODEL3D	CT_Model3D	element	ptLight	CT_PointLight	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/spotLight	MODEL3D	CT_Model3D	element	spotLight	CT_SpotLight	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/dirLight	MODEL3D	CT_Model3D	element	dirLight	CT_DirectionalLight	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/unkLight	MODEL3D	CT_Model3D	element	unkLight	CT_UnknownLight	choice			.	.	.	.	.
-x:drawing/2017/model3d:CT_Model3D/AG_Blob	MODEL3D	CT_Model3D	attrgroup	AG_Blob	AG_Blob				.	.	.	.	.
-x:drawing/2017/model3d:<model3d>	MODEL3D		root	<model3d>	CT_Model3D				.	.	.	.	.
+x:drawing/2017/model3d:CT_PositiveRatio	MODEL3D		type	CT_PositiveRatio					r	r	r	.	.
+x:drawing/2017/model3d:CT_PositiveRatio/@n	MODEL3D	CT_PositiveRatio	attribute	@n	unsignedLong	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_PositiveRatio/@d	MODEL3D	CT_PositiveRatio	attribute	@d	unsignedLong	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_Rotate3D	MODEL3D		type	CT_Rotate3D					r	r	r	.	.
+x:drawing/2017/model3d:CT_Rotate3D/@ax	MODEL3D	CT_Rotate3D	attribute	@ax	ST_Angle	optional	0		r	r	r	.	.
+x:drawing/2017/model3d:CT_Rotate3D/@ay	MODEL3D	CT_Rotate3D	attribute	@ay	ST_Angle	optional	0		r	r	r	.	.
+x:drawing/2017/model3d:CT_Rotate3D/@az	MODEL3D	CT_Rotate3D	attribute	@az	ST_Angle	optional	0		r	r	r	.	.
+x:drawing/2017/model3d:CT_Scale3D	MODEL3D		type	CT_Scale3D					r	r	r	.	.
+x:drawing/2017/model3d:CT_Scale3D/sx	MODEL3D	CT_Scale3D	element	sx	CT_Ratio				r	r	r	.	.
+x:drawing/2017/model3d:CT_Scale3D/sy	MODEL3D	CT_Scale3D	element	sy	CT_Ratio				r	r	r	.	.
+x:drawing/2017/model3d:CT_Scale3D/sz	MODEL3D	CT_Scale3D	element	sz	CT_Ratio				r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DTransform	MODEL3D		type	CT_Model3DTransform					r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DTransform/meterPerModelUnit	MODEL3D	CT_Model3DTransform	element	meterPerModelUnit	CT_PositiveRatio	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DTransform/preTrans	MODEL3D	CT_Model3DTransform	element	preTrans	CT_Vector3D	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DTransform/scale	MODEL3D	CT_Model3DTransform	element	scale	CT_Scale3D	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DTransform/rot	MODEL3D	CT_Model3DTransform	element	rot	CT_Rotate3D	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DTransform/postTrans	MODEL3D	CT_Model3DTransform	element	postTrans	CT_Vector3D	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DTransform/extLst	MODEL3D	CT_Model3DTransform	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_OrthographicProjection	MODEL3D		type	CT_OrthographicProjection					r	r	r	.	.
+x:drawing/2017/model3d:CT_OrthographicProjection/sz	MODEL3D	CT_OrthographicProjection	element	sz	CT_PositiveRatio				r	r	r	.	.
+x:drawing/2017/model3d:CT_OrthographicProjection/extLst	MODEL3D	CT_OrthographicProjection	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_PerspectiveProjection	MODEL3D		type	CT_PerspectiveProjection					r	r	r	.	.
+x:drawing/2017/model3d:CT_PerspectiveProjection/extLst	MODEL3D	CT_PerspectiveProjection	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_PerspectiveProjection/@fov	MODEL3D	CT_PerspectiveProjection	attribute	@fov	ST_FOVAngle	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DCamera	MODEL3D		type	CT_Model3DCamera					r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DCamera/pos	MODEL3D	CT_Model3DCamera	element	pos	CT_Point3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DCamera/up	MODEL3D	CT_Model3DCamera	element	up	CT_Vector3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DCamera/lookAt	MODEL3D	CT_Model3DCamera	element	lookAt	CT_Point3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DCamera/orthographic	MODEL3D	CT_Model3DCamera	element	orthographic	CT_OrthographicProjection	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DCamera/perspective	MODEL3D	CT_Model3DCamera	element	perspective	CT_PerspectiveProjection	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DCamera/extLst	MODEL3D	CT_Model3DCamera	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DRaster	MODEL3D		type	CT_Model3DRaster					r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DRaster/blip	MODEL3D	CT_Model3DRaster	element	blip	CT_Blip	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DRaster/@rName	MODEL3D	CT_Model3DRaster	attribute	@rName	string	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3DRaster/@rVer	MODEL3D	CT_Model3DRaster	attribute	@rVer	string	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_ObjectViewport	MODEL3D		type	CT_ObjectViewport					r	r	r	.	.
+x:drawing/2017/model3d:CT_ObjectViewport/extLst	MODEL3D	CT_ObjectViewport	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_ObjectViewport/@viewportSz	MODEL3D	CT_ObjectViewport	attribute	@viewportSz	ST_PositiveCoordinate	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_WindowViewport	MODEL3D		type	CT_WindowViewport					r	r	r	.	.
+x:drawing/2017/model3d:CT_WindowViewport/extLst	MODEL3D	CT_WindowViewport	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_AmbientLight	MODEL3D		type	CT_AmbientLight					r	r	r	.	.
+x:drawing/2017/model3d:CT_AmbientLight/clr	MODEL3D	CT_AmbientLight	element	clr	CT_Color				r	r	r	.	.
+x:drawing/2017/model3d:CT_AmbientLight/illuminance	MODEL3D	CT_AmbientLight	element	illuminance	CT_PositiveRatio				r	r	r	.	.
+x:drawing/2017/model3d:CT_AmbientLight/extLst	MODEL3D	CT_AmbientLight	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_AmbientLight/@enabled	MODEL3D	CT_AmbientLight	attribute	@enabled	boolean	optional	true		r	r	r	.	.
+x:drawing/2017/model3d:CT_PointLight	MODEL3D		type	CT_PointLight					r	r	r	.	.
+x:drawing/2017/model3d:CT_PointLight/clr	MODEL3D	CT_PointLight	element	clr	CT_Color				r	r	r	.	.
+x:drawing/2017/model3d:CT_PointLight/intensity	MODEL3D	CT_PointLight	element	intensity	CT_PositiveRatio				r	r	r	.	.
+x:drawing/2017/model3d:CT_PointLight/pos	MODEL3D	CT_PointLight	element	pos	CT_Point3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_PointLight/extLst	MODEL3D	CT_PointLight	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_PointLight/@enabled	MODEL3D	CT_PointLight	attribute	@enabled	boolean	optional	true		r	r	r	.	.
+x:drawing/2017/model3d:CT_PointLight/@rad	MODEL3D	CT_PointLight	attribute	@rad	ST_PositiveCoordinate	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight	MODEL3D		type	CT_SpotLight					r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/clr	MODEL3D	CT_SpotLight	element	clr	CT_Color				r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/intensity	MODEL3D	CT_SpotLight	element	intensity	CT_PositiveRatio				r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/pos	MODEL3D	CT_SpotLight	element	pos	CT_Point3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/lookAt	MODEL3D	CT_SpotLight	element	lookAt	CT_Point3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/extLst	MODEL3D	CT_SpotLight	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/@enabled	MODEL3D	CT_SpotLight	attribute	@enabled	boolean	optional	true		r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/@rad	MODEL3D	CT_SpotLight	attribute	@rad	ST_PositiveCoordinate	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_SpotLight/@spotAng	MODEL3D	CT_SpotLight	attribute	@spotAng	ST_FOVAngle	required			r	r	r	.	.
+x:drawing/2017/model3d:ST_AngularRadius	MODEL3D		simple	ST_AngularRadius				base=ST_Angle minInclusive=0 maxInclusive=5400000	r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight	MODEL3D		type	CT_DirectionalLight					r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight/clr	MODEL3D	CT_DirectionalLight	element	clr	CT_Color				r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight/illuminance	MODEL3D	CT_DirectionalLight	element	illuminance	CT_PositiveRatio				r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight/pos	MODEL3D	CT_DirectionalLight	element	pos	CT_Point3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight/lookAt	MODEL3D	CT_DirectionalLight	element	lookAt	CT_Point3D				r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight/extLst	MODEL3D	CT_DirectionalLight	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight/@enabled	MODEL3D	CT_DirectionalLight	attribute	@enabled	boolean	optional	true		r	r	r	.	.
+x:drawing/2017/model3d:CT_DirectionalLight/@angularRad	MODEL3D	CT_DirectionalLight	attribute	@angularRad	ST_AngularRadius	required			r	r	r	.	.
+x:drawing/2017/model3d:CT_UnknownLight	MODEL3D		type	CT_UnknownLight					r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D	MODEL3D		type	CT_Model3D					r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/spPr	MODEL3D	CT_Model3D	element	spPr	CT_ShapeProperties				r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/camera	MODEL3D	CT_Model3D	element	camera	CT_Model3DCamera				r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/trans	MODEL3D	CT_Model3D	element	trans	CT_Model3DTransform				r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/attrSrcUrl	MODEL3D	CT_Model3D	element	attrSrcUrl	CT_PictureAttributionSourceURL	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/raster	MODEL3D	CT_Model3D	element	raster	CT_Model3DRaster	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/extLst	MODEL3D	CT_Model3D	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/objViewport	MODEL3D	CT_Model3D	element	objViewport	CT_ObjectViewport	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/winViewport	MODEL3D	CT_Model3D	element	winViewport	CT_WindowViewport	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/ambientLight	MODEL3D	CT_Model3D	element	ambientLight	CT_AmbientLight	0..1			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/ptLight	MODEL3D	CT_Model3D	element	ptLight	CT_PointLight	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/spotLight	MODEL3D	CT_Model3D	element	spotLight	CT_SpotLight	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/dirLight	MODEL3D	CT_Model3D	element	dirLight	CT_DirectionalLight	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/unkLight	MODEL3D	CT_Model3D	element	unkLight	CT_UnknownLight	choice			r	r	r	.	.
+x:drawing/2017/model3d:CT_Model3D/AG_Blob	MODEL3D	CT_Model3D	attrgroup	AG_Blob	AG_Blob				r	r	r	.	.
+x:drawing/2017/model3d:<model3d>	MODEL3D		root	<model3d>	CT_Model3D				r	r	r	.	.
 x:drawing/2016/12/diagram:<spPr>	DGM		root	<spPr>	CT_ShapeProperties				.	.	.	.	.
 x:drawing/2016/12/diagram:<lstStyle>	DGM		root	<lstStyle>	CT_TextListStyle				.	.	.	.	.
 x:drawing/2017/03/chart:CT_BooleanFalse	CHART		type	CT_BooleanFalse					.	.	.	.	.
@@ -8646,16 +8646,16 @@ x:drawing/2018/hyperlinkcolor:ST_HyperlinkColor/=tx	SHAPE	ST_HyperlinkColor	valu
 x:drawing/2018/hyperlinkcolor:CT_HyperlinkColor	SHAPE		type	CT_HyperlinkColor					r	r	r	.	.
 x:drawing/2018/hyperlinkcolor:CT_HyperlinkColor/@val	SHAPE	CT_HyperlinkColor	attribute	@val	ST_HyperlinkColor	required			r	r	r	.	.
 x:drawing/2018/hyperlinkcolor:<hlinkClr>	SHAPE		root	<hlinkClr>	CT_HyperlinkColor				r	r	r	.	.
-x:drawing/2018/animation/model3d:ST_EmbeddedAnimationID	MODEL3D		simple	ST_EmbeddedAnimationID				base=unsignedInt	.	.	.	.	.
-x:drawing/2018/animation/model3d:CT_EmbeddedAnimation	MODEL3D		type	CT_EmbeddedAnimation					.	.	.	.	.
-x:drawing/2018/animation/model3d:CT_EmbeddedAnimation/animPr	MODEL3D	CT_EmbeddedAnimation	element	animPr	CT_AnimationProperties				.	.	.	.	.
-x:drawing/2018/animation/model3d:CT_EmbeddedAnimation/extLst	MODEL3D	CT_EmbeddedAnimation	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:drawing/2018/animation/model3d:CT_EmbeddedAnimation/@animId	MODEL3D	CT_EmbeddedAnimation	attribute	@animId	ST_EmbeddedAnimationID	required			.	.	.	.	.
-x:drawing/2018/animation/model3d:CT_PosterFrame	MODEL3D		type	CT_PosterFrame					.	.	.	.	.
-x:drawing/2018/animation/model3d:CT_PosterFrame/@animId	MODEL3D	CT_PosterFrame	attribute	@animId	ST_EmbeddedAnimationID	required			.	.	.	.	.
-x:drawing/2018/animation/model3d:CT_PosterFrame/@frame	MODEL3D	CT_PosterFrame	attribute	@frame	ST_PositiveFixedPercentage	optional	0		.	.	.	.	.
-x:drawing/2018/animation/model3d:<embedAnim>	MODEL3D		root	<embedAnim>	CT_EmbeddedAnimation				.	.	.	.	.
-x:drawing/2018/animation/model3d:<posterFrame>	MODEL3D		root	<posterFrame>	CT_PosterFrame				.	.	.	.	.
+x:drawing/2018/animation/model3d:ST_EmbeddedAnimationID	MODEL3D		simple	ST_EmbeddedAnimationID				base=unsignedInt	r	r	r	.	.
+x:drawing/2018/animation/model3d:CT_EmbeddedAnimation	MODEL3D		type	CT_EmbeddedAnimation					r	r	r	.	.
+x:drawing/2018/animation/model3d:CT_EmbeddedAnimation/animPr	MODEL3D	CT_EmbeddedAnimation	element	animPr	CT_AnimationProperties				r	r	r	.	.
+x:drawing/2018/animation/model3d:CT_EmbeddedAnimation/extLst	MODEL3D	CT_EmbeddedAnimation	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+x:drawing/2018/animation/model3d:CT_EmbeddedAnimation/@animId	MODEL3D	CT_EmbeddedAnimation	attribute	@animId	ST_EmbeddedAnimationID	required			r	r	r	.	.
+x:drawing/2018/animation/model3d:CT_PosterFrame	MODEL3D		type	CT_PosterFrame					r	r	r	.	.
+x:drawing/2018/animation/model3d:CT_PosterFrame/@animId	MODEL3D	CT_PosterFrame	attribute	@animId	ST_EmbeddedAnimationID	required			r	r	r	.	.
+x:drawing/2018/animation/model3d:CT_PosterFrame/@frame	MODEL3D	CT_PosterFrame	attribute	@frame	ST_PositiveFixedPercentage	optional	0		r	r	r	.	.
+x:drawing/2018/animation/model3d:<embedAnim>	MODEL3D		root	<embedAnim>	CT_EmbeddedAnimation				r	r	r	.	.
+x:drawing/2018/animation/model3d:<posterFrame>	MODEL3D		root	<posterFrame>	CT_PosterFrame				r	r	r	.	.
 x:drawing/2018/animation:ST_AnimationName	TIMING		simple	ST_AnimationName				base=string	.	.	.	.	.
 x:drawing/2018/animation:ST_Indefinite	TIMING		simple	ST_Indefinite				base=token	.	.	.	.	.
 x:drawing/2018/animation:ST_Indefinite/=indefinite	TIMING	ST_Indefinite	value	=indefinite					.	.	.	.	.
