@@ -23,6 +23,8 @@ Nothing has been released. Release tags and their dry-run default are described 
   tracker row shape, doc references, crates never depending on a server (`CI-01`),
   fuzz lockfile, Conventional Commits. Post-merge and scheduled fuzz workflows (`GOV-01`).
 - Microsoft's Open XML SDK validator in `tools/ooxml-sdk` (`F-006`).
+- Real PowerPoint-written decks with recorded rights in `fixtures/real/`, and a runner over
+  66 decks in `tools/real-decks` (`F-007`).
 - Text cost and painting measurements (`SPK-01`); ADR-004 and ADR-005 accepted.
 - Markup compatibility, part-name equivalence, the Strict namespace map, F4 schema
   validation and forced rewrite through the tree (`MCE-01`, `OPC-01`, `STRICT-01`,
