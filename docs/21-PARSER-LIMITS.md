@@ -297,19 +297,19 @@ Past one of these the part is set aside and named, or the list left out, and the
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Partial: `hostile/comment-limit-comments.bin`; guard not seen failing (`SEC-021`) |
-| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Partial: `hostile/comment-limit-authors.bin`; guard not seen failing (`SEC-021`) |
-| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Partial: `hostile/comment-limit-replies.bin`; guard not seen failing (`SEC-021`) |
-| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Partial: `hostile/comment-limit-reactions.bin`; guard not seen failing (`SEC-021`) |
-| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Partial: `hostile/comment-limit-task-events.bin`; guard not seen failing (`SEC-021`) |
-| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Partial: `hostile/comment-limit-monikers.bin`; guard not seen failing (`SEC-021`) |
-| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Partial: at a lowered bound: 100,001 parts is past `CS-PKG-0002` first; guard not seen failing (`SEC-021`) |
-| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Partial: `hostile/section-limit-sections.bin`; guard not seen failing (`SEC-021`) |
-| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Partial: `hostile/section-limit-slides.bin`; guard not seen failing (`SEC-021`) |
-| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Partial: `hostile/tags-limit-tags.bin`; guard not seen failing (`SEC-021`) |
-| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Partial: `hostile/marks-limit-part.bin`; guard not seen failing (`SEC-021`) |
-| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Partial: `hostile/custom-limit-schema-refs.bin`; guard not seen failing (`SEC-021`) |
-| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Partial: `hostile/custom-limit-labels.bin`; guard not seen failing (`SEC-021`) |
+| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Tested: `hostile/comment-limit-comments.bin` (legacy) and a lowered bound (modern); each guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` and `a_modern_comment_or_author_list_past_its_bound_is_set_aside` failed (`SEC-021`) |
+| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Tested: `hostile/comment-limit-authors.bin` (legacy) and a lowered bound (modern); each guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` and `a_modern_comment_or_author_list_past_its_bound_is_set_aside` failed (`SEC-021`) |
+| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Tested: `hostile/comment-limit-replies.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Tested: `hostile/comment-limit-reactions.bin` and a lowered bound; the `rxn` count and the combined count each removed, `reactions_past_their_bound_either_way_refuse_the_part` failed. The per-reaction `instance` pre-check is subsumed by the combined count, so removing it alone changes nothing (`SEC-021`) |
+| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Tested: `hostile/comment-limit-task-events.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Tested: `hostile/comment-limit-monikers.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Partial: at a lowered bound: 100,001 parts is past `CS-PKG-0002` first; the legacy comment guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the modern comment, tag and custom XML guards removed, no test failed (`SEC-021`) |
+| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Tested: `hostile/section-limit-sections.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Tested: `hostile/section-limit-slides.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Tested: `hostile/tags-limit-tags.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` and `a_part_exactly_at_its_bound_is_read` failed (`SEC-021`) |
+| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Partial: `hostile/marks-limit-part.bin`; the element-collecting guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the mark walker's guard (`Marks::charge`) removed, no test failed (`SEC-021`) |
+| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Partial: `hostile/custom-limit-schema-refs.bin`; the `itemProps` guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the schema library guard removed, no test failed (`SEC-021`) |
+| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Partial: `hostile/custom-limit-labels.bin`; the `LabelInfo` guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the custom-properties guard removed, no test failed (`SEC-021`) |
 
 ## Tools
 
