@@ -6,6 +6,8 @@
 //! them with `--nocapture`. Times are wall clock on whatever machine ran them, and so are
 //! upper bounds when it was loaded. Nothing here says anything about PowerPoint (`PV-01`).
 
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -100,8 +102,8 @@ fn rename_a_shape(
 
 /// The three kinds of edit a user makes: a property, a slide's XML, and the slide list. Each is
 /// a reopen of what the one before wrote, so each sees a file and not its own memory. A step
-/// the deck gives no place for is left out and named in the second value.
-fn edit_every_way(source: &[u8]) -> Result<(Vec<u8>, Vec<&'static str>), String> {
+/// the deck gives no place for is left out and named.
+fn edit_every_way(source: &[u8]) -> Result<Edited, String> {
     let mut left_out = Vec::new();
     let limits = OoxmlLimits::default();
     let import_limits = ImportLimits::default();
@@ -141,8 +143,12 @@ fn edit_every_way(source: &[u8]) -> Result<(Vec<u8>, Vec<&'static str>), String>
             slide: SlideRef::Index(0),
         });
     }
+    let mut clones = BTreeMap::new();
     let bytes = match plan.save(&mut pkg) {
-        Ok(outcome) => outcome.bytes,
+        Ok(outcome) => {
+            clones = outcome.clones;
+            outcome.bytes
+        }
         // A construct with no safe form yet is a stated refusal (`writer_corpus.rs`).
         Err(err) if err.code() == "CS-SAV-0009" => {
             left_out.push("slide-list");
@@ -152,7 +158,19 @@ fn edit_every_way(source: &[u8]) -> Result<(Vec<u8>, Vec<&'static str>), String>
     };
     PresentationPackage::open_strict(bytes.clone(), limits)
         .map_err(|e| format!("the output does not open strictly: {}", e.code()))?;
-    Ok((bytes, left_out))
+    Ok(Edited {
+        bytes,
+        left_out,
+        clones,
+    })
+}
+
+/// A deck edited every way, with what was left out, and each part the slide-list edit cloned,
+/// by its source, so a validator's finding on a clone can be traced to the input's.
+struct Edited {
+    bytes: Vec<u8>,
+    left_out: Vec<&'static str>,
+    clones: BTreeMap<String, String>,
 }
 
 #[test]
@@ -237,7 +255,7 @@ fn every_hostile_fixture_opens_and_edits_within_its_bound_or_is_refused() {
     files.sort();
     assert!(files.len() > 100, "{}", files.len());
     let mut edited = 0usize;
-    let mut refusals = std::collections::BTreeMap::<String, Vec<String>>::new();
+    let mut refusals = BTreeMap::<String, Vec<String>>::new();
     let mut broken = Vec::new();
     let mut slowest = Duration::ZERO;
     for path in &files {
@@ -303,10 +321,16 @@ fn every_corpus_deck_writes_out_edited() {
             total += 1;
             let name = path.file_name().unwrap().to_string_lossy().into_owned();
             match edit_every_way(&std::fs::read(&path).unwrap()) {
-                Ok((bytes, skipped)) => {
-                    std::fs::write(out.join(&name), bytes).unwrap();
-                    if !skipped.is_empty() {
-                        left_out.push(format!("{name}({})", skipped.join("+")));
+                Ok(edited) => {
+                    std::fs::write(out.join(&name), edited.bytes).unwrap();
+                    // As `writer_corpus.rs` writes them, which `tools/writer-reopen.py` reads.
+                    let mut clones = String::new();
+                    for (clone, source) in &edited.clones {
+                        writeln!(clones, "{clone}\t{source}").unwrap();
+                    }
+                    std::fs::write(out.join(format!("{name}.clones")), clones).unwrap();
+                    if !edited.left_out.is_empty() {
+                        left_out.push(format!("{name}({})", edited.left_out.join("+")));
                     }
                 }
                 Err(why) => failures.push(format!("{name}: {why}")),
@@ -323,4 +347,33 @@ fn every_corpus_deck_writes_out_edited() {
         println!("PHASE1 export-failure {failure}");
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// Found by the hostile run: a `tableStyles` part over its bound stops every slide being read
+/// (`CS-TBL-0005`), where docs/29 asks that the styles be set aside and the deck open. Ignored
+/// until fixed, since it fails: `--ignored` runs it.
+#[test]
+#[ignore = "finding P1X-01: a table style bound refuses the whole slide import"]
+fn a_table_style_bound_leaves_the_slides_readable() {
+    let bytes = std::fs::read(fixtures().join("hostile/table-limit-styles.bin")).unwrap();
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    read_all(&mut pkg).unwrap();
+}
+
+/// Found by the first export run over the hostile files: adding and duplicating a slide in a
+/// deck whose sections are hostile is refused as a broken invariant (`CS-SAV-0012`), where the
+/// edit should save. Ignored until fixed, since it fails.
+#[test]
+#[ignore = "finding P1X-01: a slide-list edit on a deck with hostile sections is refused"]
+fn a_slide_list_edit_saves_on_a_deck_with_hostile_sections() {
+    for name in [
+        "section-bad-values.bin",
+        "section-limit-sections.bin",
+        "section-limit-slides.bin",
+    ] {
+        let bytes = std::fs::read(fixtures().join("hostile").join(name)).unwrap();
+        if let Err(why) = edit_every_way(&bytes) {
+            panic!("{name}: {why}");
+        }
+    }
 }

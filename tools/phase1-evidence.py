@@ -179,6 +179,30 @@ def sdk(paths):
     return {d["deck"]: d for d in json.loads(done.stdout)["decks"]}
 
 
+def sdk_findings(path):
+    """Every SDK finding on one deck, judged or not, as (part, rule) pairs."""
+    env = dict(os.environ, OOXML_SDK_REQUIRED="1")
+    done = subprocess.run([sys.executable, "-I", str(ROOT / "tools/ooxml-sdk/validate.py"), "--json", "--no-known",
+                           str(path)], capture_output=True, text=True, check=False, env=env)
+    found = set()
+    for row in json.loads(done.stdout)["decks"]:
+        if row["status"] == "refused":
+            found.add(("*", f"refused:{row['reason']}"))
+        found.update((f["part"].lstrip("/"), f["id"]) for f in row["errors"] + row.get("unexplained", []))
+    return found
+
+
+def new_sdk_findings(output, source):
+    """Findings on an edited deck that its input does not have, on the same part or on the one
+    a clone was copied from (the `.clones` file beside it). The validator's cap on findings
+    counts as new: what it did not report was not checked."""
+    clones_file = output.with_name(output.name + ".clones")
+    clones = dict(ln.split("\t") for ln in clones_file.read_text().splitlines() if ln) if clones_file.exists() else {}
+    before = sdk_findings(source)
+    return sorted(f"{part} {rule}" for part, rule in sdk_findings(output)
+                  if (clones.get(part, part), rule) not in before or rule == "truncated")
+
+
 LO_SCRIPT = (
     'soffice --headless --norestore -env:UserInstallation=file:///tmp/p --convert-to pdf --outdir /tmp/o '
     '"/f/$DECK" >/tmp/log 2>&1; rc=$?; f="/tmp/o/${DECK%.*}.pdf"; '
@@ -233,7 +257,7 @@ def export(scratch):
         return record("export", {**base, "ok": False, "exit": code,
                                  "failures": lines_of(out, "PHASE1 export-failure") or [out[-1500:]]})
     left_out = lines_of(out, "PHASE1 export-left-out")
-    outputs = sorted(edited_dir.iterdir())
+    outputs = sorted(p for p in edited_dir.iterdir() if p.suffix in DECK_SUFFIXES)
     packages = outputs + [p for p in saveas if p.suffix in DECK_SUFFIXES]
     others = [p for p in saveas if p.suffix not in DECK_SUFFIXES]
     source_of = {p: next(d for d in decks if d.name == p.name) for p in outputs}
@@ -249,11 +273,21 @@ def export(scratch):
             failures.append(f"F4 {label[p]}: {status}, input {was}")
     sdk_out = sdk(packages)
     sdk_in = sdk(sorted({source_of[p] for p in packages}))
+    # As the gate judges: PASS, or KNOWN when every finding is one false-positives.tsv explains.
+    sdk_known = []
     for p in packages:
-        got = (sdk_out.get(p.name) or {}).get("status", "missing")
-        if got != "pass":
-            was = (sdk_in.get(source_of[p].name) or {}).get("status", "missing")
-            failures.append(f"SDK {label[p]}: {got}, input {was}")
+        got = (sdk_out.get(p.name) or {}).get("verdict", "missing")
+        if got == "KNOWN":
+            sdk_known.append(label[p])
+        elif got != "PASS":
+            was = (sdk_in.get(source_of[p].name) or {}).get("verdict", "missing")
+            new = new_sdk_findings(p, source_of[p]) if p.parent == edited_dir and was in ("PASS", "KNOWN") else None
+            if new == []:
+                # Every finding is one the input has and false-positives.tsv explains, on that
+                # part or on the slide-list edit's clone of it, which that file cannot name.
+                sdk_known.append(label[p])
+            else:
+                failures.append(f"SDK {label[p]}: {got}, input {was}" + (f"; new: {', '.join(new[:3])}" if new else ""))
 
     lo = {}
     with ThreadPoolExecutor(max_workers=3) as pool:
@@ -275,7 +309,7 @@ def export(scratch):
         **base, "load_after": m_after, "exit": code, "ok": not failures,
         "written": int(fields(written[0])["total"]), "edits_left_out": left_out[0].split() if left_out else [],
         "f4_and_sdk_checked": len(packages), "libreoffice_checked": len(lo), "libreoffice": lo_counts,
-        "libreoffice_not_decks": not_decks,
+        "sdk_known_only": len(sdk_known), "libreoffice_not_decks": not_decks,
         "libreoffice_image": LO_IMAGE, "failures": failures,
     })
 
