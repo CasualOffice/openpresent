@@ -210,7 +210,7 @@ A table has a fixed depth, and a style's parts follow no input. What is damaged 
 | `max_extensions` | `262_144` | `ext` in one part | CS-CHT-0008 | Tested; `hostile/chart-limit-extensions.bin` |
 | `max_group_depth` | `64` | Groups nested in one chart drawing, the one recursion in these schemas | CS-CHT-0009 | Tested; `hostile/chart-limit-group-depth.bin` |
 
-What is damaged but not over a bound is read as far as it goes and reported: `hostile/chart-bad-structure.bin`. What is not XML, or is rooted wrongly, is set aside: `hostile/chart-not-xml.bin`. A workbook that could not be read if anyone tried is untouched: `hostile/chart-workbook-corrupt.bin`.
+What is damaged but not over a bound is read as far as it goes and reported: `hostile/chart-bad-structure.bin`. What is rooted wrongly is set aside: `hostile/chart-wrong-root.bin`; what is not XML likewise, built in `crates/casual-slide-export/tests/chart.rs`, as every `open` deck in the corpus is held to parse part by part. A workbook that could not be read if anyone tried is untouched: `hostile/chart-workbook-corrupt.bin`.
 
 ## Export
 
