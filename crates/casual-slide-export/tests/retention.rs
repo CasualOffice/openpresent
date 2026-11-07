@@ -75,7 +75,7 @@ fn every_node_of_every_deck_survives_an_edit() {
         let number = model.presentation.first_slide_num.unwrap_or(1);
         model.presentation.first_slide_num = Some(number.saturating_add(1));
         let saved = save_deck(&mut pkg, &model, &limits).unwrap();
-        assert_eq!(saved.changed_parts, [main.clone()], "{deck}");
+        assert_eq!(saved.changed_parts, std::slice::from_ref(&main), "{deck}");
         let mut after = open(saved.bytes);
         let mut source = open(bytes.clone());
         assert_eq!(after.part_names(), names, "{deck}: parts lost or invented");
