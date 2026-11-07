@@ -1689,8 +1689,19 @@ impl Work<'_> {
             } else {
                 BTreeSet::new()
             };
-            let free = parts.iter().find(|p| !owned.contains(*p));
-            if let Some(part) = free.cloned() {
+            let free = parts.iter().find(|p| !owned.contains(*p)).cloned();
+            // With none free, the deck's theme is its first master's, as PowerPoint links it,
+            // so a main part built anew keeps the relationship the old one had (`REC-08`).
+            let free = free.or_else(|| {
+                (role.0 == Role::Theme)
+                    .then(|| {
+                        masters
+                            .first()
+                            .and_then(|m| self.targets(m, "theme").into_iter().next())
+                    })
+                    .flatten()
+            });
+            if let Some(part) = free {
                 self.link(main, role.1, &part);
             }
         }

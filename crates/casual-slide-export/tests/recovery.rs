@@ -606,7 +606,6 @@ fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
 /// recovered deck whose elements differ from what arrived, where what arrived parses, is
 /// named by a repair finding.
 #[test]
-#[ignore = "finding REC-08: main-part-missing loses a Relationship from presentation.xml.rels with no repair naming the part"]
 fn a_recovered_part_that_lost_an_element_is_reported() {
     let xml = OoxmlLimits::default();
     let names = |bytes: &[u8], part: &str| -> Option<Vec<String>> {
@@ -622,7 +621,10 @@ fn a_recovered_part_that_lost_an_element_is_reported() {
     };
     let mut checked = 0;
     for (name, bytes) in recovered_decks() {
-        let mut arrived = Package::open(bytes.clone(), Default::default()).unwrap();
+        // A container only salvage can read has no plain reading to compare with.
+        let Ok(mut arrived) = Package::open(bytes.clone(), Default::default()) else {
+            continue;
+        };
         let mut pkg = open(bytes);
         let _ = read_all(&mut pkg);
         pkg.prepare_for_edit().unwrap();
