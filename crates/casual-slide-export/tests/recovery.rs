@@ -546,13 +546,22 @@ fn a_recovered_deck_is_a_fixed_point() {
     }
 }
 
-/// `REC-08`, 1R gate item 3: a forced rewrite of a recovered deck. Every slide-like part,
-/// emptied to its root and written again from its model alone, and the deck so written
-/// passes F4.
+/// Every node's shape properties taken out, through the tree.
+fn empty_properties(node: &mut casual_slide_model::shape::ShapeNode) {
+    node.properties = Default::default();
+    for child in &mut node.children {
+        empty_properties(child);
+    }
+}
+
+/// `REC-08`, 1R gate item 3: a forced rewrite of a recovered deck. In every slide-like part,
+/// each shape's properties are emptied through the writer and written again from the model
+/// alone, which is what the writer may change (it never adds or removes a shape,
+/// `CS-SLE-0001`); the part then reads as its model, and the deck so written passes F4.
 #[test]
-#[ignore = "REC-08: the slide writer patches node properties, not the tree (CS-SLE-0001); the forced rewrite must empty and restore each node's properties instead"]
 fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
     let dir = scratch("forced");
+    let mut rewritten = 0;
     let xml = OoxmlLimits::default();
     for (name, bytes) in recovered_decks() {
         let mut pkg = open(bytes);
@@ -575,7 +584,9 @@ fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
             if shapes.children.is_empty() {
                 continue;
             }
-            shapes.children.clear();
+            for child in &mut shapes.children {
+                empty_properties(child);
+            }
             let mut blank = tree.clone();
             for to in [&emptied, part] {
                 patch_slide_part(
@@ -590,6 +601,22 @@ fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
                 )
                 .unwrap_or_else(|e| panic!("{name} {}: {e}", entry.part));
             }
+            // Written from the model, it reads as the model: one more patch changes nothing.
+            let again = patch_slide_part(
+                &mut blank,
+                &entry.part,
+                strict,
+                &rels,
+                part,
+                &SlideLimits::default(),
+                &ImportLimits::default(),
+                &xml,
+            )
+            .unwrap();
+            assert_eq!(again, 0, "{name} {}", entry.part);
+            if emptied != *part {
+                rewritten += 1;
+            }
             edits.replace(entry.part.clone(), blank.to_bytes());
         }
         let written = Package::open(base, Default::default())
@@ -599,6 +626,7 @@ fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
         let file = format!("{}.pptx", name.replace('/', "_").trim_end_matches(".bin"));
         std::fs::write(dir.join(file), written).unwrap();
     }
+    assert!(rewritten > 20, "{rewritten}");
     assert_f4_passes(&dir);
 }
 
@@ -606,7 +634,6 @@ fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
 /// recovered deck whose elements differ from what arrived, where what arrived parses, is
 /// named by a repair finding.
 #[test]
-#[ignore = "finding REC-08: main-part-missing loses a Relationship from presentation.xml.rels with no repair naming the part"]
 fn a_recovered_part_that_lost_an_element_is_reported() {
     let xml = OoxmlLimits::default();
     let names = |bytes: &[u8], part: &str| -> Option<Vec<String>> {
@@ -622,7 +649,10 @@ fn a_recovered_part_that_lost_an_element_is_reported() {
     };
     let mut checked = 0;
     for (name, bytes) in recovered_decks() {
-        let mut arrived = Package::open(bytes.clone(), Default::default()).unwrap();
+        // A container only salvage can read has no plain reading to compare with.
+        let Ok(mut arrived) = Package::open(bytes.clone(), Default::default()) else {
+            continue;
+        };
         let mut pkg = open(bytes);
         let _ = read_all(&mut pkg);
         pkg.prepare_for_edit().unwrap();
