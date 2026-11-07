@@ -70,6 +70,8 @@ pub enum ExportError {
         /// The part.
         part: String,
     },
+    /// The writer refused the save: an invariant, a limit or a blocked construct.
+    Refused(Box<crate::writer::WriterError>),
 }
 
 impl ExportError {
@@ -86,6 +88,7 @@ impl ExportError {
             Self::UnreadablePart { .. } => "CS-EXP-0006",
             Self::RoundTrip { .. } => "CS-EXP-0007",
             Self::VariantTooDeep { .. } => "CS-EXP-0008",
+            Self::Refused(err) => err.code(),
         }
     }
 }
@@ -126,6 +129,7 @@ impl fmt::Display for ExportError {
                     "[{code}] {part:?}: patched part does not read back as asked"
                 )
             }
+            Self::Refused(err) => write!(f, "{err}"),
             Self::VariantTooDeep { part } => {
                 write!(f, "[{code}] {part:?}: variant nested too deeply")
             }
