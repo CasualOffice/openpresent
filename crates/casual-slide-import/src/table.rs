@@ -977,12 +977,18 @@ pub fn read_deck_table_styles(
         .map_err(crate::properties::ImportError::from)?;
     let xml = *package.limits();
     let rels = package.relationships_of(&part).to_vec();
+    let damaged = package.is_damaged(&part);
+    if damaged {
+        findings.note(K::UnreadablePart, &part, "", None);
+    }
     let result = XmlTree::parse(&bytes, &part, &xml)
         .map_err(SlideError::from)
         .and_then(|tree| {
             import_table_styles(&tree, &part, &rels, limits, import_limits, findings, color)
         });
     match result {
+        // The empty stand-in of a repair says nothing of what the part held.
+        Ok(list) if damaged && list.tbl_style.is_empty() => Ok(None),
         Ok(list) => Ok(Some(list)),
         Err(err) if is_part_fault(&err) => {
             findings.note(K::UnreadablePart, &part, "", None);

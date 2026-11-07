@@ -426,7 +426,16 @@ fn check_bytes(
         };
     };
     match reader.read_part(name) {
-        Ok(_) => RetainedStatus::Kept,
+        // It reads, because a repair read past what was wrong with it. Not intact.
+        Ok(_) => match reader
+            .recovery_report()
+            .lines
+            .iter()
+            .find(|line| line.part == name)
+        {
+            Some(line) => RetainedStatus::SetAside { code: line.code },
+            None => RetainedStatus::Kept,
+        },
         Err(err) => RetainedStatus::SetAside { code: err.code() },
     }
 }

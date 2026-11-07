@@ -975,18 +975,24 @@ pub(crate) fn read_part_or_set_aside<T>(
 ) -> Option<T> {
     let rels = package.relationships_of(part).to_vec();
     let limits = *package.limits();
-    let result = package
-        .read_xml_part(part)
-        .map_err(ImportError::from)
-        .and_then(|bytes| XmlTree::parse(&bytes, part, &limits).map_err(ImportError::from))
-        .and_then(|tree| read(&tree, &rels, findings));
-    match result {
-        Ok(value) => Some(value),
-        Err(err) => {
-            let kind = match err {
+    let bytes = package.read_xml_part(part);
+    // A repair has been here, and what reads now is what stands in for the part: the part
+    // itself is what the caller has to be told of, and it is kept under `recovered/`.
+    let result = if package.is_damaged(part) {
+        Err(K::UnreadablePart)
+    } else {
+        bytes
+            .map_err(ImportError::from)
+            .and_then(|bytes| XmlTree::parse(&bytes, part, &limits).map_err(ImportError::from))
+            .and_then(|tree| read(&tree, &rels, findings))
+            .map_err(|err| match err {
                 ImportError::TooMany { .. } => K::Review(ReviewFinding::OverBound),
                 _ => K::UnreadablePart,
-            };
+            })
+    };
+    match result {
+        Ok(value) => Some(value),
+        Err(kind) => {
             findings.note(kind, part, "", None);
             if !set_aside.iter().any(|p| p == part) {
                 set_aside.push(part.to_owned());
