@@ -976,6 +976,58 @@ fn f4_allowance_each_accepts_what_powerpoint_writes_and_is_needed() {
     }
 }
 
+const CX: &str = "xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" \
+    xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
+
+/// A Office 2016 chart with this inside `cx:chartData`'s external data.
+fn chart_ex(external: &str) -> String {
+    format!(
+        "<cx:chartSpace {CX}><cx:chartData><cx:externalData r:id=\"rId1\" {external}/>\
+         <cx:data id=\"0\"><cx:numDim type=\"val\"><cx:f>Sheet1!$B$2</cx:f></cx:numDim></cx:data></cx:chartData>\
+         <cx:chart><cx:plotArea><cx:plotAreaRegion><cx:series layoutId=\"boxWhisker\"><cx:dataId val=\"0\"/></cx:series>\
+         </cx:plotAreaRegion></cx:plotArea></cx:chart></cx:chartSpace>"
+    )
+}
+
+/// F4-05: `cx:` and `cs:` parts are schema-checked, against MS-ODRAWXML's schemas.
+#[test]
+fn f4_fails_a_seeded_invalid_chart_ex_or_chart_style_part() {
+    if !f4_ready() {
+        return;
+    }
+    let work = scratch("f4-cx");
+    let status = |xml: &str| {
+        let (report, _) = f4_on(&work, "cx.pptx", &with_part(MINIMAL, SLIDE_PART, xml));
+        part_status(&report, SLIDE_PART).to_owned()
+    };
+    assert_eq!(status(&chart_ex("cx:autoUpdate=\"0\"")), "valid");
+    assert_eq!(status(&chart_ex("cx:autoUpdate=\"maybe\"")), "invalid");
+    assert_eq!(
+        status(&chart_ex("").replace("<cx:chart>", "<cx:notAnElement/><cx:chart>")),
+        "invalid"
+    );
+    let cs = "xmlns:cs=\"http://schemas.microsoft.com/office/drawing/2012/chartStyle\"";
+    let style = |inner: &str| {
+        format!("<cs:colorStyle {cs} meth=\"cycle\" id=\"10\">{inner}</cs:colorStyle>")
+    };
+    let colour = "<a:schemeClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent1\"/>";
+    assert_eq!(status(&style(colour)), "valid");
+    assert_eq!(status(&style("<cs:notAnElement/>")), "invalid");
+}
+
+/// F4A-7: PowerPoint writes `cx:autoUpdate`, where the schema names a bare attribute.
+#[test]
+fn f4_allowance_qualified_auto_update_is_needed_and_the_bare_one_refused() {
+    if !f4_ready() {
+        return;
+    }
+    let work = scratch("f4-cx-allowed");
+    let (with, without) = f4_with_and_without(&work, &chart_ex("cx:autoUpdate=\"0\""));
+    assert_eq!((with.as_str(), without.as_str()), ("valid", "invalid"));
+    let (with, without) = f4_with_and_without(&work, &chart_ex("autoUpdate=\"0\""));
+    assert_eq!((with.as_str(), without.as_str()), ("invalid", "valid"));
+}
+
 #[test]
 fn f4_allowance_none_lets_a_real_error_through() {
     if !f4_ready() {
