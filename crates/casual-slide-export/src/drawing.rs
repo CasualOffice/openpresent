@@ -383,6 +383,13 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
             "extLst",
         ],
         "pic" => &["nvPicPr", "blipFill", "spPr", "style", "extLst"],
+        "fmtScheme" => &[
+            "fillStyleLst",
+            "lnStyleLst",
+            "effectStyleLst",
+            "bgFillStyleLst",
+        ],
+        "effectStyle" => &["effectLst", "effectDag", "scene3d", "sp3d"],
         "nvPr" => &[
             "ph",
             "audioCd",

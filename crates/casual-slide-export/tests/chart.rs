@@ -372,6 +372,106 @@ fn a_negative_axis_id_edited_stays_signed_and_the_other_stays_as_written() {
     keep_for_validator("edit-signed-axis", &saved.bytes);
 }
 
+/// `c:axId` and `c:crossAx` of a chart part, in document order, as the part spells them.
+fn axis_ids_as_written(bytes: &[u8], part: &str) -> Vec<String> {
+    let tree = XmlTree::parse(bytes, part, &OoxmlLimits::default()).unwrap();
+    let mut out = Vec::new();
+    let mut stack = vec![tree.root()];
+    while let Some(el) = stack.pop() {
+        if matches!(tree.local_name(el), "axId" | "crossAx") {
+            out.push(tree.plain_attribute(el, "val").unwrap());
+        }
+        let mut kids = tree.child_elements(el);
+        kids.reverse();
+        stack.extend(kids);
+    }
+    out
+}
+
+/// The model's `c:axId` and `c:crossAx` for one chart part, bar families first, then axes.
+fn axis_ids_of(model: &ChartPart) -> Vec<Option<i64>> {
+    let ChartPart::Chart(space) = model else {
+        panic!("not a chart")
+    };
+    let plot = space.chart.as_ref().unwrap().plot_area.as_ref().unwrap();
+    let mut out = Vec::new();
+    for family in &plot.charts {
+        if let c::PlotAreaCharts::BarChart(bar) = family {
+            out.extend(bar.ax_id.iter().map(|a| a.val));
+        }
+    }
+    for axis in &plot.axes {
+        let (id, cross) = match axis {
+            c::PlotAreaAxes::ValAx(a) => (&a.ax_id, &a.cross_ax),
+            c::PlotAreaAxes::CatAx(a) => (&a.ax_id, &a.cross_ax),
+            c::PlotAreaAxes::DateAx(a) => (&a.ax_id, &a.cross_ax),
+            c::PlotAreaAxes::SerAx(a) => (&a.ax_id, &a.cross_ax),
+        };
+        out.push(id.as_ref().and_then(|a| a.val));
+        out.push(cross.as_ref().and_then(|a| a.val));
+    }
+    out
+}
+
+/// T1J-04: signed ids as Mac PowerPoint writes them, read into the model, saved through an
+/// edit of something else, and read back to the digit. Holds `poi-bar-chart-mac` itself where
+/// `OPENPRESENT_REAL_DECKS` has it, and always the committed deck made from its ids.
+#[test]
+fn signed_axis_ids_are_in_the_model_and_round_trip_to_the_digit() {
+    let mut sets = vec![fixtures().join("generated/chart-signed-axis.pptx")];
+    sets.extend(
+        real_decks()
+            .into_iter()
+            .filter(|d| d.file_stem().is_some_and(|s| s == "poi-bar-chart-mac")),
+    );
+    let part = "ppt/charts/chart1.xml";
+    for deck in &sets {
+        let source = std::fs::read(deck).unwrap();
+        let written = axis_ids_as_written(&parts_of(&source)[part], part);
+        assert!(written.iter().any(|v| v.starts_with('-')), "{deck:?}");
+        let mut pkg = open(source);
+        let slides = imported(&mut pkg);
+        let mut model = model_of(&slides, part);
+        let held: Vec<Option<i64>> = written.iter().map(|v| v.parse().ok()).collect();
+        assert_eq!(axis_ids_of(&model), held, "{deck:?}: the model");
+        first_bar(&mut model).gap_width = Some(Box::new(c::GapAmount {
+            val: Some("121".to_owned()),
+        }));
+        let saved = save_chart_parts(
+            &mut pkg,
+            &[(part.to_owned(), model.clone())],
+            &ChartLimits::default(),
+            &ImportLimits::default(),
+        )
+        .unwrap();
+        let after = parts_of(&saved.bytes);
+        assert_eq!(axis_ids_as_written(&after[part], part), written, "{deck:?}");
+        let mut again = open(saved.bytes);
+        let slides = imported(&mut again);
+        assert_eq!(model_of(&slides, part), model, "{deck:?}: read back");
+        assert_fixed_point(&mut again, &slides.charts, "signed");
+    }
+}
+
+/// T1J-04: an id edited to another negative is written signed, not refused or wrapped.
+#[test]
+fn a_signed_axis_id_set_in_the_model_is_written_signed() {
+    let mut pkg = open(read_fixture("generated/chart-signed-axis.pptx"));
+    let slides = imported(&mut pkg);
+    let part = "ppt/charts/chart1.xml";
+    let mut model = model_of(&slides, part);
+    first_bar(&mut model).ax_id[0].val = Some(-7);
+    let saved = save_chart_parts(
+        &mut pkg,
+        &[(part.to_owned(), model)],
+        &ChartLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    let written = axis_ids_as_written(&parts_of(&saved.bytes)[part], part);
+    assert_eq!(written[0], "-7");
+}
+
 #[test]
 fn every_real_deck_with_a_chart_takes_an_edit_and_stays_as_valid_as_it_was() {
     let mut edited = 0;

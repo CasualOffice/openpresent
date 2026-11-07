@@ -7,10 +7,10 @@ use casual_slide_model::color::{
     PresetColor, ResolveContext, ResolveError, Rgb, SchemeColor, SystemColor, TransformKind as K,
     format_percentage, parse_percentage, resolve,
 };
+use casual_slide_model::fill::Fill;
 use casual_slide_model::theme::{
     ColorMap, ColorMapOverride, ColorMapSlot, ColorScheme, ColorSchemeIndex, FontCollectionIndex,
-    FormatScheme, OnOffStyle, StyleFill, ThemeOverride, effective_color_map,
-    effective_color_scheme,
+    FormatScheme, OnOffStyle, ThemeOverride, effective_color_map, effective_color_scheme,
 };
 
 include!("standard_presets.inc");
@@ -712,16 +712,16 @@ fn override_part_scheme_replaces_the_themes() {
 #[test]
 fn style_matrix_indexes() {
     let scheme = FormatScheme {
-        fills: Some(vec![StyleFill::None, StyleFill::Group]),
-        background_fills: Some(vec![StyleFill::Picture]),
+        fills: Some(vec![Fill::None, Fill::Group]),
+        background_fills: Some(vec![Fill::Blip(Box::default())]),
         ..Default::default()
     };
     assert_eq!(scheme.fill(0), None);
     assert_eq!(scheme.fill(1000), None);
-    assert_eq!(scheme.fill(1), Some(&StyleFill::None));
-    assert_eq!(scheme.fill(2), Some(&StyleFill::Group));
+    assert_eq!(scheme.fill(1), Some(&Fill::None));
+    assert_eq!(scheme.fill(2), Some(&Fill::Group));
     assert_eq!(scheme.fill(3), None);
-    assert_eq!(scheme.fill(1001), Some(&StyleFill::Picture));
+    assert_eq!(scheme.fill(1001), Some(&Fill::Blip(Box::default())));
     assert_eq!(scheme.fill(u32::MAX), None);
     assert_eq!(scheme.line(0), None);
     assert_eq!(scheme.effect(u32::MAX), None);

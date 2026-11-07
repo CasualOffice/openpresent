@@ -12,11 +12,13 @@ use casual_slide_import::theme::{
     read_effect_reference, read_theme_parts, read_themeable_font, read_themeable_style,
 };
 use casual_slide_model::color::{
-    Color, ColorTransform, ColorValue, MAX_COLOR_TRANSFORMS, Percentage, PresetColor,
+    Angle, Color, ColorTransform, ColorValue, MAX_COLOR_TRANSFORMS, Percentage, PresetColor,
     ResolveContext, Rgb, SchemeColor, SystemColor, TransformKind as K, resolve,
 };
+use casual_slide_model::effect::EffectProperties;
+use casual_slide_model::fill::{Fill, GradientShade};
 use casual_slide_model::theme::{
-    ColorMapOverride, ColorMapSlot, ColorSchemeIndex as I, FontCollectionIndex, StyleFill, Theme,
+    ColorMapOverride, ColorMapSlot, ColorSchemeIndex as I, FontCollectionIndex, Theme,
     ThemeableFont, ThemeableStyle,
 };
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
@@ -135,40 +137,66 @@ fn font_scheme_reads_as_written() {
 }
 
 #[test]
-fn format_scheme_shows_its_colours_and_kinds() {
+fn format_scheme_holds_what_a_shape_would_for_each_fill_line_and_effect() {
     let t = rich().value;
     let f = t.elements.unwrap().format_scheme.unwrap();
     assert_eq!(f.name.as_deref(), Some("Rich Format"));
     let fills = f.fills.as_ref().unwrap();
     assert_eq!(
         fills[0],
-        StyleFill::Solid(Some(Color::new(ColorValue::Scheme(SchemeColor::PhClr))))
+        Fill::Solid(Some(Color::new(ColorValue::Scheme(SchemeColor::PhClr))))
     );
-    let StyleFill::Gradient(stops) = &fills[1] else {
+    let Fill::Gradient(gradient) = &fills[1] else {
         panic!("{:?}", fills[1]);
     };
-    assert_eq!(stops[1].position, Some(100_000));
+    assert_eq!(gradient.rotate_with_shape, Some(true));
+    let stops = gradient.stops.as_ref().unwrap();
+    assert_eq!(stops[1].position, Some(Percentage(100_000)));
     assert_eq!(
         stops[1].color.as_ref().unwrap().transforms,
         [ColorTransform::new(K::Shade, 78_000)]
     );
-    let StyleFill::Pattern { background, .. } = &fills[2] else {
+    assert!(
+        matches!(
+            gradient.shade,
+            Some(GradientShade::Linear {
+                angle: Some(Angle(5_400_000)),
+                scaled: Some(false),
+            })
+        ),
+        "{:?}",
+        gradient.shade
+    );
+    let Fill::Pattern(pattern) = &fills[2] else {
         panic!("{:?}", fills[2]);
     };
     assert_eq!(
-        background.as_ref().unwrap().value,
+        pattern.background.as_ref().unwrap().value,
         ColorValue::Preset(PresetColor::White)
     );
+    assert!(pattern.preset.is_some());
     let lines = f.lines.as_ref().unwrap();
     assert_eq!(lines[0].width, Some(6350));
-    assert_eq!(lines[1].fill, Some(StyleFill::None));
+    assert!(lines[0].cap.is_some() && lines[0].dash.is_some() && lines[0].join.is_some());
+    assert_eq!(lines[1].fill, Some(Fill::None));
     assert_eq!(lines[2].fill, None);
     let effects = f.effects.as_ref().unwrap();
-    assert!(effects[1].has_scene3d && !effects[1].has_sp3d);
-    assert!(effects[2].has_sp3d);
+    assert!(effects[0].effects.is_some() && effects[0].scene3d.is_none());
+    assert!(effects[1].scene3d.is_some() && effects[1].sp3d.is_none());
+    assert!(effects[2].sp3d.is_some());
+    let Some(EffectProperties::List(list)) = &effects[2].effects else {
+        panic!("{:?}", effects[2].effects);
+    };
+    assert_eq!(list.len(), 1, "the shadow");
     let bg = f.background_fills.as_ref().unwrap();
-    assert_eq!(bg[1], StyleFill::Picture);
-    assert_eq!(bg[2], StyleFill::Group);
+    let Fill::Blip(picture) = &bg[1] else {
+        panic!("{:?}", bg[1]);
+    };
+    assert_eq!(
+        picture.blip.as_ref().unwrap().embed.as_deref(),
+        Some("rId1")
+    );
+    assert_eq!(bg[2], Fill::Group);
     assert_eq!(f.fill(1001), Some(&bg[0]));
 }
 
@@ -178,7 +206,19 @@ fn object_defaults_extra_schemes_custom_colours_and_family() {
     let d = t.object_defaults.as_ref().unwrap();
     assert_eq!(d.extensions, ["{DEFAULTS-EXT}"]);
     let sp = d.shape.as_ref().unwrap();
-    assert!(sp.has_shape_properties && sp.body_properties.is_some() && sp.list_style.is_some());
+    assert!(sp.body_properties.is_some() && sp.list_style.is_some());
+    let props = sp.shape_properties.as_ref().unwrap();
+    assert_eq!(
+        props.fill,
+        Some(Fill::Solid(Some(Color::new(ColorValue::Scheme(
+            SchemeColor::Accent1
+        )))))
+    );
+    assert_eq!(
+        d.line.as_ref().unwrap().shape_properties,
+        Some(Default::default()),
+        "an empty spPr is there, and says nothing"
+    );
     let style = sp.style.as_ref().unwrap();
     assert_eq!(style.line.as_ref().unwrap().idx, Some(2));
     assert_eq!(style.fill.as_ref().unwrap().idx, Some(1001));

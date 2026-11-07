@@ -2,7 +2,7 @@
 //! of every shape in the decks that hold the most of Tiers 1E and 1F: take it out, read the
 //! part again, and something must differ, in the model or in the report. If neither
 //! differs, the importer read past it and said nothing, which is the one thing it may not
-//! do. Slide parts only, and only inside the shape tree; other tiers keep their own.
+//! do. Slide parts inside the shape tree, and theme parts (`T1C-03`); other tiers keep their own.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -10,6 +10,7 @@ use std::path::Path;
 use casual_slide_import::color::Findings as ColorFindings;
 use casual_slide_import::properties::{Findings, ImportLimits};
 use casual_slide_import::slide::{SlideLimits, import_slide_part};
+use casual_slide_import::theme::import_theme;
 use casual_slide_model::slide::{SlideKind, SlidePart};
 use casual_slide_ooxml::{ElementId, OoxmlLimits, PresentationPackage, XmlTree};
 
@@ -241,4 +242,148 @@ fn something_unknown_is_reported_and_so_is_its_absence() {
         silent_in(slide(r#" madeUp="1""#).as_bytes()),
         Vec::<String>::new()
     );
+}
+
+const RICH_THEME: &str = include_str!("data/rich-theme.xml");
+const THEME_DECKS: [&str; 3] = ["text-object-defaults", "area-text", "shape-fills"];
+
+fn read_theme(xml: &[u8]) -> Option<(String, Vec<String>)> {
+    let tree = XmlTree::parse(xml, "t", &OoxmlLimits::default()).ok()?;
+    let imported = import_theme(&tree).ok()?;
+    let report = imported
+        .findings
+        .items
+        .iter()
+        .map(|f| format!("{} {} {}", f.kind.code(), f.element, f.detail))
+        .collect();
+    Some((format!("{:?}", imported.value), report))
+}
+
+/// What in a theme reads no differently for being gone. What an extension holds is its own
+/// matter: its `uri` is in the model, and the rest stays in the part.
+fn silent_in_theme(xml: &[u8]) -> Vec<String> {
+    let whole = XmlTree::parse(xml, "t", &OoxmlLimits::default()).unwrap();
+    let as_read = read_theme(xml).unwrap();
+    let mut silent = Vec::new();
+    let mut stack = vec![whole.root()];
+    while let Some(parent) = stack.pop() {
+        if local(whole.qualified_name(parent)) == "ext" {
+            continue;
+        }
+        for kid in whole.child_elements(parent) {
+            stack.push(kid);
+            let name = whole.qualified_name(kid).to_owned();
+            let mut gone = whole.clone();
+            gone.remove_child(parent, kid);
+            if read_theme(&gone.to_bytes()).as_ref() == Some(&as_read) {
+                silent.push(format!("<{name}>"));
+            }
+            for (attr, _) in whole.attributes(kid, "t").unwrap() {
+                if attr == "xmlns" || attr.starts_with("xmlns:") {
+                    continue;
+                }
+                let mut gone = whole.clone();
+                gone.remove_attribute(kid, &attr);
+                if read_theme(&gone.to_bytes()).as_ref() == Some(&as_read) {
+                    silent.push(format!("<{name}>/@{attr}"));
+                }
+            }
+        }
+    }
+    silent.sort();
+    silent.dedup();
+    silent
+}
+
+/// `T1C-03`.
+#[test]
+fn nothing_in_a_theme_can_go_without_the_model_or_the_report_changing() {
+    assert_eq!(
+        silent_in_theme(RICH_THEME.as_bytes()),
+        Vec::<String>::new(),
+        "rich theme"
+    );
+    for deck in THEME_DECKS {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/generated")
+            .join(format!("{deck}.pptx"));
+        let bytes = std::fs::read(path).unwrap();
+        let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+        let xml = pkg.read_part("ppt/theme/theme1.xml").unwrap();
+        assert_eq!(silent_in_theme(&xml), Vec::<String>::new(), "{deck}");
+    }
+}
+
+/// `T1C-03`: what the importer has never heard of, on anything a format scheme or an object
+/// default is made of, is reported under that element's name.
+#[test]
+fn a_stranger_on_a_format_scheme_or_object_default_is_reported_where_it_is() {
+    const A: &str = "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"";
+    let body = |marks: [&str; 14]| {
+        let [
+            fmt,
+            fills,
+            lines,
+            ln,
+            effects,
+            style,
+            bg,
+            defaults,
+            sp,
+            pr,
+            bp,
+            ls,
+            st,
+            tail,
+        ] = marks;
+        format!(
+            r#"<a:theme {A}><a:themeElements><a:fmtScheme name="f"{fmt}>
+<a:fillStyleLst{fills}><a:noFill/><a:noFill/><a:noFill/></a:fillStyleLst>
+<a:lnStyleLst{lines}><a:ln{ln}/><a:ln/><a:ln/></a:lnStyleLst>
+<a:effectStyleLst{effects}><a:effectStyle{style}/><a:effectStyle/><a:effectStyle/></a:effectStyleLst>
+<a:bgFillStyleLst{bg}><a:noFill/><a:noFill/><a:noFill/></a:bgFillStyleLst>
+</a:fmtScheme></a:themeElements><a:objectDefaults{defaults}><a:spDef{sp}><a:spPr{pr}/><a:bodyPr{bp}/><a:lstStyle{ls}/><a:style{st}/></a:spDef>{tail}</a:objectDefaults></a:theme>"#
+        )
+    };
+    let plain = read_theme(body([""; 14]).as_bytes()).unwrap();
+    let names = [
+        "fmtScheme",
+        "fillStyleLst",
+        "lnStyleLst",
+        "ln",
+        "effectStyleLst",
+        "effectStyle",
+        "bgFillStyleLst",
+        "objectDefaults",
+        "spDef",
+        "spPr",
+        "bodyPr",
+        "lstStyle",
+        "style",
+    ];
+    for (at, name) in names.iter().enumerate() {
+        let mut marks = [""; 14];
+        marks[at] = r#" madeUp="1""#;
+        let read = read_theme(body(marks).as_bytes()).unwrap();
+        assert_eq!(read.0, plain.0, "{name}: the model does not change");
+        assert_ne!(read.1, plain.1, "{name}: an unknown attribute is reported");
+    }
+}
+
+/// `T1C-03`: `xfrm` and `@bwMode` in a default's `spPr` have no place in the model, so they
+/// have to be in the report.
+#[test]
+fn what_a_default_sp_pr_holds_beyond_the_model_is_reported() {
+    let xml = RICH_THEME.replacen(
+        "<a:spPr><a:solidFill>",
+        r#"<a:spPr bwMode="auto"><a:xfrm/><a:solidFill>"#,
+        1,
+    );
+    assert_ne!(xml, RICH_THEME);
+    let plain = read_theme(RICH_THEME.as_bytes()).unwrap();
+    let read = read_theme(xml.as_bytes()).unwrap();
+    assert_eq!(read.0, plain.0);
+    let added: Vec<&String> = read.1.iter().filter(|f| !plain.1.contains(f)).collect();
+    assert!(added.iter().any(|f| f.contains("xfrm")), "{added:?}");
+    assert!(added.iter().any(|f| f.contains("spPr")), "{added:?}");
 }
