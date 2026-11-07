@@ -647,7 +647,7 @@ fn real_decks_are_modelled_and_what_is_not_is_named() {
         }
     }
     eprintln!("decks {decks}\ncensus {census:#?}\ncodes {codes:#?}\nretained {retained:#?}");
-    assert_eq!(decks, 12);
+    assert_eq!(decks, 16);
     for name in [
         "preset", "custom", "solid", "line", "effects", "hidden", "picture",
     ] {
