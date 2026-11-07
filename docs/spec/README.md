@@ -7,7 +7,8 @@ Every tag, property and enum value in the vendored schemas, each assigned to a r
 tier. A phase cannot close while a row in its scope is unaccounted for.
 
 Status letters: `M` model, `I` import, `E` export, `R` render, `U` UI. Values: `.` not started,
-`y` done with a test, `r` retained verbatim, `n/a` does not apply.
+`y` done with a test, `r` retained verbatim, `n/a` does not apply. `tools/spec-audit/audit.py --check`
+holds every `y` to code, a test and a fixture, and `--propose` says what the evidence earns (`STAT-01`).
 
 **Rows: 8730.** element 2371, value 2256, attribute 1740, type 1208, simple 499, root 301, group 142, attrgroup 103, rootattr 74, any 25, base 11.
 

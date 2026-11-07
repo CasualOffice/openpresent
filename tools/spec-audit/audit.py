@@ -20,18 +20,38 @@ not that it handles it correctly. Each reference says how much can be said about
 "Owning element" is a may-analysis over match arms, comparisons, element-like calls and
 call sites. It over-approximates: a helper called from two arms counts for both.
 
-Gates (--check): a row marked `y` in M, I or E needs a reference of at least `ident` in
-the matching crate (--strict: `context`), and a row marked `y` in any column needs a
-fixture (docs/51: "A row with no fixture cannot be y"). Also runs count.py (SPEC-03), and
-fails if this tool's own reading of the schemas yields different row ids from the
-checklist. Wildcards have no name to find, so they count only through a
-`// spec-audit: <row id>` comment. R and U name render and UI code outside these crates,
-so they get the fixture gate only and are listed as unaudited.
+Gates (--check), STAT-01. `y` means done with a test, so a mark is held to what this tool
+can check, and what it cannot check is left blank by --propose rather than assumed:
+
+  I, E  a `context` reference in that crate (or a `spec-audit` comment on a wildcard), and
+        that crate's tests naming the construct. `name` is not enough: an owner that cannot
+        be determined is the same string read for something else.
+  M     a declaration with the row's name. An enum value must be in the enum whose doc
+        comment names the row's simple type. An attribute or element must be a public
+        field of the struct for the row's owner (named alike, or in OWNER_STRUCTS), and not
+        a name too short or generic to mean anything. The model's or import's tests must
+        name it.
+  All   a fixture that exercises the row, by the schema-directed walk (docs/51: "A row with
+        no fixture cannot be y"). Hostile decks do not count.
+  Types A type, group or attribute group marked `y` needs everything it declares to meet
+        the same bar, through the groups it includes. A wildcard or base row in it blocks
+        it. A simple type needs a value row for each value, so only M can apply. extLst is
+        retained, not read: code that names it only keeps it in order, so it never earns `y`.
+
+Also runs count.py (SPEC-03), and fails if this tool's own reading of the schemas yields
+different row ids from the checklist. R and U name render and UI code outside these
+crates, so they get the fixture gate only and are listed as unaudited.
+
+None of this reads behaviour: a mark says the code names the construct where the schema
+puts it, a test names it and a fixture has it. It can still be wrong, and a false `y` is
+worse than a blank, so --propose takes the narrow reading everywhere.
 
     python3 tools/spec-audit/audit.py                # coverage table and gap summary
     python3 tools/spec-audit/audit.py --check        # gates, non-zero on failure
     python3 tools/spec-audit/audit.py --gaps FILE    # every row and its result, as TSV
     python3 tools/spec-audit/audit.py --json FILE    # machine-readable summary
+    python3 tools/spec-audit/audit.py --propose 1A,1B,1C,1D          # what would be marked
+    python3 tools/spec-audit/audit.py --propose 1A,1B,1C,1D --apply  # write those marks
 """
 import argparse
 import csv
@@ -51,6 +71,44 @@ XS = "{http://www.w3.org/2001/XMLSchema}"
 MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 CRATES = {"I": "casual-slide-import", "E": "casual-slide-export", "M": "casual-slide-model"}
+TIERS = {"1A": ("DSIG", "PKG", "SIMPLE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE")}
+LEAF_KINDS = ("element", "attribute", "root", "rootattr", "value")
+# Model fields too generic to say anything about which attribute they hold.
+GENERIC_FIELDS = frozenset("id name type val value uri ref kind data text index key".split())
+MIN_FIELD_NAME = 3
+NEVER_EARNED = frozenset(("extLst",))
+# Schema type to model struct, where the two are named differently. Hand-kept, and read
+# from crates/casual-slide-model/src. A type with no struct here or by name earns no M.
+OWNER_STRUCTS = {
+    "CT_Properties": "AppProperties",
+    "AG_Locking": "Locks", "CT_ShapeLocking": "Locks", "CT_GroupLocking": "Locks", "CT_ConnectorLocking": "Locks",
+    "CT_PictureLocking": "Locks", "CT_GraphicalObjectFrameLocking": "Locks", "CT_ContentPartLocking": "Locks",
+    "CT_NonVisualDrawingProps": "NonVisualDrawing",
+    "CT_ApplicationNonVisualDrawingProps": "AppNonVisual",
+    "CT_Transform2D": "Transform",
+    "CT_GroupTransform2D": "Transform",
+    "CT_SlideSorterViewProperties": "SorterViewProperties",
+    "CT_OutlineViewSlideEntry": "OutlineSlide",
+    "CT_SlideMasterTextStyles": "MasterTextStyles",
+    "CT_Slide": "SlidePart", "CT_SlideLayout": "SlidePart", "CT_SlideMaster": "SlidePart", "CT_NotesSlide": "SlidePart",
+    "CT_NotesMaster": "SlidePart", "CT_HandoutMaster": "SlidePart",
+    "CT_StyleMatrixReference": "StyleMatrixRef",
+    "CT_FontReference": "FontRef",
+    "CT_Vector": "VtVector",
+    "CT_Array": "VtArray",
+    "CT_Scale2D": "Scale",
+    "CT_Point2D": "Point",
+    "CT_PositiveSize2D": "PositiveSize",
+    "CT_SlideIdListEntry": "SlideId",
+    "CT_SlideMasterIdListEntry": "SlideMasterId",
+    "CT_SlideLayoutIdListEntry": "SlideLayoutId",
+    "CT_EmbeddedFontListEntry": "EmbeddedFont",
+    "CT_ColorMapping": "ColorMap",
+    "CT_ObjectStyleDefaults": "ObjectDefaults",
+    "CT_OfficeStyleSheet": "Theme",
+    "CT_ShapeStyle": "ShapeStyle",
+    "CT_Connection": "Connection",
+}
 RANK = {"none": 0, "elsewhere": 1, "ident": 2, "name": 3, "context": 4, "annotated": 4}
 FIXTURE_SETS = ("generated", "producers", "real", "hostile")
 COUNTED_SETS = ("generated", "producers", "real")  # a hostile deck is scanned, but proves nothing about coverage
@@ -371,8 +429,9 @@ def lex(text):
     return toks
 
 
-def strip_test_items(toks):
-    """Drop whatever follows #[cfg(test)]: a test naming a construct is not an implementation of it."""
+def strip_test_items(toks, tests=None):
+    """Drop whatever follows #[cfg(test)]: a test naming a construct is not an implementation of it.
+    What is dropped goes into `tests`, if given."""
     out, i = [], 0
     pat = ["#", "[", "cfg", "(", "test", ")", "]"]
     while i < len(toks):
@@ -381,6 +440,8 @@ def strip_test_items(toks):
             depth = 0
             while i < len(toks):
                 v = toks[i][1] if toks[i][0] == "p" else None
+                if tests is not None:
+                    tests.append(toks[i])
                 i += 1
                 if v == "{":
                     depth += 1
@@ -630,6 +691,192 @@ def scan_crates(crates_dir, schema):
         scan.finish()
         scans[column] = scan
     return scans, files
+
+
+# ---------------------------------------------------------------- what tests and the model say
+
+WORD = re.compile(r"[A-Za-z_][\w-]*")
+ENUM_BLOCK = re.compile(r"(?:token_enum!\s*\(|xml_enum!\s*\{)\s*((?:///[^\n]*\n\s*)+)(\w+)\s*\{(.*?)\}", re.S)
+STRUCT_BLOCK = re.compile(r"pub struct (\w+)\s*\{(.*?)^\}", re.S | re.M)
+PUB_FIELD = re.compile(r"^\s*pub (\w+):", re.M)
+
+
+def is_test_file(path):
+    return path.name == "tests.rs" or path.name.endswith("_tests.rs") or "tests" in path.parts
+
+
+def tested_words(crate_dir):
+    """Every word in a crate's tests, in source or in markup, normalised. Comments do not count."""
+    found = set()
+    for path in sorted(crate_dir.rglob("*.rs")):
+        toks = lex(path.read_text(encoding="utf8", errors="replace"))
+        if not is_test_file(path):
+            kept = []
+            strip_test_items(toks, kept)
+            toks = kept
+        for kind, value, _ in toks:
+            if kind == "id":
+                found.add(normal(value))
+            elif kind == "str":
+                found |= {normal(w) for w in WORD.findall(value)}
+    return found
+
+
+class ModelDeclarations:
+    """What the model crate declares, read from its source."""
+
+    def __init__(self, crate_dir):
+        self.enums = {}    # simple type name -> (enum name, its values)
+        self.structs = {}  # normalised struct name -> its public fields, normalised
+        for path in sorted((crate_dir / "src").rglob("*.rs")):
+            text = path.read_text(encoding="utf8", errors="replace")
+            for docs, name, body in ENUM_BLOCK.findall(text):
+                named = re.search(r"\bST_\w+", docs)
+                if named:
+                    self.enums[named.group(0)] = (name, set(re.findall(r'=\s*"([^"]*)"', body)))
+            for name, body in STRUCT_BLOCK.findall(text):
+                fields = {normal(f.removeprefix("r#")) for f in PUB_FIELD.findall(body)}
+                self.structs.setdefault(normal(name), set()).update(fields)
+
+    def declares(self, row):
+        """The reason a row is in the model, or None."""
+        kind, name, owner = row["kind"], row["name"], row["owner"]
+        if kind == "value":
+            enum = self.enums.get(owner)
+            return enum[0] if enum and name[1:] in enum[1] else None
+        if kind not in ("element", "attribute"):
+            return None
+        bare = normal(name.lstrip("@").split(":")[-1])
+        if len(bare) < MIN_FIELD_NAME or bare in GENERIC_FIELDS:
+            return None
+        struct = normal(OWNER_STRUCTS.get(owner, re.sub(r"^(CT|EG|AG)_", "", owner)))
+        return bare if bare in self.structs.get(struct, ()) else None
+
+
+class Evidence:
+    """Everything a mark can rest on, so that proposing a mark and gating one are one rule."""
+
+    def __init__(self, rows, keys, tiers, cov, crates_dir):
+        self.rows = {r["id"]: r for r in rows}
+        self.tiers, self.cov = tiers, cov
+        self.model = ModelDeclarations(crates_dir / CRATES["M"])
+        words = {c: tested_words(crates_dir / name) for c, name in CRATES.items()}
+        self.words = {"I": words["I"], "E": words["E"], "M": words["M"] | words["I"]}
+        self.members = defaultdict(list)
+        self.declarations = {}
+        for r in rows:
+            if r["owner"]:
+                self.members[(keys[r["id"]], r["owner"])].append(r["id"])
+            if r["kind"] == "type":
+                self.declarations.setdefault(r["name"], keys[r["id"]])
+        self.keys = keys
+        self._owned = {}
+
+    def named_by_a_test(self, column, row):
+        bare = row["name"].lstrip("=@").strip("<>").split(":")[-1]
+        if normal(bare) in self.words[column]:
+            return True
+        if row["kind"] == "value" and column == "M":
+            enum = self.model.enums.get(row["owner"])
+            return bool(enum) and normal(enum[0]) in self.words[column]
+        return False
+
+    def code_gap(self, column, row):
+        """Why a leaf or wildcard row has not earned this column by its code and tests, or None."""
+        rid = row["id"]
+        if row["name"].lstrip("@").split(":")[-1] in NEVER_EARNED:
+            return "retained, not read: nothing here reads it"
+        if column == "M":
+            if not self.model.declares(row):
+                return f"no declaration in {CRATES[column]} says this is the row (see the rule in audit.py)"
+        else:
+            tier = self.tiers[column].get(rid, "none")
+            if RANK[tier] < RANK["context"]:
+                reason = {"none": "no reference", "elsewhere": "referenced only under other owners"}.get(tier, f"only `{tier}` precision")
+                return f"{reason} in {CRATES[column]}"
+            if tier == "annotated":
+                return None
+        if not self.named_by_a_test(column, row):
+            return f"no test in {CRATES[column]} names it"
+        return None
+
+    def owned_gap(self, column, name, key, seen):
+        """The first thing a type or group declares that is not done, or None."""
+        memo = (column, key, name)
+        if memo in self._owned:
+            return self._owned[memo]
+        if memo in seen:  # a cycle adds nothing to what is being checked
+            return None
+        seen = seen | {memo}
+        members = self.members.get((key, name), [])
+        found = None if members else f"{name} declares nothing to check"
+        for rid in members:
+            row = self.rows[rid]
+            if row["kind"] in ("group", "attrgroup"):
+                found = self.included_gap(column, row["name"], key, seen)
+            elif row["kind"] == "base":
+                found = rid
+            else:
+                found = self.code_gap(column, row) and rid
+            if found is None and not self.cov.hits[rid]:
+                found = rid
+            if found:
+                break
+        self._owned[memo] = found
+        return found
+
+    def included_gap(self, column, name, key, seen):
+        """A group row names a declaration, in its own namespace if it has one there."""
+        local = name.split(":")[-1]
+        target = key if (key, local) in self.members else self.declarations.get(local, key)
+        return self.owned_gap(column, local, target, seen)
+
+    def gap(self, column, row):
+        """Why a row has not earned `y` in this column, or None if it has. Fixtures are gated apart."""
+        kind = row["kind"]
+        key = self.keys[row["id"]]
+        if kind == "type":
+            missing = self.owned_gap(column, row["name"], key, frozenset())
+            return f"not all it declares is done, such as {missing}" if missing else None
+        if kind in ("group", "attrgroup"):
+            missing = self.included_gap(column, row["name"], key, frozenset())
+            return f"not all it includes is done, such as {missing}" if missing else None
+        if kind == "base":
+            return "a base row has nothing of its own to check"
+        if kind == "simple":
+            if column != "M":
+                return "a simple type's values are held by the model, so only M can apply"
+            values = self.members.get((key, row["name"]), [])
+            if not values:
+                return "a simple type with no values has nothing to check"
+            missing = next((i for i in values if self.code_gap("M", self.rows[i]) or not self.cov.hits[i]), None)
+            return f"not all its values are done, such as {missing}" if missing else None
+        return self.code_gap(column, row)
+
+    def propose(self, areas):
+        """{row id: {column: "y"}} for rows still blank in those areas."""
+        marks = {}
+        for rid, row in self.rows.items():
+            if row["area"] not in areas or not self.cov.hits[rid]:
+                continue
+            earned = {c: "y" for c in CRATES if row.get(c) == "." and not self.gap(c, row)}
+            if earned:
+                marks[rid] = earned
+        return marks
+
+
+def write_marks(checklist, marks):
+    """Set status columns in place, changing nothing else in the file."""
+    lines = checklist.read_text(encoding="utf8").split("\n")
+    columns = lines[0].split("\t")
+    index = {c: columns.index(c) for c in CRATES}
+    for number, line in enumerate(lines[1:], 1):
+        cols = line.split("\t")
+        if cols[0] in marks:
+            for column, value in marks[cols[0]].items():
+                cols[index[column]] = value
+            lines[number] = "\t".join(cols)
+    checklist.write_text("\n".join(lines), encoding="utf8")
 
 
 def classify(row, key, schema, idx):
@@ -934,22 +1181,18 @@ def scan_fixtures(fixtures_dir, schema):
 
 # ---------------------------------------------------------------- gates and report
 
-def gates(rows, tiers, cov, strict):
+def gates(rows, evidence, cov):
     failures, warnings = [], []
-    floor = RANK["context"] if strict else RANK["ident"]
     for r in rows:
         rid = r["id"]
         marked = [c for c in ("M", "I", "E", "R", "U") if r.get(c) == "y"]
         for c in marked:
-            if c not in tiers:
+            if c not in CRATES:
                 warnings.append(f"{rid}: {c}=y is not auditable from these crates")
                 continue
-            tier = tiers[c].get(rid, "none")
-            if RANK[tier] < floor:
-                reason = {"none": "no reference", "elsewhere": "referenced only under other owners"}.get(tier, f"only `{tier}` precision")
-                failures.append(f"{rid}: {c}=y, {reason} in {CRATES[c]}")
-            elif tier in ("name", "ident"):
-                warnings.append(f"{rid}: {c}=y on `{tier}` precision only")
+            reason = evidence.gap(c, r)
+            if reason:
+                failures.append(f"{rid}: {c}=y, {reason}")
         if marked and cov.hits[rid] == 0:
             failures.append(f"{rid}: {','.join(marked)}=y, no fixture exercises it")
     return failures, warnings
@@ -1025,7 +1268,8 @@ def main(argv=None):
     ap.add_argument("--crates", type=pathlib.Path)
     ap.add_argument("--fixtures", type=pathlib.Path)
     ap.add_argument("--check", action="store_true", help="fail on a `y` row without a reference or a fixture")
-    ap.add_argument("--strict", action="store_true", help="with --check, `name` precision is not enough either")
+    ap.add_argument("--propose", help="tiers, comma separated: print the marks the evidence earns in them")
+    ap.add_argument("--apply", action="store_true", help="with --propose, write those marks to the checklist")
     ap.add_argument("--gaps", type=pathlib.Path, help="write every row and its result, as TSV")
     ap.add_argument("--json", type=pathlib.Path, help="write the summary as JSON")
     args = ap.parse_args(argv)
@@ -1045,7 +1289,21 @@ def main(argv=None):
     cov = scan_fixtures(args.fixtures or args.root / "fixtures", schema)
     _, _, count_problems = spec_count.compare(args.root, checklist)
     problems += [f"count: {p}" for p in count_problems]
-    failures, warnings = gates(rows, tiers, cov, args.strict)
+    crates_dir = args.crates or args.root / "crates"
+    evidence = Evidence(rows, keys, tiers, cov, crates_dir)
+    if args.propose:
+        wanted = args.propose.split(",")
+        if unknown := [t for t in wanted if t not in TIERS]:
+            print(f"unknown tiers: {unknown}", file=sys.stderr)
+            return 2
+        marks = evidence.propose({a for t in wanted for a in TIERS[t]})
+        for rid in sorted(marks):
+            print(f"{rid}\t" + " ".join(f"{c}={v}" for c, v in sorted(marks[rid].items())))
+        print(f"{len(marks)} rows, {sum(map(len, marks.values()))} marks", file=sys.stderr)
+        if args.apply:
+            write_marks(checklist, marks)
+        return 0
+    failures, warnings = gates(rows, evidence, cov)
     areas = summary_table(rows, tiers, cov)
     samples = {c: len(s.refs) for c, s in scans.items()}
     print_report(rows, areas, tiers, cov, files, problems, failures, warnings, samples)

@@ -320,7 +320,8 @@ def render(rows, sources, skipped, status):
            "Every tag, property and enum value in the vendored schemas, each assigned to a roadmap",
            "tier. A phase cannot close while a row in its scope is unaccounted for.", "",
            "Status letters: `M` model, `I` import, `E` export, `R` render, `U` UI. Values: `.` not started,",
-           "`y` done with a test, `r` retained verbatim, `n/a` does not apply.", "",
+           "`y` done with a test, `r` retained verbatim, `n/a` does not apply. `tools/spec-audit/audit.py --check`",
+           "holds every `y` to code, a test and a fixture, and `--propose` says what the evidence earns (`STAT-01`).", "",
            f"**Rows: {len(rows)}.** " + ", ".join(f"{k} {v}" for k, v in kinds.most_common()) + ".", "",
            "| Area | What | Rows | Import, export, model | Render | Edit UI | Level |", "| --- | --- | ---: | --- | --- | --- | --- |"]
     for code, (title, tier, ren, edit, level) in sorted(AREAS.items(), key=lambda kv: (kv[1][1], kv[0])):

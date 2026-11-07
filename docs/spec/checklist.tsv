@@ -465,14 +465,14 @@ p:CT_IndexRange/@st	PRES	CT_IndexRange	attribute	@st	ST_Index	required			.	.	.	.
 p:CT_IndexRange/@end	PRES	CT_IndexRange	attribute	@end	ST_Index	required			.	.	.	.	.
 p:CT_SlideRelationshipListEntry	SLIDE		type	CT_SlideRelationshipListEntry					.	.	.	.	.
 p:CT_SlideRelationshipListEntry/@r:id	SLIDE	CT_SlideRelationshipListEntry	attribute	@r:id	id	required			.	.	.	.	.
-p:CT_SlideRelationshipList	SLIDE		type	CT_SlideRelationshipList					.	.	.	.	.
-p:CT_SlideRelationshipList/sld	SLIDE	CT_SlideRelationshipList	element	sld	CT_SlideRelationshipListEntry	0..unbounded			.	.	.	.	.
-p:CT_CustomShowId	PRES		type	CT_CustomShowId					.	.	.	.	.
-p:CT_CustomShowId/@id	PRES	CT_CustomShowId	attribute	@id	unsignedInt	required			.	.	.	.	.
+p:CT_SlideRelationshipList	SLIDE		type	CT_SlideRelationshipList					.	y	y	.	.
+p:CT_SlideRelationshipList/sld	SLIDE	CT_SlideRelationshipList	element	sld	CT_SlideRelationshipListEntry	0..unbounded			.	y	y	.	.
+p:CT_CustomShowId	PRES		type	CT_CustomShowId					.	y	y	.	.
+p:CT_CustomShowId/@id	PRES	CT_CustomShowId	attribute	@id	unsignedInt	required			.	y	y	.	.
 p:EG_SlideListChoice	PRES		type	EG_SlideListChoice					.	.	.	.	.
 p:EG_SlideListChoice/sldAll	PRES	EG_SlideListChoice	element	sldAll	CT_Empty	choice			.	.	.	.	.
 p:EG_SlideListChoice/sldRg	PRES	EG_SlideListChoice	element	sldRg	CT_IndexRange	choice			.	.	.	.	.
-p:EG_SlideListChoice/custShow	PRES	EG_SlideListChoice	element	custShow	CT_CustomShowId	choice			.	.	.	.	.
+p:EG_SlideListChoice/custShow	PRES	EG_SlideListChoice	element	custShow	CT_CustomShowId	choice			.	y	.	.	.
 p:CT_CustomerData	CUSTOM		type	CT_CustomerData					.	.	.	.	.
 p:CT_CustomerData/@r:id	CUSTOM	CT_CustomerData	attribute	@r:id	id	required			.	.	.	.	.
 p:CT_TagsData	CUSTOM		type	CT_TagsData					.	.	.	.	.
@@ -545,15 +545,15 @@ p:CT_SlideIdListEntry	SLIDE		type	CT_SlideIdListEntry					.	.	.	.	.
 p:CT_SlideIdListEntry/extLst	SLIDE	CT_SlideIdListEntry	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_SlideIdListEntry/@id	SLIDE	CT_SlideIdListEntry	attribute	@id	ST_SlideId	required			.	.	.	.	.
 p:CT_SlideIdListEntry/@r:id	SLIDE	CT_SlideIdListEntry	attribute	@r:id	id	required			.	.	.	.	.
-p:CT_SlideIdList	SLIDE		type	CT_SlideIdList					.	.	.	.	.
-p:CT_SlideIdList/sldId	SLIDE	CT_SlideIdList	element	sldId	CT_SlideIdListEntry	0..unbounded			.	.	.	.	.
+p:CT_SlideIdList	SLIDE		type	CT_SlideIdList					.	y	.	.	.
+p:CT_SlideIdList/sldId	SLIDE	CT_SlideIdList	element	sldId	CT_SlideIdListEntry	0..unbounded			.	y	.	.	.
 p:ST_SlideMasterId	SLIDE		simple	ST_SlideMasterId				base=unsignedInt minInclusive=2147483648	.	.	.	.	.
 p:CT_SlideMasterIdListEntry	SLIDE		type	CT_SlideMasterIdListEntry					.	.	.	.	.
 p:CT_SlideMasterIdListEntry/extLst	SLIDE	CT_SlideMasterIdListEntry	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_SlideMasterIdListEntry/@id	SLIDE	CT_SlideMasterIdListEntry	attribute	@id	ST_SlideMasterId	optional			.	.	.	.	.
 p:CT_SlideMasterIdListEntry/@r:id	SLIDE	CT_SlideMasterIdListEntry	attribute	@r:id	id	required			.	.	.	.	.
-p:CT_SlideMasterIdList	SLIDE		type	CT_SlideMasterIdList					.	.	.	.	.
-p:CT_SlideMasterIdList/sldMasterId	SLIDE	CT_SlideMasterIdList	element	sldMasterId	CT_SlideMasterIdListEntry	0..unbounded			.	.	.	.	.
+p:CT_SlideMasterIdList	SLIDE		type	CT_SlideMasterIdList					.	y	.	.	.
+p:CT_SlideMasterIdList/sldMasterId	SLIDE	CT_SlideMasterIdList	element	sldMasterId	CT_SlideMasterIdListEntry	0..unbounded			.	y	.	.	.
 p:CT_NotesMasterIdListEntry	SLIDE		type	CT_NotesMasterIdListEntry					.	.	.	.	.
 p:CT_NotesMasterIdListEntry/extLst	SLIDE	CT_NotesMasterIdListEntry	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_NotesMasterIdListEntry/@r:id	SLIDE	CT_NotesMasterIdListEntry	attribute	@r:id	id	required			.	.	.	.	.
@@ -564,25 +564,25 @@ p:CT_HandoutMasterIdListEntry/extLst	SLIDE	CT_HandoutMasterIdListEntry	element	e
 p:CT_HandoutMasterIdListEntry/@r:id	SLIDE	CT_HandoutMasterIdListEntry	attribute	@r:id	id	required			.	.	.	.	.
 p:CT_HandoutMasterIdList	SLIDE		type	CT_HandoutMasterIdList					.	.	.	.	.
 p:CT_HandoutMasterIdList/handoutMasterId	SLIDE	CT_HandoutMasterIdList	element	handoutMasterId	CT_HandoutMasterIdListEntry	0..1			.	.	.	.	.
-p:CT_EmbeddedFontDataId	PRES		type	CT_EmbeddedFontDataId					.	.	.	.	.
-p:CT_EmbeddedFontDataId/@r:id	PRES	CT_EmbeddedFontDataId	attribute	@r:id	id	required			.	.	.	.	.
+p:CT_EmbeddedFontDataId	PRES		type	CT_EmbeddedFontDataId					.	y	.	.	.
+p:CT_EmbeddedFontDataId/@r:id	PRES	CT_EmbeddedFontDataId	attribute	@r:id	id	required			.	y	.	.	.
 p:CT_EmbeddedFontListEntry	PRES		type	CT_EmbeddedFontListEntry					.	.	.	.	.
-p:CT_EmbeddedFontListEntry/font	PRES	CT_EmbeddedFontListEntry	element	font	CT_TextFont				.	.	.	.	.
-p:CT_EmbeddedFontListEntry/regular	PRES	CT_EmbeddedFontListEntry	element	regular	CT_EmbeddedFontDataId	0..1			.	.	.	.	.
+p:CT_EmbeddedFontListEntry/font	PRES	CT_EmbeddedFontListEntry	element	font	CT_TextFont				y	y	.	.	.
+p:CT_EmbeddedFontListEntry/regular	PRES	CT_EmbeddedFontListEntry	element	regular	CT_EmbeddedFontDataId	0..1			y	y	.	.	.
 p:CT_EmbeddedFontListEntry/bold	PRES	CT_EmbeddedFontListEntry	element	bold	CT_EmbeddedFontDataId	0..1			.	.	.	.	.
 p:CT_EmbeddedFontListEntry/italic	PRES	CT_EmbeddedFontListEntry	element	italic	CT_EmbeddedFontDataId	0..1			.	.	.	.	.
 p:CT_EmbeddedFontListEntry/boldItalic	PRES	CT_EmbeddedFontListEntry	element	boldItalic	CT_EmbeddedFontDataId	0..1			.	.	.	.	.
 p:CT_EmbeddedFontList	PRES		type	CT_EmbeddedFontList					.	.	.	.	.
 p:CT_EmbeddedFontList/embeddedFont	PRES	CT_EmbeddedFontList	element	embeddedFont	CT_EmbeddedFontListEntry	0..unbounded			.	.	.	.	.
-p:CT_SmartTags	PRES		type	CT_SmartTags					.	.	.	.	.
-p:CT_SmartTags/@r:id	PRES	CT_SmartTags	attribute	@r:id	id	required			.	.	.	.	.
+p:CT_SmartTags	PRES		type	CT_SmartTags					.	y	.	.	.
+p:CT_SmartTags/@r:id	PRES	CT_SmartTags	attribute	@r:id	id	required			.	y	.	.	.
 p:CT_CustomShow	PRES		type	CT_CustomShow					.	.	.	.	.
 p:CT_CustomShow/sldLst	PRES	CT_CustomShow	element	sldLst	CT_SlideRelationshipList				.	.	.	.	.
 p:CT_CustomShow/extLst	PRES	CT_CustomShow	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_CustomShow/@name	PRES	CT_CustomShow	attribute	@name	ST_Name	required			.	.	.	.	.
-p:CT_CustomShow/@id	PRES	CT_CustomShow	attribute	@id	unsignedInt	required			.	.	.	.	.
-p:CT_CustomShowList	PRES		type	CT_CustomShowList					.	.	.	.	.
-p:CT_CustomShowList/custShow	PRES	CT_CustomShowList	element	custShow	CT_CustomShow	0..unbounded			.	.	.	.	.
+p:CT_CustomShow/@name	PRES	CT_CustomShow	attribute	@name	ST_Name	required			.	.	y	.	.
+p:CT_CustomShow/@id	PRES	CT_CustomShow	attribute	@id	unsignedInt	required			.	y	y	.	.
+p:CT_CustomShowList	PRES		type	CT_CustomShowList					.	y	.	.	.
+p:CT_CustomShowList/custShow	PRES	CT_CustomShowList	element	custShow	CT_CustomShow	0..unbounded			.	y	.	.	.
 p:ST_PhotoAlbumLayout	PRES		simple	ST_PhotoAlbumLayout				base=token	.	.	.	.	.
 p:ST_PhotoAlbumLayout/=fitToSlide	PRES	ST_PhotoAlbumLayout	value	=fitToSlide					.	.	.	.	.
 p:ST_PhotoAlbumLayout/=1pic	PRES	ST_PhotoAlbumLayout	value	=1pic					.	.	.	.	.
@@ -601,13 +601,13 @@ p:ST_PhotoAlbumFrameShape/=frameStyle6	PRES	ST_PhotoAlbumFrameShape	value	=frame
 p:ST_PhotoAlbumFrameShape/=frameStyle7	PRES	ST_PhotoAlbumFrameShape	value	=frameStyle7					.	.	.	.	.
 p:CT_PhotoAlbum	PRES		type	CT_PhotoAlbum					.	.	.	.	.
 p:CT_PhotoAlbum/extLst	PRES	CT_PhotoAlbum	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_PhotoAlbum/@bw	PRES	CT_PhotoAlbum	attribute	@bw	boolean	optional	false		.	.	.	.	.
-p:CT_PhotoAlbum/@showCaptions	PRES	CT_PhotoAlbum	attribute	@showCaptions	boolean	optional	false		.	.	.	.	.
-p:CT_PhotoAlbum/@layout	PRES	CT_PhotoAlbum	attribute	@layout	ST_PhotoAlbumLayout	optional	fitToSlide		.	.	.	.	.
-p:CT_PhotoAlbum/@frame	PRES	CT_PhotoAlbum	attribute	@frame	ST_PhotoAlbumFrameShape	optional	frameStyle1		.	.	.	.	.
+p:CT_PhotoAlbum/@bw	PRES	CT_PhotoAlbum	attribute	@bw	boolean	optional	false		.	y	.	.	.
+p:CT_PhotoAlbum/@showCaptions	PRES	CT_PhotoAlbum	attribute	@showCaptions	boolean	optional	false		y	y	.	.	.
+p:CT_PhotoAlbum/@layout	PRES	CT_PhotoAlbum	attribute	@layout	ST_PhotoAlbumLayout	optional	fitToSlide		y	y	.	.	.
+p:CT_PhotoAlbum/@frame	PRES	CT_PhotoAlbum	attribute	@frame	ST_PhotoAlbumFrameShape	optional	frameStyle1		y	y	.	.	.
 p:ST_SlideSizeCoordinate	PRES		simple	ST_SlideSizeCoordinate				base=ST_PositiveCoordinate32 minInclusive=914400 maxInclusive=51206400	.	.	.	.	.
 p:ST_SlideSizeType	PRES		simple	ST_SlideSizeType				base=token	.	.	.	.	.
-p:ST_SlideSizeType/=screen4x3	PRES	ST_SlideSizeType	value	=screen4x3					.	.	.	.	.
+p:ST_SlideSizeType/=screen4x3	PRES	ST_SlideSizeType	value	=screen4x3					y	.	.	.	.
 p:ST_SlideSizeType/=letter	PRES	ST_SlideSizeType	value	=letter					.	.	.	.	.
 p:ST_SlideSizeType/=A4	PRES	ST_SlideSizeType	value	=A4					.	.	.	.	.
 p:ST_SlideSizeType/=35mm	PRES	ST_SlideSizeType	value	=35mm					.	.	.	.	.
@@ -621,14 +621,14 @@ p:ST_SlideSizeType/=B5ISO	PRES	ST_SlideSizeType	value	=B5ISO					.	.	.	.	.
 p:ST_SlideSizeType/=B4JIS	PRES	ST_SlideSizeType	value	=B4JIS					.	.	.	.	.
 p:ST_SlideSizeType/=B5JIS	PRES	ST_SlideSizeType	value	=B5JIS					.	.	.	.	.
 p:ST_SlideSizeType/=hagakiCard	PRES	ST_SlideSizeType	value	=hagakiCard					.	.	.	.	.
-p:ST_SlideSizeType/=screen16x9	PRES	ST_SlideSizeType	value	=screen16x9					.	.	.	.	.
+p:ST_SlideSizeType/=screen16x9	PRES	ST_SlideSizeType	value	=screen16x9					y	.	.	.	.
 p:ST_SlideSizeType/=screen16x10	PRES	ST_SlideSizeType	value	=screen16x10					.	.	.	.	.
-p:CT_SlideSize	SLIDE		type	CT_SlideSize					.	.	.	.	.
-p:CT_SlideSize/@cx	SLIDE	CT_SlideSize	attribute	@cx	ST_SlideSizeCoordinate	required			.	.	.	.	.
-p:CT_SlideSize/@cy	SLIDE	CT_SlideSize	attribute	@cy	ST_SlideSizeCoordinate	required			.	.	.	.	.
-p:CT_SlideSize/@type	SLIDE	CT_SlideSize	attribute	@type	ST_SlideSizeType	optional	custom		.	.	.	.	.
+p:CT_SlideSize	SLIDE		type	CT_SlideSize					.	y	.	.	.
+p:CT_SlideSize/@cx	SLIDE	CT_SlideSize	attribute	@cx	ST_SlideSizeCoordinate	required			.	y	.	.	.
+p:CT_SlideSize/@cy	SLIDE	CT_SlideSize	attribute	@cy	ST_SlideSizeCoordinate	required			.	y	.	.	.
+p:CT_SlideSize/@type	SLIDE	CT_SlideSize	attribute	@type	ST_SlideSizeType	optional	custom		.	y	.	.	.
 p:CT_Kinsoku	PRES		type	CT_Kinsoku					.	.	.	.	.
-p:CT_Kinsoku/@lang	PRES	CT_Kinsoku	attribute	@lang	string	optional			.	.	.	.	.
+p:CT_Kinsoku/@lang	PRES	CT_Kinsoku	attribute	@lang	string	optional			y	y	.	.	.
 p:CT_Kinsoku/@invalStChars	PRES	CT_Kinsoku	attribute	@invalStChars	string	required			.	.	.	.	.
 p:CT_Kinsoku/@invalEndChars	PRES	CT_Kinsoku	attribute	@invalEndChars	string	required			.	.	.	.	.
 p:ST_BookmarkIdSeed	PRES		simple	ST_BookmarkIdSeed				base=unsignedInt minInclusive=1 maxExclusive=2147483648	.	.	.	.	.
@@ -637,13 +637,13 @@ p:CT_ModifyVerifier/@algorithmName	PRES	CT_ModifyVerifier	attribute	@algorithmNa
 p:CT_ModifyVerifier/@hashValue	PRES	CT_ModifyVerifier	attribute	@hashValue	base64Binary	optional			.	.	.	.	.
 p:CT_ModifyVerifier/@saltValue	PRES	CT_ModifyVerifier	attribute	@saltValue	base64Binary	optional			.	.	.	.	.
 p:CT_ModifyVerifier/@spinValue	PRES	CT_ModifyVerifier	attribute	@spinValue	unsignedInt	optional			.	.	.	.	.
-p:CT_ModifyVerifier/@cryptProviderType	PRES	CT_ModifyVerifier	attribute	@cryptProviderType	ST_CryptProv	optional			.	.	.	.	.
+p:CT_ModifyVerifier/@cryptProviderType	PRES	CT_ModifyVerifier	attribute	@cryptProviderType	ST_CryptProv	optional			y	y	.	.	.
 p:CT_ModifyVerifier/@cryptAlgorithmClass	PRES	CT_ModifyVerifier	attribute	@cryptAlgorithmClass	ST_AlgClass	optional			.	.	.	.	.
 p:CT_ModifyVerifier/@cryptAlgorithmType	PRES	CT_ModifyVerifier	attribute	@cryptAlgorithmType	ST_AlgType	optional			.	.	.	.	.
 p:CT_ModifyVerifier/@cryptAlgorithmSid	PRES	CT_ModifyVerifier	attribute	@cryptAlgorithmSid	unsignedInt	optional			.	.	.	.	.
-p:CT_ModifyVerifier/@spinCount	PRES	CT_ModifyVerifier	attribute	@spinCount	unsignedInt	optional			.	.	.	.	.
+p:CT_ModifyVerifier/@spinCount	PRES	CT_ModifyVerifier	attribute	@spinCount	unsignedInt	optional			y	y	.	.	.
 p:CT_ModifyVerifier/@saltData	PRES	CT_ModifyVerifier	attribute	@saltData	base64Binary	optional			.	.	.	.	.
-p:CT_ModifyVerifier/@hashData	PRES	CT_ModifyVerifier	attribute	@hashData	base64Binary	optional			.	.	.	.	.
+p:CT_ModifyVerifier/@hashData	PRES	CT_ModifyVerifier	attribute	@hashData	base64Binary	optional			y	y	.	.	.
 p:CT_ModifyVerifier/@cryptProvider	PRES	CT_ModifyVerifier	attribute	@cryptProvider	string	optional			.	.	.	.	.
 p:CT_ModifyVerifier/@algIdExt	PRES	CT_ModifyVerifier	attribute	@algIdExt	unsignedInt	optional			.	.	.	.	.
 p:CT_ModifyVerifier/@algIdExtSource	PRES	CT_ModifyVerifier	attribute	@algIdExtSource	string	optional			.	.	.	.	.
@@ -653,41 +653,41 @@ p:CT_Presentation	PRES		type	CT_Presentation					.	.	.	.	.
 p:CT_Presentation/sldMasterIdLst	PRES	CT_Presentation	element	sldMasterIdLst	CT_SlideMasterIdList	0..1			.	.	.	.	.
 p:CT_Presentation/notesMasterIdLst	PRES	CT_Presentation	element	notesMasterIdLst	CT_NotesMasterIdList	0..1			.	.	.	.	.
 p:CT_Presentation/handoutMasterIdLst	PRES	CT_Presentation	element	handoutMasterIdLst	CT_HandoutMasterIdList	0..1			.	.	.	.	.
-p:CT_Presentation/sldIdLst	PRES	CT_Presentation	element	sldIdLst	CT_SlideIdList	0..1			.	.	.	.	.
-p:CT_Presentation/sldSz	PRES	CT_Presentation	element	sldSz	CT_SlideSize	0..1			.	.	.	.	.
+p:CT_Presentation/sldIdLst	PRES	CT_Presentation	element	sldIdLst	CT_SlideIdList	0..1			.	y	.	.	.
+p:CT_Presentation/sldSz	PRES	CT_Presentation	element	sldSz	CT_SlideSize	0..1			.	y	.	.	.
 p:CT_Presentation/notesSz	PRES	CT_Presentation	element	notesSz	CT_PositiveSize2D				.	.	.	.	.
-p:CT_Presentation/smartTags	PRES	CT_Presentation	element	smartTags	CT_SmartTags	0..1			.	.	.	.	.
+p:CT_Presentation/smartTags	PRES	CT_Presentation	element	smartTags	CT_SmartTags	0..1			y	y	.	.	.
 p:CT_Presentation/embeddedFontLst	PRES	CT_Presentation	element	embeddedFontLst	CT_EmbeddedFontList	0..1			.	.	.	.	.
-p:CT_Presentation/custShowLst	PRES	CT_Presentation	element	custShowLst	CT_CustomShowList	0..1			.	.	.	.	.
-p:CT_Presentation/photoAlbum	PRES	CT_Presentation	element	photoAlbum	CT_PhotoAlbum	0..1			.	.	.	.	.
+p:CT_Presentation/custShowLst	PRES	CT_Presentation	element	custShowLst	CT_CustomShowList	0..1			.	y	.	.	.
+p:CT_Presentation/photoAlbum	PRES	CT_Presentation	element	photoAlbum	CT_PhotoAlbum	0..1			y	y	.	.	.
 p:CT_Presentation/custDataLst	PRES	CT_Presentation	element	custDataLst	CT_CustomerDataList	0..1			.	.	.	.	.
-p:CT_Presentation/kinsoku	PRES	CT_Presentation	element	kinsoku	CT_Kinsoku	0..1			.	.	.	.	.
+p:CT_Presentation/kinsoku	PRES	CT_Presentation	element	kinsoku	CT_Kinsoku	0..1			y	y	.	.	.
 p:CT_Presentation/defaultTextStyle	PRES	CT_Presentation	element	defaultTextStyle	CT_TextListStyle	0..1			.	.	.	.	.
-p:CT_Presentation/modifyVerifier	PRES	CT_Presentation	element	modifyVerifier	CT_ModifyVerifier	0..1			.	.	.	.	.
+p:CT_Presentation/modifyVerifier	PRES	CT_Presentation	element	modifyVerifier	CT_ModifyVerifier	0..1			y	y	.	.	.
 p:CT_Presentation/extLst	PRES	CT_Presentation	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_Presentation/@serverZoom	PRES	CT_Presentation	attribute	@serverZoom	ST_Percentage	optional	50%		.	.	.	.	.
-p:CT_Presentation/@firstSlideNum	PRES	CT_Presentation	attribute	@firstSlideNum	int	optional	1		.	.	.	.	.
-p:CT_Presentation/@showSpecialPlsOnTitleSld	PRES	CT_Presentation	attribute	@showSpecialPlsOnTitleSld	boolean	optional	true		.	.	.	.	.
-p:CT_Presentation/@rtl	PRES	CT_Presentation	attribute	@rtl	boolean	optional	false		.	.	.	.	.
-p:CT_Presentation/@removePersonalInfoOnSave	PRES	CT_Presentation	attribute	@removePersonalInfoOnSave	boolean	optional	false		.	.	.	.	.
-p:CT_Presentation/@compatMode	PRES	CT_Presentation	attribute	@compatMode	boolean	optional	false		.	.	.	.	.
-p:CT_Presentation/@strictFirstAndLastChars	PRES	CT_Presentation	attribute	@strictFirstAndLastChars	boolean	optional	true		.	.	.	.	.
-p:CT_Presentation/@embedTrueTypeFonts	PRES	CT_Presentation	attribute	@embedTrueTypeFonts	boolean	optional	false		.	.	.	.	.
-p:CT_Presentation/@saveSubsetFonts	PRES	CT_Presentation	attribute	@saveSubsetFonts	boolean	optional	false		.	.	.	.	.
-p:CT_Presentation/@autoCompressPictures	PRES	CT_Presentation	attribute	@autoCompressPictures	boolean	optional	true		.	.	.	.	.
-p:CT_Presentation/@bookmarkIdSeed	PRES	CT_Presentation	attribute	@bookmarkIdSeed	ST_BookmarkIdSeed	optional	1		.	.	.	.	.
-p:CT_Presentation/@conformance	PRES	CT_Presentation	attribute	@conformance	ST_ConformanceClass	optional			.	.	.	.	.
+p:CT_Presentation/@serverZoom	PRES	CT_Presentation	attribute	@serverZoom	ST_Percentage	optional	50%		y	y	.	.	.
+p:CT_Presentation/@firstSlideNum	PRES	CT_Presentation	attribute	@firstSlideNum	int	optional	1		y	y	.	.	.
+p:CT_Presentation/@showSpecialPlsOnTitleSld	PRES	CT_Presentation	attribute	@showSpecialPlsOnTitleSld	boolean	optional	true		y	y	.	.	.
+p:CT_Presentation/@rtl	PRES	CT_Presentation	attribute	@rtl	boolean	optional	false		y	y	.	.	.
+p:CT_Presentation/@removePersonalInfoOnSave	PRES	CT_Presentation	attribute	@removePersonalInfoOnSave	boolean	optional	false		y	y	.	.	.
+p:CT_Presentation/@compatMode	PRES	CT_Presentation	attribute	@compatMode	boolean	optional	false		y	y	.	.	.
+p:CT_Presentation/@strictFirstAndLastChars	PRES	CT_Presentation	attribute	@strictFirstAndLastChars	boolean	optional	true		y	y	.	.	.
+p:CT_Presentation/@embedTrueTypeFonts	PRES	CT_Presentation	attribute	@embedTrueTypeFonts	boolean	optional	false		y	y	.	.	.
+p:CT_Presentation/@saveSubsetFonts	PRES	CT_Presentation	attribute	@saveSubsetFonts	boolean	optional	false		y	y	.	.	.
+p:CT_Presentation/@autoCompressPictures	PRES	CT_Presentation	attribute	@autoCompressPictures	boolean	optional	true		y	y	.	.	.
+p:CT_Presentation/@bookmarkIdSeed	PRES	CT_Presentation	attribute	@bookmarkIdSeed	ST_BookmarkIdSeed	optional	1		y	y	.	.	.
+p:CT_Presentation/@conformance	PRES	CT_Presentation	attribute	@conformance	ST_ConformanceClass	optional			y	y	.	.	.
 p:<presentation>	PRES		root	<presentation>	CT_Presentation				.	.	.	.	.
 p:CT_HtmlPublishProperties	PRES		type	CT_HtmlPublishProperties					.	.	.	.	.
 p:CT_HtmlPublishProperties/EG_SlideListChoice	PRES	CT_HtmlPublishProperties	group	EG_SlideListChoice	EG_SlideListChoice				.	.	.	.	.
 p:CT_HtmlPublishProperties/extLst	PRES	CT_HtmlPublishProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_HtmlPublishProperties/@showSpeakerNotes	PRES	CT_HtmlPublishProperties	attribute	@showSpeakerNotes	boolean	optional	true		.	.	.	.	.
+p:CT_HtmlPublishProperties/@showSpeakerNotes	PRES	CT_HtmlPublishProperties	attribute	@showSpeakerNotes	boolean	optional	true		y	y	.	.	.
 p:CT_HtmlPublishProperties/@target	PRES	CT_HtmlPublishProperties	attribute	@target	string	optional			.	.	.	.	.
-p:CT_HtmlPublishProperties/@title	PRES	CT_HtmlPublishProperties	attribute	@title	string	optional			.	.	.	.	.
-p:CT_HtmlPublishProperties/@r:id	PRES	CT_HtmlPublishProperties	attribute	@r:id	id	required			.	.	.	.	.
+p:CT_HtmlPublishProperties/@title	PRES	CT_HtmlPublishProperties	attribute	@title	string	optional			y	y	.	.	.
+p:CT_HtmlPublishProperties/@r:id	PRES	CT_HtmlPublishProperties	attribute	@r:id	id	required			.	y	.	.	.
 p:ST_WebColorType	PRES		simple	ST_WebColorType				base=token	.	.	.	.	.
 p:ST_WebColorType/=none	PRES	ST_WebColorType	value	=none					.	.	.	.	.
-p:ST_WebColorType/=browser	PRES	ST_WebColorType	value	=browser					.	.	.	.	.
+p:ST_WebColorType/=browser	PRES	ST_WebColorType	value	=browser					y	.	.	.	.
 p:ST_WebColorType/=presentationText	PRES	ST_WebColorType	value	=presentationText					.	.	.	.	.
 p:ST_WebColorType/=presentationAccent	PRES	ST_WebColorType	value	=presentationAccent					.	.	.	.	.
 p:ST_WebColorType/=whiteTextOnBlack	PRES	ST_WebColorType	value	=whiteTextOnBlack					.	.	.	.	.
@@ -697,7 +697,7 @@ p:ST_WebScreenSize/=544x376	PRES	ST_WebScreenSize	value	=544x376					.	.	.	.	.
 p:ST_WebScreenSize/=640x480	PRES	ST_WebScreenSize	value	=640x480					.	.	.	.	.
 p:ST_WebScreenSize/=720x512	PRES	ST_WebScreenSize	value	=720x512					.	.	.	.	.
 p:ST_WebScreenSize/=800x600	PRES	ST_WebScreenSize	value	=800x600					.	.	.	.	.
-p:ST_WebScreenSize/=1024x768	PRES	ST_WebScreenSize	value	=1024x768					.	.	.	.	.
+p:ST_WebScreenSize/=1024x768	PRES	ST_WebScreenSize	value	=1024x768					y	.	.	.	.
 p:ST_WebScreenSize/=1152x882	PRES	ST_WebScreenSize	value	=1152x882					.	.	.	.	.
 p:ST_WebScreenSize/=1152x900	PRES	ST_WebScreenSize	value	=1152x900					.	.	.	.	.
 p:ST_WebScreenSize/=1280x1024	PRES	ST_WebScreenSize	value	=1280x1024					.	.	.	.	.
@@ -714,7 +714,7 @@ p:CT_WebProperties/@relyOnVml	PRES	CT_WebProperties	attribute	@relyOnVml	boolean
 p:CT_WebProperties/@organizeInFolders	PRES	CT_WebProperties	attribute	@organizeInFolders	boolean	optional	true		.	.	.	.	.
 p:CT_WebProperties/@useLongFilenames	PRES	CT_WebProperties	attribute	@useLongFilenames	boolean	optional	true		.	.	.	.	.
 p:CT_WebProperties/@imgSz	PRES	CT_WebProperties	attribute	@imgSz	ST_WebScreenSize	optional	800x600		.	.	.	.	.
-p:CT_WebProperties/@encoding	PRES	CT_WebProperties	attribute	@encoding	ST_WebEncoding	optional			.	.	.	.	.
+p:CT_WebProperties/@encoding	PRES	CT_WebProperties	attribute	@encoding	ST_WebEncoding	optional			y	y	.	.	.
 p:CT_WebProperties/@clr	PRES	CT_WebProperties	attribute	@clr	ST_WebColorType	optional	whiteTextOnBlack		.	.	.	.	.
 p:ST_PrintWhat	PRES		simple	ST_PrintWhat				base=token	.	.	.	.	.
 p:ST_PrintWhat/=slides	PRES	ST_PrintWhat	value	=slides					.	.	.	.	.
@@ -722,25 +722,25 @@ p:ST_PrintWhat/=handouts1	PRES	ST_PrintWhat	value	=handouts1					.	.	.	.	.
 p:ST_PrintWhat/=handouts2	PRES	ST_PrintWhat	value	=handouts2					.	.	.	.	.
 p:ST_PrintWhat/=handouts3	PRES	ST_PrintWhat	value	=handouts3					.	.	.	.	.
 p:ST_PrintWhat/=handouts4	PRES	ST_PrintWhat	value	=handouts4					.	.	.	.	.
-p:ST_PrintWhat/=handouts6	PRES	ST_PrintWhat	value	=handouts6					.	.	.	.	.
+p:ST_PrintWhat/=handouts6	PRES	ST_PrintWhat	value	=handouts6					y	.	.	.	.
 p:ST_PrintWhat/=handouts9	PRES	ST_PrintWhat	value	=handouts9					.	.	.	.	.
 p:ST_PrintWhat/=notes	PRES	ST_PrintWhat	value	=notes					.	.	.	.	.
 p:ST_PrintWhat/=outline	PRES	ST_PrintWhat	value	=outline					.	.	.	.	.
 p:ST_PrintColorMode	PRES		simple	ST_PrintColorMode				base=token	.	.	.	.	.
 p:ST_PrintColorMode/=bw	PRES	ST_PrintColorMode	value	=bw					.	.	.	.	.
-p:ST_PrintColorMode/=gray	PRES	ST_PrintColorMode	value	=gray					.	.	.	.	.
+p:ST_PrintColorMode/=gray	PRES	ST_PrintColorMode	value	=gray					y	.	.	.	.
 p:ST_PrintColorMode/=clr	PRES	ST_PrintColorMode	value	=clr					.	.	.	.	.
 p:CT_PrintProperties	PRES		type	CT_PrintProperties					.	.	.	.	.
 p:CT_PrintProperties/extLst	PRES	CT_PrintProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_PrintProperties/@prnWhat	PRES	CT_PrintProperties	attribute	@prnWhat	ST_PrintWhat	optional	slides		.	.	.	.	.
 p:CT_PrintProperties/@clrMode	PRES	CT_PrintProperties	attribute	@clrMode	ST_PrintColorMode	optional	clr		.	.	.	.	.
-p:CT_PrintProperties/@hiddenSlides	PRES	CT_PrintProperties	attribute	@hiddenSlides	boolean	optional	false		.	.	.	.	.
+p:CT_PrintProperties/@hiddenSlides	PRES	CT_PrintProperties	attribute	@hiddenSlides	boolean	optional	false		y	y	.	.	.
 p:CT_PrintProperties/@scaleToFitPaper	PRES	CT_PrintProperties	attribute	@scaleToFitPaper	boolean	optional	false		.	.	.	.	.
-p:CT_PrintProperties/@frameSlides	PRES	CT_PrintProperties	attribute	@frameSlides	boolean	optional	false		.	.	.	.	.
+p:CT_PrintProperties/@frameSlides	PRES	CT_PrintProperties	attribute	@frameSlides	boolean	optional	false		y	y	.	.	.
 p:CT_ShowInfoBrowse	PRES		type	CT_ShowInfoBrowse					.	.	.	.	.
 p:CT_ShowInfoBrowse/@showScrollbar	PRES	CT_ShowInfoBrowse	attribute	@showScrollbar	boolean	optional	true		.	.	.	.	.
-p:CT_ShowInfoKiosk	PRES		type	CT_ShowInfoKiosk					.	.	.	.	.
-p:CT_ShowInfoKiosk/@restart	PRES	CT_ShowInfoKiosk	attribute	@restart	unsignedInt	optional	300000		.	.	.	.	.
+p:CT_ShowInfoKiosk	PRES		type	CT_ShowInfoKiosk					.	y	.	.	.
+p:CT_ShowInfoKiosk/@restart	PRES	CT_ShowInfoKiosk	attribute	@restart	unsignedInt	optional	300000		.	y	.	.	.
 p:EG_ShowType	PRES		type	EG_ShowType					.	.	.	.	.
 p:EG_ShowType/present	PRES	EG_ShowType	element	present	CT_Empty	choice			.	.	.	.	.
 p:EG_ShowType/browse	PRES	EG_ShowType	element	browse	CT_ShowInfoBrowse	choice			.	.	.	.	.
@@ -751,9 +751,9 @@ p:CT_ShowProperties/EG_SlideListChoice	PRES	CT_ShowProperties	group	EG_SlideList
 p:CT_ShowProperties/penClr	PRES	CT_ShowProperties	element	penClr	CT_Color	0..1			.	.	.	.	.
 p:CT_ShowProperties/extLst	PRES	CT_ShowProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_ShowProperties/@loop	PRES	CT_ShowProperties	attribute	@loop	boolean	optional	false		.	.	.	.	.
-p:CT_ShowProperties/@showNarration	PRES	CT_ShowProperties	attribute	@showNarration	boolean	optional	false		.	.	.	.	.
+p:CT_ShowProperties/@showNarration	PRES	CT_ShowProperties	attribute	@showNarration	boolean	optional	false		y	.	.	.	.
 p:CT_ShowProperties/@showAnimation	PRES	CT_ShowProperties	attribute	@showAnimation	boolean	optional	true		.	.	.	.	.
-p:CT_ShowProperties/@useTimings	PRES	CT_ShowProperties	attribute	@useTimings	boolean	optional	true		.	.	.	.	.
+p:CT_ShowProperties/@useTimings	PRES	CT_ShowProperties	attribute	@useTimings	boolean	optional	true		y	.	.	.	.
 p:CT_PresentationProperties	PRES		type	CT_PresentationProperties					.	.	.	.	.
 p:CT_PresentationProperties/htmlPubPr	PRES	CT_PresentationProperties	element	htmlPubPr	CT_HtmlPublishProperties	0..1			.	.	.	.	.
 p:CT_PresentationProperties/webPr	PRES	CT_PresentationProperties	element	webPr	CT_WebProperties	0..1			.	.	.	.	.
@@ -769,40 +769,40 @@ p:CT_HeaderFooter/@hdr	SLIDE	CT_HeaderFooter	attribute	@hdr	boolean	optional	tru
 p:CT_HeaderFooter/@ftr	SLIDE	CT_HeaderFooter	attribute	@ftr	boolean	optional	true		.	.	.	.	.
 p:CT_HeaderFooter/@dt	SLIDE	CT_HeaderFooter	attribute	@dt	boolean	optional	true		.	.	.	.	.
 p:ST_PlaceholderType	SLIDE		simple	ST_PlaceholderType				base=token	.	.	.	.	.
-p:ST_PlaceholderType/=title	SLIDE	ST_PlaceholderType	value	=title					.	.	.	.	.
-p:ST_PlaceholderType/=body	SLIDE	ST_PlaceholderType	value	=body					.	.	.	.	.
-p:ST_PlaceholderType/=ctrTitle	SLIDE	ST_PlaceholderType	value	=ctrTitle					.	.	.	.	.
-p:ST_PlaceholderType/=subTitle	SLIDE	ST_PlaceholderType	value	=subTitle					.	.	.	.	.
-p:ST_PlaceholderType/=dt	SLIDE	ST_PlaceholderType	value	=dt					.	.	.	.	.
-p:ST_PlaceholderType/=sldNum	SLIDE	ST_PlaceholderType	value	=sldNum					.	.	.	.	.
-p:ST_PlaceholderType/=ftr	SLIDE	ST_PlaceholderType	value	=ftr					.	.	.	.	.
-p:ST_PlaceholderType/=hdr	SLIDE	ST_PlaceholderType	value	=hdr					.	.	.	.	.
+p:ST_PlaceholderType/=title	SLIDE	ST_PlaceholderType	value	=title					y	.	.	.	.
+p:ST_PlaceholderType/=body	SLIDE	ST_PlaceholderType	value	=body					y	.	.	.	.
+p:ST_PlaceholderType/=ctrTitle	SLIDE	ST_PlaceholderType	value	=ctrTitle					y	.	.	.	.
+p:ST_PlaceholderType/=subTitle	SLIDE	ST_PlaceholderType	value	=subTitle					y	.	.	.	.
+p:ST_PlaceholderType/=dt	SLIDE	ST_PlaceholderType	value	=dt					y	.	.	.	.
+p:ST_PlaceholderType/=sldNum	SLIDE	ST_PlaceholderType	value	=sldNum					y	.	.	.	.
+p:ST_PlaceholderType/=ftr	SLIDE	ST_PlaceholderType	value	=ftr					y	.	.	.	.
+p:ST_PlaceholderType/=hdr	SLIDE	ST_PlaceholderType	value	=hdr					y	.	.	.	.
 p:ST_PlaceholderType/=obj	SLIDE	ST_PlaceholderType	value	=obj					.	.	.	.	.
 p:ST_PlaceholderType/=chart	SLIDE	ST_PlaceholderType	value	=chart					.	.	.	.	.
 p:ST_PlaceholderType/=tbl	SLIDE	ST_PlaceholderType	value	=tbl					.	.	.	.	.
 p:ST_PlaceholderType/=clipArt	SLIDE	ST_PlaceholderType	value	=clipArt					.	.	.	.	.
 p:ST_PlaceholderType/=dgm	SLIDE	ST_PlaceholderType	value	=dgm					.	.	.	.	.
 p:ST_PlaceholderType/=media	SLIDE	ST_PlaceholderType	value	=media					.	.	.	.	.
-p:ST_PlaceholderType/=sldImg	SLIDE	ST_PlaceholderType	value	=sldImg					.	.	.	.	.
-p:ST_PlaceholderType/=pic	SLIDE	ST_PlaceholderType	value	=pic					.	.	.	.	.
+p:ST_PlaceholderType/=sldImg	SLIDE	ST_PlaceholderType	value	=sldImg					y	.	.	.	.
+p:ST_PlaceholderType/=pic	SLIDE	ST_PlaceholderType	value	=pic					y	.	.	.	.
 p:ST_PlaceholderSize	SLIDE		simple	ST_PlaceholderSize				base=token	.	.	.	.	.
 p:ST_PlaceholderSize/=full	SLIDE	ST_PlaceholderSize	value	=full					.	.	.	.	.
-p:ST_PlaceholderSize/=half	SLIDE	ST_PlaceholderSize	value	=half					.	.	.	.	.
-p:ST_PlaceholderSize/=quarter	SLIDE	ST_PlaceholderSize	value	=quarter					.	.	.	.	.
+p:ST_PlaceholderSize/=half	SLIDE	ST_PlaceholderSize	value	=half					y	.	.	.	.
+p:ST_PlaceholderSize/=quarter	SLIDE	ST_PlaceholderSize	value	=quarter					y	.	.	.	.
 p:CT_Placeholder	SLIDE		type	CT_Placeholder					.	.	.	.	.
 p:CT_Placeholder/extLst	SLIDE	CT_Placeholder	element	extLst	CT_ExtensionListModify	0..1			.	.	.	.	.
-p:CT_Placeholder/@type	SLIDE	CT_Placeholder	attribute	@type	ST_PlaceholderType	optional	obj		.	.	.	.	.
-p:CT_Placeholder/@orient	SLIDE	CT_Placeholder	attribute	@orient	ST_Direction	optional	horz		.	.	.	.	.
-p:CT_Placeholder/@sz	SLIDE	CT_Placeholder	attribute	@sz	ST_PlaceholderSize	optional	full		.	.	.	.	.
-p:CT_Placeholder/@idx	SLIDE	CT_Placeholder	attribute	@idx	unsignedInt	optional	0		.	.	.	.	.
-p:CT_Placeholder/@hasCustomPrompt	SLIDE	CT_Placeholder	attribute	@hasCustomPrompt	boolean	optional	false		.	.	.	.	.
+p:CT_Placeholder/@type	SLIDE	CT_Placeholder	attribute	@type	ST_PlaceholderType	optional	obj		.	.	y	.	.
+p:CT_Placeholder/@orient	SLIDE	CT_Placeholder	attribute	@orient	ST_Direction	optional	horz		y	.	y	.	.
+p:CT_Placeholder/@sz	SLIDE	CT_Placeholder	attribute	@sz	ST_PlaceholderSize	optional	full		.	.	y	.	.
+p:CT_Placeholder/@idx	SLIDE	CT_Placeholder	attribute	@idx	unsignedInt	optional	0		y	.	y	.	.
+p:CT_Placeholder/@hasCustomPrompt	SLIDE	CT_Placeholder	attribute	@hasCustomPrompt	boolean	optional	false		y	.	.	.	.
 p:CT_ApplicationNonVisualDrawingProps	SHAPE		type	CT_ApplicationNonVisualDrawingProps					.	.	.	.	.
-p:CT_ApplicationNonVisualDrawingProps/ph	SHAPE	CT_ApplicationNonVisualDrawingProps	element	ph	CT_Placeholder	0..1			.	.	.	.	.
+p:CT_ApplicationNonVisualDrawingProps/ph	SHAPE	CT_ApplicationNonVisualDrawingProps	element	ph	CT_Placeholder	0..1			.	y	y	.	.
 p:CT_ApplicationNonVisualDrawingProps/EG_Media	SHAPE	CT_ApplicationNonVisualDrawingProps	group	EG_Media	EG_Media	0..1			.	.	.	.	.
 p:CT_ApplicationNonVisualDrawingProps/custDataLst	SHAPE	CT_ApplicationNonVisualDrawingProps	element	custDataLst	CT_CustomerDataList	0..1			.	.	.	.	.
 p:CT_ApplicationNonVisualDrawingProps/extLst	SHAPE	CT_ApplicationNonVisualDrawingProps	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_ApplicationNonVisualDrawingProps/@isPhoto	SHAPE	CT_ApplicationNonVisualDrawingProps	attribute	@isPhoto	boolean	optional	false		.	.	.	.	.
-p:CT_ApplicationNonVisualDrawingProps/@userDrawn	SHAPE	CT_ApplicationNonVisualDrawingProps	attribute	@userDrawn	boolean	optional	false		.	.	.	.	.
+p:CT_ApplicationNonVisualDrawingProps/@userDrawn	SHAPE	CT_ApplicationNonVisualDrawingProps	attribute	@userDrawn	boolean	optional	false		y	y	.	.	.
 p:CT_ShapeNonVisual	SHAPE		type	CT_ShapeNonVisual					.	.	.	.	.
 p:CT_ShapeNonVisual/cNvPr	SHAPE	CT_ShapeNonVisual	element	cNvPr	CT_NonVisualDrawingProps				.	.	.	.	.
 p:CT_ShapeNonVisual/cNvSpPr	SHAPE	CT_ShapeNonVisual	element	cNvSpPr	CT_NonVisualDrawingShapeProps				.	.	.	.	.
@@ -870,20 +870,20 @@ p:CT_BackgroundProperties	SLIDE		type	CT_BackgroundProperties					.	.	.	.	.
 p:CT_BackgroundProperties/EG_FillProperties	SLIDE	CT_BackgroundProperties	group	EG_FillProperties	EG_FillProperties				.	.	.	.	.
 p:CT_BackgroundProperties/EG_EffectProperties	SLIDE	CT_BackgroundProperties	group	EG_EffectProperties	EG_EffectProperties	0..1			.	.	.	.	.
 p:CT_BackgroundProperties/extLst	SLIDE	CT_BackgroundProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_BackgroundProperties/@shadeToTitle	SLIDE	CT_BackgroundProperties	attribute	@shadeToTitle	boolean	optional	false		.	.	.	.	.
+p:CT_BackgroundProperties/@shadeToTitle	SLIDE	CT_BackgroundProperties	attribute	@shadeToTitle	boolean	optional	false		y	.	.	.	.
 p:EG_Background	SLIDE		type	EG_Background					.	.	.	.	.
 p:EG_Background/bgPr	SLIDE	EG_Background	element	bgPr	CT_BackgroundProperties	choice			.	.	.	.	.
 p:EG_Background/bgRef	SLIDE	EG_Background	element	bgRef	CT_StyleMatrixReference	choice			.	.	.	.	.
 p:CT_Background	SLIDE		type	CT_Background					.	.	.	.	.
 p:CT_Background/EG_Background	SLIDE	CT_Background	group	EG_Background	EG_Background				.	.	.	.	.
-p:CT_Background/@bwMode	SLIDE	CT_Background	attribute	@bwMode	ST_BlackWhiteMode	optional	white		.	.	.	.	.
+p:CT_Background/@bwMode	SLIDE	CT_Background	attribute	@bwMode	ST_BlackWhiteMode	optional	white		y	.	.	.	.
 p:CT_CommonSlideData	VIEW		type	CT_CommonSlideData					.	.	.	.	.
-p:CT_CommonSlideData/bg	VIEW	CT_CommonSlideData	element	bg	CT_Background	0..1			.	.	.	.	.
+p:CT_CommonSlideData/bg	VIEW	CT_CommonSlideData	element	bg	CT_Background	0..1			.	y	.	.	.
 p:CT_CommonSlideData/spTree	VIEW	CT_CommonSlideData	element	spTree	CT_GroupShape				.	.	.	.	.
 p:CT_CommonSlideData/custDataLst	VIEW	CT_CommonSlideData	element	custDataLst	CT_CustomerDataList	0..1			.	.	.	.	.
 p:CT_CommonSlideData/controls	VIEW	CT_CommonSlideData	element	controls	CT_ControlList	0..1			.	.	.	.	.
 p:CT_CommonSlideData/extLst	VIEW	CT_CommonSlideData	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_CommonSlideData/@name	VIEW	CT_CommonSlideData	attribute	@name	string	optional			.	.	.	.	.
+p:CT_CommonSlideData/@name	VIEW	CT_CommonSlideData	attribute	@name	string	optional			.	y	y	.	.
 p:CT_Slide	SLIDE		type	CT_Slide					.	.	.	.	.
 p:CT_Slide/cSld	SLIDE	CT_Slide	element	cSld	CT_CommonSlideData				.	.	.	.	.
 p:CT_Slide/EG_ChildSlide	SLIDE	CT_Slide	group	EG_ChildSlide	EG_ChildSlide	0..1			.	.	.	.	.
@@ -891,10 +891,10 @@ p:CT_Slide/transition	SLIDE	CT_Slide	element	transition	CT_SlideTransition	0..1	
 p:CT_Slide/timing	SLIDE	CT_Slide	element	timing	CT_SlideTiming	0..1			.	.	.	.	.
 p:CT_Slide/extLst	SLIDE	CT_Slide	element	extLst	CT_ExtensionListModify	0..1			.	.	.	.	.
 p:CT_Slide/AG_ChildSlide	SLIDE	CT_Slide	attrgroup	AG_ChildSlide	AG_ChildSlide				.	.	.	.	.
-p:CT_Slide/@show	SLIDE	CT_Slide	attribute	@show	boolean	optional	true		.	.	.	.	.
+p:CT_Slide/@show	SLIDE	CT_Slide	attribute	@show	boolean	optional	true		y	.	.	.	.
 p:<sld>	SLIDE		root	<sld>	CT_Slide				.	.	.	.	.
 p:ST_SlideLayoutType	SLIDE		simple	ST_SlideLayoutType				base=token	.	.	.	.	.
-p:ST_SlideLayoutType/=title	SLIDE	ST_SlideLayoutType	value	=title					.	.	.	.	.
+p:ST_SlideLayoutType/=title	SLIDE	ST_SlideLayoutType	value	=title					y	.	.	.	.
 p:ST_SlideLayoutType/=tx	SLIDE	ST_SlideLayoutType	value	=tx					.	.	.	.	.
 p:ST_SlideLayoutType/=twoColTx	SLIDE	ST_SlideLayoutType	value	=twoColTx					.	.	.	.	.
 p:ST_SlideLayoutType/=tbl	SLIDE	ST_SlideLayoutType	value	=tbl					.	.	.	.	.
@@ -904,12 +904,12 @@ p:ST_SlideLayoutType/=dgm	SLIDE	ST_SlideLayoutType	value	=dgm					.	.	.	.	.
 p:ST_SlideLayoutType/=chart	SLIDE	ST_SlideLayoutType	value	=chart					.	.	.	.	.
 p:ST_SlideLayoutType/=txAndClipArt	SLIDE	ST_SlideLayoutType	value	=txAndClipArt					.	.	.	.	.
 p:ST_SlideLayoutType/=clipArtAndTx	SLIDE	ST_SlideLayoutType	value	=clipArtAndTx					.	.	.	.	.
-p:ST_SlideLayoutType/=titleOnly	SLIDE	ST_SlideLayoutType	value	=titleOnly					.	.	.	.	.
-p:ST_SlideLayoutType/=blank	SLIDE	ST_SlideLayoutType	value	=blank					.	.	.	.	.
+p:ST_SlideLayoutType/=titleOnly	SLIDE	ST_SlideLayoutType	value	=titleOnly					y	.	.	.	.
+p:ST_SlideLayoutType/=blank	SLIDE	ST_SlideLayoutType	value	=blank					y	.	.	.	.
 p:ST_SlideLayoutType/=txAndObj	SLIDE	ST_SlideLayoutType	value	=txAndObj					.	.	.	.	.
 p:ST_SlideLayoutType/=objAndTx	SLIDE	ST_SlideLayoutType	value	=objAndTx					.	.	.	.	.
 p:ST_SlideLayoutType/=objOnly	SLIDE	ST_SlideLayoutType	value	=objOnly					.	.	.	.	.
-p:ST_SlideLayoutType/=obj	SLIDE	ST_SlideLayoutType	value	=obj					.	.	.	.	.
+p:ST_SlideLayoutType/=obj	SLIDE	ST_SlideLayoutType	value	=obj					y	.	.	.	.
 p:ST_SlideLayoutType/=txAndMedia	SLIDE	ST_SlideLayoutType	value	=txAndMedia					.	.	.	.	.
 p:ST_SlideLayoutType/=mediaAndTx	SLIDE	ST_SlideLayoutType	value	=mediaAndTx					.	.	.	.	.
 p:ST_SlideLayoutType/=objOverTx	SLIDE	ST_SlideLayoutType	value	=objOverTx					.	.	.	.	.
@@ -918,18 +918,18 @@ p:ST_SlideLayoutType/=txAndTwoObj	SLIDE	ST_SlideLayoutType	value	=txAndTwoObj			
 p:ST_SlideLayoutType/=twoObjAndTx	SLIDE	ST_SlideLayoutType	value	=twoObjAndTx					.	.	.	.	.
 p:ST_SlideLayoutType/=twoObjOverTx	SLIDE	ST_SlideLayoutType	value	=twoObjOverTx					.	.	.	.	.
 p:ST_SlideLayoutType/=fourObj	SLIDE	ST_SlideLayoutType	value	=fourObj					.	.	.	.	.
-p:ST_SlideLayoutType/=vertTx	SLIDE	ST_SlideLayoutType	value	=vertTx					.	.	.	.	.
+p:ST_SlideLayoutType/=vertTx	SLIDE	ST_SlideLayoutType	value	=vertTx					y	.	.	.	.
 p:ST_SlideLayoutType/=clipArtAndVertTx	SLIDE	ST_SlideLayoutType	value	=clipArtAndVertTx					.	.	.	.	.
-p:ST_SlideLayoutType/=vertTitleAndTx	SLIDE	ST_SlideLayoutType	value	=vertTitleAndTx					.	.	.	.	.
+p:ST_SlideLayoutType/=vertTitleAndTx	SLIDE	ST_SlideLayoutType	value	=vertTitleAndTx					y	.	.	.	.
 p:ST_SlideLayoutType/=vertTitleAndTxOverChart	SLIDE	ST_SlideLayoutType	value	=vertTitleAndTxOverChart					.	.	.	.	.
-p:ST_SlideLayoutType/=twoObj	SLIDE	ST_SlideLayoutType	value	=twoObj					.	.	.	.	.
+p:ST_SlideLayoutType/=twoObj	SLIDE	ST_SlideLayoutType	value	=twoObj					y	.	.	.	.
 p:ST_SlideLayoutType/=objAndTwoObj	SLIDE	ST_SlideLayoutType	value	=objAndTwoObj					.	.	.	.	.
 p:ST_SlideLayoutType/=twoObjAndObj	SLIDE	ST_SlideLayoutType	value	=twoObjAndObj					.	.	.	.	.
 p:ST_SlideLayoutType/=cust	SLIDE	ST_SlideLayoutType	value	=cust					.	.	.	.	.
-p:ST_SlideLayoutType/=secHead	SLIDE	ST_SlideLayoutType	value	=secHead					.	.	.	.	.
-p:ST_SlideLayoutType/=twoTxTwoObj	SLIDE	ST_SlideLayoutType	value	=twoTxTwoObj					.	.	.	.	.
-p:ST_SlideLayoutType/=objTx	SLIDE	ST_SlideLayoutType	value	=objTx					.	.	.	.	.
-p:ST_SlideLayoutType/=picTx	SLIDE	ST_SlideLayoutType	value	=picTx					.	.	.	.	.
+p:ST_SlideLayoutType/=secHead	SLIDE	ST_SlideLayoutType	value	=secHead					y	.	.	.	.
+p:ST_SlideLayoutType/=twoTxTwoObj	SLIDE	ST_SlideLayoutType	value	=twoTxTwoObj					y	.	.	.	.
+p:ST_SlideLayoutType/=objTx	SLIDE	ST_SlideLayoutType	value	=objTx					y	.	.	.	.
+p:ST_SlideLayoutType/=picTx	SLIDE	ST_SlideLayoutType	value	=picTx					y	.	.	.	.
 p:CT_SlideLayout	SLIDE		type	CT_SlideLayout					.	.	.	.	.
 p:CT_SlideLayout/cSld	SLIDE	CT_SlideLayout	element	cSld	CT_CommonSlideData				.	.	.	.	.
 p:CT_SlideLayout/EG_ChildSlide	SLIDE	CT_SlideLayout	group	EG_ChildSlide	EG_ChildSlide	0..1			.	.	.	.	.
@@ -938,13 +938,13 @@ p:CT_SlideLayout/timing	SLIDE	CT_SlideLayout	element	timing	CT_SlideTiming	0..1	
 p:CT_SlideLayout/hf	SLIDE	CT_SlideLayout	element	hf	CT_HeaderFooter	0..1			.	.	.	.	.
 p:CT_SlideLayout/extLst	SLIDE	CT_SlideLayout	element	extLst	CT_ExtensionListModify	0..1			.	.	.	.	.
 p:CT_SlideLayout/AG_ChildSlide	SLIDE	CT_SlideLayout	attrgroup	AG_ChildSlide	AG_ChildSlide				.	.	.	.	.
-p:CT_SlideLayout/@matchingName	SLIDE	CT_SlideLayout	attribute	@matchingName	string	optional			.	.	.	.	.
+p:CT_SlideLayout/@matchingName	SLIDE	CT_SlideLayout	attribute	@matchingName	string	optional			y	.	.	.	.
 p:CT_SlideLayout/@type	SLIDE	CT_SlideLayout	attribute	@type	ST_SlideLayoutType	optional	cust		.	.	.	.	.
-p:CT_SlideLayout/@preserve	SLIDE	CT_SlideLayout	attribute	@preserve	boolean	optional	false		.	.	.	.	.
-p:CT_SlideLayout/@userDrawn	SLIDE	CT_SlideLayout	attribute	@userDrawn	boolean	optional	false		.	.	.	.	.
+p:CT_SlideLayout/@preserve	SLIDE	CT_SlideLayout	attribute	@preserve	boolean	optional	false		y	.	.	.	.
+p:CT_SlideLayout/@userDrawn	SLIDE	CT_SlideLayout	attribute	@userDrawn	boolean	optional	false		y	.	.	.	.
 p:<sldLayout>	SLIDE		root	<sldLayout>	CT_SlideLayout				.	.	.	.	.
 p:CT_SlideMasterTextStyles	SLIDE		type	CT_SlideMasterTextStyles					.	.	.	.	.
-p:CT_SlideMasterTextStyles/titleStyle	SLIDE	CT_SlideMasterTextStyles	element	titleStyle	CT_TextListStyle	0..1			.	.	.	.	.
+p:CT_SlideMasterTextStyles/titleStyle	SLIDE	CT_SlideMasterTextStyles	element	titleStyle	CT_TextListStyle	0..1			.	y	.	.	.
 p:CT_SlideMasterTextStyles/bodyStyle	SLIDE	CT_SlideMasterTextStyles	element	bodyStyle	CT_TextListStyle	0..1			.	.	.	.	.
 p:CT_SlideMasterTextStyles/otherStyle	SLIDE	CT_SlideMasterTextStyles	element	otherStyle	CT_TextListStyle	0..1			.	.	.	.	.
 p:CT_SlideMasterTextStyles/extLst	SLIDE	CT_SlideMasterTextStyles	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
@@ -964,7 +964,7 @@ p:CT_SlideMaster/timing	SLIDE	CT_SlideMaster	element	timing	CT_SlideTiming	0..1	
 p:CT_SlideMaster/hf	SLIDE	CT_SlideMaster	element	hf	CT_HeaderFooter	0..1			.	.	.	.	.
 p:CT_SlideMaster/txStyles	SLIDE	CT_SlideMaster	element	txStyles	CT_SlideMasterTextStyles	0..1			.	.	.	.	.
 p:CT_SlideMaster/extLst	SLIDE	CT_SlideMaster	element	extLst	CT_ExtensionListModify	0..1			.	.	.	.	.
-p:CT_SlideMaster/@preserve	SLIDE	CT_SlideMaster	attribute	@preserve	boolean	optional	false		.	.	.	.	.
+p:CT_SlideMaster/@preserve	SLIDE	CT_SlideMaster	attribute	@preserve	boolean	optional	false		y	.	.	.	.
 p:<sldMaster>	SLIDE		root	<sldMaster>	CT_SlideMaster				.	.	.	.	.
 p:CT_HandoutMaster	SLIDE		type	CT_HandoutMaster					.	.	.	.	.
 p:CT_HandoutMaster/cSld	SLIDE	CT_HandoutMaster	element	cSld	CT_CommonSlideData				.	.	.	.	.
@@ -998,9 +998,9 @@ p:CT_TagList	CUSTOM		type	CT_TagList					.	.	.	.	.
 p:CT_TagList/tag	CUSTOM	CT_TagList	element	tag	CT_StringTag	0..unbounded			.	.	.	.	.
 p:<tagLst>	CUSTOM		root	<tagLst>	CT_TagList				.	.	.	.	.
 p:ST_SplitterBarState	VIEW		simple	ST_SplitterBarState				base=token	.	.	.	.	.
-p:ST_SplitterBarState/=minimized	VIEW	ST_SplitterBarState	value	=minimized					.	.	.	.	.
+p:ST_SplitterBarState/=minimized	VIEW	ST_SplitterBarState	value	=minimized					y	.	.	.	.
 p:ST_SplitterBarState/=restored	VIEW	ST_SplitterBarState	value	=restored					.	.	.	.	.
-p:ST_SplitterBarState/=maximized	VIEW	ST_SplitterBarState	value	=maximized					.	.	.	.	.
+p:ST_SplitterBarState/=maximized	VIEW	ST_SplitterBarState	value	=maximized					y	.	.	.	.
 p:ST_ViewType	VIEW		simple	ST_ViewType				base=token	.	.	.	.	.
 p:ST_ViewType/=sldView	VIEW	ST_ViewType	value	=sldView					.	.	.	.	.
 p:ST_ViewType/=sldMasterView	VIEW	ST_ViewType	value	=sldMasterView					.	.	.	.	.
@@ -1008,32 +1008,32 @@ p:ST_ViewType/=notesView	VIEW	ST_ViewType	value	=notesView					.	.	.	.	.
 p:ST_ViewType/=handoutView	VIEW	ST_ViewType	value	=handoutView					.	.	.	.	.
 p:ST_ViewType/=notesMasterView	VIEW	ST_ViewType	value	=notesMasterView					.	.	.	.	.
 p:ST_ViewType/=outlineView	VIEW	ST_ViewType	value	=outlineView					.	.	.	.	.
-p:ST_ViewType/=sldSorterView	VIEW	ST_ViewType	value	=sldSorterView					.	.	.	.	.
-p:ST_ViewType/=sldThumbnailView	VIEW	ST_ViewType	value	=sldThumbnailView					.	.	.	.	.
-p:CT_NormalViewPortion	VIEW		type	CT_NormalViewPortion					.	.	.	.	.
-p:CT_NormalViewPortion/@sz	VIEW	CT_NormalViewPortion	attribute	@sz	ST_PositiveFixedPercentage	required			.	.	.	.	.
-p:CT_NormalViewPortion/@autoAdjust	VIEW	CT_NormalViewPortion	attribute	@autoAdjust	boolean	optional	true		.	.	.	.	.
+p:ST_ViewType/=sldSorterView	VIEW	ST_ViewType	value	=sldSorterView					y	.	.	.	.
+p:ST_ViewType/=sldThumbnailView	VIEW	ST_ViewType	value	=sldThumbnailView					y	.	.	.	.
+p:CT_NormalViewPortion	VIEW		type	CT_NormalViewPortion					.	y	.	.	.
+p:CT_NormalViewPortion/@sz	VIEW	CT_NormalViewPortion	attribute	@sz	ST_PositiveFixedPercentage	required			.	y	.	.	.
+p:CT_NormalViewPortion/@autoAdjust	VIEW	CT_NormalViewPortion	attribute	@autoAdjust	boolean	optional	true		y	y	.	.	.
 p:CT_NormalViewProperties	VIEW		type	CT_NormalViewProperties					.	.	.	.	.
-p:CT_NormalViewProperties/restoredLeft	VIEW	CT_NormalViewProperties	element	restoredLeft	CT_NormalViewPortion				.	.	.	.	.
-p:CT_NormalViewProperties/restoredTop	VIEW	CT_NormalViewProperties	element	restoredTop	CT_NormalViewPortion				.	.	.	.	.
+p:CT_NormalViewProperties/restoredLeft	VIEW	CT_NormalViewProperties	element	restoredLeft	CT_NormalViewPortion				y	y	.	.	.
+p:CT_NormalViewProperties/restoredTop	VIEW	CT_NormalViewProperties	element	restoredTop	CT_NormalViewPortion				y	y	.	.	.
 p:CT_NormalViewProperties/extLst	VIEW	CT_NormalViewProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_NormalViewProperties/@showOutlineIcons	VIEW	CT_NormalViewProperties	attribute	@showOutlineIcons	boolean	optional	true		.	.	.	.	.
 p:CT_NormalViewProperties/@snapVertSplitter	VIEW	CT_NormalViewProperties	attribute	@snapVertSplitter	boolean	optional	false		.	.	.	.	.
-p:CT_NormalViewProperties/@vertBarState	VIEW	CT_NormalViewProperties	attribute	@vertBarState	ST_SplitterBarState	optional	restored		.	.	.	.	.
+p:CT_NormalViewProperties/@vertBarState	VIEW	CT_NormalViewProperties	attribute	@vertBarState	ST_SplitterBarState	optional	restored		y	y	.	.	.
 p:CT_NormalViewProperties/@horzBarState	VIEW	CT_NormalViewProperties	attribute	@horzBarState	ST_SplitterBarState	optional	restored		.	.	.	.	.
 p:CT_NormalViewProperties/@preferSingleView	VIEW	CT_NormalViewProperties	attribute	@preferSingleView	boolean	optional	false		.	.	.	.	.
-p:CT_CommonViewProperties	VIEW		type	CT_CommonViewProperties					.	.	.	.	.
-p:CT_CommonViewProperties/scale	VIEW	CT_CommonViewProperties	element	scale	CT_Scale2D				.	.	.	.	.
-p:CT_CommonViewProperties/origin	VIEW	CT_CommonViewProperties	element	origin	CT_Point2D				.	.	.	.	.
-p:CT_CommonViewProperties/@varScale	VIEW	CT_CommonViewProperties	attribute	@varScale	boolean	optional	false		.	.	.	.	.
+p:CT_CommonViewProperties	VIEW		type	CT_CommonViewProperties					y	y	.	.	.
+p:CT_CommonViewProperties/scale	VIEW	CT_CommonViewProperties	element	scale	CT_Scale2D				y	y	.	.	.
+p:CT_CommonViewProperties/origin	VIEW	CT_CommonViewProperties	element	origin	CT_Point2D				y	y	.	.	.
+p:CT_CommonViewProperties/@varScale	VIEW	CT_CommonViewProperties	attribute	@varScale	boolean	optional	false		y	y	.	.	.
 p:CT_NotesTextViewProperties	VIEW		type	CT_NotesTextViewProperties					.	.	.	.	.
 p:CT_NotesTextViewProperties/cViewPr	VIEW	CT_NotesTextViewProperties	element	cViewPr	CT_CommonViewProperties				.	.	.	.	.
 p:CT_NotesTextViewProperties/extLst	VIEW	CT_NotesTextViewProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_OutlineViewSlideEntry	VIEW		type	CT_OutlineViewSlideEntry					.	.	.	.	.
 p:CT_OutlineViewSlideEntry/@r:id	VIEW	CT_OutlineViewSlideEntry	attribute	@r:id	id	required			.	.	.	.	.
-p:CT_OutlineViewSlideEntry/@collapse	VIEW	CT_OutlineViewSlideEntry	attribute	@collapse	boolean	optional	false		.	.	.	.	.
-p:CT_OutlineViewSlideList	VIEW		type	CT_OutlineViewSlideList					.	.	.	.	.
-p:CT_OutlineViewSlideList/sld	VIEW	CT_OutlineViewSlideList	element	sld	CT_OutlineViewSlideEntry	0..unbounded			.	.	.	.	.
+p:CT_OutlineViewSlideEntry/@collapse	VIEW	CT_OutlineViewSlideEntry	attribute	@collapse	boolean	optional	false		y	.	.	.	.
+p:CT_OutlineViewSlideList	VIEW		type	CT_OutlineViewSlideList					.	y	y	.	.
+p:CT_OutlineViewSlideList/sld	VIEW	CT_OutlineViewSlideList	element	sld	CT_OutlineViewSlideEntry	0..unbounded			.	y	y	.	.
 p:CT_OutlineViewProperties	VIEW		type	CT_OutlineViewProperties					.	.	.	.	.
 p:CT_OutlineViewProperties/cViewPr	VIEW	CT_OutlineViewProperties	element	cViewPr	CT_CommonViewProperties				.	.	.	.	.
 p:CT_OutlineViewProperties/sldLst	VIEW	CT_OutlineViewProperties	element	sldLst	CT_OutlineViewSlideList	0..1			.	.	.	.	.
@@ -1041,17 +1041,17 @@ p:CT_OutlineViewProperties/extLst	VIEW	CT_OutlineViewProperties	element	extLst	C
 p:CT_SlideSorterViewProperties	VIEW		type	CT_SlideSorterViewProperties					.	.	.	.	.
 p:CT_SlideSorterViewProperties/cViewPr	VIEW	CT_SlideSorterViewProperties	element	cViewPr	CT_CommonViewProperties				.	.	.	.	.
 p:CT_SlideSorterViewProperties/extLst	VIEW	CT_SlideSorterViewProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_SlideSorterViewProperties/@showFormatting	VIEW	CT_SlideSorterViewProperties	attribute	@showFormatting	boolean	optional	true		.	.	.	.	.
-p:CT_Guide	VIEW		type	CT_Guide					.	.	.	.	.
-p:CT_Guide/@orient	VIEW	CT_Guide	attribute	@orient	ST_Direction	optional	vert		.	.	.	.	.
-p:CT_Guide/@pos	VIEW	CT_Guide	attribute	@pos	ST_Coordinate32	optional	0		.	.	.	.	.
-p:CT_GuideList	VIEW		type	CT_GuideList					.	.	.	.	.
-p:CT_GuideList/guide	VIEW	CT_GuideList	element	guide	CT_Guide	0..unbounded			.	.	.	.	.
+p:CT_SlideSorterViewProperties/@showFormatting	VIEW	CT_SlideSorterViewProperties	attribute	@showFormatting	boolean	optional	true		y	y	.	.	.
+p:CT_Guide	VIEW		type	CT_Guide					y	y	.	.	.
+p:CT_Guide/@orient	VIEW	CT_Guide	attribute	@orient	ST_Direction	optional	vert		y	y	.	.	.
+p:CT_Guide/@pos	VIEW	CT_Guide	attribute	@pos	ST_Coordinate32	optional	0		y	y	.	.	.
+p:CT_GuideList	VIEW		type	CT_GuideList					.	.	y	.	.
+p:CT_GuideList/guide	VIEW	CT_GuideList	element	guide	CT_Guide	0..unbounded			.	.	y	.	.
 p:CT_CommonSlideViewProperties	VIEW		type	CT_CommonSlideViewProperties					.	.	.	.	.
 p:CT_CommonSlideViewProperties/cViewPr	VIEW	CT_CommonSlideViewProperties	element	cViewPr	CT_CommonViewProperties				.	.	.	.	.
 p:CT_CommonSlideViewProperties/guideLst	VIEW	CT_CommonSlideViewProperties	element	guideLst	CT_GuideList	0..1			.	.	.	.	.
 p:CT_CommonSlideViewProperties/@snapToGrid	VIEW	CT_CommonSlideViewProperties	attribute	@snapToGrid	boolean	optional	true		.	.	.	.	.
-p:CT_CommonSlideViewProperties/@snapToObjects	VIEW	CT_CommonSlideViewProperties	attribute	@snapToObjects	boolean	optional	false		.	.	.	.	.
+p:CT_CommonSlideViewProperties/@snapToObjects	VIEW	CT_CommonSlideViewProperties	attribute	@snapToObjects	boolean	optional	false		y	y	.	.	.
 p:CT_CommonSlideViewProperties/@showGuides	VIEW	CT_CommonSlideViewProperties	attribute	@showGuides	boolean	optional	false		.	.	.	.	.
 p:CT_SlideViewProperties	VIEW		type	CT_SlideViewProperties					.	.	.	.	.
 p:CT_SlideViewProperties/cSldViewPr	VIEW	CT_SlideViewProperties	element	cSldViewPr	CT_CommonSlideViewProperties				.	.	.	.	.
@@ -1066,10 +1066,10 @@ p:CT_ViewProperties/outlineViewPr	VIEW	CT_ViewProperties	element	outlineViewPr	C
 p:CT_ViewProperties/notesTextViewPr	VIEW	CT_ViewProperties	element	notesTextViewPr	CT_NotesTextViewProperties	0..1			.	.	.	.	.
 p:CT_ViewProperties/sorterViewPr	VIEW	CT_ViewProperties	element	sorterViewPr	CT_SlideSorterViewProperties	0..1			.	.	.	.	.
 p:CT_ViewProperties/notesViewPr	VIEW	CT_ViewProperties	element	notesViewPr	CT_NotesViewProperties	0..1			.	.	.	.	.
-p:CT_ViewProperties/gridSpacing	VIEW	CT_ViewProperties	element	gridSpacing	CT_PositiveSize2D	0..1			.	.	.	.	.
+p:CT_ViewProperties/gridSpacing	VIEW	CT_ViewProperties	element	gridSpacing	CT_PositiveSize2D	0..1			y	.	.	.	.
 p:CT_ViewProperties/extLst	VIEW	CT_ViewProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
-p:CT_ViewProperties/@lastView	VIEW	CT_ViewProperties	attribute	@lastView	ST_ViewType	optional	sldView		.	.	.	.	.
-p:CT_ViewProperties/@showComments	VIEW	CT_ViewProperties	attribute	@showComments	boolean	optional	true		.	.	.	.	.
+p:CT_ViewProperties/@lastView	VIEW	CT_ViewProperties	attribute	@lastView	ST_ViewType	optional	sldView		y	.	.	.	.
+p:CT_ViewProperties/@showComments	VIEW	CT_ViewProperties	attribute	@showComments	boolean	optional	true		y	.	.	.	.
 p:<viewPr>	VIEW		root	<viewPr>	CT_ViewProperties				.	.	.	.	.
 a:CT_AudioFile	MEDIA		type	CT_AudioFile					.	.	.	.	.
 a:CT_AudioFile/extLst	MEDIA	CT_AudioFile	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
@@ -1099,21 +1099,21 @@ a:<videoFile>	MEDIA		root	<videoFile>	CT_VideoFile				.	.	.	.	.
 a:ST_StyleMatrixColumnIndex	THEME		simple	ST_StyleMatrixColumnIndex				base=unsignedInt	.	.	.	.	.
 a:ST_FontCollectionIndex	THEME		simple	ST_FontCollectionIndex				base=token	.	.	.	.	.
 a:ST_FontCollectionIndex/=major	THEME	ST_FontCollectionIndex	value	=major					.	.	.	.	.
-a:ST_FontCollectionIndex/=minor	THEME	ST_FontCollectionIndex	value	=minor					.	.	.	.	.
+a:ST_FontCollectionIndex/=minor	THEME	ST_FontCollectionIndex	value	=minor					y	.	.	.	.
 a:ST_FontCollectionIndex/=none	THEME	ST_FontCollectionIndex	value	=none					.	.	.	.	.
-a:ST_ColorSchemeIndex	THEME		simple	ST_ColorSchemeIndex				base=token	.	.	.	.	.
-a:ST_ColorSchemeIndex/=dk1	THEME	ST_ColorSchemeIndex	value	=dk1					.	.	.	.	.
-a:ST_ColorSchemeIndex/=lt1	THEME	ST_ColorSchemeIndex	value	=lt1					.	.	.	.	.
-a:ST_ColorSchemeIndex/=dk2	THEME	ST_ColorSchemeIndex	value	=dk2					.	.	.	.	.
-a:ST_ColorSchemeIndex/=lt2	THEME	ST_ColorSchemeIndex	value	=lt2					.	.	.	.	.
-a:ST_ColorSchemeIndex/=accent1	THEME	ST_ColorSchemeIndex	value	=accent1					.	.	.	.	.
-a:ST_ColorSchemeIndex/=accent2	THEME	ST_ColorSchemeIndex	value	=accent2					.	.	.	.	.
-a:ST_ColorSchemeIndex/=accent3	THEME	ST_ColorSchemeIndex	value	=accent3					.	.	.	.	.
-a:ST_ColorSchemeIndex/=accent4	THEME	ST_ColorSchemeIndex	value	=accent4					.	.	.	.	.
-a:ST_ColorSchemeIndex/=accent5	THEME	ST_ColorSchemeIndex	value	=accent5					.	.	.	.	.
-a:ST_ColorSchemeIndex/=accent6	THEME	ST_ColorSchemeIndex	value	=accent6					.	.	.	.	.
-a:ST_ColorSchemeIndex/=hlink	THEME	ST_ColorSchemeIndex	value	=hlink					.	.	.	.	.
-a:ST_ColorSchemeIndex/=folHlink	THEME	ST_ColorSchemeIndex	value	=folHlink					.	.	.	.	.
+a:ST_ColorSchemeIndex	THEME		simple	ST_ColorSchemeIndex				base=token	y	.	.	.	.
+a:ST_ColorSchemeIndex/=dk1	THEME	ST_ColorSchemeIndex	value	=dk1					y	.	.	.	.
+a:ST_ColorSchemeIndex/=lt1	THEME	ST_ColorSchemeIndex	value	=lt1					y	.	.	.	.
+a:ST_ColorSchemeIndex/=dk2	THEME	ST_ColorSchemeIndex	value	=dk2					y	.	.	.	.
+a:ST_ColorSchemeIndex/=lt2	THEME	ST_ColorSchemeIndex	value	=lt2					y	.	.	.	.
+a:ST_ColorSchemeIndex/=accent1	THEME	ST_ColorSchemeIndex	value	=accent1					y	.	.	.	.
+a:ST_ColorSchemeIndex/=accent2	THEME	ST_ColorSchemeIndex	value	=accent2					y	.	.	.	.
+a:ST_ColorSchemeIndex/=accent3	THEME	ST_ColorSchemeIndex	value	=accent3					y	.	.	.	.
+a:ST_ColorSchemeIndex/=accent4	THEME	ST_ColorSchemeIndex	value	=accent4					y	.	.	.	.
+a:ST_ColorSchemeIndex/=accent5	THEME	ST_ColorSchemeIndex	value	=accent5					y	.	.	.	.
+a:ST_ColorSchemeIndex/=accent6	THEME	ST_ColorSchemeIndex	value	=accent6					y	.	.	.	.
+a:ST_ColorSchemeIndex/=hlink	THEME	ST_ColorSchemeIndex	value	=hlink					y	.	.	.	.
+a:ST_ColorSchemeIndex/=folHlink	THEME	ST_ColorSchemeIndex	value	=folHlink					y	.	.	.	.
 a:CT_ColorScheme	THEME		type	CT_ColorScheme					.	.	.	.	.
 a:CT_ColorScheme/dk1	THEME	CT_ColorScheme	element	dk1	CT_Color				.	.	.	.	.
 a:CT_ColorScheme/lt1	THEME	CT_ColorScheme	element	lt1	CT_Color				.	.	.	.	.
@@ -1132,16 +1132,16 @@ a:CT_ColorScheme/@name	THEME	CT_ColorScheme	attribute	@name	string	required			.	
 a:CT_CustomColor	THEME		type	CT_CustomColor					.	.	.	.	.
 a:CT_CustomColor/EG_ColorChoice	THEME	CT_CustomColor	group	EG_ColorChoice	EG_ColorChoice				.	.	.	.	.
 a:CT_CustomColor/@name	THEME	CT_CustomColor	attribute	@name	string	optional			.	.	.	.	.
-a:CT_SupplementalFont	THEME		type	CT_SupplementalFont					.	.	.	.	.
-a:CT_SupplementalFont/@script	THEME	CT_SupplementalFont	attribute	@script	string	required			.	.	.	.	.
-a:CT_SupplementalFont/@typeface	THEME	CT_SupplementalFont	attribute	@typeface	ST_TextTypeface	required			.	.	.	.	.
+a:CT_SupplementalFont	THEME		type	CT_SupplementalFont					y	y	.	.	.
+a:CT_SupplementalFont/@script	THEME	CT_SupplementalFont	attribute	@script	string	required			y	y	y	.	.
+a:CT_SupplementalFont/@typeface	THEME	CT_SupplementalFont	attribute	@typeface	ST_TextTypeface	required			y	y	.	.	.
 a:CT_CustomColorList	THEME		type	CT_CustomColorList					.	.	.	.	.
 a:CT_CustomColorList/custClr	THEME	CT_CustomColorList	element	custClr	CT_CustomColor	0..unbounded			.	.	.	.	.
 a:CT_FontCollection	THEME		type	CT_FontCollection					.	.	.	.	.
-a:CT_FontCollection/latin	THEME	CT_FontCollection	element	latin	CT_TextFont				.	.	.	.	.
-a:CT_FontCollection/ea	THEME	CT_FontCollection	element	ea	CT_TextFont				.	.	.	.	.
+a:CT_FontCollection/latin	THEME	CT_FontCollection	element	latin	CT_TextFont				y	y	y	.	.
+a:CT_FontCollection/ea	THEME	CT_FontCollection	element	ea	CT_TextFont				.	y	.	.	.
 a:CT_FontCollection/cs	THEME	CT_FontCollection	element	cs	CT_TextFont				.	.	.	.	.
-a:CT_FontCollection/font	THEME	CT_FontCollection	element	font	CT_SupplementalFont	0..unbounded			.	.	.	.	.
+a:CT_FontCollection/font	THEME	CT_FontCollection	element	font	CT_SupplementalFont	0..unbounded			.	y	y	.	.
 a:CT_FontCollection/extLst	THEME	CT_FontCollection	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_EffectStyleItem	THEME		type	CT_EffectStyleItem					.	.	.	.	.
 a:CT_EffectStyleItem/EG_EffectProperties	THEME	CT_EffectStyleItem	group	EG_EffectProperties	EG_EffectProperties				.	.	.	.	.
@@ -1151,7 +1151,7 @@ a:CT_FontScheme	THEME		type	CT_FontScheme					.	.	.	.	.
 a:CT_FontScheme/majorFont	THEME	CT_FontScheme	element	majorFont	CT_FontCollection				.	.	.	.	.
 a:CT_FontScheme/minorFont	THEME	CT_FontScheme	element	minorFont	CT_FontCollection				.	.	.	.	.
 a:CT_FontScheme/extLst	THEME	CT_FontScheme	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_FontScheme/@name	THEME	CT_FontScheme	attribute	@name	string	required			.	.	.	.	.
+a:CT_FontScheme/@name	THEME	CT_FontScheme	attribute	@name	string	required			.	y	.	.	.
 a:CT_FillStyleList	THEME		type	CT_FillStyleList					.	.	.	.	.
 a:CT_FillStyleList/EG_FillProperties	THEME	CT_FillStyleList	group	EG_FillProperties	EG_FillProperties	3..unbounded			.	.	.	.	.
 a:CT_LineStyleList	THEME		type	CT_LineStyleList					.	.	.	.	.
@@ -1168,7 +1168,7 @@ a:CT_StyleMatrix/bgFillStyleLst	THEME	CT_StyleMatrix	element	bgFillStyleLst	CT_B
 a:CT_StyleMatrix/@name	THEME	CT_StyleMatrix	attribute	@name	string	optional			.	.	.	.	.
 a:CT_BaseStyles	THEME		type	CT_BaseStyles					.	.	.	.	.
 a:CT_BaseStyles/clrScheme	THEME	CT_BaseStyles	element	clrScheme	CT_ColorScheme				.	.	.	.	.
-a:CT_BaseStyles/fontScheme	THEME	CT_BaseStyles	element	fontScheme	CT_FontScheme				.	.	.	.	.
+a:CT_BaseStyles/fontScheme	THEME	CT_BaseStyles	element	fontScheme	CT_FontScheme				y	.	.	.	.
 a:CT_BaseStyles/fmtScheme	THEME	CT_BaseStyles	element	fmtScheme	CT_StyleMatrix				.	.	.	.	.
 a:CT_BaseStyles/extLst	THEME	CT_BaseStyles	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_OfficeArtExtension	SHAPE		type	CT_OfficeArtExtension					.	.	.	.	.
@@ -1203,15 +1203,15 @@ a:ST_PositiveFixedPercentage	SHAPE		simple	ST_PositiveFixedPercentage				union=S
 a:ST_PositiveFixedPercentageDecimal	SHAPE		simple	ST_PositiveFixedPercentageDecimal				base=ST_PercentageDecimal minInclusive=0 maxInclusive=100000	.	.	.	.	.
 a:CT_PositiveFixedPercentage	SHAPE		type	CT_PositiveFixedPercentage					.	.	.	.	.
 a:CT_PositiveFixedPercentage/@val	SHAPE	CT_PositiveFixedPercentage	attribute	@val	ST_PositiveFixedPercentage	required			.	.	.	.	.
-a:CT_Ratio	SHAPE		type	CT_Ratio					.	.	.	.	.
-a:CT_Ratio/@n	SHAPE	CT_Ratio	attribute	@n	long	required			.	.	.	.	.
-a:CT_Ratio/@d	SHAPE	CT_Ratio	attribute	@d	long	required			.	.	.	.	.
-a:CT_Point2D	SHAPE		type	CT_Point2D					.	.	.	.	.
-a:CT_Point2D/@x	SHAPE	CT_Point2D	attribute	@x	ST_Coordinate	required			.	.	.	.	.
-a:CT_Point2D/@y	SHAPE	CT_Point2D	attribute	@y	ST_Coordinate	required			.	.	.	.	.
-a:CT_PositiveSize2D	SHAPE		type	CT_PositiveSize2D					.	.	.	.	.
-a:CT_PositiveSize2D/@cx	SHAPE	CT_PositiveSize2D	attribute	@cx	ST_PositiveCoordinate	required			.	.	.	.	.
-a:CT_PositiveSize2D/@cy	SHAPE	CT_PositiveSize2D	attribute	@cy	ST_PositiveCoordinate	required			.	.	.	.	.
+a:CT_Ratio	SHAPE		type	CT_Ratio					.	y	.	.	.
+a:CT_Ratio/@n	SHAPE	CT_Ratio	attribute	@n	long	required			.	y	.	.	.
+a:CT_Ratio/@d	SHAPE	CT_Ratio	attribute	@d	long	required			.	y	.	.	.
+a:CT_Point2D	SHAPE		type	CT_Point2D					.	y	.	.	.
+a:CT_Point2D/@x	SHAPE	CT_Point2D	attribute	@x	ST_Coordinate	required			.	y	.	.	.
+a:CT_Point2D/@y	SHAPE	CT_Point2D	attribute	@y	ST_Coordinate	required			.	y	.	.	.
+a:CT_PositiveSize2D	SHAPE		type	CT_PositiveSize2D					.	y	.	.	.
+a:CT_PositiveSize2D/@cx	SHAPE	CT_PositiveSize2D	attribute	@cx	ST_PositiveCoordinate	required			.	y	.	.	.
+a:CT_PositiveSize2D/@cy	SHAPE	CT_PositiveSize2D	attribute	@cy	ST_PositiveCoordinate	required			.	y	.	.	.
 a:CT_ComplementTransform	COLOR		type	CT_ComplementTransform					.	.	.	.	.
 a:CT_InverseTransform	COLOR		type	CT_InverseTransform					.	.	.	.	.
 a:CT_GrayscaleTransform	COLOR		type	CT_GrayscaleTransform					.	.	.	.	.
@@ -1226,13 +1226,13 @@ a:EG_ColorTransform/gray	COLOR	EG_ColorTransform	element	gray	CT_GrayscaleTransf
 a:EG_ColorTransform/alpha	COLOR	EG_ColorTransform	element	alpha	CT_PositiveFixedPercentage	choice			.	.	.	.	.
 a:EG_ColorTransform/alphaOff	COLOR	EG_ColorTransform	element	alphaOff	CT_FixedPercentage	choice			.	.	.	.	.
 a:EG_ColorTransform/alphaMod	COLOR	EG_ColorTransform	element	alphaMod	CT_PositivePercentage	choice			.	.	.	.	.
-a:EG_ColorTransform/hue	COLOR	EG_ColorTransform	element	hue	CT_PositiveFixedAngle	choice			.	.	.	.	.
+a:EG_ColorTransform/hue	COLOR	EG_ColorTransform	element	hue	CT_PositiveFixedAngle	choice			.	y	.	.	.
 a:EG_ColorTransform/hueOff	COLOR	EG_ColorTransform	element	hueOff	CT_Angle	choice			.	.	.	.	.
 a:EG_ColorTransform/hueMod	COLOR	EG_ColorTransform	element	hueMod	CT_PositivePercentage	choice			.	.	.	.	.
-a:EG_ColorTransform/sat	COLOR	EG_ColorTransform	element	sat	CT_Percentage	choice			.	.	.	.	.
+a:EG_ColorTransform/sat	COLOR	EG_ColorTransform	element	sat	CT_Percentage	choice			.	y	.	.	.
 a:EG_ColorTransform/satOff	COLOR	EG_ColorTransform	element	satOff	CT_Percentage	choice			.	.	.	.	.
 a:EG_ColorTransform/satMod	COLOR	EG_ColorTransform	element	satMod	CT_Percentage	choice			.	.	.	.	.
-a:EG_ColorTransform/lum	COLOR	EG_ColorTransform	element	lum	CT_Percentage	choice			.	.	.	.	.
+a:EG_ColorTransform/lum	COLOR	EG_ColorTransform	element	lum	CT_Percentage	choice			.	y	.	.	.
 a:EG_ColorTransform/lumOff	COLOR	EG_ColorTransform	element	lumOff	CT_Percentage	choice			.	.	.	.	.
 a:EG_ColorTransform/lumMod	COLOR	EG_ColorTransform	element	lumMod	CT_Percentage	choice			.	.	.	.	.
 a:EG_ColorTransform/red	COLOR	EG_ColorTransform	element	red	CT_Percentage	choice			.	.	.	.	.
@@ -1248,267 +1248,267 @@ a:EG_ColorTransform/gamma	COLOR	EG_ColorTransform	element	gamma	CT_GammaTransfor
 a:EG_ColorTransform/invGamma	COLOR	EG_ColorTransform	element	invGamma	CT_InverseGammaTransform	choice			.	.	.	.	.
 a:CT_ScRgbColor	COLOR		type	CT_ScRgbColor					.	.	.	.	.
 a:CT_ScRgbColor/EG_ColorTransform	COLOR	CT_ScRgbColor	group	EG_ColorTransform	EG_ColorTransform	0..unbounded			.	.	.	.	.
-a:CT_ScRgbColor/@r	COLOR	CT_ScRgbColor	attribute	@r	ST_Percentage	required			.	.	.	.	.
-a:CT_ScRgbColor/@g	COLOR	CT_ScRgbColor	attribute	@g	ST_Percentage	required			.	.	.	.	.
-a:CT_ScRgbColor/@b	COLOR	CT_ScRgbColor	attribute	@b	ST_Percentage	required			.	.	.	.	.
+a:CT_ScRgbColor/@r	COLOR	CT_ScRgbColor	attribute	@r	ST_Percentage	required			.	y	.	.	.
+a:CT_ScRgbColor/@g	COLOR	CT_ScRgbColor	attribute	@g	ST_Percentage	required			.	y	.	.	.
+a:CT_ScRgbColor/@b	COLOR	CT_ScRgbColor	attribute	@b	ST_Percentage	required			.	y	.	.	.
 a:CT_SRgbColor	COLOR		type	CT_SRgbColor					.	.	.	.	.
 a:CT_SRgbColor/EG_ColorTransform	COLOR	CT_SRgbColor	group	EG_ColorTransform	EG_ColorTransform	0..unbounded			.	.	.	.	.
-a:CT_SRgbColor/@val	COLOR	CT_SRgbColor	attribute	@val	ST_HexColorRGB	required			.	.	.	.	.
+a:CT_SRgbColor/@val	COLOR	CT_SRgbColor	attribute	@val	ST_HexColorRGB	required			.	y	.	.	.
 a:CT_HslColor	COLOR		type	CT_HslColor					.	.	.	.	.
 a:CT_HslColor/EG_ColorTransform	COLOR	CT_HslColor	group	EG_ColorTransform	EG_ColorTransform	0..unbounded			.	.	.	.	.
-a:CT_HslColor/@hue	COLOR	CT_HslColor	attribute	@hue	ST_PositiveFixedAngle	required			.	.	.	.	.
-a:CT_HslColor/@sat	COLOR	CT_HslColor	attribute	@sat	ST_Percentage	required			.	.	.	.	.
-a:CT_HslColor/@lum	COLOR	CT_HslColor	attribute	@lum	ST_Percentage	required			.	.	.	.	.
-a:ST_SystemColorVal	COLOR		simple	ST_SystemColorVal				base=token	.	.	.	.	.
-a:ST_SystemColorVal/=scrollBar	COLOR	ST_SystemColorVal	value	=scrollBar					.	.	.	.	.
-a:ST_SystemColorVal/=background	COLOR	ST_SystemColorVal	value	=background					.	.	.	.	.
-a:ST_SystemColorVal/=activeCaption	COLOR	ST_SystemColorVal	value	=activeCaption					.	.	.	.	.
-a:ST_SystemColorVal/=inactiveCaption	COLOR	ST_SystemColorVal	value	=inactiveCaption					.	.	.	.	.
-a:ST_SystemColorVal/=menu	COLOR	ST_SystemColorVal	value	=menu					.	.	.	.	.
-a:ST_SystemColorVal/=window	COLOR	ST_SystemColorVal	value	=window					.	.	.	.	.
-a:ST_SystemColorVal/=windowFrame	COLOR	ST_SystemColorVal	value	=windowFrame					.	.	.	.	.
-a:ST_SystemColorVal/=menuText	COLOR	ST_SystemColorVal	value	=menuText					.	.	.	.	.
-a:ST_SystemColorVal/=windowText	COLOR	ST_SystemColorVal	value	=windowText					.	.	.	.	.
-a:ST_SystemColorVal/=captionText	COLOR	ST_SystemColorVal	value	=captionText					.	.	.	.	.
-a:ST_SystemColorVal/=activeBorder	COLOR	ST_SystemColorVal	value	=activeBorder					.	.	.	.	.
-a:ST_SystemColorVal/=inactiveBorder	COLOR	ST_SystemColorVal	value	=inactiveBorder					.	.	.	.	.
-a:ST_SystemColorVal/=appWorkspace	COLOR	ST_SystemColorVal	value	=appWorkspace					.	.	.	.	.
-a:ST_SystemColorVal/=highlight	COLOR	ST_SystemColorVal	value	=highlight					.	.	.	.	.
-a:ST_SystemColorVal/=highlightText	COLOR	ST_SystemColorVal	value	=highlightText					.	.	.	.	.
-a:ST_SystemColorVal/=btnFace	COLOR	ST_SystemColorVal	value	=btnFace					.	.	.	.	.
-a:ST_SystemColorVal/=btnShadow	COLOR	ST_SystemColorVal	value	=btnShadow					.	.	.	.	.
-a:ST_SystemColorVal/=grayText	COLOR	ST_SystemColorVal	value	=grayText					.	.	.	.	.
-a:ST_SystemColorVal/=btnText	COLOR	ST_SystemColorVal	value	=btnText					.	.	.	.	.
-a:ST_SystemColorVal/=inactiveCaptionText	COLOR	ST_SystemColorVal	value	=inactiveCaptionText					.	.	.	.	.
-a:ST_SystemColorVal/=btnHighlight	COLOR	ST_SystemColorVal	value	=btnHighlight					.	.	.	.	.
-a:ST_SystemColorVal/=3dDkShadow	COLOR	ST_SystemColorVal	value	=3dDkShadow					.	.	.	.	.
-a:ST_SystemColorVal/=3dLight	COLOR	ST_SystemColorVal	value	=3dLight					.	.	.	.	.
-a:ST_SystemColorVal/=infoText	COLOR	ST_SystemColorVal	value	=infoText					.	.	.	.	.
-a:ST_SystemColorVal/=infoBk	COLOR	ST_SystemColorVal	value	=infoBk					.	.	.	.	.
-a:ST_SystemColorVal/=hotLight	COLOR	ST_SystemColorVal	value	=hotLight					.	.	.	.	.
-a:ST_SystemColorVal/=gradientActiveCaption	COLOR	ST_SystemColorVal	value	=gradientActiveCaption					.	.	.	.	.
-a:ST_SystemColorVal/=gradientInactiveCaption	COLOR	ST_SystemColorVal	value	=gradientInactiveCaption					.	.	.	.	.
-a:ST_SystemColorVal/=menuHighlight	COLOR	ST_SystemColorVal	value	=menuHighlight					.	.	.	.	.
-a:ST_SystemColorVal/=menuBar	COLOR	ST_SystemColorVal	value	=menuBar					.	.	.	.	.
+a:CT_HslColor/@hue	COLOR	CT_HslColor	attribute	@hue	ST_PositiveFixedAngle	required			.	y	.	.	.
+a:CT_HslColor/@sat	COLOR	CT_HslColor	attribute	@sat	ST_Percentage	required			.	y	.	.	.
+a:CT_HslColor/@lum	COLOR	CT_HslColor	attribute	@lum	ST_Percentage	required			.	y	.	.	.
+a:ST_SystemColorVal	COLOR		simple	ST_SystemColorVal				base=token	y	.	.	.	.
+a:ST_SystemColorVal/=scrollBar	COLOR	ST_SystemColorVal	value	=scrollBar					y	.	.	.	.
+a:ST_SystemColorVal/=background	COLOR	ST_SystemColorVal	value	=background					y	.	.	.	.
+a:ST_SystemColorVal/=activeCaption	COLOR	ST_SystemColorVal	value	=activeCaption					y	.	.	.	.
+a:ST_SystemColorVal/=inactiveCaption	COLOR	ST_SystemColorVal	value	=inactiveCaption					y	.	.	.	.
+a:ST_SystemColorVal/=menu	COLOR	ST_SystemColorVal	value	=menu					y	.	.	.	.
+a:ST_SystemColorVal/=window	COLOR	ST_SystemColorVal	value	=window					y	.	.	.	.
+a:ST_SystemColorVal/=windowFrame	COLOR	ST_SystemColorVal	value	=windowFrame					y	.	.	.	.
+a:ST_SystemColorVal/=menuText	COLOR	ST_SystemColorVal	value	=menuText					y	.	.	.	.
+a:ST_SystemColorVal/=windowText	COLOR	ST_SystemColorVal	value	=windowText					y	.	.	.	.
+a:ST_SystemColorVal/=captionText	COLOR	ST_SystemColorVal	value	=captionText					y	.	.	.	.
+a:ST_SystemColorVal/=activeBorder	COLOR	ST_SystemColorVal	value	=activeBorder					y	.	.	.	.
+a:ST_SystemColorVal/=inactiveBorder	COLOR	ST_SystemColorVal	value	=inactiveBorder					y	.	.	.	.
+a:ST_SystemColorVal/=appWorkspace	COLOR	ST_SystemColorVal	value	=appWorkspace					y	.	.	.	.
+a:ST_SystemColorVal/=highlight	COLOR	ST_SystemColorVal	value	=highlight					y	.	.	.	.
+a:ST_SystemColorVal/=highlightText	COLOR	ST_SystemColorVal	value	=highlightText					y	.	.	.	.
+a:ST_SystemColorVal/=btnFace	COLOR	ST_SystemColorVal	value	=btnFace					y	.	.	.	.
+a:ST_SystemColorVal/=btnShadow	COLOR	ST_SystemColorVal	value	=btnShadow					y	.	.	.	.
+a:ST_SystemColorVal/=grayText	COLOR	ST_SystemColorVal	value	=grayText					y	.	.	.	.
+a:ST_SystemColorVal/=btnText	COLOR	ST_SystemColorVal	value	=btnText					y	.	.	.	.
+a:ST_SystemColorVal/=inactiveCaptionText	COLOR	ST_SystemColorVal	value	=inactiveCaptionText					y	.	.	.	.
+a:ST_SystemColorVal/=btnHighlight	COLOR	ST_SystemColorVal	value	=btnHighlight					y	.	.	.	.
+a:ST_SystemColorVal/=3dDkShadow	COLOR	ST_SystemColorVal	value	=3dDkShadow					y	.	.	.	.
+a:ST_SystemColorVal/=3dLight	COLOR	ST_SystemColorVal	value	=3dLight					y	.	.	.	.
+a:ST_SystemColorVal/=infoText	COLOR	ST_SystemColorVal	value	=infoText					y	.	.	.	.
+a:ST_SystemColorVal/=infoBk	COLOR	ST_SystemColorVal	value	=infoBk					y	.	.	.	.
+a:ST_SystemColorVal/=hotLight	COLOR	ST_SystemColorVal	value	=hotLight					y	.	.	.	.
+a:ST_SystemColorVal/=gradientActiveCaption	COLOR	ST_SystemColorVal	value	=gradientActiveCaption					y	.	.	.	.
+a:ST_SystemColorVal/=gradientInactiveCaption	COLOR	ST_SystemColorVal	value	=gradientInactiveCaption					y	.	.	.	.
+a:ST_SystemColorVal/=menuHighlight	COLOR	ST_SystemColorVal	value	=menuHighlight					y	.	.	.	.
+a:ST_SystemColorVal/=menuBar	COLOR	ST_SystemColorVal	value	=menuBar					y	.	.	.	.
 a:CT_SystemColor	COLOR		type	CT_SystemColor					.	.	.	.	.
 a:CT_SystemColor/EG_ColorTransform	COLOR	CT_SystemColor	group	EG_ColorTransform	EG_ColorTransform	0..unbounded			.	.	.	.	.
-a:CT_SystemColor/@val	COLOR	CT_SystemColor	attribute	@val	ST_SystemColorVal	required			.	.	.	.	.
-a:CT_SystemColor/@lastClr	COLOR	CT_SystemColor	attribute	@lastClr	ST_HexColorRGB	optional			.	.	.	.	.
-a:ST_SchemeColorVal	COLOR		simple	ST_SchemeColorVal				base=token	.	.	.	.	.
-a:ST_SchemeColorVal/=bg1	COLOR	ST_SchemeColorVal	value	=bg1					.	.	.	.	.
-a:ST_SchemeColorVal/=tx1	COLOR	ST_SchemeColorVal	value	=tx1					.	.	.	.	.
-a:ST_SchemeColorVal/=bg2	COLOR	ST_SchemeColorVal	value	=bg2					.	.	.	.	.
-a:ST_SchemeColorVal/=tx2	COLOR	ST_SchemeColorVal	value	=tx2					.	.	.	.	.
-a:ST_SchemeColorVal/=accent1	COLOR	ST_SchemeColorVal	value	=accent1					.	.	.	.	.
-a:ST_SchemeColorVal/=accent2	COLOR	ST_SchemeColorVal	value	=accent2					.	.	.	.	.
-a:ST_SchemeColorVal/=accent3	COLOR	ST_SchemeColorVal	value	=accent3					.	.	.	.	.
-a:ST_SchemeColorVal/=accent4	COLOR	ST_SchemeColorVal	value	=accent4					.	.	.	.	.
-a:ST_SchemeColorVal/=accent5	COLOR	ST_SchemeColorVal	value	=accent5					.	.	.	.	.
-a:ST_SchemeColorVal/=accent6	COLOR	ST_SchemeColorVal	value	=accent6					.	.	.	.	.
-a:ST_SchemeColorVal/=hlink	COLOR	ST_SchemeColorVal	value	=hlink					.	.	.	.	.
-a:ST_SchemeColorVal/=folHlink	COLOR	ST_SchemeColorVal	value	=folHlink					.	.	.	.	.
-a:ST_SchemeColorVal/=phClr	COLOR	ST_SchemeColorVal	value	=phClr					.	.	.	.	.
-a:ST_SchemeColorVal/=dk1	COLOR	ST_SchemeColorVal	value	=dk1					.	.	.	.	.
-a:ST_SchemeColorVal/=lt1	COLOR	ST_SchemeColorVal	value	=lt1					.	.	.	.	.
-a:ST_SchemeColorVal/=dk2	COLOR	ST_SchemeColorVal	value	=dk2					.	.	.	.	.
-a:ST_SchemeColorVal/=lt2	COLOR	ST_SchemeColorVal	value	=lt2					.	.	.	.	.
+a:CT_SystemColor/@val	COLOR	CT_SystemColor	attribute	@val	ST_SystemColorVal	required			.	y	.	.	.
+a:CT_SystemColor/@lastClr	COLOR	CT_SystemColor	attribute	@lastClr	ST_HexColorRGB	optional			.	y	.	.	.
+a:ST_SchemeColorVal	COLOR		simple	ST_SchemeColorVal				base=token	y	.	.	.	.
+a:ST_SchemeColorVal/=bg1	COLOR	ST_SchemeColorVal	value	=bg1					y	.	.	.	.
+a:ST_SchemeColorVal/=tx1	COLOR	ST_SchemeColorVal	value	=tx1					y	.	.	.	.
+a:ST_SchemeColorVal/=bg2	COLOR	ST_SchemeColorVal	value	=bg2					y	.	.	.	.
+a:ST_SchemeColorVal/=tx2	COLOR	ST_SchemeColorVal	value	=tx2					y	.	.	.	.
+a:ST_SchemeColorVal/=accent1	COLOR	ST_SchemeColorVal	value	=accent1					y	.	.	.	.
+a:ST_SchemeColorVal/=accent2	COLOR	ST_SchemeColorVal	value	=accent2					y	.	.	.	.
+a:ST_SchemeColorVal/=accent3	COLOR	ST_SchemeColorVal	value	=accent3					y	.	.	.	.
+a:ST_SchemeColorVal/=accent4	COLOR	ST_SchemeColorVal	value	=accent4					y	.	.	.	.
+a:ST_SchemeColorVal/=accent5	COLOR	ST_SchemeColorVal	value	=accent5					y	.	.	.	.
+a:ST_SchemeColorVal/=accent6	COLOR	ST_SchemeColorVal	value	=accent6					y	.	.	.	.
+a:ST_SchemeColorVal/=hlink	COLOR	ST_SchemeColorVal	value	=hlink					y	.	.	.	.
+a:ST_SchemeColorVal/=folHlink	COLOR	ST_SchemeColorVal	value	=folHlink					y	.	.	.	.
+a:ST_SchemeColorVal/=phClr	COLOR	ST_SchemeColorVal	value	=phClr					y	.	.	.	.
+a:ST_SchemeColorVal/=dk1	COLOR	ST_SchemeColorVal	value	=dk1					y	.	.	.	.
+a:ST_SchemeColorVal/=lt1	COLOR	ST_SchemeColorVal	value	=lt1					y	.	.	.	.
+a:ST_SchemeColorVal/=dk2	COLOR	ST_SchemeColorVal	value	=dk2					y	.	.	.	.
+a:ST_SchemeColorVal/=lt2	COLOR	ST_SchemeColorVal	value	=lt2					y	.	.	.	.
 a:CT_SchemeColor	COLOR		type	CT_SchemeColor					.	.	.	.	.
 a:CT_SchemeColor/EG_ColorTransform	COLOR	CT_SchemeColor	group	EG_ColorTransform	EG_ColorTransform	0..unbounded			.	.	.	.	.
-a:CT_SchemeColor/@val	COLOR	CT_SchemeColor	attribute	@val	ST_SchemeColorVal	required			.	.	.	.	.
-a:ST_PresetColorVal	COLOR		simple	ST_PresetColorVal				base=token	.	.	.	.	.
-a:ST_PresetColorVal/=aliceBlue	COLOR	ST_PresetColorVal	value	=aliceBlue					.	.	.	.	.
-a:ST_PresetColorVal/=antiqueWhite	COLOR	ST_PresetColorVal	value	=antiqueWhite					.	.	.	.	.
-a:ST_PresetColorVal/=aqua	COLOR	ST_PresetColorVal	value	=aqua					.	.	.	.	.
-a:ST_PresetColorVal/=aquamarine	COLOR	ST_PresetColorVal	value	=aquamarine					.	.	.	.	.
-a:ST_PresetColorVal/=azure	COLOR	ST_PresetColorVal	value	=azure					.	.	.	.	.
-a:ST_PresetColorVal/=beige	COLOR	ST_PresetColorVal	value	=beige					.	.	.	.	.
-a:ST_PresetColorVal/=bisque	COLOR	ST_PresetColorVal	value	=bisque					.	.	.	.	.
-a:ST_PresetColorVal/=black	COLOR	ST_PresetColorVal	value	=black					.	.	.	.	.
-a:ST_PresetColorVal/=blanchedAlmond	COLOR	ST_PresetColorVal	value	=blanchedAlmond					.	.	.	.	.
-a:ST_PresetColorVal/=blue	COLOR	ST_PresetColorVal	value	=blue					.	.	.	.	.
-a:ST_PresetColorVal/=blueViolet	COLOR	ST_PresetColorVal	value	=blueViolet					.	.	.	.	.
-a:ST_PresetColorVal/=brown	COLOR	ST_PresetColorVal	value	=brown					.	.	.	.	.
-a:ST_PresetColorVal/=burlyWood	COLOR	ST_PresetColorVal	value	=burlyWood					.	.	.	.	.
-a:ST_PresetColorVal/=cadetBlue	COLOR	ST_PresetColorVal	value	=cadetBlue					.	.	.	.	.
-a:ST_PresetColorVal/=chartreuse	COLOR	ST_PresetColorVal	value	=chartreuse					.	.	.	.	.
-a:ST_PresetColorVal/=chocolate	COLOR	ST_PresetColorVal	value	=chocolate					.	.	.	.	.
-a:ST_PresetColorVal/=coral	COLOR	ST_PresetColorVal	value	=coral					.	.	.	.	.
-a:ST_PresetColorVal/=cornflowerBlue	COLOR	ST_PresetColorVal	value	=cornflowerBlue					.	.	.	.	.
-a:ST_PresetColorVal/=cornsilk	COLOR	ST_PresetColorVal	value	=cornsilk					.	.	.	.	.
-a:ST_PresetColorVal/=crimson	COLOR	ST_PresetColorVal	value	=crimson					.	.	.	.	.
-a:ST_PresetColorVal/=cyan	COLOR	ST_PresetColorVal	value	=cyan					.	.	.	.	.
-a:ST_PresetColorVal/=darkBlue	COLOR	ST_PresetColorVal	value	=darkBlue					.	.	.	.	.
-a:ST_PresetColorVal/=darkCyan	COLOR	ST_PresetColorVal	value	=darkCyan					.	.	.	.	.
-a:ST_PresetColorVal/=darkGoldenrod	COLOR	ST_PresetColorVal	value	=darkGoldenrod					.	.	.	.	.
-a:ST_PresetColorVal/=darkGray	COLOR	ST_PresetColorVal	value	=darkGray					.	.	.	.	.
-a:ST_PresetColorVal/=darkGrey	COLOR	ST_PresetColorVal	value	=darkGrey					.	.	.	.	.
-a:ST_PresetColorVal/=darkGreen	COLOR	ST_PresetColorVal	value	=darkGreen					.	.	.	.	.
-a:ST_PresetColorVal/=darkKhaki	COLOR	ST_PresetColorVal	value	=darkKhaki					.	.	.	.	.
-a:ST_PresetColorVal/=darkMagenta	COLOR	ST_PresetColorVal	value	=darkMagenta					.	.	.	.	.
-a:ST_PresetColorVal/=darkOliveGreen	COLOR	ST_PresetColorVal	value	=darkOliveGreen					.	.	.	.	.
-a:ST_PresetColorVal/=darkOrange	COLOR	ST_PresetColorVal	value	=darkOrange					.	.	.	.	.
-a:ST_PresetColorVal/=darkOrchid	COLOR	ST_PresetColorVal	value	=darkOrchid					.	.	.	.	.
-a:ST_PresetColorVal/=darkRed	COLOR	ST_PresetColorVal	value	=darkRed					.	.	.	.	.
-a:ST_PresetColorVal/=darkSalmon	COLOR	ST_PresetColorVal	value	=darkSalmon					.	.	.	.	.
-a:ST_PresetColorVal/=darkSeaGreen	COLOR	ST_PresetColorVal	value	=darkSeaGreen					.	.	.	.	.
-a:ST_PresetColorVal/=darkSlateBlue	COLOR	ST_PresetColorVal	value	=darkSlateBlue					.	.	.	.	.
-a:ST_PresetColorVal/=darkSlateGray	COLOR	ST_PresetColorVal	value	=darkSlateGray					.	.	.	.	.
-a:ST_PresetColorVal/=darkSlateGrey	COLOR	ST_PresetColorVal	value	=darkSlateGrey					.	.	.	.	.
-a:ST_PresetColorVal/=darkTurquoise	COLOR	ST_PresetColorVal	value	=darkTurquoise					.	.	.	.	.
-a:ST_PresetColorVal/=darkViolet	COLOR	ST_PresetColorVal	value	=darkViolet					.	.	.	.	.
-a:ST_PresetColorVal/=dkBlue	COLOR	ST_PresetColorVal	value	=dkBlue					.	.	.	.	.
-a:ST_PresetColorVal/=dkCyan	COLOR	ST_PresetColorVal	value	=dkCyan					.	.	.	.	.
-a:ST_PresetColorVal/=dkGoldenrod	COLOR	ST_PresetColorVal	value	=dkGoldenrod					.	.	.	.	.
-a:ST_PresetColorVal/=dkGray	COLOR	ST_PresetColorVal	value	=dkGray					.	.	.	.	.
-a:ST_PresetColorVal/=dkGrey	COLOR	ST_PresetColorVal	value	=dkGrey					.	.	.	.	.
-a:ST_PresetColorVal/=dkGreen	COLOR	ST_PresetColorVal	value	=dkGreen					.	.	.	.	.
-a:ST_PresetColorVal/=dkKhaki	COLOR	ST_PresetColorVal	value	=dkKhaki					.	.	.	.	.
-a:ST_PresetColorVal/=dkMagenta	COLOR	ST_PresetColorVal	value	=dkMagenta					.	.	.	.	.
-a:ST_PresetColorVal/=dkOliveGreen	COLOR	ST_PresetColorVal	value	=dkOliveGreen					.	.	.	.	.
-a:ST_PresetColorVal/=dkOrange	COLOR	ST_PresetColorVal	value	=dkOrange					.	.	.	.	.
-a:ST_PresetColorVal/=dkOrchid	COLOR	ST_PresetColorVal	value	=dkOrchid					.	.	.	.	.
-a:ST_PresetColorVal/=dkRed	COLOR	ST_PresetColorVal	value	=dkRed					.	.	.	.	.
-a:ST_PresetColorVal/=dkSalmon	COLOR	ST_PresetColorVal	value	=dkSalmon					.	.	.	.	.
-a:ST_PresetColorVal/=dkSeaGreen	COLOR	ST_PresetColorVal	value	=dkSeaGreen					.	.	.	.	.
-a:ST_PresetColorVal/=dkSlateBlue	COLOR	ST_PresetColorVal	value	=dkSlateBlue					.	.	.	.	.
-a:ST_PresetColorVal/=dkSlateGray	COLOR	ST_PresetColorVal	value	=dkSlateGray					.	.	.	.	.
-a:ST_PresetColorVal/=dkSlateGrey	COLOR	ST_PresetColorVal	value	=dkSlateGrey					.	.	.	.	.
-a:ST_PresetColorVal/=dkTurquoise	COLOR	ST_PresetColorVal	value	=dkTurquoise					.	.	.	.	.
-a:ST_PresetColorVal/=dkViolet	COLOR	ST_PresetColorVal	value	=dkViolet					.	.	.	.	.
-a:ST_PresetColorVal/=deepPink	COLOR	ST_PresetColorVal	value	=deepPink					.	.	.	.	.
-a:ST_PresetColorVal/=deepSkyBlue	COLOR	ST_PresetColorVal	value	=deepSkyBlue					.	.	.	.	.
-a:ST_PresetColorVal/=dimGray	COLOR	ST_PresetColorVal	value	=dimGray					.	.	.	.	.
-a:ST_PresetColorVal/=dimGrey	COLOR	ST_PresetColorVal	value	=dimGrey					.	.	.	.	.
-a:ST_PresetColorVal/=dodgerBlue	COLOR	ST_PresetColorVal	value	=dodgerBlue					.	.	.	.	.
-a:ST_PresetColorVal/=firebrick	COLOR	ST_PresetColorVal	value	=firebrick					.	.	.	.	.
-a:ST_PresetColorVal/=floralWhite	COLOR	ST_PresetColorVal	value	=floralWhite					.	.	.	.	.
-a:ST_PresetColorVal/=forestGreen	COLOR	ST_PresetColorVal	value	=forestGreen					.	.	.	.	.
-a:ST_PresetColorVal/=fuchsia	COLOR	ST_PresetColorVal	value	=fuchsia					.	.	.	.	.
-a:ST_PresetColorVal/=gainsboro	COLOR	ST_PresetColorVal	value	=gainsboro					.	.	.	.	.
-a:ST_PresetColorVal/=ghostWhite	COLOR	ST_PresetColorVal	value	=ghostWhite					.	.	.	.	.
-a:ST_PresetColorVal/=gold	COLOR	ST_PresetColorVal	value	=gold					.	.	.	.	.
-a:ST_PresetColorVal/=goldenrod	COLOR	ST_PresetColorVal	value	=goldenrod					.	.	.	.	.
-a:ST_PresetColorVal/=gray	COLOR	ST_PresetColorVal	value	=gray					.	.	.	.	.
-a:ST_PresetColorVal/=grey	COLOR	ST_PresetColorVal	value	=grey					.	.	.	.	.
-a:ST_PresetColorVal/=green	COLOR	ST_PresetColorVal	value	=green					.	.	.	.	.
-a:ST_PresetColorVal/=greenYellow	COLOR	ST_PresetColorVal	value	=greenYellow					.	.	.	.	.
-a:ST_PresetColorVal/=honeydew	COLOR	ST_PresetColorVal	value	=honeydew					.	.	.	.	.
-a:ST_PresetColorVal/=hotPink	COLOR	ST_PresetColorVal	value	=hotPink					.	.	.	.	.
-a:ST_PresetColorVal/=indianRed	COLOR	ST_PresetColorVal	value	=indianRed					.	.	.	.	.
-a:ST_PresetColorVal/=indigo	COLOR	ST_PresetColorVal	value	=indigo					.	.	.	.	.
-a:ST_PresetColorVal/=ivory	COLOR	ST_PresetColorVal	value	=ivory					.	.	.	.	.
-a:ST_PresetColorVal/=khaki	COLOR	ST_PresetColorVal	value	=khaki					.	.	.	.	.
-a:ST_PresetColorVal/=lavender	COLOR	ST_PresetColorVal	value	=lavender					.	.	.	.	.
-a:ST_PresetColorVal/=lavenderBlush	COLOR	ST_PresetColorVal	value	=lavenderBlush					.	.	.	.	.
-a:ST_PresetColorVal/=lawnGreen	COLOR	ST_PresetColorVal	value	=lawnGreen					.	.	.	.	.
-a:ST_PresetColorVal/=lemonChiffon	COLOR	ST_PresetColorVal	value	=lemonChiffon					.	.	.	.	.
-a:ST_PresetColorVal/=lightBlue	COLOR	ST_PresetColorVal	value	=lightBlue					.	.	.	.	.
-a:ST_PresetColorVal/=lightCoral	COLOR	ST_PresetColorVal	value	=lightCoral					.	.	.	.	.
-a:ST_PresetColorVal/=lightCyan	COLOR	ST_PresetColorVal	value	=lightCyan					.	.	.	.	.
-a:ST_PresetColorVal/=lightGoldenrodYellow	COLOR	ST_PresetColorVal	value	=lightGoldenrodYellow					.	.	.	.	.
-a:ST_PresetColorVal/=lightGray	COLOR	ST_PresetColorVal	value	=lightGray					.	.	.	.	.
-a:ST_PresetColorVal/=lightGrey	COLOR	ST_PresetColorVal	value	=lightGrey					.	.	.	.	.
-a:ST_PresetColorVal/=lightGreen	COLOR	ST_PresetColorVal	value	=lightGreen					.	.	.	.	.
-a:ST_PresetColorVal/=lightPink	COLOR	ST_PresetColorVal	value	=lightPink					.	.	.	.	.
-a:ST_PresetColorVal/=lightSalmon	COLOR	ST_PresetColorVal	value	=lightSalmon					.	.	.	.	.
-a:ST_PresetColorVal/=lightSeaGreen	COLOR	ST_PresetColorVal	value	=lightSeaGreen					.	.	.	.	.
-a:ST_PresetColorVal/=lightSkyBlue	COLOR	ST_PresetColorVal	value	=lightSkyBlue					.	.	.	.	.
-a:ST_PresetColorVal/=lightSlateGray	COLOR	ST_PresetColorVal	value	=lightSlateGray					.	.	.	.	.
-a:ST_PresetColorVal/=lightSlateGrey	COLOR	ST_PresetColorVal	value	=lightSlateGrey					.	.	.	.	.
-a:ST_PresetColorVal/=lightSteelBlue	COLOR	ST_PresetColorVal	value	=lightSteelBlue					.	.	.	.	.
-a:ST_PresetColorVal/=lightYellow	COLOR	ST_PresetColorVal	value	=lightYellow					.	.	.	.	.
-a:ST_PresetColorVal/=ltBlue	COLOR	ST_PresetColorVal	value	=ltBlue					.	.	.	.	.
-a:ST_PresetColorVal/=ltCoral	COLOR	ST_PresetColorVal	value	=ltCoral					.	.	.	.	.
-a:ST_PresetColorVal/=ltCyan	COLOR	ST_PresetColorVal	value	=ltCyan					.	.	.	.	.
-a:ST_PresetColorVal/=ltGoldenrodYellow	COLOR	ST_PresetColorVal	value	=ltGoldenrodYellow					.	.	.	.	.
-a:ST_PresetColorVal/=ltGray	COLOR	ST_PresetColorVal	value	=ltGray					.	.	.	.	.
-a:ST_PresetColorVal/=ltGrey	COLOR	ST_PresetColorVal	value	=ltGrey					.	.	.	.	.
-a:ST_PresetColorVal/=ltGreen	COLOR	ST_PresetColorVal	value	=ltGreen					.	.	.	.	.
-a:ST_PresetColorVal/=ltPink	COLOR	ST_PresetColorVal	value	=ltPink					.	.	.	.	.
-a:ST_PresetColorVal/=ltSalmon	COLOR	ST_PresetColorVal	value	=ltSalmon					.	.	.	.	.
-a:ST_PresetColorVal/=ltSeaGreen	COLOR	ST_PresetColorVal	value	=ltSeaGreen					.	.	.	.	.
-a:ST_PresetColorVal/=ltSkyBlue	COLOR	ST_PresetColorVal	value	=ltSkyBlue					.	.	.	.	.
-a:ST_PresetColorVal/=ltSlateGray	COLOR	ST_PresetColorVal	value	=ltSlateGray					.	.	.	.	.
-a:ST_PresetColorVal/=ltSlateGrey	COLOR	ST_PresetColorVal	value	=ltSlateGrey					.	.	.	.	.
-a:ST_PresetColorVal/=ltSteelBlue	COLOR	ST_PresetColorVal	value	=ltSteelBlue					.	.	.	.	.
-a:ST_PresetColorVal/=ltYellow	COLOR	ST_PresetColorVal	value	=ltYellow					.	.	.	.	.
-a:ST_PresetColorVal/=lime	COLOR	ST_PresetColorVal	value	=lime					.	.	.	.	.
-a:ST_PresetColorVal/=limeGreen	COLOR	ST_PresetColorVal	value	=limeGreen					.	.	.	.	.
-a:ST_PresetColorVal/=linen	COLOR	ST_PresetColorVal	value	=linen					.	.	.	.	.
-a:ST_PresetColorVal/=magenta	COLOR	ST_PresetColorVal	value	=magenta					.	.	.	.	.
-a:ST_PresetColorVal/=maroon	COLOR	ST_PresetColorVal	value	=maroon					.	.	.	.	.
-a:ST_PresetColorVal/=medAquamarine	COLOR	ST_PresetColorVal	value	=medAquamarine					.	.	.	.	.
-a:ST_PresetColorVal/=medBlue	COLOR	ST_PresetColorVal	value	=medBlue					.	.	.	.	.
-a:ST_PresetColorVal/=medOrchid	COLOR	ST_PresetColorVal	value	=medOrchid					.	.	.	.	.
-a:ST_PresetColorVal/=medPurple	COLOR	ST_PresetColorVal	value	=medPurple					.	.	.	.	.
-a:ST_PresetColorVal/=medSeaGreen	COLOR	ST_PresetColorVal	value	=medSeaGreen					.	.	.	.	.
-a:ST_PresetColorVal/=medSlateBlue	COLOR	ST_PresetColorVal	value	=medSlateBlue					.	.	.	.	.
-a:ST_PresetColorVal/=medSpringGreen	COLOR	ST_PresetColorVal	value	=medSpringGreen					.	.	.	.	.
-a:ST_PresetColorVal/=medTurquoise	COLOR	ST_PresetColorVal	value	=medTurquoise					.	.	.	.	.
-a:ST_PresetColorVal/=medVioletRed	COLOR	ST_PresetColorVal	value	=medVioletRed					.	.	.	.	.
-a:ST_PresetColorVal/=mediumAquamarine	COLOR	ST_PresetColorVal	value	=mediumAquamarine					.	.	.	.	.
-a:ST_PresetColorVal/=mediumBlue	COLOR	ST_PresetColorVal	value	=mediumBlue					.	.	.	.	.
-a:ST_PresetColorVal/=mediumOrchid	COLOR	ST_PresetColorVal	value	=mediumOrchid					.	.	.	.	.
-a:ST_PresetColorVal/=mediumPurple	COLOR	ST_PresetColorVal	value	=mediumPurple					.	.	.	.	.
-a:ST_PresetColorVal/=mediumSeaGreen	COLOR	ST_PresetColorVal	value	=mediumSeaGreen					.	.	.	.	.
-a:ST_PresetColorVal/=mediumSlateBlue	COLOR	ST_PresetColorVal	value	=mediumSlateBlue					.	.	.	.	.
-a:ST_PresetColorVal/=mediumSpringGreen	COLOR	ST_PresetColorVal	value	=mediumSpringGreen					.	.	.	.	.
-a:ST_PresetColorVal/=mediumTurquoise	COLOR	ST_PresetColorVal	value	=mediumTurquoise					.	.	.	.	.
-a:ST_PresetColorVal/=mediumVioletRed	COLOR	ST_PresetColorVal	value	=mediumVioletRed					.	.	.	.	.
-a:ST_PresetColorVal/=midnightBlue	COLOR	ST_PresetColorVal	value	=midnightBlue					.	.	.	.	.
-a:ST_PresetColorVal/=mintCream	COLOR	ST_PresetColorVal	value	=mintCream					.	.	.	.	.
-a:ST_PresetColorVal/=mistyRose	COLOR	ST_PresetColorVal	value	=mistyRose					.	.	.	.	.
-a:ST_PresetColorVal/=moccasin	COLOR	ST_PresetColorVal	value	=moccasin					.	.	.	.	.
-a:ST_PresetColorVal/=navajoWhite	COLOR	ST_PresetColorVal	value	=navajoWhite					.	.	.	.	.
-a:ST_PresetColorVal/=navy	COLOR	ST_PresetColorVal	value	=navy					.	.	.	.	.
-a:ST_PresetColorVal/=oldLace	COLOR	ST_PresetColorVal	value	=oldLace					.	.	.	.	.
-a:ST_PresetColorVal/=olive	COLOR	ST_PresetColorVal	value	=olive					.	.	.	.	.
-a:ST_PresetColorVal/=oliveDrab	COLOR	ST_PresetColorVal	value	=oliveDrab					.	.	.	.	.
-a:ST_PresetColorVal/=orange	COLOR	ST_PresetColorVal	value	=orange					.	.	.	.	.
-a:ST_PresetColorVal/=orangeRed	COLOR	ST_PresetColorVal	value	=orangeRed					.	.	.	.	.
-a:ST_PresetColorVal/=orchid	COLOR	ST_PresetColorVal	value	=orchid					.	.	.	.	.
-a:ST_PresetColorVal/=paleGoldenrod	COLOR	ST_PresetColorVal	value	=paleGoldenrod					.	.	.	.	.
-a:ST_PresetColorVal/=paleGreen	COLOR	ST_PresetColorVal	value	=paleGreen					.	.	.	.	.
-a:ST_PresetColorVal/=paleTurquoise	COLOR	ST_PresetColorVal	value	=paleTurquoise					.	.	.	.	.
-a:ST_PresetColorVal/=paleVioletRed	COLOR	ST_PresetColorVal	value	=paleVioletRed					.	.	.	.	.
-a:ST_PresetColorVal/=papayaWhip	COLOR	ST_PresetColorVal	value	=papayaWhip					.	.	.	.	.
-a:ST_PresetColorVal/=peachPuff	COLOR	ST_PresetColorVal	value	=peachPuff					.	.	.	.	.
-a:ST_PresetColorVal/=peru	COLOR	ST_PresetColorVal	value	=peru					.	.	.	.	.
-a:ST_PresetColorVal/=pink	COLOR	ST_PresetColorVal	value	=pink					.	.	.	.	.
-a:ST_PresetColorVal/=plum	COLOR	ST_PresetColorVal	value	=plum					.	.	.	.	.
-a:ST_PresetColorVal/=powderBlue	COLOR	ST_PresetColorVal	value	=powderBlue					.	.	.	.	.
-a:ST_PresetColorVal/=purple	COLOR	ST_PresetColorVal	value	=purple					.	.	.	.	.
-a:ST_PresetColorVal/=red	COLOR	ST_PresetColorVal	value	=red					.	.	.	.	.
-a:ST_PresetColorVal/=rosyBrown	COLOR	ST_PresetColorVal	value	=rosyBrown					.	.	.	.	.
-a:ST_PresetColorVal/=royalBlue	COLOR	ST_PresetColorVal	value	=royalBlue					.	.	.	.	.
-a:ST_PresetColorVal/=saddleBrown	COLOR	ST_PresetColorVal	value	=saddleBrown					.	.	.	.	.
-a:ST_PresetColorVal/=salmon	COLOR	ST_PresetColorVal	value	=salmon					.	.	.	.	.
-a:ST_PresetColorVal/=sandyBrown	COLOR	ST_PresetColorVal	value	=sandyBrown					.	.	.	.	.
-a:ST_PresetColorVal/=seaGreen	COLOR	ST_PresetColorVal	value	=seaGreen					.	.	.	.	.
-a:ST_PresetColorVal/=seaShell	COLOR	ST_PresetColorVal	value	=seaShell					.	.	.	.	.
-a:ST_PresetColorVal/=sienna	COLOR	ST_PresetColorVal	value	=sienna					.	.	.	.	.
-a:ST_PresetColorVal/=silver	COLOR	ST_PresetColorVal	value	=silver					.	.	.	.	.
-a:ST_PresetColorVal/=skyBlue	COLOR	ST_PresetColorVal	value	=skyBlue					.	.	.	.	.
-a:ST_PresetColorVal/=slateBlue	COLOR	ST_PresetColorVal	value	=slateBlue					.	.	.	.	.
-a:ST_PresetColorVal/=slateGray	COLOR	ST_PresetColorVal	value	=slateGray					.	.	.	.	.
-a:ST_PresetColorVal/=slateGrey	COLOR	ST_PresetColorVal	value	=slateGrey					.	.	.	.	.
-a:ST_PresetColorVal/=snow	COLOR	ST_PresetColorVal	value	=snow					.	.	.	.	.
-a:ST_PresetColorVal/=springGreen	COLOR	ST_PresetColorVal	value	=springGreen					.	.	.	.	.
-a:ST_PresetColorVal/=steelBlue	COLOR	ST_PresetColorVal	value	=steelBlue					.	.	.	.	.
-a:ST_PresetColorVal/=tan	COLOR	ST_PresetColorVal	value	=tan					.	.	.	.	.
-a:ST_PresetColorVal/=teal	COLOR	ST_PresetColorVal	value	=teal					.	.	.	.	.
-a:ST_PresetColorVal/=thistle	COLOR	ST_PresetColorVal	value	=thistle					.	.	.	.	.
-a:ST_PresetColorVal/=tomato	COLOR	ST_PresetColorVal	value	=tomato					.	.	.	.	.
-a:ST_PresetColorVal/=turquoise	COLOR	ST_PresetColorVal	value	=turquoise					.	.	.	.	.
-a:ST_PresetColorVal/=violet	COLOR	ST_PresetColorVal	value	=violet					.	.	.	.	.
-a:ST_PresetColorVal/=wheat	COLOR	ST_PresetColorVal	value	=wheat					.	.	.	.	.
-a:ST_PresetColorVal/=white	COLOR	ST_PresetColorVal	value	=white					.	.	.	.	.
-a:ST_PresetColorVal/=whiteSmoke	COLOR	ST_PresetColorVal	value	=whiteSmoke					.	.	.	.	.
-a:ST_PresetColorVal/=yellow	COLOR	ST_PresetColorVal	value	=yellow					.	.	.	.	.
-a:ST_PresetColorVal/=yellowGreen	COLOR	ST_PresetColorVal	value	=yellowGreen					.	.	.	.	.
+a:CT_SchemeColor/@val	COLOR	CT_SchemeColor	attribute	@val	ST_SchemeColorVal	required			.	y	.	.	.
+a:ST_PresetColorVal	COLOR		simple	ST_PresetColorVal				base=token	y	.	.	.	.
+a:ST_PresetColorVal/=aliceBlue	COLOR	ST_PresetColorVal	value	=aliceBlue					y	.	.	.	.
+a:ST_PresetColorVal/=antiqueWhite	COLOR	ST_PresetColorVal	value	=antiqueWhite					y	.	.	.	.
+a:ST_PresetColorVal/=aqua	COLOR	ST_PresetColorVal	value	=aqua					y	.	.	.	.
+a:ST_PresetColorVal/=aquamarine	COLOR	ST_PresetColorVal	value	=aquamarine					y	.	.	.	.
+a:ST_PresetColorVal/=azure	COLOR	ST_PresetColorVal	value	=azure					y	.	.	.	.
+a:ST_PresetColorVal/=beige	COLOR	ST_PresetColorVal	value	=beige					y	.	.	.	.
+a:ST_PresetColorVal/=bisque	COLOR	ST_PresetColorVal	value	=bisque					y	.	.	.	.
+a:ST_PresetColorVal/=black	COLOR	ST_PresetColorVal	value	=black					y	.	.	.	.
+a:ST_PresetColorVal/=blanchedAlmond	COLOR	ST_PresetColorVal	value	=blanchedAlmond					y	.	.	.	.
+a:ST_PresetColorVal/=blue	COLOR	ST_PresetColorVal	value	=blue					y	.	.	.	.
+a:ST_PresetColorVal/=blueViolet	COLOR	ST_PresetColorVal	value	=blueViolet					y	.	.	.	.
+a:ST_PresetColorVal/=brown	COLOR	ST_PresetColorVal	value	=brown					y	.	.	.	.
+a:ST_PresetColorVal/=burlyWood	COLOR	ST_PresetColorVal	value	=burlyWood					y	.	.	.	.
+a:ST_PresetColorVal/=cadetBlue	COLOR	ST_PresetColorVal	value	=cadetBlue					y	.	.	.	.
+a:ST_PresetColorVal/=chartreuse	COLOR	ST_PresetColorVal	value	=chartreuse					y	.	.	.	.
+a:ST_PresetColorVal/=chocolate	COLOR	ST_PresetColorVal	value	=chocolate					y	.	.	.	.
+a:ST_PresetColorVal/=coral	COLOR	ST_PresetColorVal	value	=coral					y	.	.	.	.
+a:ST_PresetColorVal/=cornflowerBlue	COLOR	ST_PresetColorVal	value	=cornflowerBlue					y	.	.	.	.
+a:ST_PresetColorVal/=cornsilk	COLOR	ST_PresetColorVal	value	=cornsilk					y	.	.	.	.
+a:ST_PresetColorVal/=crimson	COLOR	ST_PresetColorVal	value	=crimson					y	.	.	.	.
+a:ST_PresetColorVal/=cyan	COLOR	ST_PresetColorVal	value	=cyan					y	.	.	.	.
+a:ST_PresetColorVal/=darkBlue	COLOR	ST_PresetColorVal	value	=darkBlue					y	.	.	.	.
+a:ST_PresetColorVal/=darkCyan	COLOR	ST_PresetColorVal	value	=darkCyan					y	.	.	.	.
+a:ST_PresetColorVal/=darkGoldenrod	COLOR	ST_PresetColorVal	value	=darkGoldenrod					y	.	.	.	.
+a:ST_PresetColorVal/=darkGray	COLOR	ST_PresetColorVal	value	=darkGray					y	.	.	.	.
+a:ST_PresetColorVal/=darkGrey	COLOR	ST_PresetColorVal	value	=darkGrey					y	.	.	.	.
+a:ST_PresetColorVal/=darkGreen	COLOR	ST_PresetColorVal	value	=darkGreen					y	.	.	.	.
+a:ST_PresetColorVal/=darkKhaki	COLOR	ST_PresetColorVal	value	=darkKhaki					y	.	.	.	.
+a:ST_PresetColorVal/=darkMagenta	COLOR	ST_PresetColorVal	value	=darkMagenta					y	.	.	.	.
+a:ST_PresetColorVal/=darkOliveGreen	COLOR	ST_PresetColorVal	value	=darkOliveGreen					y	.	.	.	.
+a:ST_PresetColorVal/=darkOrange	COLOR	ST_PresetColorVal	value	=darkOrange					y	.	.	.	.
+a:ST_PresetColorVal/=darkOrchid	COLOR	ST_PresetColorVal	value	=darkOrchid					y	.	.	.	.
+a:ST_PresetColorVal/=darkRed	COLOR	ST_PresetColorVal	value	=darkRed					y	.	.	.	.
+a:ST_PresetColorVal/=darkSalmon	COLOR	ST_PresetColorVal	value	=darkSalmon					y	.	.	.	.
+a:ST_PresetColorVal/=darkSeaGreen	COLOR	ST_PresetColorVal	value	=darkSeaGreen					y	.	.	.	.
+a:ST_PresetColorVal/=darkSlateBlue	COLOR	ST_PresetColorVal	value	=darkSlateBlue					y	.	.	.	.
+a:ST_PresetColorVal/=darkSlateGray	COLOR	ST_PresetColorVal	value	=darkSlateGray					y	.	.	.	.
+a:ST_PresetColorVal/=darkSlateGrey	COLOR	ST_PresetColorVal	value	=darkSlateGrey					y	.	.	.	.
+a:ST_PresetColorVal/=darkTurquoise	COLOR	ST_PresetColorVal	value	=darkTurquoise					y	.	.	.	.
+a:ST_PresetColorVal/=darkViolet	COLOR	ST_PresetColorVal	value	=darkViolet					y	.	.	.	.
+a:ST_PresetColorVal/=dkBlue	COLOR	ST_PresetColorVal	value	=dkBlue					y	.	.	.	.
+a:ST_PresetColorVal/=dkCyan	COLOR	ST_PresetColorVal	value	=dkCyan					y	.	.	.	.
+a:ST_PresetColorVal/=dkGoldenrod	COLOR	ST_PresetColorVal	value	=dkGoldenrod					y	.	.	.	.
+a:ST_PresetColorVal/=dkGray	COLOR	ST_PresetColorVal	value	=dkGray					y	.	.	.	.
+a:ST_PresetColorVal/=dkGrey	COLOR	ST_PresetColorVal	value	=dkGrey					y	.	.	.	.
+a:ST_PresetColorVal/=dkGreen	COLOR	ST_PresetColorVal	value	=dkGreen					y	.	.	.	.
+a:ST_PresetColorVal/=dkKhaki	COLOR	ST_PresetColorVal	value	=dkKhaki					y	.	.	.	.
+a:ST_PresetColorVal/=dkMagenta	COLOR	ST_PresetColorVal	value	=dkMagenta					y	.	.	.	.
+a:ST_PresetColorVal/=dkOliveGreen	COLOR	ST_PresetColorVal	value	=dkOliveGreen					y	.	.	.	.
+a:ST_PresetColorVal/=dkOrange	COLOR	ST_PresetColorVal	value	=dkOrange					y	.	.	.	.
+a:ST_PresetColorVal/=dkOrchid	COLOR	ST_PresetColorVal	value	=dkOrchid					y	.	.	.	.
+a:ST_PresetColorVal/=dkRed	COLOR	ST_PresetColorVal	value	=dkRed					y	.	.	.	.
+a:ST_PresetColorVal/=dkSalmon	COLOR	ST_PresetColorVal	value	=dkSalmon					y	.	.	.	.
+a:ST_PresetColorVal/=dkSeaGreen	COLOR	ST_PresetColorVal	value	=dkSeaGreen					y	.	.	.	.
+a:ST_PresetColorVal/=dkSlateBlue	COLOR	ST_PresetColorVal	value	=dkSlateBlue					y	.	.	.	.
+a:ST_PresetColorVal/=dkSlateGray	COLOR	ST_PresetColorVal	value	=dkSlateGray					y	.	.	.	.
+a:ST_PresetColorVal/=dkSlateGrey	COLOR	ST_PresetColorVal	value	=dkSlateGrey					y	.	.	.	.
+a:ST_PresetColorVal/=dkTurquoise	COLOR	ST_PresetColorVal	value	=dkTurquoise					y	.	.	.	.
+a:ST_PresetColorVal/=dkViolet	COLOR	ST_PresetColorVal	value	=dkViolet					y	.	.	.	.
+a:ST_PresetColorVal/=deepPink	COLOR	ST_PresetColorVal	value	=deepPink					y	.	.	.	.
+a:ST_PresetColorVal/=deepSkyBlue	COLOR	ST_PresetColorVal	value	=deepSkyBlue					y	.	.	.	.
+a:ST_PresetColorVal/=dimGray	COLOR	ST_PresetColorVal	value	=dimGray					y	.	.	.	.
+a:ST_PresetColorVal/=dimGrey	COLOR	ST_PresetColorVal	value	=dimGrey					y	.	.	.	.
+a:ST_PresetColorVal/=dodgerBlue	COLOR	ST_PresetColorVal	value	=dodgerBlue					y	.	.	.	.
+a:ST_PresetColorVal/=firebrick	COLOR	ST_PresetColorVal	value	=firebrick					y	.	.	.	.
+a:ST_PresetColorVal/=floralWhite	COLOR	ST_PresetColorVal	value	=floralWhite					y	.	.	.	.
+a:ST_PresetColorVal/=forestGreen	COLOR	ST_PresetColorVal	value	=forestGreen					y	.	.	.	.
+a:ST_PresetColorVal/=fuchsia	COLOR	ST_PresetColorVal	value	=fuchsia					y	.	.	.	.
+a:ST_PresetColorVal/=gainsboro	COLOR	ST_PresetColorVal	value	=gainsboro					y	.	.	.	.
+a:ST_PresetColorVal/=ghostWhite	COLOR	ST_PresetColorVal	value	=ghostWhite					y	.	.	.	.
+a:ST_PresetColorVal/=gold	COLOR	ST_PresetColorVal	value	=gold					y	.	.	.	.
+a:ST_PresetColorVal/=goldenrod	COLOR	ST_PresetColorVal	value	=goldenrod					y	.	.	.	.
+a:ST_PresetColorVal/=gray	COLOR	ST_PresetColorVal	value	=gray					y	.	.	.	.
+a:ST_PresetColorVal/=grey	COLOR	ST_PresetColorVal	value	=grey					y	.	.	.	.
+a:ST_PresetColorVal/=green	COLOR	ST_PresetColorVal	value	=green					y	.	.	.	.
+a:ST_PresetColorVal/=greenYellow	COLOR	ST_PresetColorVal	value	=greenYellow					y	.	.	.	.
+a:ST_PresetColorVal/=honeydew	COLOR	ST_PresetColorVal	value	=honeydew					y	.	.	.	.
+a:ST_PresetColorVal/=hotPink	COLOR	ST_PresetColorVal	value	=hotPink					y	.	.	.	.
+a:ST_PresetColorVal/=indianRed	COLOR	ST_PresetColorVal	value	=indianRed					y	.	.	.	.
+a:ST_PresetColorVal/=indigo	COLOR	ST_PresetColorVal	value	=indigo					y	.	.	.	.
+a:ST_PresetColorVal/=ivory	COLOR	ST_PresetColorVal	value	=ivory					y	.	.	.	.
+a:ST_PresetColorVal/=khaki	COLOR	ST_PresetColorVal	value	=khaki					y	.	.	.	.
+a:ST_PresetColorVal/=lavender	COLOR	ST_PresetColorVal	value	=lavender					y	.	.	.	.
+a:ST_PresetColorVal/=lavenderBlush	COLOR	ST_PresetColorVal	value	=lavenderBlush					y	.	.	.	.
+a:ST_PresetColorVal/=lawnGreen	COLOR	ST_PresetColorVal	value	=lawnGreen					y	.	.	.	.
+a:ST_PresetColorVal/=lemonChiffon	COLOR	ST_PresetColorVal	value	=lemonChiffon					y	.	.	.	.
+a:ST_PresetColorVal/=lightBlue	COLOR	ST_PresetColorVal	value	=lightBlue					y	.	.	.	.
+a:ST_PresetColorVal/=lightCoral	COLOR	ST_PresetColorVal	value	=lightCoral					y	.	.	.	.
+a:ST_PresetColorVal/=lightCyan	COLOR	ST_PresetColorVal	value	=lightCyan					y	.	.	.	.
+a:ST_PresetColorVal/=lightGoldenrodYellow	COLOR	ST_PresetColorVal	value	=lightGoldenrodYellow					y	.	.	.	.
+a:ST_PresetColorVal/=lightGray	COLOR	ST_PresetColorVal	value	=lightGray					y	.	.	.	.
+a:ST_PresetColorVal/=lightGrey	COLOR	ST_PresetColorVal	value	=lightGrey					y	.	.	.	.
+a:ST_PresetColorVal/=lightGreen	COLOR	ST_PresetColorVal	value	=lightGreen					y	.	.	.	.
+a:ST_PresetColorVal/=lightPink	COLOR	ST_PresetColorVal	value	=lightPink					y	.	.	.	.
+a:ST_PresetColorVal/=lightSalmon	COLOR	ST_PresetColorVal	value	=lightSalmon					y	.	.	.	.
+a:ST_PresetColorVal/=lightSeaGreen	COLOR	ST_PresetColorVal	value	=lightSeaGreen					y	.	.	.	.
+a:ST_PresetColorVal/=lightSkyBlue	COLOR	ST_PresetColorVal	value	=lightSkyBlue					y	.	.	.	.
+a:ST_PresetColorVal/=lightSlateGray	COLOR	ST_PresetColorVal	value	=lightSlateGray					y	.	.	.	.
+a:ST_PresetColorVal/=lightSlateGrey	COLOR	ST_PresetColorVal	value	=lightSlateGrey					y	.	.	.	.
+a:ST_PresetColorVal/=lightSteelBlue	COLOR	ST_PresetColorVal	value	=lightSteelBlue					y	.	.	.	.
+a:ST_PresetColorVal/=lightYellow	COLOR	ST_PresetColorVal	value	=lightYellow					y	.	.	.	.
+a:ST_PresetColorVal/=ltBlue	COLOR	ST_PresetColorVal	value	=ltBlue					y	.	.	.	.
+a:ST_PresetColorVal/=ltCoral	COLOR	ST_PresetColorVal	value	=ltCoral					y	.	.	.	.
+a:ST_PresetColorVal/=ltCyan	COLOR	ST_PresetColorVal	value	=ltCyan					y	.	.	.	.
+a:ST_PresetColorVal/=ltGoldenrodYellow	COLOR	ST_PresetColorVal	value	=ltGoldenrodYellow					y	.	.	.	.
+a:ST_PresetColorVal/=ltGray	COLOR	ST_PresetColorVal	value	=ltGray					y	.	.	.	.
+a:ST_PresetColorVal/=ltGrey	COLOR	ST_PresetColorVal	value	=ltGrey					y	.	.	.	.
+a:ST_PresetColorVal/=ltGreen	COLOR	ST_PresetColorVal	value	=ltGreen					y	.	.	.	.
+a:ST_PresetColorVal/=ltPink	COLOR	ST_PresetColorVal	value	=ltPink					y	.	.	.	.
+a:ST_PresetColorVal/=ltSalmon	COLOR	ST_PresetColorVal	value	=ltSalmon					y	.	.	.	.
+a:ST_PresetColorVal/=ltSeaGreen	COLOR	ST_PresetColorVal	value	=ltSeaGreen					y	.	.	.	.
+a:ST_PresetColorVal/=ltSkyBlue	COLOR	ST_PresetColorVal	value	=ltSkyBlue					y	.	.	.	.
+a:ST_PresetColorVal/=ltSlateGray	COLOR	ST_PresetColorVal	value	=ltSlateGray					y	.	.	.	.
+a:ST_PresetColorVal/=ltSlateGrey	COLOR	ST_PresetColorVal	value	=ltSlateGrey					y	.	.	.	.
+a:ST_PresetColorVal/=ltSteelBlue	COLOR	ST_PresetColorVal	value	=ltSteelBlue					y	.	.	.	.
+a:ST_PresetColorVal/=ltYellow	COLOR	ST_PresetColorVal	value	=ltYellow					y	.	.	.	.
+a:ST_PresetColorVal/=lime	COLOR	ST_PresetColorVal	value	=lime					y	.	.	.	.
+a:ST_PresetColorVal/=limeGreen	COLOR	ST_PresetColorVal	value	=limeGreen					y	.	.	.	.
+a:ST_PresetColorVal/=linen	COLOR	ST_PresetColorVal	value	=linen					y	.	.	.	.
+a:ST_PresetColorVal/=magenta	COLOR	ST_PresetColorVal	value	=magenta					y	.	.	.	.
+a:ST_PresetColorVal/=maroon	COLOR	ST_PresetColorVal	value	=maroon					y	.	.	.	.
+a:ST_PresetColorVal/=medAquamarine	COLOR	ST_PresetColorVal	value	=medAquamarine					y	.	.	.	.
+a:ST_PresetColorVal/=medBlue	COLOR	ST_PresetColorVal	value	=medBlue					y	.	.	.	.
+a:ST_PresetColorVal/=medOrchid	COLOR	ST_PresetColorVal	value	=medOrchid					y	.	.	.	.
+a:ST_PresetColorVal/=medPurple	COLOR	ST_PresetColorVal	value	=medPurple					y	.	.	.	.
+a:ST_PresetColorVal/=medSeaGreen	COLOR	ST_PresetColorVal	value	=medSeaGreen					y	.	.	.	.
+a:ST_PresetColorVal/=medSlateBlue	COLOR	ST_PresetColorVal	value	=medSlateBlue					y	.	.	.	.
+a:ST_PresetColorVal/=medSpringGreen	COLOR	ST_PresetColorVal	value	=medSpringGreen					y	.	.	.	.
+a:ST_PresetColorVal/=medTurquoise	COLOR	ST_PresetColorVal	value	=medTurquoise					y	.	.	.	.
+a:ST_PresetColorVal/=medVioletRed	COLOR	ST_PresetColorVal	value	=medVioletRed					y	.	.	.	.
+a:ST_PresetColorVal/=mediumAquamarine	COLOR	ST_PresetColorVal	value	=mediumAquamarine					y	.	.	.	.
+a:ST_PresetColorVal/=mediumBlue	COLOR	ST_PresetColorVal	value	=mediumBlue					y	.	.	.	.
+a:ST_PresetColorVal/=mediumOrchid	COLOR	ST_PresetColorVal	value	=mediumOrchid					y	.	.	.	.
+a:ST_PresetColorVal/=mediumPurple	COLOR	ST_PresetColorVal	value	=mediumPurple					y	.	.	.	.
+a:ST_PresetColorVal/=mediumSeaGreen	COLOR	ST_PresetColorVal	value	=mediumSeaGreen					y	.	.	.	.
+a:ST_PresetColorVal/=mediumSlateBlue	COLOR	ST_PresetColorVal	value	=mediumSlateBlue					y	.	.	.	.
+a:ST_PresetColorVal/=mediumSpringGreen	COLOR	ST_PresetColorVal	value	=mediumSpringGreen					y	.	.	.	.
+a:ST_PresetColorVal/=mediumTurquoise	COLOR	ST_PresetColorVal	value	=mediumTurquoise					y	.	.	.	.
+a:ST_PresetColorVal/=mediumVioletRed	COLOR	ST_PresetColorVal	value	=mediumVioletRed					y	.	.	.	.
+a:ST_PresetColorVal/=midnightBlue	COLOR	ST_PresetColorVal	value	=midnightBlue					y	.	.	.	.
+a:ST_PresetColorVal/=mintCream	COLOR	ST_PresetColorVal	value	=mintCream					y	.	.	.	.
+a:ST_PresetColorVal/=mistyRose	COLOR	ST_PresetColorVal	value	=mistyRose					y	.	.	.	.
+a:ST_PresetColorVal/=moccasin	COLOR	ST_PresetColorVal	value	=moccasin					y	.	.	.	.
+a:ST_PresetColorVal/=navajoWhite	COLOR	ST_PresetColorVal	value	=navajoWhite					y	.	.	.	.
+a:ST_PresetColorVal/=navy	COLOR	ST_PresetColorVal	value	=navy					y	.	.	.	.
+a:ST_PresetColorVal/=oldLace	COLOR	ST_PresetColorVal	value	=oldLace					y	.	.	.	.
+a:ST_PresetColorVal/=olive	COLOR	ST_PresetColorVal	value	=olive					y	.	.	.	.
+a:ST_PresetColorVal/=oliveDrab	COLOR	ST_PresetColorVal	value	=oliveDrab					y	.	.	.	.
+a:ST_PresetColorVal/=orange	COLOR	ST_PresetColorVal	value	=orange					y	.	.	.	.
+a:ST_PresetColorVal/=orangeRed	COLOR	ST_PresetColorVal	value	=orangeRed					y	.	.	.	.
+a:ST_PresetColorVal/=orchid	COLOR	ST_PresetColorVal	value	=orchid					y	.	.	.	.
+a:ST_PresetColorVal/=paleGoldenrod	COLOR	ST_PresetColorVal	value	=paleGoldenrod					y	.	.	.	.
+a:ST_PresetColorVal/=paleGreen	COLOR	ST_PresetColorVal	value	=paleGreen					y	.	.	.	.
+a:ST_PresetColorVal/=paleTurquoise	COLOR	ST_PresetColorVal	value	=paleTurquoise					y	.	.	.	.
+a:ST_PresetColorVal/=paleVioletRed	COLOR	ST_PresetColorVal	value	=paleVioletRed					y	.	.	.	.
+a:ST_PresetColorVal/=papayaWhip	COLOR	ST_PresetColorVal	value	=papayaWhip					y	.	.	.	.
+a:ST_PresetColorVal/=peachPuff	COLOR	ST_PresetColorVal	value	=peachPuff					y	.	.	.	.
+a:ST_PresetColorVal/=peru	COLOR	ST_PresetColorVal	value	=peru					y	.	.	.	.
+a:ST_PresetColorVal/=pink	COLOR	ST_PresetColorVal	value	=pink					y	.	.	.	.
+a:ST_PresetColorVal/=plum	COLOR	ST_PresetColorVal	value	=plum					y	.	.	.	.
+a:ST_PresetColorVal/=powderBlue	COLOR	ST_PresetColorVal	value	=powderBlue					y	.	.	.	.
+a:ST_PresetColorVal/=purple	COLOR	ST_PresetColorVal	value	=purple					y	.	.	.	.
+a:ST_PresetColorVal/=red	COLOR	ST_PresetColorVal	value	=red					y	.	.	.	.
+a:ST_PresetColorVal/=rosyBrown	COLOR	ST_PresetColorVal	value	=rosyBrown					y	.	.	.	.
+a:ST_PresetColorVal/=royalBlue	COLOR	ST_PresetColorVal	value	=royalBlue					y	.	.	.	.
+a:ST_PresetColorVal/=saddleBrown	COLOR	ST_PresetColorVal	value	=saddleBrown					y	.	.	.	.
+a:ST_PresetColorVal/=salmon	COLOR	ST_PresetColorVal	value	=salmon					y	.	.	.	.
+a:ST_PresetColorVal/=sandyBrown	COLOR	ST_PresetColorVal	value	=sandyBrown					y	.	.	.	.
+a:ST_PresetColorVal/=seaGreen	COLOR	ST_PresetColorVal	value	=seaGreen					y	.	.	.	.
+a:ST_PresetColorVal/=seaShell	COLOR	ST_PresetColorVal	value	=seaShell					y	.	.	.	.
+a:ST_PresetColorVal/=sienna	COLOR	ST_PresetColorVal	value	=sienna					y	.	.	.	.
+a:ST_PresetColorVal/=silver	COLOR	ST_PresetColorVal	value	=silver					y	.	.	.	.
+a:ST_PresetColorVal/=skyBlue	COLOR	ST_PresetColorVal	value	=skyBlue					y	.	.	.	.
+a:ST_PresetColorVal/=slateBlue	COLOR	ST_PresetColorVal	value	=slateBlue					y	.	.	.	.
+a:ST_PresetColorVal/=slateGray	COLOR	ST_PresetColorVal	value	=slateGray					y	.	.	.	.
+a:ST_PresetColorVal/=slateGrey	COLOR	ST_PresetColorVal	value	=slateGrey					y	.	.	.	.
+a:ST_PresetColorVal/=snow	COLOR	ST_PresetColorVal	value	=snow					y	.	.	.	.
+a:ST_PresetColorVal/=springGreen	COLOR	ST_PresetColorVal	value	=springGreen					y	.	.	.	.
+a:ST_PresetColorVal/=steelBlue	COLOR	ST_PresetColorVal	value	=steelBlue					y	.	.	.	.
+a:ST_PresetColorVal/=tan	COLOR	ST_PresetColorVal	value	=tan					y	.	.	.	.
+a:ST_PresetColorVal/=teal	COLOR	ST_PresetColorVal	value	=teal					y	.	.	.	.
+a:ST_PresetColorVal/=thistle	COLOR	ST_PresetColorVal	value	=thistle					y	.	.	.	.
+a:ST_PresetColorVal/=tomato	COLOR	ST_PresetColorVal	value	=tomato					y	.	.	.	.
+a:ST_PresetColorVal/=turquoise	COLOR	ST_PresetColorVal	value	=turquoise					y	.	.	.	.
+a:ST_PresetColorVal/=violet	COLOR	ST_PresetColorVal	value	=violet					y	.	.	.	.
+a:ST_PresetColorVal/=wheat	COLOR	ST_PresetColorVal	value	=wheat					y	.	.	.	.
+a:ST_PresetColorVal/=white	COLOR	ST_PresetColorVal	value	=white					y	.	.	.	.
+a:ST_PresetColorVal/=whiteSmoke	COLOR	ST_PresetColorVal	value	=whiteSmoke					y	.	.	.	.
+a:ST_PresetColorVal/=yellow	COLOR	ST_PresetColorVal	value	=yellow					y	.	.	.	.
+a:ST_PresetColorVal/=yellowGreen	COLOR	ST_PresetColorVal	value	=yellowGreen					y	.	.	.	.
 a:CT_PresetColor	COLOR		type	CT_PresetColor					.	.	.	.	.
 a:CT_PresetColor/EG_ColorTransform	COLOR	CT_PresetColor	group	EG_ColorTransform	EG_ColorTransform	0..unbounded			.	.	.	.	.
-a:CT_PresetColor/@val	COLOR	CT_PresetColor	attribute	@val	ST_PresetColorVal	required			.	.	.	.	.
+a:CT_PresetColor/@val	COLOR	CT_PresetColor	attribute	@val	ST_PresetColorVal	required			.	y	.	.	.
 a:EG_OfficeArtExtensionList	SHAPE		type	EG_OfficeArtExtensionList					.	.	.	.	.
 a:EG_OfficeArtExtensionList/ext	SHAPE	EG_OfficeArtExtensionList	element	ext	CT_OfficeArtExtension	0..unbounded			.	.	.	.	.
 a:CT_OfficeArtExtensionList	SHAPE		type	CT_OfficeArtExtensionList					.	.	.	.	.
@@ -1520,16 +1520,16 @@ a:CT_Transform2D	SHAPE		type	CT_Transform2D					.	.	.	.	.
 a:CT_Transform2D/off	SHAPE	CT_Transform2D	element	off	CT_Point2D	0..1			.	.	.	.	.
 a:CT_Transform2D/ext	SHAPE	CT_Transform2D	element	ext	CT_PositiveSize2D	0..1			.	.	.	.	.
 a:CT_Transform2D/@rot	SHAPE	CT_Transform2D	attribute	@rot	ST_Angle	optional	0		.	.	.	.	.
-a:CT_Transform2D/@flipH	SHAPE	CT_Transform2D	attribute	@flipH	boolean	optional	false		.	.	.	.	.
-a:CT_Transform2D/@flipV	SHAPE	CT_Transform2D	attribute	@flipV	boolean	optional	false		.	.	.	.	.
+a:CT_Transform2D/@flipH	SHAPE	CT_Transform2D	attribute	@flipH	boolean	optional	false		y	.	.	.	.
+a:CT_Transform2D/@flipV	SHAPE	CT_Transform2D	attribute	@flipV	boolean	optional	false		y	.	.	.	.
 a:CT_GroupTransform2D	SHAPE		type	CT_GroupTransform2D					.	.	.	.	.
 a:CT_GroupTransform2D/off	SHAPE	CT_GroupTransform2D	element	off	CT_Point2D	0..1			.	.	.	.	.
 a:CT_GroupTransform2D/ext	SHAPE	CT_GroupTransform2D	element	ext	CT_PositiveSize2D	0..1			.	.	.	.	.
 a:CT_GroupTransform2D/chOff	SHAPE	CT_GroupTransform2D	element	chOff	CT_Point2D	0..1			.	.	.	.	.
 a:CT_GroupTransform2D/chExt	SHAPE	CT_GroupTransform2D	element	chExt	CT_PositiveSize2D	0..1			.	.	.	.	.
 a:CT_GroupTransform2D/@rot	SHAPE	CT_GroupTransform2D	attribute	@rot	ST_Angle	optional	0		.	.	.	.	.
-a:CT_GroupTransform2D/@flipH	SHAPE	CT_GroupTransform2D	attribute	@flipH	boolean	optional	false		.	.	.	.	.
-a:CT_GroupTransform2D/@flipV	SHAPE	CT_GroupTransform2D	attribute	@flipV	boolean	optional	false		.	.	.	.	.
+a:CT_GroupTransform2D/@flipH	SHAPE	CT_GroupTransform2D	attribute	@flipH	boolean	optional	false		y	.	.	.	.
+a:CT_GroupTransform2D/@flipV	SHAPE	CT_GroupTransform2D	attribute	@flipV	boolean	optional	false		y	.	.	.	.
 a:CT_Point3D	D3		type	CT_Point3D					.	.	.	.	.
 a:CT_Point3D/@x	D3	CT_Point3D	attribute	@x	ST_Coordinate	required			.	.	.	.	.
 a:CT_Point3D/@y	D3	CT_Point3D	attribute	@y	ST_Coordinate	required			.	.	.	.	.
@@ -1557,27 +1557,27 @@ a:ST_RectAlignment/=r	EFFECT	ST_RectAlignment	value	=r					.	.	.	.	.
 a:ST_RectAlignment/=bl	EFFECT	ST_RectAlignment	value	=bl					.	.	.	.	.
 a:ST_RectAlignment/=b	EFFECT	ST_RectAlignment	value	=b					.	.	.	.	.
 a:ST_RectAlignment/=br	EFFECT	ST_RectAlignment	value	=br					.	.	.	.	.
-a:EG_ColorChoice	COLOR		type	EG_ColorChoice					.	.	.	.	.
-a:EG_ColorChoice/scrgbClr	COLOR	EG_ColorChoice	element	scrgbClr	CT_ScRgbColor	choice			.	.	.	.	.
-a:EG_ColorChoice/srgbClr	COLOR	EG_ColorChoice	element	srgbClr	CT_SRgbColor	choice			.	.	.	.	.
-a:EG_ColorChoice/hslClr	COLOR	EG_ColorChoice	element	hslClr	CT_HslColor	choice			.	.	.	.	.
-a:EG_ColorChoice/sysClr	COLOR	EG_ColorChoice	element	sysClr	CT_SystemColor	choice			.	.	.	.	.
-a:EG_ColorChoice/schemeClr	COLOR	EG_ColorChoice	element	schemeClr	CT_SchemeColor	choice			.	.	.	.	.
-a:EG_ColorChoice/prstClr	COLOR	EG_ColorChoice	element	prstClr	CT_PresetColor	choice			.	.	.	.	.
-a:CT_Color	COLOR		type	CT_Color					.	.	.	.	.
-a:CT_Color/EG_ColorChoice	COLOR	CT_Color	group	EG_ColorChoice	EG_ColorChoice				.	.	.	.	.
-a:CT_ColorMRU	COLOR		type	CT_ColorMRU					.	.	.	.	.
-a:CT_ColorMRU/EG_ColorChoice	COLOR	CT_ColorMRU	group	EG_ColorChoice	EG_ColorChoice	0..unbounded			.	.	.	.	.
+a:EG_ColorChoice	COLOR		type	EG_ColorChoice					.	y	.	.	.
+a:EG_ColorChoice/scrgbClr	COLOR	EG_ColorChoice	element	scrgbClr	CT_ScRgbColor	choice			.	y	.	.	.
+a:EG_ColorChoice/srgbClr	COLOR	EG_ColorChoice	element	srgbClr	CT_SRgbColor	choice			.	y	.	.	.
+a:EG_ColorChoice/hslClr	COLOR	EG_ColorChoice	element	hslClr	CT_HslColor	choice			.	y	.	.	.
+a:EG_ColorChoice/sysClr	COLOR	EG_ColorChoice	element	sysClr	CT_SystemColor	choice			.	y	.	.	.
+a:EG_ColorChoice/schemeClr	COLOR	EG_ColorChoice	element	schemeClr	CT_SchemeColor	choice			.	y	.	.	.
+a:EG_ColorChoice/prstClr	COLOR	EG_ColorChoice	element	prstClr	CT_PresetColor	choice			.	y	.	.	.
+a:CT_Color	COLOR		type	CT_Color					.	y	.	.	.
+a:CT_Color/EG_ColorChoice	COLOR	CT_Color	group	EG_ColorChoice	EG_ColorChoice				.	y	.	.	.
+a:CT_ColorMRU	COLOR		type	CT_ColorMRU					.	y	.	.	.
+a:CT_ColorMRU/EG_ColorChoice	COLOR	CT_ColorMRU	group	EG_ColorChoice	EG_ColorChoice	0..unbounded			.	y	.	.	.
 a:ST_BlackWhiteMode	SHAPE		simple	ST_BlackWhiteMode				base=token	.	.	.	.	.
 a:ST_BlackWhiteMode/=clr	SHAPE	ST_BlackWhiteMode	value	=clr					.	.	.	.	.
-a:ST_BlackWhiteMode/=auto	SHAPE	ST_BlackWhiteMode	value	=auto					.	.	.	.	.
-a:ST_BlackWhiteMode/=gray	SHAPE	ST_BlackWhiteMode	value	=gray					.	.	.	.	.
+a:ST_BlackWhiteMode/=auto	SHAPE	ST_BlackWhiteMode	value	=auto					y	.	.	.	.
+a:ST_BlackWhiteMode/=gray	SHAPE	ST_BlackWhiteMode	value	=gray					y	.	.	.	.
 a:ST_BlackWhiteMode/=ltGray	SHAPE	ST_BlackWhiteMode	value	=ltGray					.	.	.	.	.
 a:ST_BlackWhiteMode/=invGray	SHAPE	ST_BlackWhiteMode	value	=invGray					.	.	.	.	.
 a:ST_BlackWhiteMode/=grayWhite	SHAPE	ST_BlackWhiteMode	value	=grayWhite					.	.	.	.	.
 a:ST_BlackWhiteMode/=blackGray	SHAPE	ST_BlackWhiteMode	value	=blackGray					.	.	.	.	.
 a:ST_BlackWhiteMode/=blackWhite	SHAPE	ST_BlackWhiteMode	value	=blackWhite					.	.	.	.	.
-a:ST_BlackWhiteMode/=black	SHAPE	ST_BlackWhiteMode	value	=black					.	.	.	.	.
+a:ST_BlackWhiteMode/=black	SHAPE	ST_BlackWhiteMode	value	=black					y	.	.	.	.
 a:ST_BlackWhiteMode/=white	SHAPE	ST_BlackWhiteMode	value	=white					.	.	.	.	.
 a:ST_BlackWhiteMode/=hidden	SHAPE	ST_BlackWhiteMode	value	=hidden					.	.	.	.	.
 a:AG_Blob	PIC		type	AG_Blob					.	.	.	.	.
@@ -1591,31 +1591,31 @@ a:CT_Hyperlink/snd	SHAPE	CT_Hyperlink	element	snd	CT_EmbeddedWAVAudioFile	0..1		
 a:CT_Hyperlink/extLst	SHAPE	CT_Hyperlink	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_Hyperlink/@r:id	SHAPE	CT_Hyperlink	attribute	@r:id	id	optional			.	.	.	.	.
 a:CT_Hyperlink/@invalidUrl	SHAPE	CT_Hyperlink	attribute	@invalidUrl	string	optional			.	.	.	.	.
-a:CT_Hyperlink/@action	SHAPE	CT_Hyperlink	attribute	@action	string	optional			.	.	.	.	.
+a:CT_Hyperlink/@action	SHAPE	CT_Hyperlink	attribute	@action	string	optional			y	.	.	.	.
 a:CT_Hyperlink/@tgtFrame	SHAPE	CT_Hyperlink	attribute	@tgtFrame	string	optional			.	.	.	.	.
-a:CT_Hyperlink/@tooltip	SHAPE	CT_Hyperlink	attribute	@tooltip	string	optional			.	.	.	.	.
-a:CT_Hyperlink/@history	SHAPE	CT_Hyperlink	attribute	@history	boolean	optional	true		.	.	.	.	.
+a:CT_Hyperlink/@tooltip	SHAPE	CT_Hyperlink	attribute	@tooltip	string	optional			y	.	.	.	.
+a:CT_Hyperlink/@history	SHAPE	CT_Hyperlink	attribute	@history	boolean	optional	true		y	.	.	.	.
 a:CT_Hyperlink/@highlightClick	SHAPE	CT_Hyperlink	attribute	@highlightClick	boolean	optional	false		.	.	.	.	.
 a:CT_Hyperlink/@endSnd	SHAPE	CT_Hyperlink	attribute	@endSnd	boolean	optional	false		.	.	.	.	.
 a:ST_DrawingElementId	SHAPE		simple	ST_DrawingElementId				base=unsignedInt	.	.	.	.	.
 a:AG_Locking	SHAPE		type	AG_Locking					.	.	.	.	.
 a:AG_Locking/@noGrp	SHAPE	AG_Locking	attribute	@noGrp	boolean	optional	false		.	.	.	.	.
 a:AG_Locking/@noSelect	SHAPE	AG_Locking	attribute	@noSelect	boolean	optional	false		.	.	.	.	.
-a:AG_Locking/@noRot	SHAPE	AG_Locking	attribute	@noRot	boolean	optional	false		.	.	.	.	.
+a:AG_Locking/@noRot	SHAPE	AG_Locking	attribute	@noRot	boolean	optional	false		y	.	.	.	.
 a:AG_Locking/@noChangeAspect	SHAPE	AG_Locking	attribute	@noChangeAspect	boolean	optional	false		.	.	.	.	.
-a:AG_Locking/@noMove	SHAPE	AG_Locking	attribute	@noMove	boolean	optional	false		.	.	.	.	.
+a:AG_Locking/@noMove	SHAPE	AG_Locking	attribute	@noMove	boolean	optional	false		y	.	.	.	.
 a:AG_Locking/@noResize	SHAPE	AG_Locking	attribute	@noResize	boolean	optional	false		.	.	.	.	.
 a:AG_Locking/@noEditPoints	SHAPE	AG_Locking	attribute	@noEditPoints	boolean	optional	false		.	.	.	.	.
 a:AG_Locking/@noAdjustHandles	SHAPE	AG_Locking	attribute	@noAdjustHandles	boolean	optional	false		.	.	.	.	.
 a:AG_Locking/@noChangeArrowheads	SHAPE	AG_Locking	attribute	@noChangeArrowheads	boolean	optional	false		.	.	.	.	.
-a:AG_Locking/@noChangeShapeType	SHAPE	AG_Locking	attribute	@noChangeShapeType	boolean	optional	false		.	.	.	.	.
+a:AG_Locking/@noChangeShapeType	SHAPE	AG_Locking	attribute	@noChangeShapeType	boolean	optional	false		y	.	.	.	.
 a:CT_ConnectorLocking	SHAPE		type	CT_ConnectorLocking					.	.	.	.	.
 a:CT_ConnectorLocking/extLst	SHAPE	CT_ConnectorLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_ConnectorLocking/AG_Locking	SHAPE	CT_ConnectorLocking	attrgroup	AG_Locking	AG_Locking				.	.	.	.	.
 a:CT_ShapeLocking	SHAPE		type	CT_ShapeLocking					.	.	.	.	.
 a:CT_ShapeLocking/extLst	SHAPE	CT_ShapeLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_ShapeLocking/AG_Locking	SHAPE	CT_ShapeLocking	attrgroup	AG_Locking	AG_Locking				.	.	.	.	.
-a:CT_ShapeLocking/@noTextEdit	SHAPE	CT_ShapeLocking	attribute	@noTextEdit	boolean	optional	false		.	.	.	.	.
+a:CT_ShapeLocking/@noTextEdit	SHAPE	CT_ShapeLocking	attribute	@noTextEdit	boolean	optional	false		y	.	.	.	.
 a:CT_PictureLocking	PIC		type	CT_PictureLocking					.	.	.	.	.
 a:CT_PictureLocking/extLst	PIC	CT_PictureLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_PictureLocking/AG_Locking	PIC	CT_PictureLocking	attrgroup	AG_Locking	AG_Locking				.	.	.	.	.
@@ -1623,16 +1623,16 @@ a:CT_PictureLocking/@noCrop	PIC	CT_PictureLocking	attribute	@noCrop	boolean	opti
 a:CT_GroupLocking	SHAPE		type	CT_GroupLocking					.	.	.	.	.
 a:CT_GroupLocking/extLst	SHAPE	CT_GroupLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_GroupLocking/@noGrp	SHAPE	CT_GroupLocking	attribute	@noGrp	boolean	optional	false		.	.	.	.	.
-a:CT_GroupLocking/@noUngrp	SHAPE	CT_GroupLocking	attribute	@noUngrp	boolean	optional	false		.	.	.	.	.
+a:CT_GroupLocking/@noUngrp	SHAPE	CT_GroupLocking	attribute	@noUngrp	boolean	optional	false		y	.	.	.	.
 a:CT_GroupLocking/@noSelect	SHAPE	CT_GroupLocking	attribute	@noSelect	boolean	optional	false		.	.	.	.	.
-a:CT_GroupLocking/@noRot	SHAPE	CT_GroupLocking	attribute	@noRot	boolean	optional	false		.	.	.	.	.
+a:CT_GroupLocking/@noRot	SHAPE	CT_GroupLocking	attribute	@noRot	boolean	optional	false		y	.	.	.	.
 a:CT_GroupLocking/@noChangeAspect	SHAPE	CT_GroupLocking	attribute	@noChangeAspect	boolean	optional	false		.	.	.	.	.
 a:CT_GroupLocking/@noMove	SHAPE	CT_GroupLocking	attribute	@noMove	boolean	optional	false		.	.	.	.	.
 a:CT_GroupLocking/@noResize	SHAPE	CT_GroupLocking	attribute	@noResize	boolean	optional	false		.	.	.	.	.
 a:CT_GraphicalObjectFrameLocking	SHAPE		type	CT_GraphicalObjectFrameLocking					.	.	.	.	.
 a:CT_GraphicalObjectFrameLocking/extLst	SHAPE	CT_GraphicalObjectFrameLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_GraphicalObjectFrameLocking/@noGrp	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noGrp	boolean	optional	false		.	.	.	.	.
-a:CT_GraphicalObjectFrameLocking/@noDrilldown	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noDrilldown	boolean	optional	false		.	.	.	.	.
+a:CT_GraphicalObjectFrameLocking/@noDrilldown	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noDrilldown	boolean	optional	false		y	.	.	.	.
 a:CT_GraphicalObjectFrameLocking/@noSelect	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noSelect	boolean	optional	false		.	.	.	.	.
 a:CT_GraphicalObjectFrameLocking/@noChangeAspect	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noChangeAspect	boolean	optional	false		.	.	.	.	.
 a:CT_GraphicalObjectFrameLocking/@noMove	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noMove	boolean	optional	false		.	.	.	.	.
@@ -1646,9 +1646,9 @@ a:CT_NonVisualDrawingProps/hlinkHover	SHAPE	CT_NonVisualDrawingProps	element	hli
 a:CT_NonVisualDrawingProps/extLst	SHAPE	CT_NonVisualDrawingProps	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_NonVisualDrawingProps/@id	SHAPE	CT_NonVisualDrawingProps	attribute	@id	ST_DrawingElementId	required			.	.	.	.	.
 a:CT_NonVisualDrawingProps/@name	SHAPE	CT_NonVisualDrawingProps	attribute	@name	string	required			.	.	.	.	.
-a:CT_NonVisualDrawingProps/@descr	SHAPE	CT_NonVisualDrawingProps	attribute	@descr	string	optional			.	.	.	.	.
-a:CT_NonVisualDrawingProps/@hidden	SHAPE	CT_NonVisualDrawingProps	attribute	@hidden	boolean	optional	false		.	.	.	.	.
-a:CT_NonVisualDrawingProps/@title	SHAPE	CT_NonVisualDrawingProps	attribute	@title	string	optional			.	.	.	.	.
+a:CT_NonVisualDrawingProps/@descr	SHAPE	CT_NonVisualDrawingProps	attribute	@descr	string	optional			y	.	.	.	.
+a:CT_NonVisualDrawingProps/@hidden	SHAPE	CT_NonVisualDrawingProps	attribute	@hidden	boolean	optional	false		y	.	.	.	.
+a:CT_NonVisualDrawingProps/@title	SHAPE	CT_NonVisualDrawingProps	attribute	@title	string	optional			y	.	.	.	.
 a:CT_NonVisualDrawingShapeProps	SHAPE		type	CT_NonVisualDrawingShapeProps					.	.	.	.	.
 a:CT_NonVisualDrawingShapeProps/spLocks	SHAPE	CT_NonVisualDrawingShapeProps	element	spLocks	CT_ShapeLocking	0..1			.	.	.	.	.
 a:CT_NonVisualDrawingShapeProps/extLst	SHAPE	CT_NonVisualDrawingShapeProps	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
@@ -1675,8 +1675,8 @@ a:CT_NonVisualContentPartProperties/@isComment	SHAPE	CT_NonVisualContentPartProp
 a:CT_GraphicalObjectData	SHAPE		type	CT_GraphicalObjectData					.	.	.	.	.
 a:CT_GraphicalObjectData/xsd:any	SHAPE	CT_GraphicalObjectData	any	xsd:any		0..unbounded		strict	.	.	.	.	.
 a:CT_GraphicalObjectData/@uri	SHAPE	CT_GraphicalObjectData	attribute	@uri	token	required			.	.	.	.	.
-a:CT_GraphicalObject	SHAPE		type	CT_GraphicalObject					.	.	.	.	.
-a:CT_GraphicalObject/graphicData	SHAPE	CT_GraphicalObject	element	graphicData	CT_GraphicalObjectData				.	.	.	.	.
+a:CT_GraphicalObject	SHAPE		type	CT_GraphicalObject					.	y	.	.	.
+a:CT_GraphicalObject/graphicData	SHAPE	CT_GraphicalObject	element	graphicData	CT_GraphicalObjectData				.	y	.	.	.
 a:<graphic>	SHAPE		root	<graphic>	CT_GraphicalObject				.	.	.	.	.
 a:ST_ChartBuildStep	TIMING		simple	ST_ChartBuildStep				base=token	.	.	.	.	.
 a:ST_ChartBuildStep/=category	TIMING	ST_ChartBuildStep	value	=category					.	.	.	.	.
@@ -2697,12 +2697,12 @@ a:CT_GroupShapeProperties/EG_EffectProperties	SHAPE	CT_GroupShapeProperties	grou
 a:CT_GroupShapeProperties/scene3d	SHAPE	CT_GroupShapeProperties	element	scene3d	CT_Scene3D	0..1			.	.	.	.	.
 a:CT_GroupShapeProperties/extLst	SHAPE	CT_GroupShapeProperties	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_GroupShapeProperties/@bwMode	SHAPE	CT_GroupShapeProperties	attribute	@bwMode	ST_BlackWhiteMode	optional			.	.	.	.	.
-a:CT_StyleMatrixReference	THEME		type	CT_StyleMatrixReference					.	.	.	.	.
-a:CT_StyleMatrixReference/EG_ColorChoice	THEME	CT_StyleMatrixReference	group	EG_ColorChoice	EG_ColorChoice	0..1			.	.	.	.	.
-a:CT_StyleMatrixReference/@idx	THEME	CT_StyleMatrixReference	attribute	@idx	ST_StyleMatrixColumnIndex	required			.	.	.	.	.
-a:CT_FontReference	THEME		type	CT_FontReference					.	.	.	.	.
-a:CT_FontReference/EG_ColorChoice	THEME	CT_FontReference	group	EG_ColorChoice	EG_ColorChoice	0..1			.	.	.	.	.
-a:CT_FontReference/@idx	THEME	CT_FontReference	attribute	@idx	ST_FontCollectionIndex	required			.	.	.	.	.
+a:CT_StyleMatrixReference	THEME		type	CT_StyleMatrixReference					.	y	.	.	.
+a:CT_StyleMatrixReference/EG_ColorChoice	THEME	CT_StyleMatrixReference	group	EG_ColorChoice	EG_ColorChoice	0..1			.	y	.	.	.
+a:CT_StyleMatrixReference/@idx	THEME	CT_StyleMatrixReference	attribute	@idx	ST_StyleMatrixColumnIndex	required			y	y	.	.	.
+a:CT_FontReference	THEME		type	CT_FontReference					.	y	.	.	.
+a:CT_FontReference/EG_ColorChoice	THEME	CT_FontReference	group	EG_ColorChoice	EG_ColorChoice	0..1			.	y	.	.	.
+a:CT_FontReference/@idx	THEME	CT_FontReference	attribute	@idx	ST_FontCollectionIndex	required			y	y	.	.	.
 a:CT_ShapeStyle	THEME		type	CT_ShapeStyle					.	.	.	.	.
 a:CT_ShapeStyle/lnRef	THEME	CT_ShapeStyle	element	lnRef	CT_StyleMatrixReference				.	.	.	.	.
 a:CT_ShapeStyle/fillRef	THEME	CT_ShapeStyle	element	fillRef	CT_StyleMatrixReference				.	.	.	.	.
@@ -2734,21 +2734,21 @@ a:CT_ColorMapping/@accent5	THEME	CT_ColorMapping	attribute	@accent5	ST_ColorSche
 a:CT_ColorMapping/@accent6	THEME	CT_ColorMapping	attribute	@accent6	ST_ColorSchemeIndex	required			.	.	.	.	.
 a:CT_ColorMapping/@hlink	THEME	CT_ColorMapping	attribute	@hlink	ST_ColorSchemeIndex	required			.	.	.	.	.
 a:CT_ColorMapping/@folHlink	THEME	CT_ColorMapping	attribute	@folHlink	ST_ColorSchemeIndex	required			.	.	.	.	.
-a:CT_ColorMappingOverride	THEME		type	CT_ColorMappingOverride					.	.	.	.	.
-a:CT_ColorMappingOverride/masterClrMapping	THEME	CT_ColorMappingOverride	element	masterClrMapping	CT_EmptyElement	choice			.	.	.	.	.
-a:CT_ColorMappingOverride/overrideClrMapping	THEME	CT_ColorMappingOverride	element	overrideClrMapping	CT_ColorMapping	choice			.	.	.	.	.
+a:CT_ColorMappingOverride	THEME		type	CT_ColorMappingOverride					.	y	.	.	.
+a:CT_ColorMappingOverride/masterClrMapping	THEME	CT_ColorMappingOverride	element	masterClrMapping	CT_EmptyElement	choice			.	y	.	.	.
+a:CT_ColorMappingOverride/overrideClrMapping	THEME	CT_ColorMappingOverride	element	overrideClrMapping	CT_ColorMapping	choice			.	y	.	.	.
 a:CT_ColorSchemeAndMapping	THEME		type	CT_ColorSchemeAndMapping					.	.	.	.	.
 a:CT_ColorSchemeAndMapping/clrScheme	THEME	CT_ColorSchemeAndMapping	element	clrScheme	CT_ColorScheme				.	.	.	.	.
 a:CT_ColorSchemeAndMapping/clrMap	THEME	CT_ColorSchemeAndMapping	element	clrMap	CT_ColorMapping	0..1			.	.	.	.	.
 a:CT_ColorSchemeList	THEME		type	CT_ColorSchemeList					.	.	.	.	.
 a:CT_ColorSchemeList/extraClrScheme	THEME	CT_ColorSchemeList	element	extraClrScheme	CT_ColorSchemeAndMapping	0..unbounded			.	.	.	.	.
 a:CT_OfficeStyleSheet	THEME		type	CT_OfficeStyleSheet					.	.	.	.	.
-a:CT_OfficeStyleSheet/themeElements	THEME	CT_OfficeStyleSheet	element	themeElements	CT_BaseStyles				.	.	.	.	.
-a:CT_OfficeStyleSheet/objectDefaults	THEME	CT_OfficeStyleSheet	element	objectDefaults	CT_ObjectStyleDefaults	0..1			.	.	.	.	.
+a:CT_OfficeStyleSheet/themeElements	THEME	CT_OfficeStyleSheet	element	themeElements	CT_BaseStyles				.	y	.	.	.
+a:CT_OfficeStyleSheet/objectDefaults	THEME	CT_OfficeStyleSheet	element	objectDefaults	CT_ObjectStyleDefaults	0..1			y	y	.	.	.
 a:CT_OfficeStyleSheet/extraClrSchemeLst	THEME	CT_OfficeStyleSheet	element	extraClrSchemeLst	CT_ColorSchemeList	0..1			.	.	.	.	.
 a:CT_OfficeStyleSheet/custClrLst	THEME	CT_OfficeStyleSheet	element	custClrLst	CT_CustomColorList	0..1			.	.	.	.	.
 a:CT_OfficeStyleSheet/extLst	THEME	CT_OfficeStyleSheet	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_OfficeStyleSheet/@name	THEME	CT_OfficeStyleSheet	attribute	@name	string	optional			.	.	.	.	.
+a:CT_OfficeStyleSheet/@name	THEME	CT_OfficeStyleSheet	attribute	@name	string	optional			.	y	.	.	.
 a:CT_BaseStylesOverride	THEME		type	CT_BaseStylesOverride					.	.	.	.	.
 a:CT_BaseStylesOverride/clrScheme	THEME	CT_BaseStylesOverride	element	clrScheme	CT_ColorScheme	0..1			.	.	.	.	.
 a:CT_BaseStylesOverride/fontScheme	THEME	CT_BaseStylesOverride	element	fontScheme	CT_FontScheme	0..1			.	.	.	.	.
@@ -2834,7 +2834,7 @@ a:EG_ThemeableFontStyles	THEME		type	EG_ThemeableFontStyles					.	.	.	.	.
 a:EG_ThemeableFontStyles/font	THEME	EG_ThemeableFontStyles	element	font	CT_FontCollection	choice			.	.	.	.	.
 a:EG_ThemeableFontStyles/fontRef	THEME	EG_ThemeableFontStyles	element	fontRef	CT_FontReference	choice			.	.	.	.	.
 a:ST_OnOffStyleType	THEME		simple	ST_OnOffStyleType				base=token	.	.	.	.	.
-a:ST_OnOffStyleType/=on	THEME	ST_OnOffStyleType	value	=on					.	.	.	.	.
+a:ST_OnOffStyleType/=on	THEME	ST_OnOffStyleType	value	=on					y	.	.	.	.
 a:ST_OnOffStyleType/=off	THEME	ST_OnOffStyleType	value	=off					.	.	.	.	.
 a:ST_OnOffStyleType/=def	THEME	ST_OnOffStyleType	value	=def					.	.	.	.	.
 a:CT_TableStyleTextStyle	TABLE		type	CT_TableStyleTextStyle					.	.	.	.	.
@@ -5329,7 +5329,7 @@ st:ST_YAlign/=inside	SIMPLE	ST_YAlign	value	=inside					.	.	.	.	.
 st:ST_YAlign/=outside	SIMPLE	ST_YAlign	value	=outside					.	.	.	.	.
 st:ST_ConformanceClass	SIMPLE		simple	ST_ConformanceClass				base=string	.	.	.	.	.
 st:ST_ConformanceClass/=strict	SIMPLE	ST_ConformanceClass	value	=strict					.	.	.	.	.
-st:ST_ConformanceClass/=transitional	SIMPLE	ST_ConformanceClass	value	=transitional					.	.	.	.	.
+st:ST_ConformanceClass/=transitional	SIMPLE	ST_ConformanceClass	value	=transitional					y	.	.	.	.
 st:ST_UniversalMeasure	SIMPLE		simple	ST_UniversalMeasure				base=string pattern=-?[0-9]+(\.[0-9]+)?(mm|cm|in|pt|pc|pi)	.	.	.	.	.
 st:ST_PositiveUniversalMeasure	SIMPLE		simple	ST_PositiveUniversalMeasure				base=ST_UniversalMeasure pattern=[0-9]+(\.[0-9]+)?(mm|cm|in|pt|pc|pi)	.	.	.	.	.
 st:ST_Percentage	SIMPLE		simple	ST_Percentage				base=string pattern=-?[0-9]+(\.[0-9]+)?%	.	.	.	.	.
@@ -5337,7 +5337,7 @@ st:ST_FixedPercentage	SIMPLE		simple	ST_FixedPercentage				base=ST_Percentage pa
 st:ST_PositivePercentage	SIMPLE		simple	ST_PositivePercentage				base=ST_Percentage pattern=[0-9]+(\.[0-9]+)?%	.	.	.	.	.
 st:ST_PositiveFixedPercentage	SIMPLE		simple	ST_PositiveFixedPercentage				base=ST_Percentage pattern=((100)|([0-9][0-9]?))(\.[0-9][0-9]?)?%	.	.	.	.	.
 r:ST_RelationshipId	SIMPLE		simple	ST_RelationshipId				base=string	.	.	.	.	.
-r:@id	SIMPLE		rootattr	@id	ST_RelationshipId	optional			.	.	.	.	.
+r:@id	SIMPLE		rootattr	@id	ST_RelationshipId	optional			.	y	.	.	.
 r:@embed	SIMPLE		rootattr	@embed	ST_RelationshipId	optional			.	.	.	.	.
 r:@link	SIMPLE		rootattr	@link	ST_RelationshipId	optional			.	.	.	.	.
 r:@dm	SIMPLE		rootattr	@dm	ST_RelationshipId	optional			.	.	.	.	.
@@ -5352,40 +5352,40 @@ r:@topRight	SIMPLE		rootattr	@topRight	ST_RelationshipId	optional			.	.	.	.	.
 r:@bottomLeft	SIMPLE		rootattr	@bottomLeft	ST_RelationshipId	optional			.	.	.	.	.
 r:@bottomRight	SIMPLE		rootattr	@bottomRight	ST_RelationshipId	optional			.	.	.	.	.
 ep:<Properties>	PKG		root	<Properties>	CT_Properties				.	.	.	.	.
-ep:CT_Properties	PKG		type	CT_Properties					.	.	.	.	.
-ep:CT_Properties/Template	PKG	CT_Properties	element	Template	string	0..1			.	.	.	.	.
-ep:CT_Properties/Manager	PKG	CT_Properties	element	Manager	string	0..1			.	.	.	.	.
-ep:CT_Properties/Company	PKG	CT_Properties	element	Company	string	0..1			.	.	.	.	.
-ep:CT_Properties/Pages	PKG	CT_Properties	element	Pages	int	0..1			.	.	.	.	.
-ep:CT_Properties/Words	PKG	CT_Properties	element	Words	int	0..1			.	.	.	.	.
-ep:CT_Properties/Characters	PKG	CT_Properties	element	Characters	int	0..1			.	.	.	.	.
-ep:CT_Properties/PresentationFormat	PKG	CT_Properties	element	PresentationFormat	string	0..1			.	.	.	.	.
-ep:CT_Properties/Lines	PKG	CT_Properties	element	Lines	int	0..1			.	.	.	.	.
-ep:CT_Properties/Paragraphs	PKG	CT_Properties	element	Paragraphs	int	0..1			.	.	.	.	.
-ep:CT_Properties/Slides	PKG	CT_Properties	element	Slides	int	0..1			.	.	.	.	.
-ep:CT_Properties/Notes	PKG	CT_Properties	element	Notes	int	0..1			.	.	.	.	.
-ep:CT_Properties/TotalTime	PKG	CT_Properties	element	TotalTime	int	0..1			.	.	.	.	.
-ep:CT_Properties/HiddenSlides	PKG	CT_Properties	element	HiddenSlides	int	0..1			.	.	.	.	.
-ep:CT_Properties/MMClips	PKG	CT_Properties	element	MMClips	int	0..1			.	.	.	.	.
-ep:CT_Properties/ScaleCrop	PKG	CT_Properties	element	ScaleCrop	boolean	0..1			.	.	.	.	.
-ep:CT_Properties/HeadingPairs	PKG	CT_Properties	element	HeadingPairs	CT_VectorVariant	0..1			.	.	.	.	.
-ep:CT_Properties/TitlesOfParts	PKG	CT_Properties	element	TitlesOfParts	CT_VectorLpstr	0..1			.	.	.	.	.
-ep:CT_Properties/LinksUpToDate	PKG	CT_Properties	element	LinksUpToDate	boolean	0..1			.	.	.	.	.
-ep:CT_Properties/CharactersWithSpaces	PKG	CT_Properties	element	CharactersWithSpaces	int	0..1			.	.	.	.	.
-ep:CT_Properties/SharedDoc	PKG	CT_Properties	element	SharedDoc	boolean	0..1			.	.	.	.	.
-ep:CT_Properties/HyperlinkBase	PKG	CT_Properties	element	HyperlinkBase	string	0..1			.	.	.	.	.
-ep:CT_Properties/HLinks	PKG	CT_Properties	element	HLinks	CT_VectorVariant	0..1			.	.	.	.	.
-ep:CT_Properties/HyperlinksChanged	PKG	CT_Properties	element	HyperlinksChanged	boolean	0..1			.	.	.	.	.
-ep:CT_Properties/DigSig	PKG	CT_Properties	element	DigSig	CT_DigSigBlob	0..1			.	.	.	.	.
-ep:CT_Properties/Application	PKG	CT_Properties	element	Application	string	0..1			.	.	.	.	.
-ep:CT_Properties/AppVersion	PKG	CT_Properties	element	AppVersion	string	0..1			.	.	.	.	.
-ep:CT_Properties/DocSecurity	PKG	CT_Properties	element	DocSecurity	int	0..1			.	.	.	.	.
+ep:CT_Properties	PKG		type	CT_Properties					y	.	.	.	.
+ep:CT_Properties/Template	PKG	CT_Properties	element	Template	string	0..1			y	.	.	.	.
+ep:CT_Properties/Manager	PKG	CT_Properties	element	Manager	string	0..1			y	.	.	.	.
+ep:CT_Properties/Company	PKG	CT_Properties	element	Company	string	0..1			y	.	.	.	.
+ep:CT_Properties/Pages	PKG	CT_Properties	element	Pages	int	0..1			y	.	.	.	.
+ep:CT_Properties/Words	PKG	CT_Properties	element	Words	int	0..1			y	.	.	.	.
+ep:CT_Properties/Characters	PKG	CT_Properties	element	Characters	int	0..1			y	.	.	.	.
+ep:CT_Properties/PresentationFormat	PKG	CT_Properties	element	PresentationFormat	string	0..1			y	.	.	.	.
+ep:CT_Properties/Lines	PKG	CT_Properties	element	Lines	int	0..1			y	.	.	.	.
+ep:CT_Properties/Paragraphs	PKG	CT_Properties	element	Paragraphs	int	0..1			y	.	.	.	.
+ep:CT_Properties/Slides	PKG	CT_Properties	element	Slides	int	0..1			y	.	.	.	.
+ep:CT_Properties/Notes	PKG	CT_Properties	element	Notes	int	0..1			y	.	.	.	.
+ep:CT_Properties/TotalTime	PKG	CT_Properties	element	TotalTime	int	0..1			y	.	.	.	.
+ep:CT_Properties/HiddenSlides	PKG	CT_Properties	element	HiddenSlides	int	0..1			y	.	.	.	.
+ep:CT_Properties/MMClips	PKG	CT_Properties	element	MMClips	int	0..1			y	.	.	.	.
+ep:CT_Properties/ScaleCrop	PKG	CT_Properties	element	ScaleCrop	boolean	0..1			y	.	.	.	.
+ep:CT_Properties/HeadingPairs	PKG	CT_Properties	element	HeadingPairs	CT_VectorVariant	0..1			y	.	.	.	.
+ep:CT_Properties/TitlesOfParts	PKG	CT_Properties	element	TitlesOfParts	CT_VectorLpstr	0..1			y	.	.	.	.
+ep:CT_Properties/LinksUpToDate	PKG	CT_Properties	element	LinksUpToDate	boolean	0..1			y	.	.	.	.
+ep:CT_Properties/CharactersWithSpaces	PKG	CT_Properties	element	CharactersWithSpaces	int	0..1			y	.	.	.	.
+ep:CT_Properties/SharedDoc	PKG	CT_Properties	element	SharedDoc	boolean	0..1			y	.	.	.	.
+ep:CT_Properties/HyperlinkBase	PKG	CT_Properties	element	HyperlinkBase	string	0..1			y	.	.	.	.
+ep:CT_Properties/HLinks	PKG	CT_Properties	element	HLinks	CT_VectorVariant	0..1			y	.	.	.	.
+ep:CT_Properties/HyperlinksChanged	PKG	CT_Properties	element	HyperlinksChanged	boolean	0..1			y	.	.	.	.
+ep:CT_Properties/DigSig	PKG	CT_Properties	element	DigSig	CT_DigSigBlob	0..1			y	.	.	.	.
+ep:CT_Properties/Application	PKG	CT_Properties	element	Application	string	0..1			y	.	.	.	.
+ep:CT_Properties/AppVersion	PKG	CT_Properties	element	AppVersion	string	0..1			y	.	.	.	.
+ep:CT_Properties/DocSecurity	PKG	CT_Properties	element	DocSecurity	int	0..1			y	.	.	.	.
 ep:CT_VectorVariant	PKG		type	CT_VectorVariant					.	.	.	.	.
 ep:CT_VectorVariant/vt:vector	PKG	CT_VectorVariant	element	vt:vector	vector				.	.	.	.	.
 ep:CT_VectorLpstr	PKG		type	CT_VectorLpstr					.	.	.	.	.
 ep:CT_VectorLpstr/vt:vector	PKG	CT_VectorLpstr	element	vt:vector	vector				.	.	.	.	.
-ep:CT_DigSigBlob	PKG		type	CT_DigSigBlob					.	.	.	.	.
-ep:CT_DigSigBlob/vt:blob	PKG	CT_DigSigBlob	element	vt:blob	blob				.	.	.	.	.
+ep:CT_DigSigBlob	PKG		type	CT_DigSigBlob					.	y	.	.	.
+ep:CT_DigSigBlob/vt:blob	PKG	CT_DigSigBlob	element	vt:blob	blob				.	y	.	.	.
 cp:<Properties>	PKG		root	<Properties>	CT_Properties				.	.	.	.	.
 cp:CT_Properties	PKG		type	CT_Properties					.	.	.	.	.
 cp:CT_Properties/property	PKG	CT_Properties	element	property	CT_Property	0..unbounded			.	.	.	.	.
@@ -5428,10 +5428,10 @@ cp:CT_Property/@pid	PKG	CT_Property	attribute	@pid	int	required			.	.	.	.	.
 cp:CT_Property/@name	PKG	CT_Property	attribute	@name	string	optional			.	.	.	.	.
 cp:CT_Property/@linkTarget	PKG	CT_Property	attribute	@linkTarget	string	optional			.	.	.	.	.
 vt:ST_VectorBaseType	PKG		simple	ST_VectorBaseType				base=string	.	.	.	.	.
-vt:ST_VectorBaseType/=variant	PKG	ST_VectorBaseType	value	=variant					.	.	.	.	.
+vt:ST_VectorBaseType/=variant	PKG	ST_VectorBaseType	value	=variant					y	.	.	.	.
 vt:ST_VectorBaseType/=i1	PKG	ST_VectorBaseType	value	=i1					.	.	.	.	.
 vt:ST_VectorBaseType/=i2	PKG	ST_VectorBaseType	value	=i2					.	.	.	.	.
-vt:ST_VectorBaseType/=i4	PKG	ST_VectorBaseType	value	=i4					.	.	.	.	.
+vt:ST_VectorBaseType/=i4	PKG	ST_VectorBaseType	value	=i4					y	.	.	.	.
 vt:ST_VectorBaseType/=i8	PKG	ST_VectorBaseType	value	=i8					.	.	.	.	.
 vt:ST_VectorBaseType/=ui1	PKG	ST_VectorBaseType	value	=ui1					.	.	.	.	.
 vt:ST_VectorBaseType/=ui2	PKG	ST_VectorBaseType	value	=ui2					.	.	.	.	.
@@ -5439,7 +5439,7 @@ vt:ST_VectorBaseType/=ui4	PKG	ST_VectorBaseType	value	=ui4					.	.	.	.	.
 vt:ST_VectorBaseType/=ui8	PKG	ST_VectorBaseType	value	=ui8					.	.	.	.	.
 vt:ST_VectorBaseType/=r4	PKG	ST_VectorBaseType	value	=r4					.	.	.	.	.
 vt:ST_VectorBaseType/=r8	PKG	ST_VectorBaseType	value	=r8					.	.	.	.	.
-vt:ST_VectorBaseType/=lpstr	PKG	ST_VectorBaseType	value	=lpstr					.	.	.	.	.
+vt:ST_VectorBaseType/=lpstr	PKG	ST_VectorBaseType	value	=lpstr					y	.	.	.	.
 vt:ST_VectorBaseType/=lpwstr	PKG	ST_VectorBaseType	value	=lpwstr					.	.	.	.	.
 vt:ST_VectorBaseType/=bstr	PKG	ST_VectorBaseType	value	=bstr					.	.	.	.	.
 vt:ST_VectorBaseType/=date	PKG	ST_VectorBaseType	value	=date					.	.	.	.	.
@@ -5463,7 +5463,7 @@ vt:ST_ArrayBaseType/=r8	PKG	ST_ArrayBaseType	value	=r8					.	.	.	.	.
 vt:ST_ArrayBaseType/=decimal	PKG	ST_ArrayBaseType	value	=decimal					.	.	.	.	.
 vt:ST_ArrayBaseType/=bstr	PKG	ST_ArrayBaseType	value	=bstr					.	.	.	.	.
 vt:ST_ArrayBaseType/=date	PKG	ST_ArrayBaseType	value	=date					.	.	.	.	.
-vt:ST_ArrayBaseType/=bool	PKG	ST_ArrayBaseType	value	=bool					.	.	.	.	.
+vt:ST_ArrayBaseType/=bool	PKG	ST_ArrayBaseType	value	=bool					y	.	.	.	.
 vt:ST_ArrayBaseType/=cy	PKG	ST_ArrayBaseType	value	=cy					.	.	.	.	.
 vt:ST_ArrayBaseType/=error	PKG	ST_ArrayBaseType	value	=error					.	.	.	.	.
 vt:ST_Cy	PKG		simple	ST_Cy				base=string pattern=\s*[0-9]*\.[0-9]{4}\s*	.	.	.	.	.
@@ -5491,8 +5491,8 @@ vt:CT_Vector/bool	PKG	CT_Vector	element	bool	bool	choice			.	.	.	.	.
 vt:CT_Vector/cy	PKG	CT_Vector	element	cy	cy	choice			.	.	.	.	.
 vt:CT_Vector/error	PKG	CT_Vector	element	error	error	choice			.	.	.	.	.
 vt:CT_Vector/clsid	PKG	CT_Vector	element	clsid	clsid	choice			.	.	.	.	.
-vt:CT_Vector/@baseType	PKG	CT_Vector	attribute	@baseType	ST_VectorBaseType	required			.	.	.	.	.
-vt:CT_Vector/@size	PKG	CT_Vector	attribute	@size	unsignedInt	required			.	.	.	.	.
+vt:CT_Vector/@baseType	PKG	CT_Vector	attribute	@baseType	ST_VectorBaseType	required			y	y	.	.	.
+vt:CT_Vector/@size	PKG	CT_Vector	attribute	@size	unsignedInt	required			.	y	.	.	.
 vt:CT_Array	PKG		type	CT_Array					.	.	.	.	.
 vt:CT_Array/variant	PKG	CT_Array	element	variant	variant	choice			.	.	.	.	.
 vt:CT_Array/i1	PKG	CT_Array	element	i1	i1	choice			.	.	.	.	.
@@ -5513,7 +5513,7 @@ vt:CT_Array/error	PKG	CT_Array	element	error	error	choice			.	.	.	.	.
 vt:CT_Array/cy	PKG	CT_Array	element	cy	cy	choice			.	.	.	.	.
 vt:CT_Array/@lBounds	PKG	CT_Array	attribute	@lBounds	int	required			.	.	.	.	.
 vt:CT_Array/@uBounds	PKG	CT_Array	attribute	@uBounds	int	required			.	.	.	.	.
-vt:CT_Array/@baseType	PKG	CT_Array	attribute	@baseType	ST_ArrayBaseType	required			.	.	.	.	.
+vt:CT_Array/@baseType	PKG	CT_Array	attribute	@baseType	ST_ArrayBaseType	required			y	y	.	.	.
 vt:CT_Variant	PKG		type	CT_Variant					.	.	.	.	.
 vt:CT_Variant/variant	PKG	CT_Variant	element	variant	variant	choice			.	.	.	.	.
 vt:CT_Variant/vector	PKG	CT_Variant	element	vector	vector	choice			.	.	.	.	.
@@ -5524,7 +5524,7 @@ vt:CT_Variant/empty	PKG	CT_Variant	element	empty	empty	choice			.	.	.	.	.
 vt:CT_Variant/null	PKG	CT_Variant	element	null	null	choice			.	.	.	.	.
 vt:CT_Variant/i1	PKG	CT_Variant	element	i1	i1	choice			.	.	.	.	.
 vt:CT_Variant/i2	PKG	CT_Variant	element	i2	i2	choice			.	.	.	.	.
-vt:CT_Variant/i4	PKG	CT_Variant	element	i4	i4	choice			.	.	.	.	.
+vt:CT_Variant/i4	PKG	CT_Variant	element	i4	i4	choice			.	y	y	.	.
 vt:CT_Variant/i8	PKG	CT_Variant	element	i8	i8	choice			.	.	.	.	.
 vt:CT_Variant/int	PKG	CT_Variant	element	int	int	choice			.	.	.	.	.
 vt:CT_Variant/ui1	PKG	CT_Variant	element	ui1	ui1	choice			.	.	.	.	.
@@ -5535,7 +5535,7 @@ vt:CT_Variant/uint	PKG	CT_Variant	element	uint	uint	choice			.	.	.	.	.
 vt:CT_Variant/r4	PKG	CT_Variant	element	r4	r4	choice			.	.	.	.	.
 vt:CT_Variant/r8	PKG	CT_Variant	element	r8	r8	choice			.	.	.	.	.
 vt:CT_Variant/decimal	PKG	CT_Variant	element	decimal	decimal	choice			.	.	.	.	.
-vt:CT_Variant/lpstr	PKG	CT_Variant	element	lpstr	lpstr	choice			.	.	.	.	.
+vt:CT_Variant/lpstr	PKG	CT_Variant	element	lpstr	lpstr	choice			.	y	y	.	.
 vt:CT_Variant/lpwstr	PKG	CT_Variant	element	lpwstr	lpwstr	choice			.	.	.	.	.
 vt:CT_Variant/bstr	PKG	CT_Variant	element	bstr	bstr	choice			.	.	.	.	.
 vt:CT_Variant/date	PKG	CT_Variant	element	date	date	choice			.	.	.	.	.
@@ -5551,7 +5551,7 @@ vt:CT_Variant/vstream	PKG	CT_Variant	element	vstream	vstream	choice			.	.	.	.	.
 vt:CT_Variant/clsid	PKG	CT_Variant	element	clsid	clsid	choice			.	.	.	.	.
 vt:CT_Vstream	PKG		type	CT_Vstream					.	.	.	.	.
 vt:CT_Vstream/base64Binary	PKG	CT_Vstream	base	base64Binary	base64Binary				.	.	.	.	.
-vt:CT_Vstream/@version	PKG	CT_Vstream	attribute	@version	ST_Guid	optional			.	.	.	.	.
+vt:CT_Vstream/@version	PKG	CT_Vstream	attribute	@version	ST_Guid	optional			.	y	.	.	.
 vt:<variant>	PKG		root	<variant>	CT_Variant				.	.	.	.	.
 vt:<vector>	PKG		root	<vector>	CT_Vector				.	.	.	.	.
 vt:<array>	PKG		root	<array>	CT_Array				.	.	.	.	.
@@ -6435,9 +6435,9 @@ ct:CT_Types/Override	PKG	CT_Types	element	Override	Override	choice			.	.	.	.	.
 ct:CT_Default	PKG		type	CT_Default					.	.	.	.	.
 ct:CT_Default/@Extension	PKG	CT_Default	attribute	@Extension	ST_Extension	required			.	.	.	.	.
 ct:CT_Default/@ContentType	PKG	CT_Default	attribute	@ContentType	ST_ContentType	required			.	.	.	.	.
-ct:CT_Override	PKG		type	CT_Override					.	.	.	.	.
-ct:CT_Override/@ContentType	PKG	CT_Override	attribute	@ContentType	ST_ContentType	required			.	.	.	.	.
-ct:CT_Override/@PartName	PKG	CT_Override	attribute	@PartName	anyURI	required			.	.	.	.	.
+ct:CT_Override	PKG		type	CT_Override					.	.	y	.	.
+ct:CT_Override/@ContentType	PKG	CT_Override	attribute	@ContentType	ST_ContentType	required			.	.	y	.	.
+ct:CT_Override/@PartName	PKG	CT_Override	attribute	@PartName	anyURI	required			.	.	y	.	.
 ct:ST_ContentType	PKG		simple	ST_ContentType				base=string pattern=(((([\p{IsBasicLatin}-[\p{Cc}\(\)<>@,;:\\"/\[\]\?=\{\}\s\t]])+))/((([\p{IsBasicLatin}-[\p{Cc}\(\)<>@,;:\\"/\[\]\?=\{\}\s\t]])+))((\s+)*;(\s+)*(((([\p{IsBasicLatin}-[\p{Cc}\(\)<>@,;:\\"/\[\]\?=\{\}\s\t]])+))=((([\p{IsBasicLatin}-[\p{Cc}\(\)<>@,;:\\"/\[\]\?=\{\}\s\t]])+)|("(([\p{IsLatin-1Supplement}\p{IsBasicLatin}-[\p{Cc}"\n\r]]|(\s+))|(\\[\p{IsBasicLatin}]))*"))))*)	.	.	.	.	.
 ct:ST_Extension	PKG		simple	ST_Extension				base=string pattern=([!$&'\(\)\*\+,:=]|(%[0-9a-fA-F][0-9a-fA-F])|[:@]|[a-zA-Z0-9\-_~])+	.	.	.	.	.
 rel:<Relationships>	PKG		root	<Relationships>	CT_Relationships				.	.	.	.	.
@@ -6447,31 +6447,31 @@ rel:CT_Relationships/Relationship	PKG	CT_Relationships	element	Relationship	Rela
 rel:CT_Relationship	PKG		type	CT_Relationship					.	.	.	.	.
 rel:CT_Relationship/string	PKG	CT_Relationship	base	string	string				.	.	.	.	.
 rel:CT_Relationship/@TargetMode	PKG	CT_Relationship	attribute	@TargetMode	ST_TargetMode	optional			.	.	.	.	.
-rel:CT_Relationship/@Target	PKG	CT_Relationship	attribute	@Target	anyURI	required			.	.	.	.	.
-rel:CT_Relationship/@Type	PKG	CT_Relationship	attribute	@Type	anyURI	required			.	.	.	.	.
-rel:CT_Relationship/@Id	PKG	CT_Relationship	attribute	@Id	ID	required			.	.	.	.	.
+rel:CT_Relationship/@Target	PKG	CT_Relationship	attribute	@Target	anyURI	required			.	.	y	.	.
+rel:CT_Relationship/@Type	PKG	CT_Relationship	attribute	@Type	anyURI	required			.	.	y	.	.
+rel:CT_Relationship/@Id	PKG	CT_Relationship	attribute	@Id	ID	required			.	.	y	.	.
 rel:ST_TargetMode	PKG		simple	ST_TargetMode				base=string	.	.	.	.	.
 rel:ST_TargetMode/=External	PKG	ST_TargetMode	value	=External					.	.	.	.	.
 rel:ST_TargetMode/=Internal	PKG	ST_TargetMode	value	=Internal					.	.	.	.	.
 core:<coreProperties>	PKG		root	<coreProperties>	CT_CoreProperties				.	.	.	.	.
-core:CT_CoreProperties	PKG		type	CT_CoreProperties					.	.	.	.	.
-core:CT_CoreProperties/category	PKG	CT_CoreProperties	element	category	string	0..1			.	.	.	.	.
-core:CT_CoreProperties/contentStatus	PKG	CT_CoreProperties	element	contentStatus	string	0..1			.	.	.	.	.
-core:CT_CoreProperties/dcterms:created	PKG	CT_CoreProperties	element	dcterms:created	created	0..1			.	.	.	.	.
-core:CT_CoreProperties/dc:creator	PKG	CT_CoreProperties	element	dc:creator	creator	0..1			.	.	.	.	.
-core:CT_CoreProperties/dc:description	PKG	CT_CoreProperties	element	dc:description	description	0..1			.	.	.	.	.
-core:CT_CoreProperties/dc:identifier	PKG	CT_CoreProperties	element	dc:identifier	identifier	0..1			.	.	.	.	.
-core:CT_CoreProperties/keywords	PKG	CT_CoreProperties	element	keywords	CT_Keywords	0..1			.	.	.	.	.
-core:CT_CoreProperties/dc:language	PKG	CT_CoreProperties	element	dc:language	language	0..1			.	.	.	.	.
-core:CT_CoreProperties/lastModifiedBy	PKG	CT_CoreProperties	element	lastModifiedBy	string	0..1			.	.	.	.	.
-core:CT_CoreProperties/lastPrinted	PKG	CT_CoreProperties	element	lastPrinted	dateTime	0..1			.	.	.	.	.
-core:CT_CoreProperties/dcterms:modified	PKG	CT_CoreProperties	element	dcterms:modified	modified	0..1			.	.	.	.	.
-core:CT_CoreProperties/revision	PKG	CT_CoreProperties	element	revision	string	0..1			.	.	.	.	.
-core:CT_CoreProperties/dc:subject	PKG	CT_CoreProperties	element	dc:subject	subject	0..1			.	.	.	.	.
-core:CT_CoreProperties/dc:title	PKG	CT_CoreProperties	element	dc:title	title	0..1			.	.	.	.	.
-core:CT_CoreProperties/version	PKG	CT_CoreProperties	element	version	string	0..1			.	.	.	.	.
+core:CT_CoreProperties	PKG		type	CT_CoreProperties					y	y	.	.	.
+core:CT_CoreProperties/category	PKG	CT_CoreProperties	element	category	string	0..1			y	y	.	.	.
+core:CT_CoreProperties/contentStatus	PKG	CT_CoreProperties	element	contentStatus	string	0..1			y	y	.	.	.
+core:CT_CoreProperties/dcterms:created	PKG	CT_CoreProperties	element	dcterms:created	created	0..1			y	y	.	.	.
+core:CT_CoreProperties/dc:creator	PKG	CT_CoreProperties	element	dc:creator	creator	0..1			y	y	.	.	.
+core:CT_CoreProperties/dc:description	PKG	CT_CoreProperties	element	dc:description	description	0..1			y	y	.	.	.
+core:CT_CoreProperties/dc:identifier	PKG	CT_CoreProperties	element	dc:identifier	identifier	0..1			y	y	.	.	.
+core:CT_CoreProperties/keywords	PKG	CT_CoreProperties	element	keywords	CT_Keywords	0..1			y	y	.	.	.
+core:CT_CoreProperties/dc:language	PKG	CT_CoreProperties	element	dc:language	language	0..1			y	y	.	.	.
+core:CT_CoreProperties/lastModifiedBy	PKG	CT_CoreProperties	element	lastModifiedBy	string	0..1			y	y	.	.	.
+core:CT_CoreProperties/lastPrinted	PKG	CT_CoreProperties	element	lastPrinted	dateTime	0..1			y	y	.	.	.
+core:CT_CoreProperties/dcterms:modified	PKG	CT_CoreProperties	element	dcterms:modified	modified	0..1			y	y	.	.	.
+core:CT_CoreProperties/revision	PKG	CT_CoreProperties	element	revision	string	0..1			y	y	.	.	.
+core:CT_CoreProperties/dc:subject	PKG	CT_CoreProperties	element	dc:subject	subject	0..1			y	y	.	.	.
+core:CT_CoreProperties/dc:title	PKG	CT_CoreProperties	element	dc:title	title	0..1			y	y	.	.	.
+core:CT_CoreProperties/version	PKG	CT_CoreProperties	element	version	string	0..1			y	y	.	.	.
 core:CT_Keywords	PKG		type	CT_Keywords					.	.	.	.	.
-core:CT_Keywords/value	PKG	CT_Keywords	element	value	CT_Keyword	0..unbounded			.	.	.	.	.
+core:CT_Keywords/value	PKG	CT_Keywords	element	value	CT_Keyword	0..unbounded			.	y	.	.	.
 core:CT_Keywords/@xml:lang	PKG	CT_Keywords	attribute	@xml:lang	lang	optional			.	.	.	.	.
 core:CT_Keyword	PKG		type	CT_Keyword					.	.	.	.	.
 core:CT_Keyword/string	PKG	CT_Keyword	base	string	string				.	.	.	.	.
@@ -7682,9 +7682,9 @@ x:drawing/2010/diagram:CT_Boolean/@val	DGM	CT_Boolean	attribute	@val	boolean	opt
 x:drawing/2010/diagram:<recolorImg>	DGM		root	<recolorImg>	CT_Boolean				.	.	.	.	.
 x:thememl/2012/main:CT_ThemeFamily	THEME		type	CT_ThemeFamily					.	.	.	.	.
 x:thememl/2012/main:CT_ThemeFamily/extLst	THEME	CT_ThemeFamily	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-x:thememl/2012/main:CT_ThemeFamily/@name	THEME	CT_ThemeFamily	attribute	@name	string	required			.	.	.	.	.
-x:thememl/2012/main:CT_ThemeFamily/@id	THEME	CT_ThemeFamily	attribute	@id	ST_Guid	required			.	.	.	.	.
-x:thememl/2012/main:CT_ThemeFamily/@vid	THEME	CT_ThemeFamily	attribute	@vid	ST_Guid	required			.	.	.	.	.
+x:thememl/2012/main:CT_ThemeFamily/@name	THEME	CT_ThemeFamily	attribute	@name	string	required			.	y	.	.	.
+x:thememl/2012/main:CT_ThemeFamily/@id	THEME	CT_ThemeFamily	attribute	@id	ST_Guid	required			.	y	.	.	.
+x:thememl/2012/main:CT_ThemeFamily/@vid	THEME	CT_ThemeFamily	attribute	@vid	ST_Guid	required			y	y	.	.	.
 x:thememl/2012/main:<themeFamily>	THEME		root	<themeFamily>	CT_ThemeFamily				.	.	.	.	.
 x:thememl/2012/main:@id	THEME		rootattr	@id	ST_Guid	optional			.	.	.	.	.
 x:powerpoint/2014/inkAction:ST_DataNameReserved	INK		simple	ST_DataNameReserved				base=string	.	.	.	.	.
