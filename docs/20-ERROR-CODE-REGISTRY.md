@@ -19,4 +19,6 @@ Stable, never reused. **The contract:** messages and findings carry part names, 
 
 Findings, which do not stop a deck opening: CS-FND-0001 external content; 0002 unsafe link; 0003 target escapes package; 0004 dangling target; 0005 orphan part; 0006 undeclared content type; 0007 unknown relationship type; 0008 macro project; 0009 signature; 0010 embedded object; 0011 target or entry name that decodes to traversal or to no valid name; 0012 markup compatibility non-conformance.
 
+Text bodies, refused on crossing a bound in `TextLimits` ([21](21-PARSER-LIMITS.md)): CS-TXT-0001 paragraphs in a text body; CS-TXT-0002 runs in a paragraph; CS-TXT-0003 paragraphs in a part; CS-TXT-0004 runs in a part; CS-TXT-0005 tab stops in a list. Defined in `crates/casual-slide-import/src/properties.rs`. Export refuses an edit it does not write as CS-EXP-0009, defined in `crates/casual-slide-export/src/properties.rs`, and nothing is saved. Text content (`a:t`, `@typeface`, `@char`, `@tooltip` and the rest) never reaches a message or a finding: both carry element and attribute names only.
+
 Colour and theme import findings: CS-CLR-0001, CS-CLR-0002, CS-CLR-0003, CS-CLR-0004, CS-CLR-0005, CS-CLR-0006, CS-CLR-0007, CS-CLR-0008, CS-CLR-0009, CS-CLR-0010. Defined in `crates/casual-slide-import/src/color.rs` and `theme.rs`.

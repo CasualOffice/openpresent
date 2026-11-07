@@ -5,4 +5,5 @@ pub mod presentation;
 pub mod properties;
 pub mod shape;
 pub mod slide;
+pub mod text;
 pub mod theme;

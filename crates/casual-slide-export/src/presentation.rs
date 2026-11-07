@@ -202,7 +202,7 @@ fn patch_positive_size(
     w.attr(el, "cy", before.map(|b| &b.cy), Some(&after.cy))
 }
 
-fn patch_text_font(
+pub(crate) fn patch_text_font(
     w: &mut Writer<'_>,
     el: &Elem,
     before: Option<&TextFont>,
@@ -612,6 +612,11 @@ pub fn patch_presentation(
         patch_customer_data(w, el, old, new, limits)
     });
     child!("kinsoku", kinsoku, patch_kinsoku);
+    child!(
+        "defaultTextStyle",
+        default_text_style,
+        crate::text::patch_list_style
+    );
     child!("modifyVerifier", modify_verifier, patch_modify_verifier);
     Ok(w.changes)
 }

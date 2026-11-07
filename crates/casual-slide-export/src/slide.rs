@@ -7,8 +7,8 @@
 //!
 //! What this tier writes: a node's transform, `cNvPr` attributes, hyperlink
 //! attributes, locks, `txBox`, placeholder attributes, `isPhoto`, `userDrawn`,
-//! `useBgFill` and `bwMode`; a part's root attributes, `cSld/@name`, `clrMap`
-//! slots, `clrMapOvr` and `hf`. Anything else that differs (a node added, removed
+//! `useBgFill`, `bwMode` and text body ([`crate::text`]); a part's root attributes,
+//! `cSld/@name`, `clrMap` slots, `clrMapOvr`, `hf`, `txStyles` and `notesStyle`. Anything else that differs (a node added, removed
 //! or reordered, a background, a layout list) is refused as `CS-SLE-0001`, and
 //! nothing is saved: those edits belong to the writer tier (1N) and to Phase 4.
 
@@ -24,7 +24,9 @@ use casual_slide_model::presentation::{Point, PositiveSize};
 use casual_slide_model::shape::{
     AppNonVisual, Hyperlink, Locks, NodeKind, NonVisualDrawing, Placeholder, ShapeNode, Transform,
 };
-use casual_slide_model::slide::{DeckStructure, HeaderFooter, SlideKind, SlidePart};
+use casual_slide_model::slide::{
+    DeckStructure, HeaderFooter, MasterTextStyles, SlideKind, SlidePart,
+};
 use casual_slide_model::theme::{ColorMapOverride, ColorMapSlot};
 use casual_slide_ooxml::{
     Conformance, FindingKind, OoxmlLimits, PresentationPackage, Relationship, XmlTree,
@@ -33,6 +35,7 @@ use casual_slide_package::PartEdits;
 
 use crate::presentation::SaveOutcome;
 use crate::properties::{ExportError, Writer};
+use crate::text::{patch_list_style, patch_text_body};
 use crate::theme::{set_color_map_override, set_color_map_slot};
 
 /// Why a slide-like part could not be written. Nothing was saved.
@@ -152,6 +155,8 @@ const SP_PR_ORDER: &[&str] = &[
 ];
 const FRAME_ORDER: &[&str] = &["nvGraphicFramePr", "xfrm", "graphic", "extLst"];
 const XFRM_ORDER: &[&str] = &["off", "ext", "chOff", "chExt"];
+const SHAPE_ORDER: &[&str] = &["nvSpPr", "spPr", "style", "txBody", "extLst"];
+const TEXT_STYLES_ORDER: &[&str] = &["titleStyle", "bodyStyle", "otherStyle", "extLst"];
 
 fn root_order(kind: SlideKind) -> &'static [&'static str] {
     match kind {
@@ -246,12 +251,29 @@ impl Patch<'_, '_> {
         if before.layout_ids != after.layout_ids {
             return Err(self.unsupported("a layout list"));
         }
-        if before.text_styles != after.text_styles
-            || before.has_notes_style != after.has_notes_style
-        {
-            return Err(self.unsupported("text styles"));
-        }
         let order = root_order(after.kind);
+        sync_ordered(
+            &mut self.w,
+            root,
+            ns::PML,
+            "p",
+            order,
+            "txStyles",
+            before.text_styles.as_ref(),
+            after.text_styles.as_ref(),
+            patch_text_styles,
+        )?;
+        sync_ordered(
+            &mut self.w,
+            root,
+            ns::PML,
+            "p",
+            order,
+            "notesStyle",
+            before.notes_style.as_ref(),
+            after.notes_style.as_ref(),
+            patch_list_style,
+        )?;
         sync_ordered(
             &mut self.w,
             root,
@@ -357,7 +379,8 @@ impl Patch<'_, '_> {
             || b.bw_mode != a.bw_mode
             || b.use_bg_fill != a.use_bg_fill
             || b.graphic_uri != a.graphic_uri
-            || b.rel_id != a.rel_id;
+            || b.rel_id != a.rel_id
+            || b.text_body != a.text_body;
         if own_changed {
             let mapped = self
                 .map
@@ -405,6 +428,20 @@ impl Patch<'_, '_> {
         if b.transform != a.transform || b.bw_mode != a.bw_mode {
             self.transform(el, b, a)?;
         }
+        if a.text_body.is_some() && a.kind != NodeKind::Shape {
+            return Err(self.unsupported("a text body on a node that holds none"));
+        }
+        sync_ordered(
+            &mut self.w,
+            el,
+            ns::PML,
+            "p",
+            SHAPE_ORDER,
+            "txBody",
+            b.text_body.as_ref(),
+            a.text_body.as_ref(),
+            |w, el, before, after| patch_text_body(w, el, before.map(|b| &**b), after),
+        )?;
         Ok(())
     }
 
@@ -553,7 +590,7 @@ impl Patch<'_, '_> {
 /// namespace: an `a:xfrm` goes before `a:prstGeom` in a `p:spPr`, and a `p:xfrm`
 /// before `a:graphic`. Elements not in `order` are not landmarks.
 #[allow(clippy::too_many_arguments)]
-fn sync_ordered<T: PartialEq>(
+pub(crate) fn sync_ordered<T: PartialEq>(
     w: &mut Writer<'_>,
     parent: &Elem,
     uris: &[&str],
@@ -623,6 +660,44 @@ fn patch_header_footer(
     )
 }
 
+fn patch_text_styles(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&MasterTextStyles>,
+    a: &MasterTextStyles,
+) -> std::result::Result<(), ExportError> {
+    for (name, before, after) in [
+        (
+            "titleStyle",
+            b.and_then(|b| b.title.as_ref()),
+            a.title.as_ref(),
+        ),
+        (
+            "bodyStyle",
+            b.and_then(|b| b.body.as_ref()),
+            a.body.as_ref(),
+        ),
+        (
+            "otherStyle",
+            b.and_then(|b| b.other.as_ref()),
+            a.other.as_ref(),
+        ),
+    ] {
+        sync_ordered(
+            w,
+            el,
+            ns::PML,
+            "p",
+            TEXT_STYLES_ORDER,
+            name,
+            before,
+            after,
+            patch_list_style,
+        )?;
+    }
+    Ok(())
+}
+
 fn patch_locks(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -647,7 +722,7 @@ fn patch_locks(
     Ok(())
 }
 
-fn patch_hyperlink(
+pub(crate) fn patch_hyperlink(
     w: &mut Writer<'_>,
     el: &Elem,
     b: &Hyperlink,

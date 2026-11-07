@@ -32,6 +32,7 @@ use crate::properties::{
     Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns,
 };
 use crate::shape::{ShapeReader, SourceMap};
+use crate::text::{TextCounts, TextReader};
 use crate::theme::{read_color_map, read_color_map_override, read_style_matrix_ref};
 
 const TRANSITIONAL_RELS: &str =
@@ -324,6 +325,8 @@ fn read_part(
                     next_node: 0,
                     spids: HashSet::new(),
                     map: map.as_deref_mut(),
+                    color: &mut *color,
+                    text_counts: TextCounts::default(),
                 };
                 p.common = Some(read_common(&mut shapes, &el)?);
             }
@@ -331,11 +334,15 @@ fn read_part(
             "clrMapOvr" => p.color_map_override = read_color_map_override(tree, el.id, color),
             "hf" => p.header_footer = Some(read_header_footer(r, &el)?),
             "sldLayoutIdLst" => p.layout_ids = Some(read_layout_ids(r, &el, rels, limits)?),
-            "txStyles" => p.text_styles = Some(read_text_styles(r, &el)?),
+            "txStyles" => p.text_styles = Some(read_text_styles(r, &el, rels, color)?),
             _ => {
-                p.has_notes_style = Some(true);
-                // Its content is Tier 1F.
-                r.retained(&el);
+                let mut text = TextReader {
+                    r: &mut *r,
+                    rels,
+                    color: &mut *color,
+                    counts: &mut TextCounts::default(),
+                };
+                p.notes_style = Some(text.list_style(&el)?);
             }
         }
     }
@@ -515,26 +522,37 @@ fn read_layout_ids(
     Ok(out)
 }
 
-fn read_text_styles(r: &mut Reader<'_>, el: &Elem) -> Result<MasterTextStyles, SlideError> {
+fn read_text_styles(
+    r: &mut Reader<'_>,
+    el: &Elem,
+    rels: &[Relationship],
+    color: &mut ColorFindings,
+) -> Result<MasterTextStyles, SlideError> {
     r.finish(el);
     let mut styles = MasterTextStyles::default();
     for child in r.children(el)? {
-        if child.in_namespace(ns::PML) {
-            let slot = match child.local.as_str() {
-                "titleStyle" => Some(&mut styles.title),
-                "bodyStyle" => Some(&mut styles.body),
-                "otherStyle" => Some(&mut styles.other),
-                _ => None,
-            };
-            if let Some(slot) = slot {
-                if *slot {
-                    r.note(K::DuplicateElement, &child, None);
-                }
-                *slot = true;
-            }
+        let slot = match child.local.as_str() {
+            _ if !child.in_namespace(ns::PML) => None,
+            "titleStyle" => Some(&mut styles.title),
+            "bodyStyle" => Some(&mut styles.body),
+            "otherStyle" => Some(&mut styles.other),
+            _ => None,
+        };
+        let Some(slot) = slot else {
+            r.retained(&child);
+            continue;
+        };
+        if slot.is_some() {
+            r.note(K::DuplicateElement, &child, None);
+            continue;
         }
-        // A list style's content is Tier 1F.
-        r.retained(&child);
+        let mut text = TextReader {
+            r: &mut *r,
+            rels,
+            color: &mut *color,
+            counts: &mut TextCounts::default(),
+        };
+        *slot = Some(text.list_style(&child)?);
     }
     Ok(styles)
 }

@@ -6,8 +6,8 @@
 //! defaults and the schema's; for a notes slide it is notes slide, notes master.
 //! Tier 1D resolves what Tier 1D models: placeholder matching, transform, colour
 //! map, background, header and footer flags, the visibility of master and layout
-//! shapes, a slide's hidden flag, and which master text style applies. Fills, lines
-//! and text properties join as their tiers model them.
+//! shapes, a slide's hidden flag, and which master text style applies. Tier 1F adds
+//! every text property, in [`text`]. Fills and lines join as their tiers model them.
 //!
 //! # Placeholder matching (BEH-01)
 //!
@@ -38,6 +38,9 @@
 //! | Header, footer | Layout `hf`, else master `hf`, as a unit; an absent attribute of a present `hf` is the schema's `true` | Inferred |
 //! | Master shapes | Hidden if the slide or the layout says `showMasterSp="0"`; layout shapes hidden if the slide does | ECMA-376 19.3.1.38, 19.3.1.39; the slide hiding both is Inferred |
 //! | Text style | Title placeholders take `titleStyle`; `dt`, `ftr`, `sldNum`, `hdr` and non-placeholders `otherStyle`; other placeholders `bodyStyle`; a notes body `notesStyle`; else the presentation default | ECMA-376 19.3.1.51 for title, body, other; the footer types Inferred |
+//! | Text properties | Run or paragraph, shape list style, layout placeholder, master placeholder, master text styles, presentation default | [`text`] |
+
+pub mod text;
 
 use casual_slide_model::presentation::{Point, PositiveSize};
 use casual_slide_model::shape::{NodeKind, ObjectId, Placeholder, PlaceholderType, ShapeNode};
@@ -457,18 +460,9 @@ impl<'a> Chain<'a> {
                 _ => TextStyle::Other,
             },
         };
-        let master = self.master;
         let present = match wanted {
-            TextStyle::Notes => master.and_then(|m| m.has_notes_style).unwrap_or(false),
-            TextStyle::PresentationDefault => false,
-            _ if self.is_notes() => false,
-            slot => master
-                .and_then(|m| m.text_styles)
-                .is_some_and(|s| match slot {
-                    TextStyle::Title => s.title,
-                    TextStyle::Body => s.body,
-                    _ => s.other,
-                }),
+            _ if self.is_notes() && wanted != TextStyle::Notes => false,
+            slot => self.master_list_style(slot).is_some(),
         };
         if present {
             Resolved::new(wanted, Level::Master)

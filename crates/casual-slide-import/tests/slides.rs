@@ -156,8 +156,8 @@ fn part_attributes_read_as_written_and_absent_stays_absent() {
         (Some(false), Some(false), Some(false), None),
         "an attribute not written is not the schema's true"
     );
-    let styles = master.text_styles.unwrap();
-    assert!(styles.title && styles.body && styles.other);
+    let styles = master.text_styles.as_ref().unwrap();
+    assert!(styles.title.is_some() && styles.body.is_some() && styles.other.is_some());
     let ids = master.layout_ids.as_ref().unwrap();
     assert_eq!(ids.len(), 3);
     assert_eq!(
@@ -223,7 +223,7 @@ fn part_attributes_read_as_written_and_absent_stays_absent() {
         s3.common.as_ref().unwrap().name.as_deref(),
         Some("Hidden dark")
     );
-    assert_eq!(p(8).has_notes_style, Some(true));
+    assert!(p(8).notes_style.is_some());
     assert_eq!(p(8).header_footer.unwrap().date_time, Some(false));
     assert_eq!(p(9).header_footer.unwrap().header, Some(false));
     assert_eq!(p(7).kind, SlideKind::Notes);
@@ -382,10 +382,12 @@ fn every_node_kind_has_identity_transform_locks_and_links() {
         )
     );
     // What a node holds beyond this tier is in the report, by name.
-    for element in ["txBody", "prstGeom", "tbl", "txStyles", "notesStyle"] {
-        let reported = s.findings.has(K::RetainedElement, element)
-            || (element == "txStyles" && s.findings.has(K::RetainedElement, "titleStyle"));
-        assert!(reported, "{element}: {:?}", s.findings);
+    for element in ["prstGeom", "tbl"] {
+        assert!(
+            s.findings.has(K::RetainedElement, element),
+            "{element}: {:?}",
+            s.findings
+        );
     }
     assert!(s.findings.has(K::RetainedElement, "blipFill"));
     assert!(s.findings.has(K::RetainedElement, "AlternateContent"));
@@ -617,6 +619,7 @@ fn absent_stays_absent_on_a_bare_node_and_part() {
     expected.non_visual = title.non_visual.clone();
     expected.app = title.app.clone();
     expected.transform = title.transform;
+    expected.text_body = title.text_body.clone();
     assert_eq!(*title, expected, "no field the file did not state");
     let nv = title.non_visual.as_ref().unwrap();
     assert_eq!(

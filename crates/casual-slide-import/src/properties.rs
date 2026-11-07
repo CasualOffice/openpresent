@@ -19,6 +19,8 @@ use casual_slide_model::properties::{
 };
 use casual_slide_ooxml::{ElementId, OoxmlError, XmlTree};
 
+use crate::text::TextLimits;
+
 /// Namespace names. Transitional first, then Strict, where they differ.
 pub mod ns {
     /// `p:`
@@ -92,6 +94,8 @@ pub struct ImportLimits {
     pub max_value_bytes: usize,
     /// Distinct findings kept. One more says the list was cut.
     pub max_findings: usize,
+    /// Bounds on text bodies and list styles.
+    pub text: TextLimits,
 }
 
 impl Default for ImportLimits {
@@ -110,6 +114,45 @@ impl Default for ImportLimits {
             max_variant_depth: 16,
             max_value_bytes: 16 << 20,
             max_findings: 10_000,
+            text: TextLimits::default(),
+        }
+    }
+}
+
+/// Which text bound was crossed. Each has its own stable code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextBound {
+    /// Paragraphs in one text body.
+    ParagraphsInBody,
+    /// Runs, breaks and fields in one paragraph.
+    RunsInParagraph,
+    /// Paragraphs across one part.
+    ParagraphsInPart,
+    /// Runs, breaks and fields across one part.
+    RunsInPart,
+    /// Tab stops in one list.
+    TabStops,
+}
+
+impl TextBound {
+    /// The stable diagnostic code.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::ParagraphsInBody => "CS-TXT-0001",
+            Self::RunsInParagraph => "CS-TXT-0002",
+            Self::ParagraphsInPart => "CS-TXT-0003",
+            Self::RunsInPart => "CS-TXT-0004",
+            Self::TabStops => "CS-TXT-0005",
+        }
+    }
+
+    fn what(self) -> &'static str {
+        match self {
+            Self::ParagraphsInBody => "paragraphs in a text body",
+            Self::RunsInParagraph => "runs in a paragraph",
+            Self::ParagraphsInPart => "paragraphs in the part",
+            Self::RunsInPart => "runs in the part",
+            Self::TabStops => "tab stops in a list",
         }
     }
 }
@@ -143,6 +186,15 @@ pub enum ImportError {
         /// The element expected.
         expected: &'static str,
     },
+    /// More text than [`crate::text::TextLimits`] allows.
+    TextBound {
+        /// Which bound.
+        bound: TextBound,
+        /// The part.
+        part: String,
+        /// The bound's value.
+        limit: usize,
+    },
 }
 
 impl ImportError {
@@ -153,6 +205,7 @@ impl ImportError {
             Self::TooMany { .. } => "CS-IMP-0001",
             Self::ValueTooLong { .. } => "CS-IMP-0002",
             Self::WrongRoot { .. } => "CS-IMP-0003",
+            Self::TextBound { bound, .. } => bound.code(),
         }
     }
 }
@@ -173,6 +226,14 @@ impl fmt::Display for ImportError {
             }
             Self::WrongRoot { part, expected } => {
                 write!(f, "[{}] {part:?}: root is not {expected}", self.code())
+            }
+            Self::TextBound { bound, part, limit } => {
+                write!(
+                    f,
+                    "[{}] {part:?}: {} over the limit {limit}",
+                    self.code(),
+                    bound.what()
+                )
             }
         }
     }

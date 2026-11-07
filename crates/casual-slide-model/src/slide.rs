@@ -4,12 +4,13 @@
 //!
 //! The six part kinds share most of their shape, so one [`SlidePart`] holds them,
 //! with a field per attribute and child; a field a kind does not have stays `None`.
-//! Transitions, timing, text styles' content, fills and effects stay in the part's
-//! tree, preserved but not modelled. Inheritance between these parts is resolved
+//! Transitions, timing, fills and effects stay in the part's tree, preserved but
+//! not modelled. Inheritance between these parts is resolved
 //! by `casual-slide-style` at read time, never stored here (ADR-006).
 
 use crate::properties::token_enum;
 use crate::shape::{BlackWhiteMode, ObjectId, ShapeNode};
+use crate::text::TextListStyle;
 use crate::theme::{ColorMap, ColorMapOverride, StyleMatrixRef};
 
 /// Smallest `ST_SlideLayoutId`. Layout and master ids share one pool (`INV-ID-03`).
@@ -192,16 +193,15 @@ pub struct SlideLayoutId {
     pub rel_id: String,
 }
 
-/// `p:CT_SlideMasterTextStyles`: which list styles a master states. Their content
-/// is Tier 1F, and stays in the tree.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+/// `p:CT_SlideMasterTextStyles`. `extLst` stays in the tree.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MasterTextStyles {
     /// `titleStyle`.
-    pub title: bool,
+    pub title: Option<TextListStyle>,
     /// `bodyStyle`.
-    pub body: bool,
+    pub body: Option<TextListStyle>,
     /// `otherStyle`.
-    pub other: bool,
+    pub other: Option<TextListStyle>,
 }
 
 /// One slide-like part: `sld`, `sldLayout`, `sldMaster`, `notes`, `notesMaster` or
@@ -238,8 +238,8 @@ pub struct SlidePart {
     pub layout_ids: Option<Vec<SlideLayoutId>>,
     /// `txStyles`: masters.
     pub text_styles: Option<MasterTextStyles>,
-    /// `notesStyle` is present: the notes master.
-    pub has_notes_style: Option<bool>,
+    /// `notesStyle`: the notes master.
+    pub notes_style: Option<TextListStyle>,
 }
 
 impl SlidePart {
@@ -261,7 +261,7 @@ impl SlidePart {
             header_footer: None,
             layout_ids: None,
             text_styles: None,
-            has_notes_style: None,
+            notes_style: None,
         }
     }
 

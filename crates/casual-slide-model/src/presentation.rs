@@ -428,8 +428,7 @@ pub struct ModifyVerifier {
     pub crypt_provider_type_ext_source: Option<String>,
 }
 
-/// `p:CT_Presentation`. `defaultTextStyle` and `extLst` stay in the tree, and are
-/// reported as retained; neither has a value here until Tier 1F and 1M.
+/// `p:CT_Presentation`. `extLst` stays in the tree, and is reported as retained.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Presentation {
     /// `@serverZoom`.
@@ -478,6 +477,8 @@ pub struct Presentation {
     pub photo_album: Option<PhotoAlbum>,
     /// `custDataLst`.
     pub customer_data: Option<CustomerDataList>,
+    /// `defaultTextStyle`.
+    pub default_text_style: Option<crate::text::TextListStyle>,
     /// `kinsoku`.
     pub kinsoku: Option<Kinsoku>,
     /// `modifyVerifier`.

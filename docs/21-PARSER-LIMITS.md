@@ -143,6 +143,20 @@ carries one (`GEO-04`). And a geometry diagnostic carries up to 64 bytes of text
 file, which the log contract in [20](20-ERROR-CODE-REGISTRY.md) forbids: the same defect
 as `SEC-015`, in a crate that row does not name.
 
+## Text: `TextLimits`
+
+`crates/casual-slide-import/src/text.rs`, nested in `ImportLimits` as `text`. Each is well beyond any real deck; the largest committed real deck is well under one percent of each. The part bounds below `max_runs_per_part` set what a text-heavy part can cost in the model: a run holds at most about 400 bytes of model before its strings, and each string is bounded by `max_value_bytes` and by the part. A size test holds that figure, so at the defaults text in one part stays near 400 MiB plus its characters.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_paragraphs_per_body` | `100_000` | Paragraphs in one text body | CS-TXT-0001 | Tested; `hostile/text-limit-paragraphs-in-body.bin` |
+| `max_runs_per_paragraph` | `100_000` | Runs, breaks, fields and retained children in one paragraph | CS-TXT-0002 | Tested; `hostile/text-limit-runs-in-paragraph.bin` |
+| `max_paragraphs_per_part` | `250_000` | Paragraphs across one part's shapes | CS-TXT-0003 | Tested; `hostile/text-limit-paragraphs-in-part.bin` |
+| `max_runs_per_part` | `1_000_000` | Runs, breaks, fields and retained children across one part | CS-TXT-0004 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_tab_stops` | `1_024` | Tab stops in one `tabLst`. Between the schema's 32 and this, they are kept and reported as `CS-IMF-0002` | CS-TXT-0005 | Tested; `hostile/text-limit-tab-stops.bin` |
+
+Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fixed shape, and a colour's transforms have their own bound. `a:t` is bounded by `max_value_bytes`.
+
 ## Export
 
 | Limit | Default | Bounds | Code | Status |
@@ -156,8 +170,8 @@ Each of these is a known gap with an owner, not an oversight:
 - **Time.** No limit bounds the time a deck can take within its byte budgets (`SEC-P10`, Tier 1A).
 - **Embedded packages.** An embedded deck or workbook is retained, never opened; opening one
   will be a separate admission with an inherited budget (`SEC-P09`).
-- **Text, layout and rendering** limits arrive with Tiers 1F and 2D: runs per paragraph, glyphs
-  per frame, image pixel dimensions before decode.
+- **Layout and rendering** limits arrive with Tier 2D: glyphs per frame, image pixel dimensions
+  before decode.
 - **Legacy `.ppt`** has no reader; a Compound File is refused as `CS-OPC-0005` (`CFB-01`, `PPT-01`).
 
 ## Tools
