@@ -489,6 +489,76 @@ fn what_nothing_models_is_reported_and_kept() {
     assert!(out.contains("odd=\"1\""));
 }
 
+/// `T1K-05`: a bullet in a diagram point's text is read as Tier 1F's `Bullet`, not dropped
+/// or merely retained, and an edit to it is written and reads back.
+#[test]
+fn a_bullet_in_a_diagram_s_text_is_read_and_written() {
+    use casual_slide_model::text::Bullet;
+    let (mut pkg, _, _, d) = first_diagram(&fixture("generated/graphics-diagram-consistent.pptx"));
+    let name = d.part(DiagramRole::Data).unwrap().to_owned();
+    let tree = part_tree(&mut pkg, &name);
+    let rels = pkg.relationships_of(&name).to_vec();
+    let import = import();
+    let read = |tree: &XmlTree, findings: &mut Findings| {
+        let root = import_diagram_root(tree, &name, &rels, &limits(), &import, findings)
+            .unwrap()
+            .unwrap();
+        let dgm::Root::DataModel(data) = root else {
+            panic!()
+        };
+        data
+    };
+    let bullet = |data: &dgm::DataModel| {
+        data.pt_lst.as_ref().unwrap().pt[1]
+            .t
+            .as_ref()
+            .unwrap()
+            .paragraphs[0]
+            .properties
+            .as_ref()
+            .unwrap()
+            .bullet
+            .clone()
+    };
+    let mut findings = Findings::new(import.max_findings);
+    let mut data = read(&tree, &mut findings);
+    assert_eq!(
+        bullet(&data),
+        Some(Bullet::Char(Some("\u{2022}".to_owned())))
+    );
+    assert!(
+        !findings.iter().any(|f| f.kind == K::RetainedElement),
+        "{findings:?}"
+    );
+    data.pt_lst.as_mut().unwrap().pt[1]
+        .t
+        .as_mut()
+        .unwrap()
+        .paragraphs[0]
+        .properties
+        .as_mut()
+        .unwrap()
+        .bullet = Some(Bullet::Char(Some("-".to_owned())));
+    let mut edited = tree.clone();
+    patch_diagram_part(
+        &mut edited,
+        &name,
+        false,
+        &rels,
+        &dgm::Root::DataModel(data),
+        &limits(),
+        &import,
+        &OoxmlLimits::default(),
+    )
+    .unwrap();
+    let again = XmlTree::parse(&edited.to_bytes(), &name, &OoxmlLimits::default()).unwrap();
+    let mut findings = Findings::new(import.max_findings);
+    assert_eq!(
+        bullet(&read(&again, &mut findings)),
+        Some(Bullet::Char(Some("-".to_owned())))
+    );
+}
+
 #[test]
 fn an_unedited_save_returns_the_same_bytes() {
     for deck in WITH_DIAGRAMS {
