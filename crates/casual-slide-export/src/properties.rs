@@ -49,7 +49,8 @@ pub enum ExportError {
         /// The part.
         part: String,
     },
-    /// The model drops a whole part, which this tier does not do.
+    /// The model drops a whole part, which this tier does not do. No longer returned: a
+    /// dropped part is removed whole since `T1B-02`; kept so its code is never reused.
     PartRemovalUnsupported {
         /// The part.
         part: String,

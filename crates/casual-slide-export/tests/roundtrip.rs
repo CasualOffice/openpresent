@@ -718,10 +718,6 @@ fn a_value_that_would_corrupt_the_deck_is_refused_and_nothing_is_saved() {
         }),
         "CS-EXP-0003"
     );
-    assert_eq!(
-        code_of(&source, |d| d.properties.core = None),
-        "CS-EXP-0005"
-    );
     // Out of the type's range: written, read back as absent, and so refused.
     assert_eq!(
         code_of(&source, |d| {
@@ -989,4 +985,63 @@ fn parts_rebuilt_from_the_model_validate_against_the_schemas() {
     let all = parts(&edited);
     xmllint_validate(&schemas.join("pml.xsd"), MAIN, &all[MAIN]);
     xmllint_validate(&schemas.join("pml.xsd"), PROPS, &all[PROPS]);
+}
+
+/// A part the model no longer holds is taken out whole (`T1B-02`): the part, the
+/// relationship to it and its content type go, nothing else changes, and the result reads
+/// back as asked and is a fixed point.
+#[test]
+fn a_part_the_model_drops_is_removed_whole() {
+    let source = read(RICH);
+    let cases: [(&str, Change); 5] = [
+        (CORE, |d| d.properties.core = None),
+        (APP, |d| d.properties.app = None),
+        (CUSTOM, |d| d.properties.custom = None),
+        (PROPS, |d| d.presentation_properties = None),
+        (VIEW, |d| d.view_properties = None),
+    ];
+    for (part, change) in cases {
+        let before = parts(&source);
+        assert!(before.contains_key(part), "{part} in the input");
+        let mut pkg = open(source.clone());
+        let mut deck = import_deck(&mut pkg, &limits()).unwrap().deck;
+        change(&mut deck);
+        let outcome = save_deck(&mut pkg, &deck, &limits()).unwrap();
+        let edited = outcome.bytes.clone();
+        assert_eq!(model(&edited), deck, "{part}: reads back without it");
+        let second = save_deck(&mut open(edited.clone()), &deck, &limits()).unwrap();
+        assert_eq!(second.bytes, edited, "{part}: fixed point");
+
+        let after = parts(&edited);
+        assert!(!after.contains_key(part), "{part} removed");
+        let gone: Vec<&String> = before.keys().filter(|n| !after.contains_key(*n)).collect();
+        let (dir, file) = part.rsplit_once('/').unwrap();
+        let own_rels = format!("{dir}/_rels/{file}.rels");
+        // The part, its relationships, and what only it pointed to (`pub.htm` from
+        // `presProps`), swept as unreachable (`INV-SP-01`).
+        let its_targets = before
+            .get(&own_rels)
+            .map(|b| String::from_utf8_lossy(b).into_owned())
+            .unwrap_or_default();
+        assert!(gone.contains(&&part.to_owned()), "{part} went");
+        for name in &gone {
+            let target = name.rsplit('/').next().unwrap();
+            assert!(
+                *name == part || **name == own_rels || its_targets.contains(target),
+                "{part}: {name} went too"
+            );
+        }
+        for (name, bytes) in &after {
+            if !outcome.changed_parts.contains(name) {
+                assert_eq!(before.get(name), Some(bytes), "{name} changed");
+            }
+        }
+        let file = part.rsplit('/').next().unwrap();
+        for (name, bytes) in &after {
+            if name.ends_with(".rels") || name == "[Content_Types].xml" {
+                let text = String::from_utf8_lossy(bytes);
+                assert!(!text.contains(file), "{name} still names {part}");
+            }
+        }
+    }
 }

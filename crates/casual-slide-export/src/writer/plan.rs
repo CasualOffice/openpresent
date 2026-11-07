@@ -10,7 +10,7 @@ use super::bookkeeping::HostInputs;
 use super::draft::{Draft, WriterOutcome};
 use super::error::WriterError;
 use super::ops::Op;
-use crate::presentation::deck_changes;
+use crate::presentation::{DeckChanges, deck_changes};
 use crate::slide::slide_part_changes;
 
 /// Ceilings on one plan. A host may tighten them; none can be switched off.
@@ -179,7 +179,10 @@ impl<'a> SavePlan<'a> {
         // Model patches read the input as it stands, before the draft holds it.
         let deck_edits = match self.deck {
             Some(deck) => deck_changes(package, deck, &self.import_limits)?,
-            None => Vec::new(),
+            None => DeckChanges {
+                parts: Vec::new(),
+                removed_rels: Vec::new(),
+            },
         };
         let slide_edits = match &self.slides {
             Some(s) => {
@@ -188,9 +191,10 @@ impl<'a> SavePlan<'a> {
             None => Vec::new(),
         };
         let mut draft = Draft::new(package, self.limits);
-        for (name, bytes) in deck_edits {
+        for (name, bytes) in deck_edits.parts {
             draft.apply_patched(&name, bytes);
         }
+        draft.log.removed_rels.extend(deck_edits.removed_rels);
         if draft.log.model_edited_main {
             draft.log.deck_slides = Some(draft.build_views()?.1.slides);
         }

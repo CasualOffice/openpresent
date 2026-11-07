@@ -96,7 +96,7 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | ID | Title | St | Sev | Mechanism | Gate |
 | --- | --- | --- | --- | --- | --- |
 | T-1A | Package, part graph, properties, repackager | In progress | P0 | Built and merged; the listed fixes are Done. 278 of 401 rows `y`/`r` in M, I, E; 64 `n/a`; 59 blank, each accounted for (`audit.py --check` 0 failures, 2026-11-08). Open: `T1A-02`, `CLOSE-02`. `SEC-P10`, `SEC-P11` Tested, each seen red. Not closed | Per-tier gate in 06; items in §Tier gates |
-| T-1B | Presentation part, view state | In progress | P0 | Built and merged, fuzz target. 280 of 297 rows `y`/`r`, 15 `n/a`, 2 blank with reasons. Open: `T1B-02` (whole-part removal). Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1B | Presentation part, view state | In progress | P0 | Built and merged, fuzz target. 280 of 297 rows `y`/`r`, 15 `n/a`, 2 blank with reasons. Whole-part removal Tested (`T1B-02`). Open: `T1B-02`'s `defaultTextStyle` and app counts, which follow `T1F-01` and `T1N-05`. Not closed | Per-tier gate in 06; items in §Tier gates |
 | T-1C | Colour and theme | In progress | P0 | Built and merged; format scheme and object defaults landed (`T1C-02`, `T1C-03`). 437 of 473 rows `y`/`r`, 17 `n/a`, 19 blank, accounted for. Every gate item met (§Tier gates). `COLOR-02`, `COLOR-03` wait on `PV-01`, a release gate (`DEC-04`), and are not gate items. Not closed: 06 holds 1C until 1E and 1F close (`CLOSE-01`) | Per-tier gate in 06; items in §Tier gates |
 | T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged; `T1D-03` Done. 479 of 564 rows `y`/`r`, 35 `n/a`, 50 blank, accounted for. `SEC-X07` Tested: cycle guard seen red. Open: `CLOSE-02`. Not closed | Per-tier gate in 06; items in §Tier gates |
 | T-1E | Geometry, fills, lines, effects, 3D | In progress | P0 | Built and merged, fuzz targets run. 1,014 of 1,082 rows `y`/`r`, 48 `n/a`, 20 blank, accounted for. Open: `CLOSE-01`. Not closed | Per-tier gate in 06; items in §Tier gates |
@@ -250,7 +250,7 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | --- | --- | --- | --- | --- | --- |
 | STAT-01 | Checklist status marks | Done | P0 | One rule proposes and gates a mark: code at the schema's spot, a test naming it, a fixture holding it. 604 of 1,735 rows in 1A to 1D marked; M 487, I 178, E 27. 240 of COLOR's M are enum values | False marks fail `audit.py --check` |
 | T1A-02 | Close Tier 1A | In progress | P0 | `SPEC-08`, `PKG-02`, `XML-04`, `SEC-018`, `DOC-009`, `F4-02` | Per-tier gate |
-| T1B-02 | Close Tier 1B | In progress | P1 | Whole-part removal rule; `defaultTextStyle` follows `T1F-01`; app counts follow `T1N-05` | Per-tier gate |
+| T1B-02 | Close Tier 1B | In progress | P1 | Whole-part removal built: a part the model drops (core, app, custom, `presProps`, `viewProps`) loses its relationship, and the writer's sweep removes it, its `.rels` and what only it reached; `a_part_the_model_drops_is_removed_whole`, seen red. Left: `defaultTextStyle` follows `T1F-01`; app counts follow `T1N-05` | Per-tier gate |
 | T1C-01 | Tier 1C leftovers | Done | P1 | Effect reference, `themeManager`, setters | Seen red |
 | T1C-02 | Tier 1C format scheme and object defaults | Done | P0 | Format scheme internals, after 1E; object defaults, after 1F. Read, reported and written, seen red (`3043ec7`). Closing the tier is `T-1C` | Per-tier gate |
 | T1D-02 | Merge Tier 1D | Done | P0 | Merged onto the parser fixes; 372 tests pass | Gates pass |
