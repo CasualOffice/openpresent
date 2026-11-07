@@ -1,13 +1,139 @@
-# OpenSlide
+# OpenPresent
 
-A PowerPoint-compatible presentation editor you can run anywhere: a deterministic
-Rust engine that reads, lays out, renders and writes `.pptx`, under an editor that
-works like PowerPoint for the web, running client-side in WebAssembly.
+[![CI](https://github.com/CasualOffice/openpresent/actions/workflows/ci.yml/badge.svg)](https://github.com/CasualOffice/openpresent/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-orange.svg)](#status)
 
-**Status: Phase 1 in progress.** The package reader admits and reports on decks. Nothing renders yet, and there is no editor. Sister project to OpenCalc, whose architecture it follows.
+**A PowerPoint-compatible presentation engine and editor that you can run anywhere.**
+A deterministic Rust engine reads, models, lays out and writes `.pptx`, and runs natively or in
+the browser through WebAssembly. On top of it sits an editor built to work like PowerPoint, on the
+web and as a desktop app, so a PowerPoint user needs no teaching.
 
-Start at [docs/00-README.md](docs/00-README.md).
+The engine is built first, and fidelity comes before features: a deck opened and saved by OpenPresent
+should keep everything PowerPoint put in it.
+
+> **Pre-alpha.** The file engine is under construction; nothing renders yet, and there is no editor.
+> See [Status](#status) for exactly what works today.
+
+Part of [CasualOffice](https://github.com/CasualOffice), with
+[OpenCalc](https://github.com/CasualOffice/opencalc) (spreadsheets) and
+[OpenDoc](https://github.com/CasualOffice/opendoc) (documents), whose architecture it shares.
+
+---
+
+## Why another presentation editor?
+
+Most open editors can open a `.pptx`. Fewer can save one back without quietly losing what they did not
+understand: animations they do not model, extensions from newer Office versions, a SmartArt layout,
+a chart's embedded workbook. The damage shows up later, for the next person who opens the file in PowerPoint.
+
+OpenPresent is designed around that problem:
+
+- **Nothing is lost silently.** Every part of a deck is either modelled or kept byte for byte, and
+  anything that cannot be kept is named in a compatibility report.
+- **Edits are surgical.** Saving an edited deck rewrites only the XML nodes that changed. Every
+  untouched part keeps its exact bytes.
+- **Coverage is measured, not claimed.** Every element, attribute and enum value in the Office Open XML
+  schemas, 8,730 in all, is a row in a [spec checklist](docs/spec/README.md). A row is marked supported
+  only when code and a test deck prove it.
+- **Every file is treated as hostile.** Zip bombs, entity expansion, path tricks, tracking links and
+  credential-leaking UNC paths are refused or reported. Nothing is fetched and no macro ever runs.
+- **The engine owns text layout.** Every collaborator, every export and every browser sees the same
+  line breaks.
+
+## Status
+
+| Area | State |
+| --- | --- |
+| Package reading: bounded ZIP, part graph, content types, relationships | ✅ Built, fuzzed |
+| Saving: unedited byte-identical, edits patch only what changed | ✅ Built |
+| Markup compatibility, Strict and Transitional, percent-encoded part names | ✅ Built |
+| Geometry: all 187 preset shapes and 41 text warps | ✅ Built |
+| Document properties, presentation part, view state | 🟡 Built, tier open |
+| Colour models, transforms, themes, colour maps | 🟡 Built, tier open |
+| Slides, masters, layouts, shape tree, inheritance | 🔨 In progress |
+| Text, tables, pictures, charts, SmartArt, animations | ⬜ Planned, Phase 1 |
+| Rendering to PNG and PDF | ⬜ Phase 2 |
+| Editor, slide show, co-editing, desktop app | ⬜ Phases 3 to 10 |
+
+The full plan, with how each phase opens and closes, is the [roadmap](docs/06-ROADMAP-AND-DELIVERY.md).
+Every task is in the [execution tracker](docs/14-EXECUTION-TRACKER.md). Fidelity has not yet been checked
+against PowerPoint itself; until then, nothing here claims to match it.
+
+## Try it
+
+You need Rust 1.88 or later. The toolchain is pinned in `rust-toolchain.toml`.
+
+```sh
+git clone https://github.com/CasualOffice/openpresent
+cd openpresent
+cargo test --workspace
+
+# Inspect any deck: structure, conformance, and anything suspicious in it
+cargo run -p casual-slide-ooxml --example inspect -- path/to/deck.pptx
+```
+
+The inspector prints the deck's kind and part count, plus each finding: external content that was not
+fetched, unsafe links, macro projects, embedded objects, and parts nothing points to.
+
+## How it is built
+
+```
+ Host (browser, desktop, server)
+   └─ SDK / WebAssembly bridge
+        ├─ Model, inheritance resolver, operations     casual-slide-model, -style, -transaction
+        ├─ Geometry, text, layout, display list         casual-slide-geometry, -text, -layout
+        └─ Render backends: canvas, PNG, PDF            casual-slide-render
+   Import and export                                    casual-slide-package, -ooxml, -import, -export
+```
+
+Each layer depends only on the layers below it, and the engine has no network capability at all. Some
+crates above are still to come. The [architecture](docs/02-ARCHITECTURE.md) explains what is shared with
+OpenCalc and what had to be different.
+
+| Crate | What it does today |
+| --- | --- |
+| `casual-slide-package` | Bounded ZIP and OPC admission: size, ratio and entry limits, safe part names, raw-copy rewriting |
+| `casual-slide-ooxml` | Part graph, the single bounded XML reader, a byte-faithful XML tree, markup compatibility |
+| `casual-slide-model` | The presentation as plain typed values |
+| `casual-slide-import`, `-export` | XML to model, and model changes patched back into XML |
+| `casual-slide-geometry` | Preset and custom shape geometry, deterministic on every platform |
+| `casual-slide-text` | Bundled fonts and metrics, including Calibri- and Cambria-compatible faces |
+
+## Documentation
+
+| Read | For |
+| --- | --- |
+| [docs/00](docs/00-README.md) | The index of every design document |
+| [Roadmap](docs/06-ROADMAP-AND-DELIVERY.md) | Phases, tiers, and their exit criteria |
+| [Security threat model](docs/07-SECURITY-THREAT-MODEL.md) | Every threat, its control, and its test |
+| [Spec checklist](docs/spec/README.md) | Every tag, property and value in the format |
+| [Fidelity](docs/51-SPEC-CHECKLIST-AND-FIDELITY.md) | How fidelity is measured |
+| [PowerPoint fit-gap](docs/96-POWERPOINT-FIT-GAP.md) | All 318 features, and our plan for each |
+
+## Contributing
+
+The project is designed before it is built, and every change follows one cycle: design, build, run it,
+look for what is wrong, fix it, with a test that fails without the fix. [AGENTS.md](AGENTS.md) is the
+contract and [CLAUDE.md](CLAUDE.md) the working rules, for people and coding agents alike. Commits follow
+[Conventional Commits](https://www.conventionalcommits.org/) and cite a tracker row.
+
+Run the gates before committing:
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-features --locked
+python3 tools/check-repo.py
+```
+
+Found a security issue? Please report it privately to the maintainers rather than in a public issue.
 
 ## License
 
-Apache-2.0, matching OpenCalc (`DEC-01` covers identity).
+[Apache-2.0](LICENSE). Bundled fonts carry their own licences (Apache-2.0 and SIL OFL 1.1); see
+`crates/casual-slide-text/fonts/`. The vendored Office Open XML schemas are © Ecma International and
+Microsoft and are used under their published terms; see [schemas/README.md](schemas/README.md).
+
+PowerPoint and Microsoft Office are trademarks of Microsoft Corporation. OpenPresent is not affiliated
+with or endorsed by Microsoft.
