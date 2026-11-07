@@ -30,12 +30,12 @@
   "optimized": false
  },
  "damage": {
-  "commit": "6ba939dfc8bd50dbeb9b242b1f4ec19fddf8c6ca",
+  "commit": "64d000bbccec694a75abfd77b92ae3473bff7db5",
   "corpus": "damage corpus: 16 decks, 6203 damaged",
   "counts": [
    "open   broken-xml: 4580",
    "open   directory-broken: 80",
-   "open   flipped-burst: 63",
+   "open   flipped-burst: 64",
    "open   flipped-byte: 192",
    "open   hostile-xml: 16",
    "open   local-header-wiped: 16",
@@ -49,7 +49,7 @@
    "open   wrong-encoding: 32",
    "open   wrong-relationships: 48",
    "refuse truncated CS-PKG-0005: 2",
-   "repair CS-REC-0101: 403",
+   "repair CS-REC-0101: 404",
    "repair CS-REC-0102: 61",
    "repair CS-REC-0103: 227",
    "repair CS-REC-0104: 174",
@@ -76,25 +76,26 @@
    "repair CS-REC-0404: 245",
    "repair CS-REC-0405: 150"
   ],
-  "date": "2026-11-07T21:50Z",
+  "date": "2026-11-07T22:11Z",
   "decks": 16,
   "decks_sha256": "a04efea713bb83c3440c002c1798f947b554717e92816cb106235931a855d86d",
   "engine_uncommitted": false,
   "exit": 101,
-  "failure": "panicked at crates/casual-slide-export/tests/damage_corpus.rs:741:5:\n1 of 6203 broke a rule:\nz17310490-vierfelder-de flipped-burst @9948: import_slide_parts: [CS-OPC-0001] required part missing: \"ppt/slideLayouts/slideLayout1.xml\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p casual-slide-export --test damage_corpus`\n",
+  "f4": "F4: 6201 outputs, 58 failing lines, 12 more in a part kept as it arrived",
+  "failure": "panicked at crates/casual-slide-export/tests/damage_corpus.rs:777:9:\n58 F4 failures in 6201 outputs:\n[z19828779-education-ar truncated @39513] z19828779-education-ar--04273.pptx: invalid         ppt/slideLayouts/slideLayout9.xml  [ooxml/pml.xsd]\n[z19828779-education-ar truncated @39513] z19828779-education-ar--04273.pptx:   2: element cSld: Schemas validity error : Element '{http://schemas.openxmlformats.org/presentationml/2006/main}cSld': Character content other than whitespace is not allowed because the content type is 'element-only'.\n[sdk-strict-animclr broken-xml ppt/slideLayouts/slideLayout11.xml#8@2987] sdk-strict-animclr--02479.pptx: invalid         ppt/slideLayouts/slideLayout11.xml  [ooxml-strict/pml.xsd]\n[sdk-strict-animclr broken-xml ppt/slideLayouts/slideLayout11.xml#8@2987] sdk-strict-animclr--02479.pptx:   2: element materClrMapping: Schemas validity error : Element '{http://purl.oclc.org/ooxml/drawingml/main}materClrMapping': This element is not expected. Expected is one of ( {http://purl.oclc.org/ooxml/drawingml/main}masterClrMapping, {http://purl.oclc.org/ooxml/drawingml/main}overrideClrMapping ).\n[sdk-strict-animclr broken-xml ppt/slides/slide1.xml#8@168] sdk-strict-animclr--02438.pptx: invalid         ppt/slides/slide1.xml  [ooxml/pml.xsd]\n[sdk-strict-animclr broken-xml ppt/slides/slide1.xml#8@168] sdk-strict-animclr--02438.pptx:   2: namespace error : xmlns:r: 'http://purl.oclc.org/ooxml/officeDocument/relationships xmlns:p=' is not a valid URI\n[sdk-of16-01 broken-xml ppt/slides/slide1.xml#8@86] sdk-of16-01--02038.pptx: invalid         ppt/slides/slide1.xml  [ooxml/pml.xsd]  branches=fallback\n[sdk-of16-01 broken-xml ppt/slides/slide1.xml#8@86] sdk-of16-01--02038.pptx:   2: namespace error : xmlns:a: 'http://schemas.openxmlformats.org/drawingml/2006/main xmlns:r=' is not a valid URI\n[z17310490-vierfelder-de broken-xml _rels/.rels#5@175] z17310490-vierfelder-de--03561.pptx: invalid         _rels/.rels  [opc/opc-relationships.xsd]\n[z17310490-vierfelder-de broken-xml _rels/.rels#5@175] z17310490-vierfelder-de--03561.pptx:   2: element Relationship: Schemas validity error : Element '{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', attribute 'Type': '...' is not a valid value of the atomic type 'xs:anyURI'.\n[z18866178-doklad-ru broken-xml ppt/slides/slide1.xml#9@146] z18866178-doklad-ru--04032.pptx: invalid         ppt/slides/slide1.xml  [ooxml/pml.xsd]\n[z18866178-doklad-ru broken-xml ppt/slides/slide1.xml#9@146] z18866178-doklad-ru--04032.pptx:   2: element blip: Schemas validity error : Element '{http://schemas.openxmlformats.org/drawingml/2006/main}blip', attribute '{http://sc}embed': The attribute '{http://sc}embed' is not allowed.\n[z18866178-doklad-ru broken-xml ppt/_rels/presentation.xml.rels#5@1664] z18866178-doklad-ru--04005.pptx: invalid         ppt/_rels/presentation.xml.rels  [opc/opc-relationships.xsd]\n[z18866178-doklad-ru broken-xml ppt/_rels/presentation.xml.rels#5@1664] z18866178-doklad-ru-",
   "load_after": [
-   6.1,
-   6.5,
-   6.2
+   13.5,
+   13.7,
+   11.6
   ],
   "load_before": [
-   3.9,
-   4.6,
-   5.6
+   5.7,
+   5.7,
+   5.7
   ],
   "machine": "Darwin arm64, 10 cores",
   "ok": false,
-  "opened": "opened 6200, refused 2, slowest 1.349957584s"
+  "opened": "opened 6201, refused 2, slowest 1.945571834s"
  },
  "export": {
   "commit": "9c5239d331f3c81d501bd6825cb251fcc0fcd9d7",
