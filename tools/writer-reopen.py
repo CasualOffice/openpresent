@@ -66,7 +66,9 @@ def run_f4(root):
     inputs = sorted({input_of(deck) for _, deck in rows})
     bad_before = {}
     for report in f4(inputs):
-        failed = {p["part"] for p in report["parts"] if p["status"] in BAD}
+        # A part invalid as it arrived, explained or not, is the input's; a clone of it
+        # carries the same markup, so it is judged against its source.
+        failed = {p["part"] for p in report["parts"] if p["status"] in BAD | {"recorded"}}
         bad_before[report["deck"]] = failed
     new = []
     for variant in sorted({v for v, _ in rows}):
