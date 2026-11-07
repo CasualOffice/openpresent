@@ -171,6 +171,9 @@ def fixtures():
     yield "generated/percent-encoded-targets.pptx", zipped(deck(
         slide_rels=[("image", "../media/my%20image.png"), ("image", "../media/%c3%a9.png")],
         parts=[("ppt/media/my image.png", png), ("ppt/media/é.png", png)])), "open"
+    # PKG-02: a part's relationships under a percent-encoded entry name.
+    encoded_rels = [(n.replace("ppt/_rels/presentation.xml.rels", "ppt/_rels/pres%65ntation.xml.rels"), d) for n, d in deck()]
+    yield "generated/percent-encoded-rels.pptx", zipped(encoded_rels), "open"
     # MCE-01: a Choice this engine does not understand, in front of a valid Fallback.
     mc_ns = ('xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
              'xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" mc:Ignorable="p14"')
@@ -209,6 +212,8 @@ def fixtures():
         "compound-file": (bytes.fromhex("d0cf11e0a1b11ae1") + b"\0" * 504, "refuse:CS-OPC-0005"),
         "not-a-zip": (b"this is not a package", "refuse:CS-PKG-0005"),
         "path-traversal": (zipped(deck(parts=[("../../etc/evil.xml", "<a/>")])), "refuse:CS-PKG-0004"),
+        # SEC-020: an ordinary name, one byte over max_path_bytes. Nothing else refuses it.
+        "path-too-long": (zipped(deck(parts=[("ppt/" + "a" * (4096 - len("ppt/") - len(".xml") + 1) + ".xml", "<a/>")])), "refuse:CS-PKG-0004"),
         "case-colliding-parts": (zipped(deck(parts=[("PPT/PRESENTATION.XML", "<a/>")])), "refuse:CS-PKG-0007"),
         "zip-bomb": (zipped(deck(parts=[("ppt/media/bomb.bin", b"\0" * (64 << 20))])), "refuse:CS-PKG-0003"),
         "percent-equivalent-parts": (zipped(deck(parts=[("ppt/media/a b.png", png), ("ppt/media/a%20b.png", b"other")])), "refuse:CS-PKG-0007"),

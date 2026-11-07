@@ -496,6 +496,34 @@ fn a_forced_rewrite_through_the_tree_changes_nothing() {
     }
 }
 
+// --- DOC-009 --------------------------------------------------------------------------
+
+/// A finding repeats a relationship id only in the form the schema gives one.
+#[test]
+fn a_finding_leaves_out_an_id_that_is_not_an_ncname() {
+    let rels = |id: &str| {
+        format!(
+            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\
+             <Relationship Id=\"{id}\" Type=\"urn:unknown-type\" Target=\"http://example.com/\" TargetMode=\"External\"/>\
+             </Relationships>"
+        )
+    };
+    let findings = |id: &str| {
+        let deck = with_part(MINIMAL, "ppt/slides/_rels/slide1.xml.rels", &rels(id));
+        let pkg = PresentationPackage::open(deck, OoxmlLimits::default()).unwrap();
+        pkg.findings()
+            .iter()
+            .filter(|f| f.part == "ppt/slides/slide1.xml")
+            .map(|f| f.rel_id.clone())
+            .collect::<Vec<_>>()
+    };
+    let plain = findings("rId9");
+    assert!(plain.contains(&Some("rId9".to_owned())), "{plain:?}");
+    let odd = findings("a secret sentence, not an id");
+    assert!(!odd.is_empty());
+    assert!(odd.iter().all(Option::is_none), "{odd:?}");
+}
+
 // --- F4-01 ---------------------------------------------------------------------------
 
 /// F4 needs `python3` and `xmllint`, which not every CI runner has. Set `F4_REQUIRED`

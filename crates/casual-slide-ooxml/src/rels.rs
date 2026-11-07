@@ -28,6 +28,25 @@ pub struct Relationship {
     pub mode: TargetMode,
 }
 
+/// The longest relationship id a finding will repeat. `rId` and a number is the norm.
+const MAX_REPORTED_ID_BYTES: usize = 64;
+
+impl Relationship {
+    /// This relationship's id, if it may appear in a finding: an `xsd:NCName`, as the
+    /// schema types it, of ordinary length (`DOC-009`).
+    ///
+    /// A part chooses its ids, so an id can hold anything a value can: an id of any
+    /// other form still works as an id, and is left out of the report.
+    pub fn reportable_id(&self) -> Option<&str> {
+        let id = self.id.as_str();
+        let mut chars = id.chars();
+        let first = chars.next()?;
+        let starts = first == '_' || first.is_alphabetic();
+        let rest = |c: char| c.is_alphanumeric() || matches!(c, '_' | '-' | '.');
+        (id.len() <= MAX_REPORTED_ID_BYTES && starts && chars.all(rest)).then_some(id)
+    }
+}
+
 /// Parse a `.rels` part. Missing required attributes, a repeated id and an
 /// unknown target mode are refused.
 pub(crate) fn parse_relationships(
@@ -236,6 +255,80 @@ mod tests {
             None
         );
         assert_eq!(resolve_internal("a.xml", "../b.xml"), None);
+    }
+
+    const RELS_OPEN: &str = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\" xmlns:x=\"urn:x\">";
+
+    fn read_rels(body: &str) -> Result<Vec<Relationship>, OoxmlError> {
+        let xml = format!("{RELS_OPEN}{body}</Relationships>");
+        parse_relationships(xml.as_bytes(), "_rels/.rels", &OoxmlLimits::default())
+    }
+
+    /// `XML-04`: on either side of the real one, a foreign attribute is not the real one.
+    #[test]
+    fn a_foreign_attribute_does_not_shadow_the_plain_one() {
+        for body in [
+            "<Relationship x:Target=\"evil.xml\" Id=\"a\" Type=\"t\" Target=\"good.xml\"/>",
+            "<Relationship Id=\"a\" Type=\"t\" Target=\"good.xml\" x:Target=\"evil.xml\"/>",
+            "<Relationship Id=\"a\" Type=\"t\" Target=\"good.xml\" xmlns:Target=\"urn:evil\"/>",
+        ] {
+            let rels = read_rels(body).unwrap();
+            assert_eq!(rels[0].target, "good.xml", "{body}");
+        }
+    }
+
+    #[test]
+    fn a_foreign_attribute_does_not_stand_in_for_a_missing_one() {
+        for body in [
+            "<Relationship Id=\"a\" Type=\"t\" x:Target=\"evil.xml\"/>",
+            "<Relationship x:Id=\"a\" Type=\"t\" Target=\"good.xml\"/>",
+            "<Relationship Id=\"a\" x:Type=\"t\" Target=\"good.xml\"/>",
+        ] {
+            assert_eq!(read_rels(body).unwrap_err().code(), "CS-XML-0004", "{body}");
+        }
+    }
+
+    #[test]
+    fn a_foreign_target_mode_does_not_make_a_relationship_external() {
+        let rels = read_rels(
+            "<Relationship Id=\"a\" Type=\"t\" Target=\"g.xml\" x:TargetMode=\"External\"/>",
+        )
+        .unwrap();
+        assert_eq!(rels[0].mode, TargetMode::Internal);
+    }
+
+    /// `DOC-009`: what the contract allows in a message is a checked form.
+    #[test]
+    fn only_a_short_ncname_id_may_be_reported() {
+        let rel = |id: &str| Relationship {
+            id: id.to_owned(),
+            rel_type: String::new(),
+            target: String::new(),
+            mode: TargetMode::Internal,
+        };
+        for id in ["rId1", "R2c3", "_a", "a-b.c_d", "\u{e9}t\u{e9}"] {
+            assert_eq!(rel(id).reportable_id(), Some(id), "{id}");
+        }
+        let long = "a".repeat(MAX_REPORTED_ID_BYTES + 1);
+        for id in [
+            "",
+            "1a",
+            "a b",
+            "a:b",
+            "<x>",
+            "a\n",
+            "-a",
+            ".a",
+            "a/b",
+            long.as_str(),
+        ] {
+            assert_eq!(rel(id).reportable_id(), None, "{id:?}");
+        }
+        assert!(
+            rel(&"a".repeat(MAX_REPORTED_ID_BYTES))
+                .reportable_id()
+                .is_some()
+        );
     }
 
     #[test]

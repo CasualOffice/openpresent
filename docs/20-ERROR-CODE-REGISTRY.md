@@ -1,6 +1,6 @@
 # 20 — Error code registry
 
-Stable, never reused. **The contract:** messages and findings carry part names, relationship ids and counts, never document text. Tested for every code below except import's (`SEC-015`, `no_message_or_finding_carries_document_text`). `CS-OPC-0004` and `CS-MCE-0001` no longer carry the content type or namespace they refused; the package's content types and `resolve_compatibility` have them.
+Stable, never reused. **The contract:** messages and findings carry part names, relationship ids and counts, never document text. A relationship id is only repeated if it is an `xsd:NCName` of at most 64 bytes, `Relationship::reportable_id` (`DOC-009`): a part chooses its ids, so another form is left out of the finding and still works as an id. Tested for every code below except import's (`SEC-015`, `no_message_or_finding_carries_document_text`). `CS-OPC-0004` and `CS-MCE-0001` no longer carry the content type or namespace they refused; the package's content types and `resolve_compatibility` have them.
 
 | Code | Meaning | | Code | Meaning |
 | --- | --- | --- | --- | --- |

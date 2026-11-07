@@ -43,7 +43,7 @@ the central directory, before anything is inflated.
 | `max_entries` | `50_000` | Entries in the archive | CS-PKG-0002 | Tested |
 | `max_total_uncompressed` | `4u64 << 30` | Declared uncompressed bytes over all entries, 4 GiB; also the budget every read is charged against | CS-PKG-0003 | Tested |
 | `max_expansion_ratio` | `1000` | Uncompressed to compressed, over the archive **and per entry**, since ordinary parts can dilute a bomb (`SEC-013`) | CS-PKG-0003 | Tested; `hostile/zip-bomb.bin` |
-| `max_path_bytes` | `4096` | Bytes in one entry name | CS-PKG-0004 | **Untested**: no test or fixture crosses it |
+| `max_path_bytes` | `4096` | Bytes in one entry name | CS-PKG-0004 | Fixture `path-too-long`, seen red with the cap removed (`SEC-020`) |
 
 ## Reading a part
 
@@ -70,6 +70,7 @@ the central directory, before anything is inflated.
 | `max_total_relationships` | `2_000_000` | Relationships across the package | CS-OPC-0002 | **Untested** (`SEC-016`) |
 | `max_content_types` | `200_000` | Entries in `[Content_Types].xml` | CS-OPC-0003 | **Untested** (`SEC-016`) |
 | `MAX_ENCODING_LAYERS` | `8` | Rounds of percent-decoding a part name or target may need; more is refused (`OPC-01`) | CS-FND-0011 as a finding | Tested |
+| `MAX_REPORTED_ID_BYTES` | `64` | Bytes of a relationship id a finding will repeat, with its form checked as an NCName; longer or otherwise is left out, and still works as an id (`DOC-009`) | none: left out of the finding | Tested |
 
 The walker accepts some malformed attributes (`XML-02`) and some non-XML (`XML-03`). Those
 are correctness defects with security consequences, not missing limits, and are tracked there.

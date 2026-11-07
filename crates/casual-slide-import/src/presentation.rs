@@ -18,7 +18,8 @@ use casual_slide_model::presentation::{
 };
 use casual_slide_model::properties::DocumentProperties;
 use casual_slide_ooxml::{
-    OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree, resolve_internal,
+    OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree, part_names_equivalent,
+    resolve_internal,
 };
 
 use crate::properties::{
@@ -1059,7 +1060,7 @@ pub fn locate_part(
     match package
         .part_names()
         .into_iter()
-        .find(|n| n.eq_ignore_ascii_case(&target))
+        .find(|n| part_names_equivalent(n, &target))
     {
         Some(actual) => PartLocation::At(actual),
         None => unusable(findings),

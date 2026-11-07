@@ -9,6 +9,7 @@ use casual_slide_import::properties::{
     import_core_properties, import_custom_properties,
 };
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
+use casual_slide_package::PartEdits;
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures")
@@ -46,6 +47,32 @@ fn a_count_past_its_bound_refuses_with_its_code() {
         assert_eq!(err.code(), code, "{name}: {err}");
         assert!(err.to_string().contains(what), "{name}: {err}");
     }
+}
+
+/// `PKG-02`: a target percent-encoded, as Part 2 allows, is the part it names. Compared
+/// with ASCII case alone, this deck's properties were dropped as unusable.
+#[test]
+fn a_percent_encoded_target_reaches_its_part() {
+    const RELS: &str = "ppt/_rels/presentation.xml.rels";
+    let bytes = std::fs::read(fixtures().join("generated/rich-properties.pptx")).unwrap();
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let plain = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
+    assert!(plain.deck.presentation_properties.is_some());
+
+    let rels = String::from_utf8(pkg.read_part(RELS).unwrap()).unwrap();
+    let encoded = rels.replace("presProps.xml", "pres%50rops.xml");
+    assert_ne!(rels, encoded);
+    let mut edits = PartEdits::default();
+    edits.replace(RELS, encoded.into_bytes());
+    let saved = pkg.save_with(&edits).unwrap();
+
+    let mut pkg = PresentationPackage::open(saved, OoxmlLimits::default()).unwrap();
+    let imported = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
+    assert_eq!(
+        imported.deck.presentation_properties,
+        plain.deck.presentation_properties
+    );
+    assert!(!imported.findings.has(K::UnusableRelationship, ""));
 }
 
 #[test]
