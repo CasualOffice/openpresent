@@ -14,7 +14,7 @@
 //! printed: run with `--nocapture` to read them. A deck is seeded by name, so a failure
 //! found in a run is found again.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
@@ -470,6 +470,8 @@ struct Outcome {
     refused: Option<&'static str>,
     edited: Option<Vec<u8>>,
     repaired: Vec<&'static str>,
+    /// Each part reported as kept as it arrived, by a code in [`KEPT_AS_ARRIVED`].
+    kept: BTreeSet<String>,
 }
 
 /// The gate for one deck. An `Err` is a broken rule, with what it was.
@@ -486,6 +488,7 @@ fn run_one(bytes: &[u8]) -> Result<Outcome, String> {
                     refused: Some(code),
                     edited: None,
                     repaired: Vec::new(),
+                    kept: BTreeSet::new(),
                 })
             } else {
                 Err(format!("refused outside docs/29: {err}"))
@@ -538,16 +541,25 @@ fn run_one(bytes: &[u8]) -> Result<Outcome, String> {
         .collect();
     repaired.sort_unstable();
     repaired.dedup();
+    let kept = pkg
+        .findings()
+        .iter()
+        .filter(|f| {
+            matches!(f.kind, FindingKind::Repaired(_)) && KEPT_AS_ARRIVED.contains(&f.kind.code())
+        })
+        .map(|f| f.part.trim_start_matches('/').to_owned())
+        .collect();
     Ok(Outcome {
         refused: None,
         edited: Some(edited.bytes),
         repaired,
+        kept,
     })
 }
 
 /// Run F4 over `dir`, by batches on as many threads as there are cores. Every failure, by
 /// file name.
-fn f4_failures(dir: &Path) -> Vec<String> {
+fn f4_failures(dir: &Path) -> Vec<F4Failure> {
     let files: Vec<PathBuf> = std::fs::read_dir(dir)
         .unwrap()
         .map(|e| e.unwrap().path())
@@ -586,40 +598,108 @@ fn f4_failures(dir: &Path) -> Vec<String> {
     })
 }
 
-/// F4's text output, reduced to what failed: `deck: part: first message`. A deck's line says
-/// `name: PASS` or `name: FAIL`; a part's is indented two, and a message six.
-fn failures_in(stdout: &str) -> Vec<String> {
+/// One line F4 failed: the output, the part (empty for the whole deck), and the line.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct F4Failure {
+    deck: String,
+    part: String,
+    line: String,
+}
+
+/// F4's text output, reduced to what failed: `deck: part: first message`, each with its deck
+/// and part. A deck's line says `name: PASS` or `name: FAIL`; a part's is indented two, as
+/// `status  part  [schema]`, and a message six.
+fn failures_in(stdout: &str) -> Vec<F4Failure> {
     let mut deck = "";
+    let mut part = "";
     let mut failing_part = false;
     let mut out = Vec::new();
     for line in stdout.lines() {
+        let mut found = None;
         if !line.starts_with(' ') {
             deck = line.split(':').next().unwrap_or_default();
+            part = "";
             if line.contains("(refused") {
-                out.push(line.to_owned());
+                found = Some(line.to_owned());
             }
             failing_part = false;
         } else if line.starts_with("      ") {
             if failing_part {
-                out.push(format!("{deck}:   {}", line.trim()));
+                found = Some(format!("{deck}:   {}", line.trim()));
                 failing_part = false;
             }
         } else if let Some(body) = line.strip_prefix("  ") {
-            let status = body.split_whitespace().next().unwrap_or_default();
+            let mut words = body.split_whitespace();
+            let status = words.next().unwrap_or_default();
+            part = words.next().unwrap_or_default();
             failing_part =
                 !matches!(status, "valid" | "no-schema" | "recorded") && !body.starts_with('(');
             if failing_part {
-                out.push(format!("{deck}: {}", body.trim()));
+                found = Some(format!("{deck}: {}", body.trim()));
             }
+        }
+        if let Some(line) = found {
+            out.push(F4Failure {
+                deck: deck.to_owned(),
+                part: part.to_owned(),
+                line,
+            });
         }
     }
     out
 }
 
-/// A checksum failed, and the part's bytes are kept and reported: owner instruction 34. An output
-/// holding such a part may fail F4, since a flipped byte can leave XML that still parses. Every
-/// other output must pass.
-const KEPT_AS_ARRIVED: &str = "CS-REC-0104";
+/// Whether an F4 failure is one owner instruction 34 accepts: in a part that this output's
+/// own report names as kept as it arrived. A failure anywhere else, or in no part, is not.
+fn is_kept_as_arrived(failure: &F4Failure, kept: &BTreeMap<String, BTreeSet<String>>) -> bool {
+    !failure.part.is_empty()
+        && kept
+            .get(&failure.deck)
+            .is_some_and(|parts| parts.contains(failure.part.trim_start_matches('/')))
+}
+
+#[test]
+fn only_a_failure_in_a_part_reported_as_kept_is_accepted() {
+    let stdout = "a.pptx: FAIL\n  invalid  ppt/slides/slide1.xml  [pml.xsd]\n      2: bad\n  \
+                  invalid  ppt/slides/slide2.xml  [pml.xsd]\n      3: worse\nb.pptx: FAIL\n  \
+                  invalid  ppt/slides/slide1.xml  [pml.xsd]\n      2: bad\n";
+    let failures = failures_in(stdout);
+    assert_eq!(failures.len(), 6);
+    let kept = BTreeMap::from([(
+        "a.pptx".to_owned(),
+        BTreeSet::from(["ppt/slides/slide1.xml".to_owned()]),
+    )]);
+    let accepted: Vec<(&str, &str)> = failures
+        .iter()
+        .filter(|f| is_kept_as_arrived(f, &kept))
+        .map(|f| (f.deck.as_str(), f.part.as_str()))
+        .collect();
+    // The reported part's two lines; never slide2 of the same output, nor slide1 of another.
+    assert_eq!(
+        accepted,
+        [
+            ("a.pptx", "ppt/slides/slide1.xml"),
+            ("a.pptx", "ppt/slides/slide1.xml")
+        ]
+    );
+}
+
+/// Codes that report a part kept as it arrived (owner instruction 34): a failed checksum, with
+/// the bytes kept (`CS-REC-0104`), and the XML repairs the reader made only to read, which an
+/// edit that does not touch the part leaves as it arrived, as docs/29 says (`CS-REC-0301` to
+/// `0308`). F4 may fail in such a part, and only in such a part of that output. A part set
+/// aside (`0309`) has a stand-in, which must pass.
+const KEPT_AS_ARRIVED: [&str; 9] = [
+    "CS-REC-0104",
+    "CS-REC-0301",
+    "CS-REC-0302",
+    "CS-REC-0303",
+    "CS-REC-0304",
+    "CS-REC-0305",
+    "CS-REC-0306",
+    "CS-REC-0307",
+    "CS-REC-0308",
+];
 
 #[test]
 fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
@@ -681,7 +761,7 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
             .flat_map(|w| w.join().expect("a worker finished"))
             .collect()
     });
-    let mut kept_as_arrived = std::collections::BTreeSet::new();
+    let mut kept_as_arrived: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     {
         for ((name, damaged), (outcome, took)) in all.iter().zip(results) {
             total += 1;
@@ -714,8 +794,8 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
                         ordinal += 1;
                         let file = format!("{name}--{ordinal:05}.pptx");
                         std::fs::write(out.join(&file), bytes).unwrap();
-                        if outcome.repaired.contains(&KEPT_AS_ARRIVED) {
-                            kept_as_arrived.insert(file.clone());
+                        if !outcome.kept.is_empty() {
+                            kept_as_arrived.insert(file.clone(), outcome.kept);
                         }
                         sources.insert(file, label);
                     }
@@ -755,9 +835,9 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
         eprintln!("xmllint or python3 not installed: F4 skipped");
         return;
     }
-    let (accepted, failures): (Vec<String>, Vec<String>) = f4_failures(&out)
+    let (accepted, failures): (Vec<F4Failure>, Vec<F4Failure>) = f4_failures(&out)
         .into_iter()
-        .partition(|line| kept_as_arrived.contains(line.split(':').next().unwrap_or_default()));
+        .partition(|failure| is_kept_as_arrived(failure, &kept_as_arrived));
     println!(
         "F4: {} outputs, {} failing lines, {} more in a part kept as it arrived",
         sources.len(),
@@ -768,10 +848,9 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
         let shown: Vec<String> = failures
             .iter()
             .take(60)
-            .map(|line| {
-                let file = line.split(':').next().unwrap_or_default();
-                let source = sources.get(file).map_or("?", String::as_str);
-                format!("[{source}] {line}")
+            .map(|failure| {
+                let source = sources.get(&failure.deck).map_or("?", String::as_str);
+                format!("[{source}] {}", failure.line)
             })
             .collect();
         panic!(
