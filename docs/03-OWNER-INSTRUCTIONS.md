@@ -27,6 +27,7 @@ by saying so.
 | 16 | 2026-11-07 | Complete Phase 0 soon | Phase 0 exit criteria prioritised over other work; workers commit each criterion as soon as it is done |
 | 17 | 2026-11-07 | Push directly to `main`; no pull requests for now. Supersedes CLAUDE.md's rule against committing to `main` until the owner says otherwise | [CLAUDE.md](../CLAUDE.md), `openslide-merge` skill |
 | 18 | 2026-11-07 | Update the README and repo overview. While Phase 0 completes, plan out all of Phase 1 | README, GitHub description and topics; [06](06-ROADMAP-AND-DELIVERY.md) Phase 1 plan; task rows in [14](14-EXECUTION-TRACKER.md) |
+| 19 | 2026-11-07 | Fix the open findings and proceed | Close-out session and Phase 1 Wave 1 |
 
 ## Boundaries set by the environment
 

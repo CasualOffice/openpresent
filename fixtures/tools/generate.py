@@ -230,6 +230,11 @@ def fixtures():
     for name, (data, expect, *limits) in hostile.items():
         yield f"hostile/{name}.bin", data, expect, *limits
     yield from property_fixtures()
+    yield "generated/slides-masters-layouts.pptx", zipped(slides_parts()), "open"
+    yield "generated/slides-strict.pptx", zipped([(n, d) if isinstance(d, bytes) else strict([(n, d)])[0] for n, d in slides_parts()]), "open"
+    # Lazy loading is measured on this: opening it must not read 500 slides.
+    yield "generated/five-hundred-slides.pptx", zipped(deck(500)), "open"
+    yield from slide_hostile()
 
 
 def main_part(xml):
@@ -458,6 +463,230 @@ def property_fixtures():
     yield "hostile/import-findings-flood.bin", zipped(full_deck(pres_doc(f"<p:extLst/>{flood}"))), "open"
     # Values that must be reported and left out, never coerced and never a panic.
     yield "hostile/import-bad-values.bin", zipped(full_deck(**bad_values())), "open"
+
+
+# ---------------------------------------------------------------- Tier 1D: slides, layouts, masters, shape trees
+
+A16 = "http://schemas.microsoft.com/office/drawing/2014/main"
+ADEC = "http://schemas.microsoft.com/office/drawing/2017/decorative"
+P14 = "http://schemas.microsoft.com/office/powerpoint/2010/main"
+MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+
+def xf(x, y, cx, cy, attrs=""):
+    return f'<a:xfrm{attrs}><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+
+
+def sp(sid, name, ph="", xfrm="", locks="", extra_nv="", cnvpr_attrs="", cnvpr_body="", attrs="", props=""):
+    """A shape. `ph` is the whole `p:ph` element; `xfrm` the whole `a:xfrm`."""
+    return (f'<p:sp{attrs}><p:nvSpPr><p:cNvPr id="{sid}" name="{name}"{cnvpr_attrs}>{cnvpr_body}</p:cNvPr>'
+            f'<p:cNvSpPr{extra_nv}>{locks}</p:cNvSpPr><p:nvPr>{ph}</p:nvPr></p:nvSpPr>'
+            f'<p:spPr{props}>{xfrm}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>'
+            f'<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US"/><a:t>{name}</a:t></a:r></a:p></p:txBody></p:sp>')
+
+
+def ph_tree(*shapes):
+    return f'<p:spTree>{TREE}{"".join(shapes)}</p:spTree>'
+
+
+LIST = '<a:lvl1pPr><a:defRPr sz="1800"/></a:lvl1pPr>'
+
+
+def slides_parts():
+    """Every Tier 1D construct at least once: a master with placeholders, header and footer
+    flags and text styles; three layouts (one hiding master shapes, with its own background
+    and colour map); three slides inheriting from them; a notes slide, notes master and
+    handout master; every node kind, every lock element, hyperlinks and actions, alternate
+    content, and drawing extensions. Synthetic: written to the schema, not by PowerPoint."""
+    master = (
+        f'{DECL}<p:sldMaster {NS} preserve="1"><p:cSld name="Fixture Master">'
+        '<p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'
+        + ph_tree(
+            sp(2, "Title Placeholder 1", '<p:ph type="title"/>', xf(838200, 365125, 10515600, 1325563), '<a:spLocks noGrp="1"/>'),
+            sp(3, "Text Placeholder 2", '<p:ph type="body" idx="1"/>', xf(838200, 1825625, 10515600, 4351338), '<a:spLocks noGrp="1"/>'),
+            sp(4, "Date Placeholder 3", '<p:ph type="dt" sz="half" idx="2"/>', xf(838200, 6356350, 2743200, 365125)),
+            sp(5, "Footer Placeholder 4", '<p:ph type="ftr" sz="quarter" idx="3"/>', xf(4038600, 6356350, 4114800, 365125)),
+            sp(6, "Slide Number Placeholder 5", '<p:ph type="sldNum" sz="quarter" idx="4"/>', xf(8610600, 6356350, 2743200, 365125)),
+            sp(7, "Master Logo", "", xf(11277600, 76200, 838200, 457200)))
+        + f'</p:cSld>{CLRMAP}'
+        '<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/><p:sldLayoutId id="2147483650" r:id="rId2"/>'
+        '<p:sldLayoutId id="2147483651" r:id="rId3"/></p:sldLayoutIdLst>'
+        '<p:hf hdr="0" ftr="0" dt="0"/>'
+        f'<p:txStyles><p:titleStyle>{LIST}</p:titleStyle><p:bodyStyle>{LIST}</p:bodyStyle><p:otherStyle>{LIST}</p:otherStyle></p:txStyles>'
+        '</p:sldMaster>')
+    layout1 = (
+        f'{DECL}<p:sldLayout {NS} type="title" matchingName="Title" preserve="1" userDrawn="1"><p:cSld name="Title Slide">'
+        + ph_tree(
+            sp(2, "Title 1", '<p:ph type="ctrTitle" orient="horz" hasCustomPrompt="1"/>', xf(1524000, 1122363, 9144000, 2387600)),
+            sp(3, "Subtitle 2", '<p:ph type="subTitle" idx="1"/>', xf(1524000, 3602038, 9144000, 1655762)),
+            sp(4, "Date Placeholder 3", '<p:ph type="dt" sz="half" idx="10"/>'),
+            sp(5, "Footer Placeholder 4", '<p:ph type="ftr" sz="quarter" idx="11"/>'),
+            sp(6, "Slide Number Placeholder 5", '<p:ph type="sldNum" sz="quarter" idx="12"/>'))
+        + '</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr><p:hf sldNum="0"/></p:sldLayout>')
+    layout2 = (
+        f'{DECL}<p:sldLayout {NS} type="obj" preserve="1"><p:cSld name="Title and Content">'
+        + ph_tree(sp(2, "Title 1", '<p:ph type="title"/>'), sp(3, "Content Placeholder 2", '<p:ph idx="1"/>'),
+                  sp(4, "Picture Placeholder 3", '<p:ph type="pic" sz="quarter" idx="13"/>', xf(838200, 4000000, 3000000, 2000000)))
+        + '</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>')
+    swapped = ('<a:overrideClrMapping bg1="dk1" tx1="lt1" bg2="dk2" tx2="lt2" accent1="accent1" accent2="accent2" '
+               'accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>')
+    layout3 = (
+        f'{DECL}<p:sldLayout {NS} type="blank" showMasterSp="0" showMasterPhAnim="0"><p:cSld name="Dark">'
+        '<p:bg bwMode="black"><p:bgPr shadeToTitle="1"><a:solidFill><a:srgbClr val="1F1F1F"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>'
+        + ph_tree(sp(2, "Layout Deco", "", xf(0, 0, 12192000, 228600)))
+        + f'</p:cSld><p:clrMapOvr>{swapped}</p:clrMapOvr><p:hf hdr="1" ftr="1" dt="1" sldNum="1"/></p:sldLayout>')
+
+    creation = (f'<a:extLst><a:ext uri="{{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}}"><a16:creationId xmlns:a16="{A16}" '
+                'id="{6C3B0F0E-1D2A-4B5C-9D8E-0F1A2B3C4D5E}"/></a:ext>'
+                f'<a:ext uri="{{C183D7F6-B498-43B3-948B-1728B52AA6E4}}"><adec:decorative xmlns:adec="{ADEC}" val="0"/></a:ext></a:extLst>')
+    slide1 = (
+        f'{DECL}<p:sld {NS}><p:cSld>'
+        + ph_tree(
+            sp(2, "Title 1", '<p:ph type="ctrTitle"/>', cnvpr_body=creation),
+            sp(3, "Subtitle 2", '<p:ph type="subTitle" idx="1"/>', xf(1524000, 3900000, 9144000, 1200000),
+               cnvpr_attrs=' descr="Alt text" title="Subtitle"',
+               cnvpr_body='<a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=nextslide" highlightClick="1"/>'),
+            sp(4, "Footer Placeholder 3", '<p:ph type="ftr" sz="quarter" idx="11"/>'))
+        + '</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>')
+
+    grp_inner = ('<p:grpSp><p:nvGrpSpPr><p:cNvPr id="13" name="Inner Group"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
+                 f'<p:grpSpPr>{xf(0, 0, 914400, 914400)}</p:grpSpPr>'
+                 + sp(14, "Inner Child", "", xf(0, 0, 914400, 914400)) + '</p:grpSp>')
+    group = ('<p:grpSp><p:nvGrpSpPr><p:cNvPr id="10" name="Group 9"/><p:cNvGrpSpPr><a:grpSpLocks noUngrp="1" noRot="1"/></p:cNvGrpSpPr><p:nvPr/></p:nvGrpSpPr>'
+             '<p:grpSpPr bwMode="auto"><a:xfrm rot="5400000" flipH="1"><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/>'
+             '<a:chOff x="0" y="0"/><a:chExt cx="1828800" cy="914400"/></a:xfrm></p:grpSpPr>'
+             + sp(11, "Child A", "", xf(0, 0, 914400, 914400), '<a:spLocks noMove="1" noResize="1" noTextEdit="1"/>', ' txBox="1"')
+             + sp(12, "Child B", "", xf(914400, 0, 914400, 914400), attrs=' useBgFill="1"', props=' bwMode="gray"')
+             + grp_inner + '</p:grpSp>')
+    connector = ('<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="15" name="Connector 14"/><p:cNvCxnSpPr><a:cxnSpLocks noChangeShapeType="1"/>'
+                 '<a:stCxn id="11" idx="3"/><a:endCxn id="12" idx="1"/></p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr>'
+                 '<p:spPr>' + xf(3000000, 3000000, 1000000, 0, ' flipV="1"') + '<a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom></p:spPr></p:cxnSp>')
+    picture = ('<p:pic><p:nvPicPr><p:cNvPr id="16" name="Picture 15" descr="A checker"/><p:cNvPicPr><a:picLocks noChangeAspect="1" noCrop="1"/></p:cNvPicPr>'
+               '<p:nvPr><p:ph type="pic" sz="quarter" idx="13"/></p:nvPr></p:nvPicPr><p:blipFill><a:blip r:embed="rId3"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'
+               '<p:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>')
+    frame = ('<p:graphicFrame bwMode="auto"><p:nvGraphicFramePr><p:cNvPr id="17" name="Table 16"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1" noDrilldown="1"/></p:cNvGraphicFramePr>'
+             '<p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="6000000" y="1825625"/><a:ext cx="4000000" cy="740000"/></p:xfrm>'
+             '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1"/>'
+             '<a:tblGrid><a:gridCol w="4000000"/></a:tblGrid><a:tr h="370000"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr/></a:tc></a:tr>'
+             '</a:tbl></a:graphicData></a:graphic></p:graphicFrame>')
+    links = ('<a:hlinkClick r:id="rId4" action="ppaction://hlinksldjump" tooltip="To slide 3" history="0"/>'
+             '<a:hlinkHover r:id="" action="ppaction://noaction" endSnd="1"/>')
+    alternate = (f'<mc:AlternateContent xmlns:mc="{MC_NS}"><mc:Choice xmlns:p14="{P14}" Requires="p14">'
+                 + sp(18, "Choice Shape", "", xf(0, 5000000, 914400, 914400)) + '</mc:Choice><mc:Fallback>'
+                 + sp(18, "Fallback Shape", "", xf(0, 5000000, 914400, 914400)) + '</mc:Fallback></mc:AlternateContent>')
+    slide2 = (
+        f'{DECL}<p:sld {NS} xmlns:p14="{P14}" xmlns:mc="{MC_NS}" mc:Ignorable="p14"><p:cSld name="Content">'
+        + ph_tree(
+            sp(2, "Title 1", '<p:ph type="title"/>', cnvpr_body=links),
+            sp(3, "Content Placeholder 2", '<p:ph idx="1"/>'),
+            sp(4, "Orphan Placeholder", '<p:ph type="body" idx="4294967295"/>', xf(838200, 5500000, 3000000, 600000)),
+            sp(5, "Hidden", "", xf(0, 0, 100, 100), cnvpr_attrs=' hidden="1"'),
+            group, connector, picture, frame, alternate,
+            '<p:contentPart r:id="rId5"/>')
+        + '</p:cSld></p:sld>')
+    slide3 = (
+        f'{DECL}<p:sld {NS} show="0" showMasterSp="0" showMasterPhAnim="0"><p:cSld name="Hidden dark">'
+        '<p:bg><p:bgPr><a:noFill/><a:effectLst/></p:bgPr></p:bg>'
+        + ph_tree(sp(2, "Note", "", xf(914400, 914400, 4572000, 914400)))
+        + f'</p:cSld><p:clrMapOvr>{swapped}</p:clrMapOvr></p:sld>')
+    notes = (
+        f'{DECL}<p:notes {NS}><p:cSld>'
+        + ph_tree(sp(2, "Slide Image Placeholder 1", '<p:ph type="sldImg"/>', locks='<a:spLocks noGrp="1" noRot="1" noChangeAspect="1"/>'),
+                  sp(3, "Notes Placeholder 2", '<p:ph type="body" idx="1"/>'))
+        + '</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>')
+    notes_master = (
+        f'{DECL}<p:notesMaster {NS}><p:cSld>'
+        + ph_tree(sp(2, "Header Placeholder 1", '<p:ph type="hdr" sz="quarter"/>', xf(0, 0, 2971800, 458788)),
+                  sp(3, "Slide Image Placeholder 2", '<p:ph type="sldImg" idx="2"/>', xf(685800, 1143000, 5486400, 3086100)),
+                  sp(4, "Notes Placeholder 3", '<p:ph type="body" sz="quarter" idx="3"/>', xf(685800, 4400550, 5486400, 3600450)))
+        + f'</p:cSld>{CLRMAP}<p:hf dt="0"/><p:notesStyle>{LIST}</p:notesStyle></p:notesMaster>')
+    handout = (
+        f'{DECL}<p:handoutMaster {NS}><p:cSld>'
+        + ph_tree(sp(2, "Header Placeholder 1", '<p:ph type="hdr" sz="quarter"/>', xf(0, 0, 2971800, 458788)),
+                  sp(3, "Slide Number Placeholder 2", '<p:ph type="sldNum" sz="quarter" idx="3"/>', xf(3884613, 8685213, 2971800, 458787)))
+        + f'</p:cSld>{CLRMAP}<p:hf hdr="0"/></p:handoutMaster>')
+    presentation = (
+        f'{DECL}<p:presentation {NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'
+        '<p:notesMasterIdLst><p:notesMasterId r:id="rId6"/></p:notesMasterIdLst><p:handoutMasterIdLst><p:handoutMasterId r:id="rId7"/></p:handoutMasterIdLst>'
+        '<p:sldIdLst><p:sldId id="256" r:id="rId3"/><p:sldId id="257" r:id="rId4"/><p:sldId id="258" r:id="rId5"/></p:sldIdLst>'
+        '<p:sldSz cx="12192000" cy="6858000"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>')
+    png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000001"
+                        "e221bc330000000049454e44ae426082")
+    types = [(f"/ppt/slideLayouts/slideLayout{i}.xml", f"{PML}.slideLayout+xml") for i in (2, 3)]
+    types += [("/ppt/notesSlides/notesSlide1.xml", f"{PML}.notesSlide+xml"),
+              ("/ppt/notesMasters/notesMaster1.xml", f"{PML}.notesMaster+xml"),
+              ("/ppt/handoutMasters/handoutMaster1.xml", f"{PML}.handoutMaster+xml")]
+    entries = deck(3, presentation=presentation, types_extra=types)
+    layout_rels = rels(("slideMaster", "../slideMasters/slideMaster1.xml"))
+    entries = replace(entries, "ppt/_rels/presentation.xml.rels", rels(
+        ("slideMaster", "slideMasters/slideMaster1.xml"), ("theme", "theme/theme1.xml"),  # rId1, rId2
+        ("slide", "slides/slide1.xml"), ("slide", "slides/slide2.xml"), ("slide", "slides/slide3.xml"),  # rId3-5
+        ("notesMaster", "notesMasters/notesMaster1.xml"), ("handoutMaster", "handoutMasters/handoutMaster1.xml")))  # rId6, rId7
+    entries = replace(entries, "ppt/slideMasters/slideMaster1.xml", master)
+    entries = replace(entries, "ppt/slideMasters/_rels/slideMaster1.xml.rels", rels(
+        ("slideLayout", "../slideLayouts/slideLayout1.xml"), ("slideLayout", "../slideLayouts/slideLayout2.xml"),
+        ("slideLayout", "../slideLayouts/slideLayout3.xml"), ("theme", "../theme/theme1.xml")))
+    entries = replace(entries, "ppt/slideLayouts/slideLayout1.xml", layout1)
+    entries = replace(entries, "ppt/slides/slide1.xml", slide1)
+    entries = replace(entries, "ppt/slides/slide2.xml", slide2)
+    entries = replace(entries, "ppt/slides/slide3.xml", slide3)
+    entries = replace(entries, "ppt/slides/_rels/slide2.xml.rels", rels(
+        ("slideLayout", "../slideLayouts/slideLayout2.xml"), ("slide", "slide1.xml"), ("image", "../media/image1.png"),
+        ("slide", "slide3.xml"), ("customXml", "../ink/ink1.xml")))
+    entries = replace(entries, "ppt/slides/_rels/slide3.xml.rels", rels(
+        ("slideLayout", "../slideLayouts/slideLayout3.xml"), ("notesSlide", "../notesSlides/notesSlide1.xml")))
+    entries += [
+        ("ppt/slideLayouts/slideLayout2.xml", layout2), ("ppt/slideLayouts/_rels/slideLayout2.xml.rels", layout_rels),
+        ("ppt/slideLayouts/slideLayout3.xml", layout3), ("ppt/slideLayouts/_rels/slideLayout3.xml.rels", layout_rels),
+        ("ppt/notesSlides/notesSlide1.xml", notes),
+        ("ppt/notesSlides/_rels/notesSlide1.xml.rels", rels(("notesMaster", "../notesMasters/notesMaster1.xml"), ("slide", "../slides/slide3.xml"))),
+        ("ppt/notesMasters/notesMaster1.xml", notes_master),
+        ("ppt/notesMasters/_rels/notesMaster1.xml.rels", rels(("theme", "../theme/theme1.xml"))),
+        ("ppt/handoutMasters/handoutMaster1.xml", handout),
+        ("ppt/handoutMasters/_rels/handoutMaster1.xml.rels", rels(("theme", "../theme/theme1.xml"))),
+        ("ppt/media/image1.png", png),
+        ("ppt/ink/ink1.xml", '<inkml:ink xmlns:inkml="http://www.w3.org/2003/InkML"/>'),
+    ]
+    return entries
+
+
+def slide_hostile():
+    """Each opens as a package; the slide import refuses or reports. Codes are in
+    crates/casual-slide-import/tests/slides.rs."""
+    def with_slide(body, slide_rels=None, extra=()):
+        entries = replace(deck(), "ppt/slides/slide1.xml", f"{DECL}<p:sld {NS}><p:cSld>{body}</p:cSld></p:sld>")
+        if slide_rels is not None:
+            entries = replace(entries, "ppt/slides/_rels/slide1.xml.rels", slide_rels)
+        return zipped(list(entries) + list(extra))
+    node = '<p:sp><p:nvSpPr><p:cNvPr id="2" name="s"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/></p:sp>'
+    yield "hostile/slide-limit-shapes.bin", with_slide(f"<p:spTree>{TREE}" + seeded(node, 100_001) + "</p:spTree>"), "open"
+    depth = 70
+    nested = ('<p:grpSp><p:nvGrpSpPr><p:cNvPr id="3" name="g"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>' * depth
+              + "</p:grpSp>" * depth)
+    yield "hostile/slide-limit-group-depth.bin", with_slide(f"<p:spTree>{TREE}{nested}</p:spTree>"), "open"
+    dupes = (f"<p:spTree>{TREE}" + sp(2, "a", '<p:ph type="title"/>') + sp(2, "b", '<p:ph type="title"/>')
+             + sp(3, "c", '<p:ph idx="7"/>') + sp(4, "d", '<p:ph idx="7"/>') + "</p:spTree>")
+    yield "hostile/slide-duplicate-ids.bin", with_slide(dupes), "open"
+    # The slide's layout relationship names the slide itself, and the layout's master
+    # relationship names the slide: a cycle if a reader followed kinds blindly.
+    cycle = replace(deck(), "ppt/slides/_rels/slide1.xml.rels", rels(("slideLayout", "slide1.xml")))
+    cycle = replace(cycle, "ppt/slideLayouts/_rels/slideLayout1.xml.rels", rels(("slideMaster", "../slides/slide1.xml")))
+    yield "hostile/slide-layout-cycle.bin", zipped(cycle), "open"
+    # A layout relationship that reaches a real part of another kind, not yet seen as anything.
+    yield "hostile/slide-layout-wrong-kind.bin", with_slide(f"<p:spTree>{TREE}</p:spTree>",
+                                                            rels(("slideLayout", "../theme/theme1.xml"))), "open"
+    # A slide with no layout relationship at all, and one whose layout part is not there.
+    yield "hostile/slide-no-layout.bin", with_slide(f"<p:spTree>{TREE}</p:spTree>", rels()), "open"
+    yield "hostile/slide-missing-layout.bin", with_slide(f"<p:spTree>{TREE}</p:spTree>",
+                                                          rels(("slideLayout", "../slideLayouts/slideLayout9.xml"))), "open CS-FND-0004"
+    bad = (f"<p:spTree>{TREE}"
+           '<p:sp useBgFill="maybe"><p:nvSpPr><p:cNvPr id="x" name="n" hidden="2"><a:hlinkClick r:id="rId404" action="ppaction://program"/></p:cNvPr>'
+           '<p:cNvSpPr txBox="?"><a:spLocks noMove="yes" noUngrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="nope" idx="-1" sz="huge"/></p:nvPr></p:nvSpPr>'
+           '<p:spPr bwMode="sepia"><a:xfrm rot="1.5" flipH="2"><a:off x="1e99" y="0"/><a:ext cx="-5" cy="1"/></a:xfrm></p:spPr></p:sp>'
+           '<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="5" name="c"/><p:cNvCxnSpPr><a:stCxn id="z"/></p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr><p:spPr/></p:cxnSp>'
+           '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="f"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>'
+           '<p:xfrm/><a:graphic><a:graphicData/></a:graphic></p:graphicFrame><p:contentPart/><p:unknownNode/></p:spTree>')
+    yield "hostile/slide-bad-values.bin", with_slide(bad), "open"
 
 
 def hostile_noise():

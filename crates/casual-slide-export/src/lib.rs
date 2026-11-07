@@ -3,4 +3,5 @@
 pub mod color;
 pub mod presentation;
 pub mod properties;
+pub mod slide;
 pub mod theme;

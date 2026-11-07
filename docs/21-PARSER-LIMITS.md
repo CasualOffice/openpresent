@@ -107,6 +107,18 @@ is left absent, reported, and kept as bytes.
 These are constants, not fields of `ImportLimits`, so a host cannot tighten them yet
 (`COLOR-01`).
 
+## Slides: `SlideLimits`
+
+`crates/casual-slide-import/src/slide.rs`. Over a limit, the deck is refused with a `CS-SLD` code.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_shapes_per_part` | `100_000` | Shape-tree nodes in one part | CS-SLD | Tested; hostile fixture |
+| `max_group_depth` | `64` | Group nesting | CS-SLD | Tested; hostile fixture |
+| `max_slides` | `100_000` | Slides indexed | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
+| `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
+| `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
+
 ## Geometry
 
 `crates/casual-slide-geometry/src/lib.rs`, module `limits`, enforced by `RawGeometry::compile`.

@@ -73,6 +73,7 @@
 | OT-01 | Is character OT needed? | Open | P1 | Figma and Google Docs support server order and per-property rules. ONLYOFFICE ships presentations with object marking and no character OT in the same object. **Kept: a clone must allow two people in one text box**, so character OT stays (ADR-009). Reviewed again at Phase 9's audit | Decision recorded at Phase 9 |
 | FID-03 | Fixtures for the 17 ranked problems | Open | P0 | [52](52-COMPETITOR-STUDY.md): fonts, autofit, SmartArt, animation and round-trip validity first. The first five were each reported by several products | Each has a fixture in its tier |
 | ADR-014 | Precedent check for ADR-013 | Done | P2 | Study found the need strongly supported and no precedent for a byte-faithful tree, so it is ours to prove (`ARC-02`). Kept | — |
+| T1D-03 | Tier 1D leftovers | Open | P1 | Hostile fixtures for `max_slides`, `max_parts`, `max_layout_ids`; codes in docs/20; `bgRef` finding keeps its colour code; verify layout-to-master matching claims that came from memory; fixtures for 46 enum values and lock attributes; `insert_in_order` namespace limit | Per-tier gate |
 | GEO-01 | `upArrow` missing from Ecma's preset definitions | Done | P1 | The two `upDownArrow` copies are identical. `upArrow` derived from `downArrow` by y to h-y; LibreOffice's copy agrees on path, sites, text rectangle, handles | Golden and mirror tests; generator exits 1 if the override goes |
 | GEO-02 | Other defects in Ecma's definitions | Done | P1 | `textNoShape` absent from warps (empty definition added); `curvedLeftArrow` uses undefined `cd3`; surplus operands in 8 circular arrow formulas; `pie` text rectangle inside out; `gear6` and `gear9` mirrored guides. Corrected explicitly in the generator. **`pie` and gear corrections are our reading, not a PowerPoint match** | A test per correction; PowerPoint check via `PV-01` |
 | GEO-03 | Geometry engine | Done | P0 | `casual-slide-geometry`: 17 operators, 40 built-in guides, all 187 presets and 41 warps, own trig for determinism. Bit-exact fingerprint agrees on aarch64 and wasm32; x86_64 not run. Built-in list partly recalled, since the Ecma prose is not in the repo. 181 of 187 paths agree with LibreOffice's table | Main session merged, gates pass, broke `atan2` and saw red |
@@ -96,7 +97,7 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | T-1A | Package, part graph, properties, repackager | In progress | P0 | Structure, properties, repackager, MCE, Strict built and merged. Open: `XML-02`, `SEC-015`, `SEC-016`, `SEC-017`, `PKG-04`, `SPEC-08` | Per-tier gate in 06 |
 | T-1B | Presentation part, view state | In progress | P0 | Built and merged, with fuzz target. Removing a whole part refused; `defaultTextStyle`, `penClr`, `clrMru`, `extLst` retained, not modelled; app counts not recalculated | Per-tier gate |
 | T-1C | Colour and theme | In progress | P0 | Model, import and export built and merged; 236 workspace tests pass. Audit: code references 314 COLOR and 159 THEME rows partly. Remaining: `COLOR-01`, `COLOR-02`, `COLOR-03`, effect reference, format scheme internals, object defaults, `themeManager` | Per-tier gate in 06 |
-| T-1D | Slides, masters, layouts, shape tree, `-style` | Open | P0 | 564 rows | Per-tier gate |
+| T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged. All 12 committed real decks import through slide import. Open: `T1D-03`. Most spec rows still lack fixtures, so the tier gate is not met | Per-tier gate in 06 |
 | T-1E | Geometry, fills, lines, effects, 3D | Open | P0 | 1082 rows | Per-tier gate |
 | T-1F | Text model | Open | P0 | 317 rows | Per-tier gate |
 | T-1G | Tables | Open | P0 | 113 rows | Per-tier gate |
@@ -215,7 +216,7 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1B-02 | Close Tier 1B | Open | P1 | Whole-part removal rule; `defaultTextStyle` follows `T1F-01`; app counts follow `T1N-05` | Per-tier gate |
 | T1C-01 | Tier 1C leftovers | Open | P1 | `COLOR-01`; effect reference; `themeManager`; export setters for panose, pitch, charset, style reference index | Tests seen red |
 | T1C-02 | Close Tier 1C | Open | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
-| T1D-02 | Merge and close Tier 1D | Open | P0 | Session running. Then adapt to the stricter reader and removed `XmlTree::attribute` | Per-tier gate |
+| T1D-02 | Merge Tier 1D | Done | P0 | Merged onto the parser fixes; 372 tests pass | Gates pass |
 | SKEL-02 | Skeleton: minimal layout and PNG | Open | P0 | Creates `-layout` and `-render` with composition, presets, solid fills and one-font text, enough to see 5 decks. Compared in F7 only | 5 decks rendered and inspected |
 | T1E-01 | Geometry binding | Open | P0 | `prstGeom`, `custGeom`, `avLst` into the model; calls `-geometry`; `GEO-04` | All 187 presets round-trip |
 | T1E-02 | Fills | Open | P0 | Solid, gradient, pattern, blip, group, none; rotate-with-shape | Every `ST_PresetPatternVal`; fixed point |
