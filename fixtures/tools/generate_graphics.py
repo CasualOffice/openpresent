@@ -103,6 +103,8 @@ class Maker:
     def attr_value(self, a):
         if a.rel:
             return ""  # As Office writes `r:blip`. A named one must exist in the part's rels.
+        if a.name == "xml:space":
+            return "preserve"  # XML 1.0 2.10: no other value parses in a validating reader.
         return self.turn(a.st, self.tokens(a.st) or ["x"])
 
     def attrs(self, t, required_only=False):

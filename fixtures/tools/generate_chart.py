@@ -626,7 +626,7 @@ def signed_axis_deck():
 
 
 def fixtures():
-    yield "generated/chart-families.pptx", zipped(families_deck()), "open"
+    yield "generated/chart-families.pptx", zipped(families_deck()), "open CS-FND-0010"
     yield "generated/chart-strict.pptx", zipped(strict_chart(families_deck())), "open"
     yield "generated/chart-ex-layouts.pptx", zipped(chart_ex_deck()), "open"
     yield "generated/chart-signed-axis.pptx", zipped(signed_axis_deck()), "open"
