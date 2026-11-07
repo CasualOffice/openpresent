@@ -103,23 +103,24 @@ pub(crate) fn member_st_function_value(attribute: &str, value: &str) -> bool {
 }
 
 /// What `ST_LayoutShapeType` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_layout_shape_type(attribute: &str, value: &str) -> bool {
     (attribute == "type") && (matches!(value, "conn" | "none") || true)
 }
 
 /// What `ST_ModelId` admits, on the attributes that hold it.
-pub(crate) fn member_st_model_id(attribute: &str, value: &str) -> bool {
-    (attribute == "cxnId"
+pub(crate) fn member_st_model_id(attribute: &str, _value: &str) -> bool {
+    attribute == "cxnId"
         || attribute == "destId"
         || attribute == "modelId"
         || attribute == "parTransId"
         || attribute == "presAssocID"
         || attribute == "sibTransId"
-        || attribute == "srcId")
-        && (true || i32::parse_lexical(value).is_some())
+        || attribute == "srcId"
 }
 
 /// What `ST_ParameterVal` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_parameter_val(attribute: &str, value: &str) -> bool {
     (attribute == "val")
         && (matches!(
@@ -188,32 +189,29 @@ pub(crate) fn member_st_parameter_val(attribute: &str, value: &str) -> bool {
                 | "trans"
                 | "upr"
                 | "vert"
-        ) || Float64::parse_lexical(value).is_some()
-            || true
-            || bool::parse_lexical(value).is_some()
-            || i32::parse_lexical(value).is_some())
+        ) || true)
 }
 
 /// What `ST_PrSetCustVal` admits, on the attributes that hold it.
-pub(crate) fn member_st_pr_set_cust_val(attribute: &str, value: &str) -> bool {
-    (attribute == "custLinFactNeighborX"
+pub(crate) fn member_st_pr_set_cust_val(attribute: &str, _value: &str) -> bool {
+    attribute == "custLinFactNeighborX"
         || attribute == "custLinFactNeighborY"
         || attribute == "custLinFactX"
         || attribute == "custLinFactY"
         || attribute == "custRadScaleInc"
         || attribute == "custRadScaleRad"
         || attribute == "custScaleX"
-        || attribute == "custScaleY")
-        && (true || i32::parse_lexical(value).is_some())
+        || attribute == "custScaleY"
 }
 
 // spec-audit: owner=title
 pub(crate) fn read_ct_name(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::CTName> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::CTName::default();
-    out.lang = c.attr(&mut e, "lang")?;
-    out.val = c.attr_required(&mut e, "val")?;
+    let out = m::CTName {
+        lang: c.attr(&mut e, "lang")?,
+        val: c.attr_required(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -229,9 +227,10 @@ pub(crate) fn read_ct_description(
 ) -> Res<m::CTDescription> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::CTDescription::default();
-    out.lang = c.attr(&mut e, "lang")?;
-    out.val = c.attr_required(&mut e, "val")?;
+    let out = m::CTDescription {
+        lang: c.attr(&mut e, "lang")?,
+        val: c.attr_required(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -244,9 +243,10 @@ pub(crate) fn read_ct_description(
 pub(crate) fn read_ct_category(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::CTCategory> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::CTCategory::default();
-    out.type_ = c.attr_required(&mut e, "type")?;
-    out.pri = c.attr_required(&mut e, "pri")?;
+    let out = m::CTCategory {
+        type_: c.attr_required(&mut e, "type")?,
+        pri: c.attr_required(&mut e, "pri")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -262,17 +262,12 @@ pub(crate) fn read_ct_categories(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
     let mut out = m::CTCategories::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "cat" => {
-                    out.items
-                        .push(m::CTCategoriesItem::Cat(Box::new(read_ct_category(
-                            c, &child,
-                        )?)));
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "cat" {
+            out.items
+                .push(m::CTCategoriesItem::Cat(Box::new(read_ct_category(
+                    c, &child,
+                )?)));
+            continue;
         }
         c.retained(&child);
     }
@@ -284,9 +279,11 @@ pub(crate) fn read_ct_categories(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
 pub(crate) fn read_colors(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Colors> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Colors::default();
-    out.meth = c.attr(&mut e, "meth")?;
-    out.hue_dir = c.attr(&mut e, "hueDir")?;
+    let mut out = m::Colors {
+        meth: c.attr(&mut e, "meth")?,
+        hue_dir: c.attr(&mut e, "hueDir")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if is_color(c, &child) {
@@ -305,8 +302,10 @@ pub(crate) fn read_colors(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Col
 pub(crate) fn read_ct_style_label(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::CTStyleLabel> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::CTStyleLabel::default();
-    out.name = c.attr_required(&mut e, "name")?;
+    let mut out = m::CTStyleLabel {
+        name: c.attr_required(&mut e, "name")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -383,9 +382,11 @@ pub(crate) fn read_color_transform(
 ) -> Res<m::ColorTransform> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ColorTransform::default();
-    out.unique_id = c.attr(&mut e, "uniqueId")?;
-    out.min_ver = c.attr(&mut e, "minVer")?;
+    let mut out = m::ColorTransform {
+        unique_id: c.attr(&mut e, "uniqueId")?,
+        min_ver: c.attr(&mut e, "minVer")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -434,10 +435,12 @@ pub(crate) fn read_color_transform_header(
 ) -> Res<m::ColorTransformHeader> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ColorTransformHeader::default();
-    out.unique_id = c.attr_required(&mut e, "uniqueId")?;
-    out.min_ver = c.attr(&mut e, "minVer")?;
-    out.res_id = c.attr(&mut e, "resId")?;
+    let mut out = m::ColorTransformHeader {
+        unique_id: c.attr_required(&mut e, "uniqueId")?,
+        min_ver: c.attr(&mut e, "minVer")?,
+        res_id: c.attr(&mut e, "resId")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -485,15 +488,10 @@ pub(crate) fn read_color_transform_header_lst(
     let mut out = m::ColorTransformHeaderLst::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "colorsDefHdr" => {
-                    out.colors_def_hdr
-                        .push(read_color_transform_header(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "colorsDefHdr" {
+            out.colors_def_hdr
+                .push(read_color_transform_header(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -506,10 +504,12 @@ pub(crate) fn read_pt(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Pt> {
     c.charge(GraphicBound::Points)?;
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Pt::default();
-    out.model_id = c.attr_member(&mut e, "modelId", true, member_st_model_id)?;
-    out.type_ = c.attr(&mut e, "type")?;
-    out.cxn_id = c.attr_member(&mut e, "cxnId", false, member_st_model_id)?;
+    let mut out = m::Pt {
+        model_id: c.attr_member(&mut e, "modelId", true, member_st_model_id)?,
+        type_: c.attr(&mut e, "type")?,
+        cxn_id: c.attr_member(&mut e, "cxnId", false, member_st_model_id)?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -562,14 +562,9 @@ pub(crate) fn read_pt_list(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Pt
     let mut out = m::PtList::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "pt" => {
-                    out.pt.push(read_pt(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "pt" {
+            out.pt.push(read_pt(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -582,30 +577,27 @@ pub(crate) fn read_cxn(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Cxn> {
     c.charge(GraphicBound::Connections)?;
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Cxn::default();
-    out.model_id = c.attr_member(&mut e, "modelId", true, member_st_model_id)?;
-    out.type_ = c.attr(&mut e, "type")?;
-    out.src_id = c.attr_member(&mut e, "srcId", true, member_st_model_id)?;
-    out.dest_id = c.attr_member(&mut e, "destId", true, member_st_model_id)?;
-    out.src_ord = c.attr_required(&mut e, "srcOrd")?;
-    out.dest_ord = c.attr_required(&mut e, "destOrd")?;
-    out.par_trans_id = c.attr_member(&mut e, "parTransId", false, member_st_model_id)?;
-    out.sib_trans_id = c.attr_member(&mut e, "sibTransId", false, member_st_model_id)?;
-    out.pres_id = c.attr(&mut e, "presId")?;
+    let mut out = m::Cxn {
+        model_id: c.attr_member(&mut e, "modelId", true, member_st_model_id)?,
+        type_: c.attr(&mut e, "type")?,
+        src_id: c.attr_member(&mut e, "srcId", true, member_st_model_id)?,
+        dest_id: c.attr_member(&mut e, "destId", true, member_st_model_id)?,
+        src_ord: c.attr_required(&mut e, "srcOrd")?,
+        dest_ord: c.attr_required(&mut e, "destOrd")?,
+        par_trans_id: c.attr_member(&mut e, "parTransId", false, member_st_model_id)?,
+        sib_trans_id: c.attr_member(&mut e, "sibTransId", false, member_st_model_id)?,
+        pres_id: c.attr(&mut e, "presId")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "extLst" => {
-                    if out.ext_lst.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_DGM) && child.local == "extLst" {
+            if out.ext_lst.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -620,14 +612,9 @@ pub(crate) fn read_cxn_list(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::C
     let mut out = m::CxnList::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "cxn" => {
-                    out.cxn.push(read_cxn(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "cxn" {
+            out.cxn.push(read_cxn(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -697,32 +684,29 @@ pub(crate) fn read_data_model(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
 pub(crate) fn read_constraint(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Constraint> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Constraint::default();
-    out.type_ = c.attr_required(&mut e, "type")?;
-    out.for_ = c.attr(&mut e, "for")?;
-    out.for_name = c.attr(&mut e, "forName")?;
-    out.pt_type = c.attr(&mut e, "ptType")?;
-    out.ref_type = c.attr(&mut e, "refType")?;
-    out.ref_for = c.attr(&mut e, "refFor")?;
-    out.ref_for_name = c.attr(&mut e, "refForName")?;
-    out.ref_pt_type = c.attr(&mut e, "refPtType")?;
-    out.op = c.attr(&mut e, "op")?;
-    out.val = c.attr(&mut e, "val")?;
-    out.fact = c.attr(&mut e, "fact")?;
+    let mut out = m::Constraint {
+        type_: c.attr_required(&mut e, "type")?,
+        for_: c.attr(&mut e, "for")?,
+        for_name: c.attr(&mut e, "forName")?,
+        pt_type: c.attr(&mut e, "ptType")?,
+        ref_type: c.attr(&mut e, "refType")?,
+        ref_for: c.attr(&mut e, "refFor")?,
+        ref_for_name: c.attr(&mut e, "refForName")?,
+        ref_pt_type: c.attr(&mut e, "refPtType")?,
+        op: c.attr(&mut e, "op")?,
+        val: c.attr(&mut e, "val")?,
+        fact: c.attr(&mut e, "fact")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "extLst" => {
-                    if out.ext_lst.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_DGM) && child.local == "extLst" {
+            if out.ext_lst.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -737,14 +721,9 @@ pub(crate) fn read_constraints(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
     let mut out = m::Constraints::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "constr" => {
-                    out.constr.push(read_constraint(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "constr" {
+            out.constr.push(read_constraint(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -756,28 +735,25 @@ pub(crate) fn read_constraints(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_numeric_rule(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::NumericRule> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::NumericRule::default();
-    out.type_ = c.attr_required(&mut e, "type")?;
-    out.for_ = c.attr(&mut e, "for")?;
-    out.for_name = c.attr(&mut e, "forName")?;
-    out.pt_type = c.attr(&mut e, "ptType")?;
-    out.val = c.attr(&mut e, "val")?;
-    out.fact = c.attr(&mut e, "fact")?;
-    out.max = c.attr(&mut e, "max")?;
+    let mut out = m::NumericRule {
+        type_: c.attr_required(&mut e, "type")?,
+        for_: c.attr(&mut e, "for")?,
+        for_name: c.attr(&mut e, "forName")?,
+        pt_type: c.attr(&mut e, "ptType")?,
+        val: c.attr(&mut e, "val")?,
+        fact: c.attr(&mut e, "fact")?,
+        max: c.attr(&mut e, "max")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "extLst" => {
-                    if out.ext_lst.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_DGM) && child.local == "extLst" {
+            if out.ext_lst.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -792,14 +768,9 @@ pub(crate) fn read_rules(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Rule
     let mut out = m::Rules::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "rule" => {
-                    out.rule.push(read_numeric_rule(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "rule" {
+            out.rule.push(read_numeric_rule(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -814,27 +785,24 @@ pub(crate) fn read_presentation_of(
 ) -> Res<m::PresentationOf> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::PresentationOf::default();
-    out.axis = c.attr_member(&mut e, "axis", false, member_st_axis_types)?;
-    out.pt_type = c.attr_member(&mut e, "ptType", false, member_st_element_types)?;
-    out.hide_last_trans = c.attr(&mut e, "hideLastTrans")?;
-    out.st = c.attr(&mut e, "st")?;
-    out.cnt = c.attr(&mut e, "cnt")?;
-    out.step = c.attr(&mut e, "step")?;
+    let mut out = m::PresentationOf {
+        axis: c.attr_member(&mut e, "axis", false, member_st_axis_types)?,
+        pt_type: c.attr_member(&mut e, "ptType", false, member_st_element_types)?,
+        hide_last_trans: c.attr(&mut e, "hideLastTrans")?,
+        st: c.attr(&mut e, "st")?,
+        cnt: c.attr(&mut e, "cnt")?,
+        step: c.attr(&mut e, "step")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "extLst" => {
-                    if out.ext_lst.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_DGM) && child.local == "extLst" {
+            if out.ext_lst.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ext_lst = Some(Box::new(read_ext_lst(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -846,9 +814,10 @@ pub(crate) fn read_presentation_of(
 pub(crate) fn read_adj(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Adj> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Adj::default();
-    out.idx = c.attr_range(&mut e, "idx", true, 1..)?;
-    out.val = c.attr_required(&mut e, "val")?;
+    let out = m::Adj {
+        idx: c.attr_range(&mut e, "idx", true, 1..)?,
+        val: c.attr_required(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -864,14 +833,9 @@ pub(crate) fn read_adj_lst(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Ad
     let mut out = m::AdjLst::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "adj" => {
-                    out.adj.push(read_adj(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "adj" {
+            out.adj.push(read_adj(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -883,14 +847,16 @@ pub(crate) fn read_adj_lst(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Ad
 pub(crate) fn read_shape(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Shape> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Shape::default();
-    out.rot = c.attr(&mut e, "rot")?;
-    out.type_ = c.attr_member(&mut e, "type", false, member_st_layout_shape_type)?;
-    out.blip = c.rel_attr(&mut e, "blip");
-    out.z_order_off = c.attr(&mut e, "zOrderOff")?;
-    out.hide_geom = c.attr(&mut e, "hideGeom")?;
-    out.lk_tx_entry = c.attr(&mut e, "lkTxEntry")?;
-    out.blip_phldr = c.attr(&mut e, "blipPhldr")?;
+    let mut out = m::Shape {
+        rot: c.attr(&mut e, "rot")?,
+        type_: c.attr_member(&mut e, "type", false, member_st_layout_shape_type)?,
+        blip: c.rel_attr(&mut e, "blip"),
+        z_order_off: c.attr(&mut e, "zOrderOff")?,
+        hide_geom: c.attr(&mut e, "hideGeom")?,
+        lk_tx_entry: c.attr(&mut e, "lkTxEntry")?,
+        blip_phldr: c.attr(&mut e, "blipPhldr")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -924,9 +890,10 @@ pub(crate) fn read_shape(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Shap
 pub(crate) fn read_parameter(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Parameter> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Parameter::default();
-    out.type_ = c.attr_required(&mut e, "type")?;
-    out.val = c.attr_member(&mut e, "val", true, member_st_parameter_val)?;
+    let out = m::Parameter {
+        type_: c.attr_required(&mut e, "type")?,
+        val: c.attr_member(&mut e, "val", true, member_st_parameter_val)?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -939,9 +906,11 @@ pub(crate) fn read_parameter(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
 pub(crate) fn read_algorithm(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Algorithm> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Algorithm::default();
-    out.type_ = c.attr_required(&mut e, "type")?;
-    out.rev = c.attr(&mut e, "rev")?;
+    let mut out = m::Algorithm {
+        type_: c.attr_required(&mut e, "type")?,
+        rev: c.attr(&mut e, "rev")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -972,11 +941,13 @@ pub(crate) fn read_layout_node(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
     c.charge(GraphicBound::LayoutNodes)?;
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::LayoutNode::default();
-    out.name = c.attr(&mut e, "name")?;
-    out.style_lbl = c.attr(&mut e, "styleLbl")?;
-    out.ch_order = c.attr(&mut e, "chOrder")?;
-    out.move_with = c.attr(&mut e, "moveWith")?;
+    let mut out = m::LayoutNode {
+        name: c.attr(&mut e, "name")?,
+        style_lbl: c.attr(&mut e, "styleLbl")?,
+        ch_order: c.attr(&mut e, "chOrder")?,
+        move_with: c.attr(&mut e, "moveWith")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1055,15 +1026,17 @@ pub(crate) fn read_layout_node(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_for_each(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::ForEach> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ForEach::default();
-    out.name = c.attr(&mut e, "name")?;
-    out.ref_ = c.attr(&mut e, "ref")?;
-    out.axis = c.attr_member(&mut e, "axis", false, member_st_axis_types)?;
-    out.pt_type = c.attr_member(&mut e, "ptType", false, member_st_element_types)?;
-    out.hide_last_trans = c.attr(&mut e, "hideLastTrans")?;
-    out.st = c.attr(&mut e, "st")?;
-    out.cnt = c.attr(&mut e, "cnt")?;
-    out.step = c.attr(&mut e, "step")?;
+    let mut out = m::ForEach {
+        name: c.attr(&mut e, "name")?,
+        ref_: c.attr(&mut e, "ref")?,
+        axis: c.attr_member(&mut e, "axis", false, member_st_axis_types)?,
+        pt_type: c.attr_member(&mut e, "ptType", false, member_st_element_types)?,
+        hide_last_trans: c.attr(&mut e, "hideLastTrans")?,
+        st: c.attr(&mut e, "st")?,
+        cnt: c.attr(&mut e, "cnt")?,
+        step: c.attr(&mut e, "step")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1132,18 +1105,20 @@ pub(crate) fn read_for_each(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::F
 pub(crate) fn read_when(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::When> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::When::default();
-    out.name = c.attr(&mut e, "name")?;
-    out.axis = c.attr_member(&mut e, "axis", false, member_st_axis_types)?;
-    out.pt_type = c.attr_member(&mut e, "ptType", false, member_st_element_types)?;
-    out.hide_last_trans = c.attr(&mut e, "hideLastTrans")?;
-    out.st = c.attr(&mut e, "st")?;
-    out.cnt = c.attr(&mut e, "cnt")?;
-    out.step = c.attr(&mut e, "step")?;
-    out.func = c.attr_required(&mut e, "func")?;
-    out.arg = c.attr_member(&mut e, "arg", false, member_st_function_argument)?;
-    out.op = c.attr_required(&mut e, "op")?;
-    out.val = c.attr_member(&mut e, "val", true, member_st_function_value)?;
+    let mut out = m::When {
+        name: c.attr(&mut e, "name")?,
+        axis: c.attr_member(&mut e, "axis", false, member_st_axis_types)?,
+        pt_type: c.attr_member(&mut e, "ptType", false, member_st_element_types)?,
+        hide_last_trans: c.attr(&mut e, "hideLastTrans")?,
+        st: c.attr(&mut e, "st")?,
+        cnt: c.attr(&mut e, "cnt")?,
+        step: c.attr(&mut e, "step")?,
+        func: c.attr_required(&mut e, "func")?,
+        arg: c.attr_member(&mut e, "arg", false, member_st_function_argument)?,
+        op: c.attr_required(&mut e, "op")?,
+        val: c.attr_member(&mut e, "val", true, member_st_function_value)?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1212,8 +1187,10 @@ pub(crate) fn read_when(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::When>
 pub(crate) fn read_otherwise(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Otherwise> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Otherwise::default();
-    out.name = c.attr(&mut e, "name")?;
+    let mut out = m::Otherwise {
+        name: c.attr(&mut e, "name")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1284,8 +1261,10 @@ pub(crate) fn read_otherwise(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
 pub(crate) fn read_choose(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Choose> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Choose::default();
-    out.name = c.attr(&mut e, "name")?;
+    let mut out = m::Choose {
+        name: c.attr(&mut e, "name")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1315,22 +1294,19 @@ pub(crate) fn read_choose(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Cho
 pub(crate) fn read_sample_data(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::SampleData> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::SampleData::default();
-    out.use_def = c.attr(&mut e, "useDef")?;
+    let mut out = m::SampleData {
+        use_def: c.attr(&mut e, "useDef")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "dataModel" => {
-                    if out.data_model.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.data_model = Some(Box::new(read_data_model(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_DGM) && child.local == "dataModel" {
+            if out.data_model.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.data_model = Some(Box::new(read_data_model(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -1342,9 +1318,10 @@ pub(crate) fn read_sample_data(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_category(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Category> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Category::default();
-    out.type_ = c.attr_required(&mut e, "type")?;
-    out.pri = c.attr_required(&mut e, "pri")?;
+    let out = m::Category {
+        type_: c.attr_required(&mut e, "type")?,
+        pri: c.attr_required(&mut e, "pri")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1360,14 +1337,9 @@ pub(crate) fn read_categories(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
     let mut out = m::Categories::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "cat" => {
-                    out.cat.push(read_category(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "cat" {
+            out.cat.push(read_category(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -1379,9 +1351,10 @@ pub(crate) fn read_categories(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
 pub(crate) fn read_name(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Name> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Name::default();
-    out.lang = c.attr(&mut e, "lang")?;
-    out.val = c.attr_required(&mut e, "val")?;
+    let out = m::Name {
+        lang: c.attr(&mut e, "lang")?,
+        val: c.attr_required(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1394,9 +1367,10 @@ pub(crate) fn read_name(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Name>
 pub(crate) fn read_description(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Description> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Description::default();
-    out.lang = c.attr(&mut e, "lang")?;
-    out.val = c.attr_required(&mut e, "val")?;
+    let out = m::Description {
+        lang: c.attr(&mut e, "lang")?,
+        val: c.attr_required(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1412,10 +1386,12 @@ pub(crate) fn read_diagram_definition(
 ) -> Res<m::DiagramDefinition> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::DiagramDefinition::default();
-    out.unique_id = c.attr(&mut e, "uniqueId")?;
-    out.min_ver = c.attr(&mut e, "minVer")?;
-    out.def_style = c.attr(&mut e, "defStyle")?;
+    let mut out = m::DiagramDefinition {
+        unique_id: c.attr(&mut e, "uniqueId")?,
+        min_ver: c.attr(&mut e, "minVer")?,
+        def_style: c.attr(&mut e, "defStyle")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1492,11 +1468,13 @@ pub(crate) fn read_diagram_definition_header(
 ) -> Res<m::DiagramDefinitionHeader> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::DiagramDefinitionHeader::default();
-    out.unique_id = c.attr_required(&mut e, "uniqueId")?;
-    out.min_ver = c.attr(&mut e, "minVer")?;
-    out.def_style = c.attr(&mut e, "defStyle")?;
-    out.res_id = c.attr(&mut e, "resId")?;
+    let mut out = m::DiagramDefinitionHeader {
+        unique_id: c.attr_required(&mut e, "uniqueId")?,
+        min_ver: c.attr(&mut e, "minVer")?,
+        def_style: c.attr(&mut e, "defStyle")?,
+        res_id: c.attr(&mut e, "resId")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1544,15 +1522,10 @@ pub(crate) fn read_diagram_definition_header_lst(
     let mut out = m::DiagramDefinitionHeaderLst::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "layoutDefHdr" => {
-                    out.layout_def_hdr
-                        .push(read_diagram_definition_header(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "layoutDefHdr" {
+            out.layout_def_hdr
+                .push(read_diagram_definition_header(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -1564,11 +1537,12 @@ pub(crate) fn read_diagram_definition_header_lst(
 pub(crate) fn read_rel_ids(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::RelIds> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::RelIds::default();
-    out.dm = c.rel_attr(&mut e, "dm");
-    out.lo = c.rel_attr(&mut e, "lo");
-    out.qs = c.rel_attr(&mut e, "qs");
-    out.cs = c.rel_attr(&mut e, "cs");
+    let out = m::RelIds {
+        dm: c.rel_attr(&mut e, "dm"),
+        lo: c.rel_attr(&mut e, "lo"),
+        qs: c.rel_attr(&mut e, "qs"),
+        cs: c.rel_attr(&mut e, "cs"),
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1581,49 +1555,57 @@ pub(crate) fn read_rel_ids(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Re
 pub(crate) fn read_elem_prop_set(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::ElemPropSet> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ElemPropSet::default();
-    out.pres_assoc_id = c.attr_member(&mut e, "presAssocID", false, member_st_model_id)?;
-    out.pres_name = c.attr(&mut e, "presName")?;
-    out.pres_style_lbl = c.attr(&mut e, "presStyleLbl")?;
-    out.pres_style_idx = c.attr(&mut e, "presStyleIdx")?;
-    out.pres_style_cnt = c.attr(&mut e, "presStyleCnt")?;
-    out.lo_type_id = c.attr(&mut e, "loTypeId")?;
-    out.lo_cat_id = c.attr(&mut e, "loCatId")?;
-    out.qs_type_id = c.attr(&mut e, "qsTypeId")?;
-    out.qs_cat_id = c.attr(&mut e, "qsCatId")?;
-    out.cs_type_id = c.attr(&mut e, "csTypeId")?;
-    out.cs_cat_id = c.attr(&mut e, "csCatId")?;
-    out.coherent3_d_off = c.attr(&mut e, "coherent3DOff")?;
-    out.phldr_t = c.attr(&mut e, "phldrT")?;
-    out.phldr = c.attr(&mut e, "phldr")?;
-    out.cust_ang = c.attr(&mut e, "custAng")?;
-    out.cust_flip_vert = c.attr(&mut e, "custFlipVert")?;
-    out.cust_flip_hor = c.attr(&mut e, "custFlipHor")?;
-    out.cust_sz_x = c.attr(&mut e, "custSzX")?;
-    out.cust_sz_y = c.attr(&mut e, "custSzY")?;
-    out.cust_scale_x = c.attr_member(&mut e, "custScaleX", false, member_st_pr_set_cust_val)?;
-    out.cust_scale_y = c.attr_member(&mut e, "custScaleY", false, member_st_pr_set_cust_val)?;
-    out.cust_t = c.attr(&mut e, "custT")?;
-    out.cust_lin_fact_x =
-        c.attr_member(&mut e, "custLinFactX", false, member_st_pr_set_cust_val)?;
-    out.cust_lin_fact_y =
-        c.attr_member(&mut e, "custLinFactY", false, member_st_pr_set_cust_val)?;
-    out.cust_lin_fact_neighbor_x = c.attr_member(
-        &mut e,
-        "custLinFactNeighborX",
-        false,
-        member_st_pr_set_cust_val,
-    )?;
-    out.cust_lin_fact_neighbor_y = c.attr_member(
-        &mut e,
-        "custLinFactNeighborY",
-        false,
-        member_st_pr_set_cust_val,
-    )?;
-    out.cust_rad_scale_rad =
-        c.attr_member(&mut e, "custRadScaleRad", false, member_st_pr_set_cust_val)?;
-    out.cust_rad_scale_inc =
-        c.attr_member(&mut e, "custRadScaleInc", false, member_st_pr_set_cust_val)?;
+    let mut out = m::ElemPropSet {
+        pres_assoc_id: c.attr_member(&mut e, "presAssocID", false, member_st_model_id)?,
+        pres_name: c.attr(&mut e, "presName")?,
+        pres_style_lbl: c.attr(&mut e, "presStyleLbl")?,
+        pres_style_idx: c.attr(&mut e, "presStyleIdx")?,
+        pres_style_cnt: c.attr(&mut e, "presStyleCnt")?,
+        lo_type_id: c.attr(&mut e, "loTypeId")?,
+        lo_cat_id: c.attr(&mut e, "loCatId")?,
+        qs_type_id: c.attr(&mut e, "qsTypeId")?,
+        qs_cat_id: c.attr(&mut e, "qsCatId")?,
+        cs_type_id: c.attr(&mut e, "csTypeId")?,
+        cs_cat_id: c.attr(&mut e, "csCatId")?,
+        coherent3_d_off: c.attr(&mut e, "coherent3DOff")?,
+        phldr_t: c.attr(&mut e, "phldrT")?,
+        phldr: c.attr(&mut e, "phldr")?,
+        cust_ang: c.attr(&mut e, "custAng")?,
+        cust_flip_vert: c.attr(&mut e, "custFlipVert")?,
+        cust_flip_hor: c.attr(&mut e, "custFlipHor")?,
+        cust_sz_x: c.attr(&mut e, "custSzX")?,
+        cust_sz_y: c.attr(&mut e, "custSzY")?,
+        cust_scale_x: c.attr_member(&mut e, "custScaleX", false, member_st_pr_set_cust_val)?,
+        cust_scale_y: c.attr_member(&mut e, "custScaleY", false, member_st_pr_set_cust_val)?,
+        cust_t: c.attr(&mut e, "custT")?,
+        cust_lin_fact_x: c.attr_member(&mut e, "custLinFactX", false, member_st_pr_set_cust_val)?,
+        cust_lin_fact_y: c.attr_member(&mut e, "custLinFactY", false, member_st_pr_set_cust_val)?,
+        cust_lin_fact_neighbor_x: c.attr_member(
+            &mut e,
+            "custLinFactNeighborX",
+            false,
+            member_st_pr_set_cust_val,
+        )?,
+        cust_lin_fact_neighbor_y: c.attr_member(
+            &mut e,
+            "custLinFactNeighborY",
+            false,
+            member_st_pr_set_cust_val,
+        )?,
+        cust_rad_scale_rad: c.attr_member(
+            &mut e,
+            "custRadScaleRad",
+            false,
+            member_st_pr_set_cust_val,
+        )?,
+        cust_rad_scale_inc: c.attr_member(
+            &mut e,
+            "custRadScaleInc",
+            false,
+            member_st_pr_set_cust_val,
+        )?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -1658,8 +1640,9 @@ pub(crate) fn read_elem_prop_set(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
 pub(crate) fn read_org_chart(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::OrgChart> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::OrgChart::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::OrgChart {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1672,8 +1655,9 @@ pub(crate) fn read_org_chart(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
 pub(crate) fn read_child_max(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::ChildMax> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ChildMax::default();
-    out.val = c.attr_range(&mut e, "val", false, -1..)?;
+    let out = m::ChildMax {
+        val: c.attr_range(&mut e, "val", false, -1..)?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1686,8 +1670,9 @@ pub(crate) fn read_child_max(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
 pub(crate) fn read_child_pref(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::ChildPref> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ChildPref::default();
-    out.val = c.attr_range(&mut e, "val", false, -1..)?;
+    let out = m::ChildPref {
+        val: c.attr_range(&mut e, "val", false, -1..)?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1703,8 +1688,9 @@ pub(crate) fn read_bullet_enabled(
 ) -> Res<m::BulletEnabled> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::BulletEnabled::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::BulletEnabled {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1717,8 +1703,9 @@ pub(crate) fn read_bullet_enabled(
 pub(crate) fn read_direction(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Direction> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Direction::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::Direction {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1734,8 +1721,9 @@ pub(crate) fn read_hier_branch_style(
 ) -> Res<m::HierBranchStyle> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::HierBranchStyle::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::HierBranchStyle {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1748,8 +1736,9 @@ pub(crate) fn read_hier_branch_style(
 pub(crate) fn read_anim_one(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::AnimOne> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::AnimOne::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::AnimOne {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1762,8 +1751,9 @@ pub(crate) fn read_anim_one(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::A
 pub(crate) fn read_anim_lvl(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::AnimLvl> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::AnimLvl::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::AnimLvl {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1779,8 +1769,9 @@ pub(crate) fn read_resize_handles(
 ) -> Res<m::ResizeHandles> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ResizeHandles::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::ResizeHandles {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1886,9 +1877,10 @@ pub(crate) fn read_layout_variable_property_set(
 pub(crate) fn read_sd_name(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::SDName> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::SDName::default();
-    out.lang = c.attr(&mut e, "lang")?;
-    out.val = c.attr_required(&mut e, "val")?;
+    let out = m::SDName {
+        lang: c.attr(&mut e, "lang")?,
+        val: c.attr_required(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1904,9 +1896,10 @@ pub(crate) fn read_sd_description(
 ) -> Res<m::SDDescription> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::SDDescription::default();
-    out.lang = c.attr(&mut e, "lang")?;
-    out.val = c.attr_required(&mut e, "val")?;
+    let out = m::SDDescription {
+        lang: c.attr(&mut e, "lang")?,
+        val: c.attr_required(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1919,9 +1912,10 @@ pub(crate) fn read_sd_description(
 pub(crate) fn read_sd_category(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::SDCategory> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::SDCategory::default();
-    out.type_ = c.attr_required(&mut e, "type")?;
-    out.pri = c.attr_required(&mut e, "pri")?;
+    let out = m::SDCategory {
+        type_: c.attr_required(&mut e, "type")?,
+        pri: c.attr_required(&mut e, "pri")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1937,17 +1931,12 @@ pub(crate) fn read_sd_categories(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
     let mut out = m::SDCategories::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "cat" => {
-                    out.items
-                        .push(m::SDCategoriesItem::Cat(Box::new(read_sd_category(
-                            c, &child,
-                        )?)));
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "cat" {
+            out.items
+                .push(m::SDCategoriesItem::Cat(Box::new(read_sd_category(
+                    c, &child,
+                )?)));
+            continue;
         }
         c.retained(&child);
     }
@@ -1980,8 +1969,10 @@ pub(crate) fn read_text_props(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
 pub(crate) fn read_style_label(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::StyleLabel> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::StyleLabel::default();
-    out.name = c.attr_required(&mut e, "name")?;
+    let mut out = m::StyleLabel {
+        name: c.attr_required(&mut e, "name")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -2042,9 +2033,11 @@ pub(crate) fn read_style_definition(
 ) -> Res<m::StyleDefinition> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::StyleDefinition::default();
-    out.unique_id = c.attr(&mut e, "uniqueId")?;
-    out.min_ver = c.attr(&mut e, "minVer")?;
+    let mut out = m::StyleDefinition {
+        unique_id: c.attr(&mut e, "uniqueId")?,
+        min_ver: c.attr(&mut e, "minVer")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -2101,10 +2094,12 @@ pub(crate) fn read_style_definition_header(
 ) -> Res<m::StyleDefinitionHeader> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::StyleDefinitionHeader::default();
-    out.unique_id = c.attr_required(&mut e, "uniqueId")?;
-    out.min_ver = c.attr(&mut e, "minVer")?;
-    out.res_id = c.attr(&mut e, "resId")?;
+    let mut out = m::StyleDefinitionHeader {
+        unique_id: c.attr_required(&mut e, "uniqueId")?,
+        min_ver: c.attr(&mut e, "minVer")?,
+        res_id: c.attr(&mut e, "resId")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DGM) {
@@ -2152,15 +2147,10 @@ pub(crate) fn read_style_definition_header_lst(
     let mut out = m::StyleDefinitionHeaderLst::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM) {
-            match child.local.as_str() {
-                "styleDefHdr" => {
-                    out.style_def_hdr
-                        .push(read_style_definition_header(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM) && child.local == "styleDefHdr" {
+            out.style_def_hdr
+                .push(read_style_definition_header(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -2210,8 +2200,10 @@ pub(crate) fn read_dsp_shape(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
     c.charge(GraphicBound::DrawingShapes)?;
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::DspShape::default();
-    out.model_id = c.attr_member(&mut e, "modelId", true, member_st_model_id)?;
+    let mut out = m::DspShape {
+        model_id: c.attr_member(&mut e, "modelId", true, member_st_model_id)?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_DSP) {
@@ -2377,18 +2369,13 @@ pub(crate) fn read_dsp_drawing(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
     let mut out = m::DspDrawing::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DSP) {
-            match child.local.as_str() {
-                "spTree" => {
-                    if out.sp_tree.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.sp_tree = Some(Box::new(read_dsp_group_shape(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_DSP) && child.local == "spTree" {
+            if out.sp_tree.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.sp_tree = Some(Box::new(read_dsp_group_shape(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -2403,9 +2390,10 @@ pub(crate) fn read_dsp_data_model_ext_block(
 ) -> Res<m::DspDataModelExtBlock> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::DspDataModelExtBlock::default();
-    out.rel_id = c.attr(&mut e, "relId")?;
-    out.min_ver = c.attr(&mut e, "minVer")?;
+    let out = m::DspDataModelExtBlock {
+        rel_id: c.attr(&mut e, "relId")?,
+        min_ver: c.attr(&mut e, "minVer")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2418,8 +2406,9 @@ pub(crate) fn read_dsp_data_model_ext_block(
 pub(crate) fn read_dgm14_boolean(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Dgm14Boolean> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Dgm14Boolean::default();
-    out.val = c.attr(&mut e, "val")?;
+    let out = m::Dgm14Boolean {
+        val: c.attr(&mut e, "val")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2435,9 +2424,10 @@ pub(crate) fn read_dgm1611_diagram_auto_bullet(
 ) -> Res<m::Dgm1611DiagramAutoBullet> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Dgm1611DiagramAutoBullet::default();
-    out.prefix = c.attr(&mut e, "prefix")?;
-    out.lead_zeros = c.attr(&mut e, "leadZeros")?;
+    let out = m::Dgm1611DiagramAutoBullet {
+        prefix: c.attr(&mut e, "prefix")?,
+        lead_zeros: c.attr(&mut e, "leadZeros")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2453,23 +2443,20 @@ pub(crate) fn read_dgm1611_number_diagram_info(
 ) -> Res<m::Dgm1611NumberDiagramInfo> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Dgm1611NumberDiagramInfo::default();
-    out.lvl = c.attr_required(&mut e, "lvl")?;
-    out.pt_type = c.attr_required(&mut e, "ptType")?;
+    let mut out = m::Dgm1611NumberDiagramInfo {
+        lvl: c.attr_required(&mut e, "lvl")?,
+        pt_type: c.attr_required(&mut e, "ptType")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM1611) {
-            match child.local.as_str() {
-                "buPr" => {
-                    if out.bu_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.bu_pr = Some(Box::new(read_dgm1611_diagram_auto_bullet(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_DGM1611) && child.local == "buPr" {
+            if out.bu_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.bu_pr = Some(Box::new(read_dgm1611_diagram_auto_bullet(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -2487,15 +2474,10 @@ pub(crate) fn read_dgm1611_number_diagram_info_list(
     let mut out = m::Dgm1611NumberDiagramInfoList::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_DGM1611) {
-            match child.local.as_str() {
-                "autoBuNodeInfo" => {
-                    out.auto_bu_node_info
-                        .push(read_dgm1611_number_diagram_info(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_DGM1611) && child.local == "autoBuNodeInfo" {
+            out.auto_bu_node_info
+                .push(read_dgm1611_number_diagram_info(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }

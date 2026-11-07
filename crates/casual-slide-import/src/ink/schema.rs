@@ -17,6 +17,7 @@ pub const NS_IACT: &[&str] = &["http://schemas.microsoft.com/office/powerpoint/2
 pub const NS_INKEFFECTS: &[&str] = &["http://schemas.microsoft.com/office/drawing/2016/ink"];
 
 /// What `ST_CtxNodeType` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_ctx_node_type(attribute: &str, value: &str) -> bool {
     (attribute == "type")
         && (matches!(
@@ -48,8 +49,8 @@ pub(crate) fn member_st_ctx_node_type(attribute: &str, value: &str) -> bool {
 }
 
 /// What `ST_Ref` admits, on the attributes that hold it.
-pub(crate) fn member_st_ref(attribute: &str, value: &str) -> bool {
-    (attribute == "ref") && (true || u32::parse_lexical(value).is_some())
+pub(crate) fn member_st_ref(attribute: &str, _value: &str) -> bool {
+    attribute == "ref"
 }
 
 /// What `ST_SemanticType` admits, on the attributes that hold it.
@@ -72,21 +73,25 @@ pub(crate) fn member_st_semantic_type(attribute: &str, value: &str) -> bool {
 }
 
 /// What `ST_ActionType` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_action_type(attribute: &str, value: &str) -> bool {
     (attribute == "type") && (matches!(value, "add" | "remove" | "transform") || true)
 }
 
 /// What `ST_DataName` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_data_name(attribute: &str, value: &str) -> bool {
     (attribute == "name") && (matches!(value, "path" | "stroke" | "target") || true)
 }
 
 /// What `ST_PropertyName` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_property_name(attribute: &str, value: &str) -> bool {
     (attribute == "name") && (matches!(value, "dataType" | "style") || true)
 }
 
 /// What `ST_PropertyValue` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_property_value(attribute: &str, value: &str) -> bool {
     (attribute == "value")
         && (matches!(value, "ink" | "instant" | "pointEraser" | "strokeEraser") || true)
@@ -95,8 +100,10 @@ pub(crate) fn member_st_property_value(attribute: &str, value: &str) -> bool {
 pub(crate) fn read_ink(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Ink> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Ink::default();
-    out.document_id = c.attr(&mut e, "documentID")?;
+    let mut out = m::Ink {
+        document_id: c.attr(&mut e, "documentID")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -244,15 +251,17 @@ pub(crate) fn read_definitions(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_context(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Context> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Context::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.context_ref = c.attr(&mut e, "contextRef")?;
-    out.canvas_ref = c.attr(&mut e, "canvasRef")?;
-    out.canvas_transform_ref = c.attr(&mut e, "canvasTransformRef")?;
-    out.trace_format_ref = c.attr(&mut e, "traceFormatRef")?;
-    out.ink_source_ref = c.attr(&mut e, "inkSourceRef")?;
-    out.brush_ref = c.attr(&mut e, "brushRef")?;
-    out.timestamp_ref = c.attr(&mut e, "timestampRef")?;
+    let mut out = m::Context {
+        id: c.attr(&mut e, "xml:id")?,
+        context_ref: c.attr(&mut e, "contextRef")?,
+        canvas_ref: c.attr(&mut e, "canvasRef")?,
+        canvas_transform_ref: c.attr(&mut e, "canvasTransformRef")?,
+        trace_format_ref: c.attr(&mut e, "traceFormatRef")?,
+        ink_source_ref: c.attr(&mut e, "inkSourceRef")?,
+        brush_ref: c.attr(&mut e, "brushRef")?,
+        timestamp_ref: c.attr(&mut e, "timestampRef")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -306,9 +315,11 @@ pub(crate) fn read_context(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Co
 pub(crate) fn read_brush(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Brush> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Brush::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.brush_ref = c.attr(&mut e, "brushRef")?;
+    let mut out = m::Brush {
+        id: c.attr(&mut e, "xml:id")?,
+        brush_ref: c.attr(&mut e, "brushRef")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -349,10 +360,12 @@ pub(crate) fn read_brush_property(
 ) -> Res<m::BrushProperty> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::BrushProperty::default();
-    out.name = c.attr(&mut e, "name")?;
-    out.value = c.attr(&mut e, "value")?;
-    out.units = c.attr(&mut e, "units")?;
+    let mut out = m::BrushProperty {
+        name: c.attr(&mut e, "name")?,
+        value: c.attr(&mut e, "value")?,
+        units: c.attr(&mut e, "units")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -382,13 +395,15 @@ pub(crate) fn read_brush_property(
 pub(crate) fn read_ink_source(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::InkSource> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::InkSource::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.manufacturer = c.attr(&mut e, "manufacturer")?;
-    out.model = c.attr(&mut e, "model")?;
-    out.serial_no = c.attr(&mut e, "serialNo")?;
-    out.specification_ref = c.attr(&mut e, "specificationRef")?;
-    out.description = c.attr(&mut e, "description")?;
+    let mut out = m::InkSource {
+        id: c.attr(&mut e, "xml:id")?,
+        manufacturer: c.attr(&mut e, "manufacturer")?,
+        model: c.attr(&mut e, "model")?,
+        serial_no: c.attr(&mut e, "serialNo")?,
+        specification_ref: c.attr(&mut e, "specificationRef")?,
+        description: c.attr(&mut e, "description")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -450,9 +465,11 @@ pub(crate) fn read_ink_source(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
 pub(crate) fn read_trace_format(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::TraceFormat> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::TraceFormat::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.href = c.attr(&mut e, "href")?;
+    let mut out = m::TraceFormat {
+        id: c.attr(&mut e, "xml:id")?,
+        href: c.attr(&mut e, "href")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -488,14 +505,9 @@ pub(crate) fn read_intermittent_channels(
     let mut out = m::IntermittentChannels::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_INKML) {
-            match child.local.as_str() {
-                "channel" => {
-                    out.channel.push(read_channel(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_INKML) && child.local == "channel" {
+            out.channel.push(read_channel(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -506,26 +518,23 @@ pub(crate) fn read_intermittent_channels(
 pub(crate) fn read_channel(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Channel> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Channel::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.name = c.attr(&mut e, "name")?;
-    out.type_ = c.attr(&mut e, "type")?;
-    out.default = c.attr(&mut e, "default")?;
-    out.min = c.attr(&mut e, "min")?;
-    out.max = c.attr(&mut e, "max")?;
-    out.orientation = c.attr(&mut e, "orientation")?;
-    out.respect_to = c.attr(&mut e, "respectTo")?;
-    out.units = c.attr(&mut e, "units")?;
+    let mut out = m::Channel {
+        id: c.attr(&mut e, "xml:id")?,
+        name: c.attr(&mut e, "name")?,
+        type_: c.attr(&mut e, "type")?,
+        default: c.attr(&mut e, "default")?,
+        min: c.attr(&mut e, "min")?,
+        max: c.attr(&mut e, "max")?,
+        orientation: c.attr(&mut e, "orientation")?,
+        respect_to: c.attr(&mut e, "respectTo")?,
+        units: c.attr(&mut e, "units")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_INKML) {
-            match child.local.as_str() {
-                "mapping" => {
-                    out.mapping.push(read_mapping(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_INKML) && child.local == "mapping" {
+            out.mapping.push(read_mapping(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -542,14 +551,9 @@ pub(crate) fn read_channel_properties(
     let mut out = m::ChannelProperties::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_INKML) {
-            match child.local.as_str() {
-                "channelProperty" => {
-                    out.channel_property.push(read_channel_property(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_INKML) && child.local == "channelProperty" {
+            out.channel_property.push(read_channel_property(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -563,11 +567,12 @@ pub(crate) fn read_channel_property(
 ) -> Res<m::ChannelProperty> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ChannelProperty::default();
-    out.channel = c.attr(&mut e, "channel")?;
-    out.name = c.attr(&mut e, "name")?;
-    out.value = c.attr(&mut e, "value")?;
-    out.units = c.attr(&mut e, "units")?;
+    let out = m::ChannelProperty {
+        channel: c.attr(&mut e, "channel")?,
+        name: c.attr(&mut e, "name")?,
+        value: c.attr(&mut e, "value")?,
+        units: c.attr(&mut e, "units")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -579,9 +584,10 @@ pub(crate) fn read_channel_property(
 pub(crate) fn read_sample_rate(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::SampleRate> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::SampleRate::default();
-    out.uniform = c.attr(&mut e, "uniform")?;
-    out.value = c.attr(&mut e, "value")?;
+    let out = m::SampleRate {
+        uniform: c.attr(&mut e, "uniform")?,
+        value: c.attr(&mut e, "value")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -593,8 +599,9 @@ pub(crate) fn read_sample_rate(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_latency(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Latency> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Latency::default();
-    out.value = c.attr(&mut e, "value")?;
+    let out = m::Latency {
+        value: c.attr(&mut e, "value")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -606,11 +613,12 @@ pub(crate) fn read_latency(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::La
 pub(crate) fn read_active_area(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::ActiveArea> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ActiveArea::default();
-    out.size = c.attr(&mut e, "size")?;
-    out.height = c.attr(&mut e, "height")?;
-    out.width = c.attr(&mut e, "width")?;
-    out.units = c.attr(&mut e, "units")?;
+    let out = m::ActiveArea {
+        size: c.attr(&mut e, "size")?,
+        height: c.attr(&mut e, "height")?,
+        width: c.attr(&mut e, "width")?,
+        units: c.attr(&mut e, "units")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -622,10 +630,11 @@ pub(crate) fn read_active_area(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_src_property(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::SrcProperty> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::SrcProperty::default();
-    out.name = c.attr(&mut e, "name")?;
-    out.value = c.attr(&mut e, "value")?;
-    out.units = c.attr(&mut e, "units")?;
+    let out = m::SrcProperty {
+        name: c.attr(&mut e, "name")?,
+        value: c.attr(&mut e, "value")?,
+        units: c.attr(&mut e, "units")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -637,12 +646,13 @@ pub(crate) fn read_src_property(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<
 pub(crate) fn read_timestamp(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Timestamp> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Timestamp::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.time = c.attr(&mut e, "time")?;
-    out.timestamp_ref = c.attr(&mut e, "timestampRef")?;
-    out.time_string = c.attr(&mut e, "timeString")?;
-    out.time_offset = c.attr(&mut e, "timeOffset")?;
+    let out = m::Timestamp {
+        id: c.attr(&mut e, "xml:id")?,
+        time: c.attr(&mut e, "time")?,
+        timestamp_ref: c.attr(&mut e, "timestampRef")?,
+        time_string: c.attr(&mut e, "timeString")?,
+        time_offset: c.attr(&mut e, "timeOffset")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -654,10 +664,11 @@ pub(crate) fn read_timestamp(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
 pub(crate) fn read_mapping(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Mapping> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Mapping::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.type_ = c.attr(&mut e, "type")?;
-    out.mapping_ref = c.attr(&mut e, "mappingRef")?;
+    let out = m::Mapping {
+        id: c.attr(&mut e, "xml:id")?,
+        type_: c.attr(&mut e, "type")?,
+        mapping_ref: c.attr(&mut e, "mappingRef")?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -669,23 +680,20 @@ pub(crate) fn read_mapping(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Ma
 pub(crate) fn read_canvas(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Canvas> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Canvas::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.trace_format_ref = c.attr(&mut e, "traceFormatRef")?;
+    let mut out = m::Canvas {
+        id: c.attr(&mut e, "xml:id")?,
+        trace_format_ref: c.attr(&mut e, "traceFormatRef")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_INKML) {
-            match child.local.as_str() {
-                "traceFormat" => {
-                    if out.trace_format.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.trace_format = Some(Box::new(read_trace_format(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_INKML) && child.local == "traceFormat" {
+            if out.trace_format.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.trace_format = Some(Box::new(read_trace_format(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -699,19 +707,16 @@ pub(crate) fn read_canvas_transform(
 ) -> Res<m::CanvasTransform> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::CanvasTransform::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.invertible = c.attr(&mut e, "invertible")?;
+    let mut out = m::CanvasTransform {
+        id: c.attr(&mut e, "xml:id")?,
+        invertible: c.attr(&mut e, "invertible")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_INKML) {
-            match child.local.as_str() {
-                "mapping" => {
-                    out.mapping.push(read_mapping(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_INKML) && child.local == "mapping" {
+            out.mapping.push(read_mapping(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -723,15 +728,17 @@ pub(crate) fn read_trace(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Trac
     c.charge(GraphicBound::Traces)?;
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Trace::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.type_ = c.attr(&mut e, "type")?;
-    out.continuation = c.attr(&mut e, "continuation")?;
-    out.prior_ref = c.attr(&mut e, "priorRef")?;
-    out.context_ref = c.attr(&mut e, "contextRef")?;
-    out.brush_ref = c.attr(&mut e, "brushRef")?;
-    out.duration = c.attr(&mut e, "duration")?;
-    out.time_offset = c.attr(&mut e, "timeOffset")?;
+    let mut out = m::Trace {
+        id: c.attr(&mut e, "xml:id")?,
+        type_: c.attr(&mut e, "type")?,
+        continuation: c.attr(&mut e, "continuation")?,
+        prior_ref: c.attr(&mut e, "priorRef")?,
+        context_ref: c.attr(&mut e, "contextRef")?,
+        brush_ref: c.attr(&mut e, "brushRef")?,
+        duration: c.attr(&mut e, "duration")?,
+        time_offset: c.attr(&mut e, "timeOffset")?,
+        ..Default::default()
+    };
     c.finish(&e);
     out.text = c.text(&e)?;
     c.leave();
@@ -741,10 +748,12 @@ pub(crate) fn read_trace(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Trac
 pub(crate) fn read_trace_group(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::TraceGroup> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::TraceGroup::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.context_ref = c.attr(&mut e, "contextRef")?;
-    out.brush_ref = c.attr(&mut e, "brushRef")?;
+    let mut out = m::TraceGroup {
+        id: c.attr(&mut e, "xml:id")?,
+        context_ref: c.attr(&mut e, "contextRef")?,
+        brush_ref: c.attr(&mut e, "brushRef")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -786,12 +795,14 @@ pub(crate) fn read_trace_group(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_trace_view(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::TraceView> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::TraceView::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.context_ref = c.attr(&mut e, "contextRef")?;
-    out.trace_data_ref = c.attr(&mut e, "traceDataRef")?;
-    out.from = c.attr(&mut e, "from")?;
-    out.to = c.attr(&mut e, "to")?;
+    let mut out = m::TraceView {
+        id: c.attr(&mut e, "xml:id")?,
+        context_ref: c.attr(&mut e, "contextRef")?,
+        trace_data_ref: c.attr(&mut e, "traceDataRef")?,
+        from: c.attr(&mut e, "from")?,
+        to: c.attr(&mut e, "to")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_INKML) {
@@ -828,9 +839,11 @@ pub(crate) fn read_trace_view(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
 pub(crate) fn read_annotation(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Annotation> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Annotation::default();
-    out.type_ = c.attr(&mut e, "type")?;
-    out.encoding = c.attr(&mut e, "encoding")?;
+    let mut out = m::Annotation {
+        type_: c.attr(&mut e, "type")?,
+        encoding: c.attr(&mut e, "encoding")?,
+        ..Default::default()
+    };
     c.finish(&e);
     out.text = c.text(&e)?;
     c.leave();
@@ -843,20 +856,17 @@ pub(crate) fn read_annotation_xml(
 ) -> Res<m::AnnotationXML> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::AnnotationXML::default();
-    out.type_ = c.attr(&mut e, "type")?;
-    out.encoding = c.attr(&mut e, "encoding")?;
-    out.href = c.attr(&mut e, "href")?;
+    let mut out = m::AnnotationXML {
+        type_: c.attr(&mut e, "type")?,
+        encoding: c.attr(&mut e, "encoding")?,
+        href: c.attr(&mut e, "href")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_MSINK) {
-            match child.local.as_str() {
-                "context" => {
-                    out.context.push(read_msink_ctx_node(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_MSINK) && child.local == "context" {
+            out.context.push(read_msink_ctx_node(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -867,8 +877,10 @@ pub(crate) fn read_annotation_xml(
 pub(crate) fn read_matrix(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Matrix> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Matrix::default();
-    out.id = c.attr(&mut e, "xml:id")?;
+    let mut out = m::Matrix {
+        id: c.attr(&mut e, "xml:id")?,
+        ..Default::default()
+    };
     c.finish(&e);
     out.text = c.text(&e)?;
     c.leave();
@@ -882,8 +894,10 @@ pub(crate) fn read_msink_property(
 ) -> Res<m::MsinkProperty> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::MsinkProperty::default();
-    out.type_ = c.attr(&mut e, "type")?;
+    let mut out = m::MsinkProperty {
+        type_: c.attr(&mut e, "type")?,
+        ..Default::default()
+    };
     c.finish(&e);
     out.text = c.text(&e)?;
     c.leave();
@@ -894,9 +908,10 @@ pub(crate) fn read_msink_property(
 pub(crate) fn read_msink_ctx_link(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::MsinkCtxLink> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::MsinkCtxLink::default();
-    out.direction = c.attr(&mut e, "direction")?;
-    out.ref_ = c.attr_member(&mut e, "ref", false, member_st_ref)?;
+    let out = m::MsinkCtxLink {
+        direction: c.attr(&mut e, "direction")?,
+        ref_: c.attr_member(&mut e, "ref", false, member_st_ref)?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -909,28 +924,30 @@ pub(crate) fn read_msink_ctx_link(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Re
 pub(crate) fn read_msink_ctx_node(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::MsinkCtxNode> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::MsinkCtxNode::default();
-    out.id = c.attr(&mut e, "id")?;
-    out.type_ = c.attr_member(&mut e, "type", true, member_st_ctx_node_type)?;
-    out.rotated_bounding_box = c.attr(&mut e, "rotatedBoundingBox")?;
-    out.alignment_level = c.attr(&mut e, "alignmentLevel")?;
-    out.content_type = c.attr(&mut e, "contentType")?;
-    out.ascender = c.attr(&mut e, "ascender")?;
-    out.descender = c.attr(&mut e, "descender")?;
-    out.baseline = c.attr(&mut e, "baseline")?;
-    out.midline = c.attr(&mut e, "midline")?;
-    out.custom_recognizer_id = c.attr(&mut e, "customRecognizerId")?;
-    out.math_ml = c.attr(&mut e, "mathML")?;
-    out.math_struct = c.attr(&mut e, "mathStruct")?;
-    out.math_symbol = c.attr(&mut e, "mathSymbol")?;
-    out.begin_modifier_type = c.attr(&mut e, "beginModifierType")?;
-    out.end_modifier_type = c.attr(&mut e, "endModifierType")?;
-    out.rotation_angle = c.attr(&mut e, "rotationAngle")?;
-    out.hot_points = c.attr(&mut e, "hotPoints")?;
-    out.centroid = c.attr(&mut e, "centroid")?;
-    out.semantic_type = c.attr_member(&mut e, "semanticType", false, member_st_semantic_type)?;
-    out.shape_name = c.attr(&mut e, "shapeName")?;
-    out.shape_geometry = c.attr(&mut e, "shapeGeometry")?;
+    let mut out = m::MsinkCtxNode {
+        id: c.attr(&mut e, "id")?,
+        type_: c.attr_member(&mut e, "type", true, member_st_ctx_node_type)?,
+        rotated_bounding_box: c.attr(&mut e, "rotatedBoundingBox")?,
+        alignment_level: c.attr(&mut e, "alignmentLevel")?,
+        content_type: c.attr(&mut e, "contentType")?,
+        ascender: c.attr(&mut e, "ascender")?,
+        descender: c.attr(&mut e, "descender")?,
+        baseline: c.attr(&mut e, "baseline")?,
+        midline: c.attr(&mut e, "midline")?,
+        custom_recognizer_id: c.attr(&mut e, "customRecognizerId")?,
+        math_ml: c.attr(&mut e, "mathML")?,
+        math_struct: c.attr(&mut e, "mathStruct")?,
+        math_symbol: c.attr(&mut e, "mathSymbol")?,
+        begin_modifier_type: c.attr(&mut e, "beginModifierType")?,
+        end_modifier_type: c.attr(&mut e, "endModifierType")?,
+        rotation_angle: c.attr(&mut e, "rotationAngle")?,
+        hot_points: c.attr(&mut e, "hotPoints")?,
+        centroid: c.attr(&mut e, "centroid")?,
+        semantic_type: c.attr_member(&mut e, "semanticType", false, member_st_semantic_type)?,
+        shape_name: c.attr(&mut e, "shapeName")?,
+        shape_geometry: c.attr(&mut e, "shapeGeometry")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_MSINK) {
@@ -963,24 +980,21 @@ pub(crate) fn read_action_action_data(
 ) -> Res<m::ActionActionData> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ActionActionData::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.name = c.attr_member(&mut e, "name", false, member_st_data_name)?;
-    out.ref_ = c.attr(&mut e, "ref")?;
+    let mut out = m::ActionActionData {
+        id: c.attr(&mut e, "xml:id")?,
+        name: c.attr_member(&mut e, "name", false, member_st_data_name)?,
+        ref_: c.attr(&mut e, "ref")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_IACT) {
-            match child.local.as_str() {
-                "transform" => {
-                    if out.transform.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.transform = Some(Box::new(read_matrix(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_IACT) && child.local == "transform" {
+            if out.transform.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.transform = Some(Box::new(read_matrix(c, &child)?));
             }
+            continue;
         }
         if child.in_namespace(NS_INKML) {
             match child.local.as_str() {
@@ -1013,19 +1027,16 @@ pub(crate) fn read_action_action_data_group(
 ) -> Res<m::ActionActionDataGroup> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ActionActionDataGroup::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.name = c.attr_member(&mut e, "name", false, member_st_data_name)?;
+    let mut out = m::ActionActionDataGroup {
+        id: c.attr(&mut e, "xml:id")?,
+        name: c.attr_member(&mut e, "name", false, member_st_data_name)?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_IACT) {
-            match child.local.as_str() {
-                "actionData" => {
-                    out.action_data.push(read_action_action_data(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_IACT) && child.local == "actionData" {
+            out.action_data.push(read_action_action_data(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -1040,9 +1051,10 @@ pub(crate) fn read_action_action_property(
 ) -> Res<m::ActionActionProperty> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ActionActionProperty::default();
-    out.name = c.attr_member(&mut e, "name", true, member_st_property_name)?;
-    out.value = c.attr_member(&mut e, "value", false, member_st_property_value)?;
+    let out = m::ActionActionProperty {
+        name: c.attr_member(&mut e, "name", true, member_st_property_name)?,
+        value: c.attr_member(&mut e, "value", false, member_st_property_value)?,
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -1055,10 +1067,12 @@ pub(crate) fn read_action_action_property(
 pub(crate) fn read_action_action(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::ActionAction> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ActionAction::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.type_ = c.attr_member(&mut e, "type", true, member_st_action_type)?;
-    out.start_time = c.attr_required(&mut e, "startTime")?;
+    let mut out = m::ActionAction {
+        id: c.attr(&mut e, "xml:id")?,
+        type_: c.attr_member(&mut e, "type", true, member_st_action_type)?,
+        start_time: c.attr_required(&mut e, "startTime")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         if child.in_namespace(NS_IACT) {
@@ -1096,20 +1110,17 @@ pub(crate) fn read_action_action_group(
 ) -> Res<m::ActionActionGroup> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ActionActionGroup::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.type_ = c.attr_member(&mut e, "type", true, member_st_action_type)?;
-    out.start_time = c.attr_required(&mut e, "startTime")?;
+    let mut out = m::ActionActionGroup {
+        id: c.attr(&mut e, "xml:id")?,
+        type_: c.attr_member(&mut e, "type", true, member_st_action_type)?,
+        start_time: c.attr_required(&mut e, "startTime")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_IACT) {
-            match child.local.as_str() {
-                "action" => {
-                    out.action.push(read_action_action(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_IACT) && child.local == "action" {
+            out.action.push(read_action_action(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -1124,24 +1135,21 @@ pub(crate) fn read_action_actions(
 ) -> Res<m::ActionActions> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ActionActions::default();
-    out.id = c.attr(&mut e, "xml:id")?;
-    out.length_unit = c.attr_required(&mut e, "lengthUnit")?;
-    out.time_unit = c.attr_required(&mut e, "timeUnit")?;
+    let mut out = m::ActionActions {
+        id: c.attr(&mut e, "xml:id")?,
+        length_unit: c.attr_required(&mut e, "lengthUnit")?,
+        time_unit: c.attr_required(&mut e, "timeUnit")?,
+        ..Default::default()
+    };
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_INKML) {
-            match child.local.as_str() {
-                "definitions" => {
-                    if out.definitions.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.definitions = Some(Box::new(read_definitions(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_INKML) && child.local == "definitions" {
+            if out.definitions.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.definitions = Some(Box::new(read_definitions(c, &child)?));
             }
+            continue;
         }
         if child.in_namespace(NS_IACT) {
             match child.local.as_str() {

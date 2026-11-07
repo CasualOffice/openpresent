@@ -54,7 +54,7 @@ pub(crate) mod prelude {
     };
     pub(crate) use crate::properties::Writer;
     pub(crate) use casual_slide_import::properties::{Elem, ns};
-    pub(crate) use casual_slide_model::properties::{Float64, Lexical};
+    pub(crate) use casual_slide_model::properties::Lexical;
 }
 
 pub(crate) type R = Result<(), ExportError>;

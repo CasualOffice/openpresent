@@ -10,6 +10,7 @@ const NS_MSINK: &[&str] = read::NS_MSINK;
 const NS_IACT: &[&str] = read::NS_IACT;
 
 /// What `ST_CtxNodeType` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_ctx_node_type(attribute: &str, value: &str) -> bool {
     (attribute == "type")
         && (matches!(
@@ -41,8 +42,8 @@ pub(crate) fn member_st_ctx_node_type(attribute: &str, value: &str) -> bool {
 }
 
 /// What `ST_Ref` admits, on the attributes that hold it.
-pub(crate) fn member_st_ref(attribute: &str, value: &str) -> bool {
-    (attribute == "ref") && (true || u32::parse_lexical(value).is_some())
+pub(crate) fn member_st_ref(attribute: &str, _value: &str) -> bool {
+    attribute == "ref"
 }
 
 /// What `ST_SemanticType` admits, on the attributes that hold it.
@@ -65,21 +66,25 @@ pub(crate) fn member_st_semantic_type(attribute: &str, value: &str) -> bool {
 }
 
 /// What `ST_ActionType` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_action_type(attribute: &str, value: &str) -> bool {
     (attribute == "type") && (matches!(value, "add" | "remove" | "transform") || true)
 }
 
 /// What `ST_DataName` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_data_name(attribute: &str, value: &str) -> bool {
     (attribute == "name") && (matches!(value, "path" | "stroke" | "target") || true)
 }
 
 /// What `ST_PropertyName` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_property_name(attribute: &str, value: &str) -> bool {
     (attribute == "name") && (matches!(value, "dataType" | "style") || true)
 }
 
 /// What `ST_PropertyValue` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_property_value(attribute: &str, value: &str) -> bool {
     (attribute == "value")
         && (matches!(value, "ink" | "instant" | "pointEraser" | "strokeEraser") || true)

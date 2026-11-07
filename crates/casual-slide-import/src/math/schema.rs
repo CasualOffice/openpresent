@@ -14,9 +14,12 @@ pub const NS_M: &[&str] = &[
 pub(crate) fn read_integer255(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Integer255> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Integer255::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_range(&mut e, &name, true, 1..=255)?;
+    let out = m::Integer255 {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_range(&mut e, &name, true, 1..=255)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -29,9 +32,12 @@ pub(crate) fn read_integer255(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
 pub(crate) fn read_integer2(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Integer2> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Integer2::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_range(&mut e, &name, true, -2..=2)?;
+    let out = m::Integer2 {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_range(&mut e, &name, true, -2..=2)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -44,9 +50,12 @@ pub(crate) fn read_integer2(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::I
 pub(crate) fn read_spacing_rule(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::SpacingRule> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::SpacingRule::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_range(&mut e, &name, true, 0..=4)?;
+    let out = m::SpacingRule {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_range(&mut e, &name, true, 0..=4)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -62,9 +71,12 @@ pub(crate) fn read_un_signed_integer(
 ) -> Res<m::UnSignedInteger> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::UnSignedInteger::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::UnSignedInteger {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -77,9 +89,12 @@ pub(crate) fn read_un_signed_integer(
 pub(crate) fn read_char(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Char> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Char::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::Char {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -92,9 +107,12 @@ pub(crate) fn read_char(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Char>
 pub(crate) fn read_on_off(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::OnOff> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::OnOff::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr(&mut e, &name)?;
+    let out = m::OnOff {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -107,9 +125,12 @@ pub(crate) fn read_on_off(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::OnO
 pub(crate) fn read_string_type(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::StringType> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::StringType::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr(&mut e, &name)?;
+    let out = m::StringType {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -122,9 +143,12 @@ pub(crate) fn read_string_type(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m
 pub(crate) fn read_x_align(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::XAlign> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::XAlign::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::XAlign {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -137,9 +161,12 @@ pub(crate) fn read_x_align(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::XA
 pub(crate) fn read_y_align(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::YAlign> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::YAlign::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::YAlign {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -152,9 +179,12 @@ pub(crate) fn read_y_align(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::YA
 pub(crate) fn read_shp(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Shp> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Shp::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::Shp {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -167,9 +197,12 @@ pub(crate) fn read_shp(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Shp> {
 pub(crate) fn read_f_type(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::FType> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::FType::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::FType {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -182,9 +215,12 @@ pub(crate) fn read_f_type(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::FTy
 pub(crate) fn read_lim_loc(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::LimLoc> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::LimLoc::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::LimLoc {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -197,9 +233,12 @@ pub(crate) fn read_lim_loc(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Li
 pub(crate) fn read_top_bot(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::TopBot> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::TopBot::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::TopBot {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -212,9 +251,12 @@ pub(crate) fn read_top_bot(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::To
 pub(crate) fn read_script(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Script> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Script::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr(&mut e, &name)?;
+    let out = m::Script {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -227,9 +269,12 @@ pub(crate) fn read_script(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Scr
 pub(crate) fn read_style(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Style> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Style::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr(&mut e, &name)?;
+    let out = m::Style {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -242,9 +287,12 @@ pub(crate) fn read_style(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Styl
 pub(crate) fn read_manual_break(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::ManualBreak> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::ManualBreak::default();
-    let name = c.attr_name(&e, NS_M, "alnAt");
-    out.aln_at = c.attr_range(&mut e, &name, false, 1..=255)?;
+    let out = m::ManualBreak {
+        aln_at: {
+            let name = c.attr_name(&e, NS_M, "alnAt");
+            c.attr_range(&mut e, &name, false, 1..=255)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -323,8 +371,10 @@ pub(crate) fn read_rpr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::RPR> {
 pub(crate) fn read_text(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Text> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::Text::default();
-    out.space = c.attr(&mut e, "xml:space")?;
+    let mut out = m::Text {
+        space: c.attr(&mut e, "xml:space")?,
+        ..Default::default()
+    };
     c.finish(&e);
     out.text = c.text(&e)?;
     c.leave();
@@ -355,18 +405,13 @@ pub(crate) fn read_r(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::R> {
                 _ => {}
             }
         }
-        if child.in_namespace(ns::DML) {
-            match child.local.as_str() {
-                "rPr" => {
-                    if out.a_r_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.a_r_pr = Some(Box::new(read_character(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(ns::DML) && child.local == "rPr" {
+            if out.a_r_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.a_r_pr = Some(Box::new(read_character(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -381,18 +426,13 @@ pub(crate) fn read_ctrl_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Ct
     let mut out = m::CtrlPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(ns::DML) {
-            match child.local.as_str() {
-                "rPr" => {
-                    if out.a_r_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.a_r_pr = Some(Box::new(read_character(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(ns::DML) && child.local == "rPr" {
+            if out.a_r_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.a_r_pr = Some(Box::new(read_character(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -1035,18 +1075,13 @@ pub(crate) fn read_func_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::Fu
     let mut out = m::FuncPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "ctrlPr" => {
-                    if out.ctrl_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "ctrlPr" {
+            if out.ctrl_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -1187,18 +1222,13 @@ pub(crate) fn read_lim_low_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
     let mut out = m::LimLowPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "ctrlPr" => {
-                    if out.ctrl_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "ctrlPr" {
+            if out.ctrl_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -1255,18 +1285,13 @@ pub(crate) fn read_lim_upp_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
     let mut out = m::LimUppPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "ctrlPr" => {
-                    if out.ctrl_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "ctrlPr" {
+            if out.ctrl_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -1357,18 +1382,13 @@ pub(crate) fn read_mc(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::MC> {
     let mut out = m::MC::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "mcPr" => {
-                    if out.mc_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.mc_pr = Some(Box::new(read_mc_pr(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "mcPr" {
+            if out.mc_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.mc_pr = Some(Box::new(read_mc_pr(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -1383,14 +1403,9 @@ pub(crate) fn read_mcs(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::MCS> {
     let mut out = m::MCS::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "mc" => {
-                    out.mc.push(read_mc(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_M) && child.local == "mc" {
+            out.mc.push(read_mc(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -1495,14 +1510,9 @@ pub(crate) fn read_mr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::MR> {
     let mut out = m::MR::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "e" => {
-                    out.e.push(read_o_math_arg(c, &child)?);
-                    continue;
-                }
-                _ => {}
-            }
+        if child.in_namespace(NS_M) && child.local == "e" {
+            out.e.push(read_o_math_arg(c, &child)?);
+            continue;
         }
         c.retained(&child);
     }
@@ -1839,18 +1849,13 @@ pub(crate) fn read_s_pre_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::S
     let mut out = m::SPrePr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "ctrlPr" => {
-                    if out.ctrl_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "ctrlPr" {
+            if out.ctrl_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -1915,18 +1920,13 @@ pub(crate) fn read_s_sub_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::S
     let mut out = m::SSubPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "ctrlPr" => {
-                    if out.ctrl_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "ctrlPr" {
+            if out.ctrl_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -2067,18 +2067,13 @@ pub(crate) fn read_s_sup_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::S
     let mut out = m::SSupPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "ctrlPr" => {
-                    if out.ctrl_pr.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "ctrlPr" {
+            if out.ctrl_pr.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.ctrl_pr = Some(Box::new(read_ctrl_pr(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -2135,18 +2130,13 @@ pub(crate) fn read_o_math_arg_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
     let mut out = m::OMathArgPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "argSz" => {
-                    if out.arg_sz.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.arg_sz = Some(Box::new(read_integer2(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "argSz" {
+            if out.arg_sz.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.arg_sz = Some(Box::new(read_integer2(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -2298,9 +2288,12 @@ pub(crate) fn read_o_math_arg(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m:
 pub(crate) fn read_o_math_jc(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::OMathJc> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::OMathJc::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr(&mut e, &name)?;
+    let out = m::OMathJc {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2316,18 +2309,13 @@ pub(crate) fn read_o_math_para_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Re
     let mut out = m::OMathParaPr::default();
     c.finish(&e);
     for child in c.children(&e)? {
-        if child.in_namespace(NS_M) {
-            match child.local.as_str() {
-                "jc" => {
-                    if out.jc.is_some() {
-                        c.duplicate(&child);
-                    } else {
-                        out.jc = Some(Box::new(read_o_math_jc(c, &child)?));
-                    }
-                    continue;
-                }
-                _ => {}
+        if child.in_namespace(NS_M) && child.local == "jc" {
+            if out.jc.is_some() {
+                c.duplicate(&child);
+            } else {
+                out.jc = Some(Box::new(read_o_math_jc(c, &child)?));
             }
+            continue;
         }
         c.retained(&child);
     }
@@ -2339,9 +2327,12 @@ pub(crate) fn read_o_math_para_pr(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Re
 pub(crate) fn read_twips_measure(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::TwipsMeasure> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::TwipsMeasure::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr_required(&mut e, &name)?;
+    let out = m::TwipsMeasure {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr_required(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2354,9 +2345,12 @@ pub(crate) fn read_twips_measure(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res
 pub(crate) fn read_break_bin(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::BreakBin> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::BreakBin::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr(&mut e, &name)?;
+    let out = m::BreakBin {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);
@@ -2369,9 +2363,12 @@ pub(crate) fn read_break_bin(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::
 pub(crate) fn read_break_bin_sub(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<m::BreakBinSub> {
     c.enter()?;
     let mut e = el.clone();
-    let mut out = m::BreakBinSub::default();
-    let name = c.attr_name(&e, NS_M, "val");
-    out.val = c.attr(&mut e, &name)?;
+    let out = m::BreakBinSub {
+        val: {
+            let name = c.attr_name(&e, NS_M, "val");
+            c.attr(&mut e, &name)?
+        },
+    };
     c.finish(&e);
     for child in c.children(&e)? {
         c.retained(&child);

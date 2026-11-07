@@ -92,23 +92,24 @@ pub(crate) fn member_st_function_value(attribute: &str, value: &str) -> bool {
 }
 
 /// What `ST_LayoutShapeType` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_layout_shape_type(attribute: &str, value: &str) -> bool {
     (attribute == "type") && (matches!(value, "conn" | "none") || true)
 }
 
 /// What `ST_ModelId` admits, on the attributes that hold it.
-pub(crate) fn member_st_model_id(attribute: &str, value: &str) -> bool {
-    (attribute == "cxnId"
+pub(crate) fn member_st_model_id(attribute: &str, _value: &str) -> bool {
+    attribute == "cxnId"
         || attribute == "destId"
         || attribute == "modelId"
         || attribute == "parTransId"
         || attribute == "presAssocID"
         || attribute == "sibTransId"
-        || attribute == "srcId")
-        && (true || i32::parse_lexical(value).is_some())
+        || attribute == "srcId"
 }
 
 /// What `ST_ParameterVal` admits, on the attributes that hold it.
+#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.
 pub(crate) fn member_st_parameter_val(attribute: &str, value: &str) -> bool {
     (attribute == "val")
         && (matches!(
@@ -177,23 +178,19 @@ pub(crate) fn member_st_parameter_val(attribute: &str, value: &str) -> bool {
                 | "trans"
                 | "upr"
                 | "vert"
-        ) || Float64::parse_lexical(value).is_some()
-            || true
-            || bool::parse_lexical(value).is_some()
-            || i32::parse_lexical(value).is_some())
+        ) || true)
 }
 
 /// What `ST_PrSetCustVal` admits, on the attributes that hold it.
-pub(crate) fn member_st_pr_set_cust_val(attribute: &str, value: &str) -> bool {
-    (attribute == "custLinFactNeighborX"
+pub(crate) fn member_st_pr_set_cust_val(attribute: &str, _value: &str) -> bool {
+    attribute == "custLinFactNeighborX"
         || attribute == "custLinFactNeighborY"
         || attribute == "custLinFactX"
         || attribute == "custLinFactY"
         || attribute == "custRadScaleInc"
         || attribute == "custRadScaleRad"
         || attribute == "custScaleX"
-        || attribute == "custScaleY")
-        && (true || i32::parse_lexical(value).is_some())
+        || attribute == "custScaleY"
 }
 
 // spec-audit: owner=title
