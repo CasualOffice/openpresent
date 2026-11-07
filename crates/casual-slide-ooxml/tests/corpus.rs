@@ -648,6 +648,30 @@ fn f4_fails_a_seeded_invalid_part_and_only_that_part() {
     assert_ne!(seeded_json, minimal_json);
 }
 
+/// F4-04: VML is schema-checked. Before, `.vml` parts were never read, and
+/// `vml-main.xsd` could not compile.
+#[test]
+fn f4_fails_a_seeded_invalid_vml_part() {
+    if !f4_ready() {
+        return;
+    }
+    const OLE: &str = "generated/area-ole.pptx";
+    const VML_PART: &str = "ppt/drawings/vmlDrawing1.vml";
+    let work = scratch("f4-vml");
+    let (report, code) = run_f4(&[fixtures().join(OLE).to_str().unwrap()]);
+    assert_eq!(code, 0, "{report}");
+    assert_eq!(part_status(&report, VML_PART), "valid", "{report}");
+
+    let vml = "<xml xmlns:v=\"urn:schemas-microsoft-com:vml\" \
+        xmlns:o=\"urn:schemas-microsoft-com:office:office\">\
+        <o:shapelayout v:ext=\"edit\"><o:idmap v:ext=\"edit\" data=\"1\"/></o:shapelayout>\
+        <v:shape id=\"s\" v:notAnAttribute=\"1\"><v:notAnElement/></v:shape></xml>";
+    let (seeded, code) = f4_on(&work, "area-ole.pptx", &with_part(OLE, VML_PART, vml));
+    assert_eq!(code, 1, "{seeded}");
+    assert_eq!(part_status(&seeded, VML_PART), "invalid", "{seeded}");
+    assert!(seeded.contains("notAnElement"), "{seeded}");
+}
+
 #[test]
 fn f4_refuses_a_document_type_and_never_reports_its_text() {
     if !f4_ready() {

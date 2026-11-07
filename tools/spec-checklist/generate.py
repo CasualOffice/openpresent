@@ -70,6 +70,8 @@ AREAS = {
 # `mc:`, which is what tells the audit they are not the schemas' rows.
 HAND_WRITTEN = ROOT / "tools/spec-checklist/markup-compatibility.tsv"
 HAND_WRITTEN_PREFIX = "mc"
+# Imported by vml-main.xsd, unmodified from Ecma, for F4 alone (F4-04).
+F4_ONLY = ("dml-wordprocessingDrawing.xsd", "vml-spreadsheetDrawing.xsd", "vml-wordprocessingDrawing.xsd", "wml.xsd")
 HAND_WRITTEN_AREA = "MCE"
 HAND_WRITTEN_NOTE = ("Written by hand, since ECMA-376 Part 3 ships no XSD: `tools/spec-checklist/markup-compatibility.tsv`. "
                      "Tied to `BEH-18` in [51](../51-SPEC-CHECKLIST-AND-FIDELITY.md). Built in `crates/casual-slide-ooxml/src/mce.rs`.")
@@ -360,6 +362,8 @@ def render(rows, sources, skipped, status):
     idx += [f"| `{p}` | `{k}` |" for p, k in sources]
     idx += ["", "Excluded on purpose: these MS-ODRAWXML namespaces belong to Word and Excel parts: "
             + ", ".join(f"`{s}`" for s in sorted(skipped)) + ".", "",
+            "Vendored only so that `vml-main.xsd` compiles in F4 (`F4-04`); they describe Word and Excel parts, so give no rows: "
+            + ", ".join(f"`schemas/ooxml/{s}`" for s in F4_ONLY) + ".", "",
             f"Not from a schema: [{HAND_WRITTEN_AREA}]({HAND_WRITTEN_AREA}.md). {HAND_WRITTEN_NOTE}"]
     out["README.md"] = "\n".join(idx) + "\n"
 

@@ -18,3 +18,4 @@ strict-properties.pptx	docProps/core.xml	\{urn:other\}title	fixture-invalid	as r
 strict-properties.pptx	ppt/presProps.xml	htmlPubPr	fixture-invalid	htmlPubPr, written by the same generator as the Transitional deck, is not in the Strict schema
 strict-properties.pptx	ppt/presentation.xml	modifyVerifier', attribute	fixture-invalid	modifyVerifier's Transitional attributes, kept in the Strict variant to test retention
 strict-properties.pptx	ppt/viewProps.xml	restored(Top|Left).*ST_PositiveFixedPercentage	fixture-invalid	viewProps sizes kept numeric in the Strict variant, to test that a Transitional value there is retained
+area-vml.pptx	ppt/drawings/vmlDrawing1.vml	Schemas validity error	fixture-invalid	The checklist generator puts every VML element and attribute in one part, out of schema order, with placeholder values (42 messages, 2026-11-08). Until F4-06 makes it valid, the VML seeded test runs on area-ole.pptx

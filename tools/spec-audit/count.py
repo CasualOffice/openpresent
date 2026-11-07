@@ -96,7 +96,7 @@ def sources(root):
     tail = text.split("Excluded on purpose", 1)
     excluded = set(re.findall(r"`([^`]+)`", tail[1])) if len(tail) == 2 else set()
     problems = []
-    on_disk = {f"schemas/{d}/{p.name}" for d in ("ooxml", "opc") for p in (root / "schemas" / d).glob("*.xsd")}
+    on_disk = {f"schemas/{d}/{p.name}" for d in ("ooxml", "opc") for p in (root / "schemas" / d).glob("*.xsd")} - excluded
     index = root / "schemas/ms-extensions/index.json"
     if index.exists():
         for fname, uri, *_ in json.loads(index.read_text(encoding="utf8")):
