@@ -813,6 +813,18 @@ pub fn salvage(
                 note(ContainerFaultKind::DirectoryRebuilt, "");
             }
             for candidate in directory.entries {
+                // A local header declaring other sizes than the directory is what strict
+                // admission refuses (`SEC-P11`). The directory's are read; the user is told.
+                if let Some(local) = local_header(bytes, candidate.header)
+                    && local.compressed.is_some()
+                    && (local.compressed != candidate.compressed
+                        || local.uncompressed != candidate.uncompressed)
+                {
+                    note(
+                        ContainerFaultKind::ChecksumMismatch,
+                        &String::from_utf8_lossy(&candidate.name),
+                    );
+                }
                 let read = measure(bytes, candidate, &limits, &mut budget);
                 covered.push(read.candidate.header..read.span.end);
                 reads.push(read);

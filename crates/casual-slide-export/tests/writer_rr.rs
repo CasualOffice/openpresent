@@ -1766,6 +1766,37 @@ fn author() -> Op {
 }
 
 /// Set the text of a child of `part`'s root.
+/// Set the `size` of the vector under `list` in `app.xml`.
+fn set_vector_size(d: &mut Draft<'_>, list: &str, size: &str) {
+    d.edit_part(APP, |tree| {
+        let held = tree.child(tree.root(), list).unwrap();
+        let vector = tree.child(held, "vector").unwrap();
+        assert!(tree.set_attribute(vector, "size", size));
+    })
+    .unwrap();
+}
+
+/// Set the count of the `group`th pair in `HeadingPairs`.
+fn set_group_count(d: &mut Draft<'_>, group: usize, count: &str) {
+    d.edit_part(APP, |tree| {
+        let held = tree.child(tree.root(), "HeadingPairs").unwrap();
+        let vector = tree.child(held, "vector").unwrap();
+        let counts: Vec<ElementId> = tree
+            .child_elements(vector)
+            .into_iter()
+            .filter_map(|variant| tree.child(variant, "i4"))
+            .collect();
+        tree.set_text(counts[group], count);
+    })
+    .unwrap();
+}
+
+/// A thumbnail must have no relationships of its own (`INV-TH-01`).
+const THUMB_RELS: &[u8] = b"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\
+<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\
+<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" \
+Target=\"../../ppt/presentation.xml\"/></Relationships>";
+
 fn set_root_text(d: &mut Draft<'_>, part: &str, local: &str, value: &str) {
     d.edit_part(part, |tree| {
         let el = tree.child(tree.root(), local).unwrap();
@@ -1805,6 +1836,8 @@ fn bookkeeping_cases() -> Vec<Case> {
                 assert!(app.contains("<HiddenSlides>1</HiddenSlides>"), "{app}");
             })
             .seed("INV-AP-01", |d| set_root_text(d, APP, "Slides", "9"))
+            .seed("INV-AP-01", |d| set_root_text(d, APP, "HiddenSlides", "9"))
+            .seed("INV-AP-01", |d| set_root_text(d, APP, "Notes", "9"))
             .reported(),
         case("RR-AP-02", "INV-AP-02", RR_APP, vec![add_slide()])
             .check(|parts, _| {
@@ -1823,6 +1856,11 @@ fn bookkeeping_cases() -> Vec<Case> {
                 })
                 .unwrap();
             })
+            // Each of the rule's three checks alone.
+            .seed("INV-AP-02", |d| set_vector_size(d, "HeadingPairs", "99"))
+            .seed("INV-AP-02", |d| set_vector_size(d, "TitlesOfParts", "99"))
+            .seed("INV-AP-02", |d| set_group_count(d, 0, "0"))
+            .seed("INV-AP-03", |d| set_group_count(d, 1, "5"))
             .reported(),
         case(
             "RR-AP-03",
@@ -1880,7 +1918,8 @@ fn bookkeeping_cases() -> Vec<Case> {
                 })
                 .unwrap();
             })
-            .seed("INV-AP-08", |d| set_root_text(d, CORE, "created", WHEN)),
+            .seed("INV-AP-08", |d| set_root_text(d, CORE, "created", WHEN))
+            .seed("INV-AP-09", |d| set_root_text(d, CORE, "lastModifiedBy", "Other")),
         case(
             "RR-AP-09",
             "INV-AP-09",
@@ -1906,6 +1945,9 @@ fn bookkeeping_cases() -> Vec<Case> {
             .prepare(with_png)
             .seed("INV-TH-01", |d| {
                 raw_rel(d, "_rels/.rels", "rId90", THUMB, "docProps/thumbnail.png");
+            })
+            .seed("INV-TH-01", |d| {
+                d.set_part_bytes("docProps/_rels/thumbnail.png.rels", THUMB_RELS.to_vec());
             }),
         case("RR-TH-02", "INV-TH-02", RR_THUMB, vec![author()])
             .check(|parts, _| {
@@ -2590,4 +2632,43 @@ fn notes_text_is_escaped_and_never_reaches_a_message() {
             .contains("&lt;script&gt;&amp;")
     );
     assert!(!format!("{:?}", outcome.report).contains("script"));
+}
+
+/// `INV-AP-08`: a host that supplies no time leaves `dcterms:modified` alone, so a draft
+/// that changes it anyway is refused.
+#[test]
+fn a_modified_time_changed_with_no_time_supplied_is_refused() {
+    let source = std::fs::read(fixtures().join(RR_APP)).unwrap();
+    let mut pkg = open(&source);
+    let plan = SavePlan::new().op(author()).host(HostInputs {
+        user: Some("Editor".to_owned()),
+        ..HostInputs::default()
+    });
+    let mut draft = plan.stage(&mut pkg).unwrap();
+    set_root_text(&mut draft, CORE, "modified", WHEN);
+    let err = draft.preflight().map(|_| ()).unwrap_err();
+    assert_eq!(err.code(), "CS-SAV-0012", "{err}");
+    assert!(err.names_rule("INV-AP-08"), "{err}");
+}
+
+/// Every seed of the bookkeeping rows is refused naming its rule, each one alone, so a
+/// failure elsewhere in the fixture walk cannot hide one.
+#[test]
+fn every_bookkeeping_seed_is_refused_naming_its_rule() {
+    for case in cases()
+        .into_iter()
+        .filter(|c| c.id.starts_with("RR-AP-") || c.id.starts_with("RR-TH-"))
+    {
+        let source = std::fs::read(fixtures().join(case.base)).unwrap();
+        for (rule, seed) in &case.seeds {
+            let err = stage_and_seed(&source, &case, *seed)
+                .expect_err(&format!("{}: {rule} was not refused", case.id));
+            assert_eq!(err.code(), "CS-SAV-0012", "{}: {err}", case.id);
+            assert!(
+                err.names_rule(rule),
+                "{}: {rule} not named by {err}",
+                case.id
+            );
+        }
+    }
 }
