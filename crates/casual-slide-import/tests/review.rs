@@ -658,6 +658,155 @@ fn reactions_past_their_bound_either_way_refuse_the_part() {
     assert_eq!(read(&rxn.repeat(3)).unwrap_err().code(), "CS-IMP-0001");
     // One reaction and two instances: three together.
     assert_eq!(read(&with(2)).unwrap_err().code(), "CS-IMP-0001");
+    // One reaction holding three children that are not instances: only the count of a
+    // reaction's own children stops these, as the combined count sees instances alone.
+    let unknown = r#"<p223:rxn type="a"><p223:x/><p223:x/><p223:x/></p223:rxn>"#;
+    assert_eq!(read(unknown).unwrap_err().code(), "CS-IMP-0001");
+}
+
+fn review_at(deck: &str, limits: ReviewLimits) -> ImportedReview {
+    let mut pkg = open(read_fixture(deck));
+    let import = ImportLimits::default();
+    let d = import_deck(&mut pkg, &import).unwrap().deck;
+    import_review(&mut pkg, &d, &limits, &import)
+}
+
+/// `max_review_parts` counts modern comment parts too: one past it, the part is set aside.
+#[test]
+fn a_modern_comment_part_past_the_part_count_is_set_aside() {
+    let at = review_at(
+        "generated/comments-modern.pptx",
+        ReviewLimits {
+            max_review_parts: 1,
+            ..ReviewLimits::default()
+        },
+    );
+    assert_eq!(at.comments.threaded.len(), 1);
+    let over = review_at(
+        "generated/comments-modern.pptx",
+        ReviewLimits {
+            max_review_parts: 0,
+            ..ReviewLimits::default()
+        },
+    );
+    assert!(over.comments.threaded.is_empty());
+    assert!(
+        over.comments
+            .set_aside
+            .contains(&"ppt/comments/modernComment_100_0.xml".to_owned()),
+        "{:?}",
+        over.comments.set_aside
+    );
+}
+
+/// `max_review_parts` counts tag parts and custom XML items, each on its own count.
+#[test]
+fn tag_parts_and_custom_xml_items_past_the_part_count_are_set_aside() {
+    let deck = "generated/custom-tags-labels.pptx";
+    let at = review_at(
+        deck,
+        ReviewLimits {
+            max_review_parts: 2,
+            ..ReviewLimits::default()
+        },
+    );
+    assert!(at.custom.set_aside.is_empty(), "{:?}", at.custom.set_aside);
+    let one = review_at(
+        deck,
+        ReviewLimits {
+            max_review_parts: 1,
+            ..ReviewLimits::default()
+        },
+    );
+    assert_eq!(one.custom.set_aside, vec!["customXml/item2.xml".to_owned()]);
+    let none = review_at(
+        deck,
+        ReviewLimits {
+            max_review_parts: 0,
+            ..ReviewLimits::default()
+        },
+    );
+    assert!(
+        none.custom
+            .set_aside
+            .contains(&"ppt/tags/tag1.xml".to_owned()),
+        "{:?}",
+        none.custom.set_aside
+    );
+}
+
+/// A schema library past `max_schema_refs` is refused; exactly at it, it reads.
+#[test]
+fn a_schema_library_past_its_bound_is_refused() {
+    let limits = ReviewLimits {
+        max_schema_refs: 2,
+        ..ReviewLimits::default()
+    };
+    let read = |n: usize| {
+        let schemas = r#"<sl:schema sl:uri="urn:a"/>"#.repeat(n);
+        let xml = format!(
+            r#"<sl:schemaLibrary xmlns:sl="http://schemas.openxmlformats.org/schemaLibrary/2006/main">{schemas}</sl:schemaLibrary>"#
+        );
+        let tree = XmlTree::parse(xml.as_bytes(), "l", &OoxmlLimits::default()).unwrap();
+        import_schema_library(
+            &tree,
+            "l",
+            &limits,
+            &ImportLimits::default(),
+            &mut Findings::new(10),
+        )
+    };
+    assert_eq!(read(2).unwrap().schemas.len(), 2);
+    assert_eq!(read(3).unwrap_err().code(), "CS-IMP-0001");
+}
+
+/// Labels left in custom properties stop at `max_labels`.
+#[test]
+fn labels_in_custom_properties_stop_at_their_bound() {
+    let mut pkg = open(read_fixture("generated/custom-tags-labels.pptx"));
+    let d = import_deck(&mut pkg, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    let at = |n: usize| {
+        casual_slide_import::custom_data::labels_in_custom_properties(
+            &d,
+            &ReviewLimits {
+                max_labels: n,
+                ..ReviewLimits::default()
+            },
+        )
+    };
+    assert_eq!(at(1).len(), 1);
+    assert!(at(0).is_empty());
+}
+
+/// Designer tags and summary zoom objects are marks too: past the bound the rest stay in the
+/// tree, unread, and the part is reported.
+#[test]
+fn designer_tags_past_the_mark_bound_stay_unread_and_are_reported() {
+    let read = |n: usize| {
+        let tags = r#"<p202:designTag name="a" val="b"/>"#.repeat(3);
+        let xml = format!(
+            r#"<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="9" name="L"/><p:cNvSpPr/><p:nvPr><p:extLst><p:ext uri="{{3A5E9C8B-7D21-4F60-8E1A-5C4B3D2E1F00}}"><p202:designPr xmlns:p202="http://schemas.microsoft.com/office/powerpoint/2020/02/main"><p202:designTagLst>{tags}</p202:designTagLst></p202:designPr></p:ext></p:extLst></p:nvPr></p:nvSpPr><p:spPr/></p:sp></p:spTree></p:cSld></p:sld>"#
+        );
+        let tree = XmlTree::parse(xml.as_bytes(), "s", &OoxmlLimits::default()).unwrap();
+        let limits = ReviewLimits {
+            max_marks_per_part: n,
+            ..ReviewLimits::default()
+        };
+        let mut f = Findings::new(100);
+        let marks =
+            import_part_marks(&tree, "s", &[], &limits, &ImportLimits::default(), &mut f).unwrap();
+        let tags = match marks.designer.first() {
+            Some(DesignerMark::DrawingProperties { design_tag_lst, .. }) => {
+                design_tag_lst.as_ref().map_or(0, Vec::len)
+            }
+            other => panic!("{other:?}"),
+        };
+        (tags, codes(&f).iter().any(|c| c.contains("CS-RVW-0001")))
+    };
+    assert_eq!(read(3), (3, false));
+    assert_eq!(read(2), (2, true));
 }
 
 /// One past each bound is what the hostile decks hold. Exactly at it, a part opens.
