@@ -7,6 +7,7 @@ mod effect;
 mod fill;
 mod geometry;
 mod line;
+pub mod media;
 pub mod presentation;
 pub mod properties;
 mod retained;

@@ -384,6 +384,7 @@ impl Patch<'_, '_> {
             || b.transform != a.transform
             || b.bw_mode != a.bw_mode
             || b.use_bg_fill != a.use_bg_fill
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
             || !crate::retained::object_unchanged(b.retained.as_deref(), a.retained.as_deref())
@@ -429,6 +430,7 @@ impl Patch<'_, '_> {
         let changed_nv = b.non_visual != a.non_visual
             || b.locks != a.locks
             || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.start_connection != a.start_connection
             || b.end_connection != a.end_connection
             || b.app != a.app;
@@ -526,9 +528,15 @@ impl Patch<'_, '_> {
                 )?;
             }
         }
-        if b.locks != a.locks || b.text_box != a.text_box {
+        if b.locks != a.locks
+            || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
+        {
             let el = self.child(container, ns::PML, a.kind.non_visual_properties())?;
             let el = self.need(el, "the kind's non-visual properties")?;
+            if a.kind == NodeKind::Picture {
+                return self.c_nv_pic_pr(&el, b, a);
+            }
             self.w
                 .attr(&el, "txBox", b.text_box.as_ref(), a.text_box.as_ref())?;
             let lock = a.kind.lock_element();
@@ -554,6 +562,27 @@ impl Patch<'_, '_> {
             let el = self.need(el, "nvPr")?;
             self.app(&el, ba, aa)?;
         }
+        Ok(())
+    }
+
+    fn c_nv_pic_pr(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
+        self.w.attr(
+            el,
+            "preferRelativeResize",
+            b.prefer_relative_resize.as_ref(),
+            a.prefer_relative_resize.as_ref(),
+        )?;
+        sync_ordered(
+            &mut self.w,
+            el,
+            ns::DML,
+            "a",
+            &["picLocks", "extLst"],
+            "picLocks",
+            b.locks.as_ref(),
+            a.locks.as_ref(),
+            pic_locks,
+        )?;
         Ok(())
     }
 
@@ -588,9 +617,7 @@ impl Patch<'_, '_> {
     }
 
     fn app(&mut self, el: &Elem, b: &AppNonVisual, a: &AppNonVisual) -> Result<()> {
-        if b.media != a.media {
-            return Err(self.unsupported("media"));
-        }
+        crate::media::patch_app_media(&mut self.w, el, b, a)?;
         self.w
             .attr(el, "isPhoto", b.is_photo.as_ref(), a.is_photo.as_ref())?;
         self.w.attr(
@@ -782,6 +809,32 @@ fn patch_text_styles(
     Ok(())
 }
 
+/// `AG_Locking`, as any node has it, and `noCrop`, which only a picture does.
+fn pic_locks(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&Locks>,
+    a: &Locks,
+) -> std::result::Result<(), ExportError> {
+    w.attr(
+        el,
+        "noCrop",
+        b.and_then(|b| b.no_crop.as_ref()),
+        a.no_crop.as_ref(),
+    )?;
+    let without = |l: &Locks| Locks {
+        no_crop: None,
+        ..*l
+    };
+    patch_locks(
+        w,
+        el,
+        NodeKind::Picture,
+        b.map(without).as_ref(),
+        &without(a),
+    )
+}
+
 fn patch_locks(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -846,7 +899,14 @@ pub(crate) fn patch_hyperlink(
         b.highlight_click.as_ref(),
         a.highlight_click.as_ref(),
     )?;
-    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())
+    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())?;
+    if b.sound != a.sound {
+        let holder = |link: &Hyperlink| {
+            crate::drawing::Node::a("hlink").opt(link.sound.as_ref().map(crate::media::snd))
+        };
+        crate::drawing::patch(w, el, Some(&holder(b)), &holder(a))?;
+    }
+    Ok(())
 }
 
 fn patch_placeholder(

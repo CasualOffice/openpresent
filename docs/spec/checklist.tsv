@@ -1072,30 +1072,30 @@ p:CT_ViewProperties/@lastView	VIEW	CT_ViewProperties	attribute	@lastView	ST_View
 p:CT_ViewProperties/@showComments	VIEW	CT_ViewProperties	attribute	@showComments	boolean	optional	true		y	.	.	.	.
 p:<viewPr>	VIEW		root	<viewPr>	CT_ViewProperties				.	.	.	.	.
 a:CT_AudioFile	MEDIA		type	CT_AudioFile					.	.	.	.	.
-a:CT_AudioFile/extLst	MEDIA	CT_AudioFile	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_AudioFile/@r:link	MEDIA	CT_AudioFile	attribute	@r:link	link	required			.	.	.	.	.
-a:CT_AudioFile/@contentType	MEDIA	CT_AudioFile	attribute	@contentType	string	optional			.	.	.	.	.
+a:CT_AudioFile/extLst	MEDIA	CT_AudioFile	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_AudioFile/@r:link	MEDIA	CT_AudioFile	attribute	@r:link	link	required			y	y	y	.	.
+a:CT_AudioFile/@contentType	MEDIA	CT_AudioFile	attribute	@contentType	string	optional			y	y	y	.	.
 a:CT_VideoFile	MEDIA		type	CT_VideoFile					.	.	.	.	.
-a:CT_VideoFile/extLst	MEDIA	CT_VideoFile	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_VideoFile/@r:link	MEDIA	CT_VideoFile	attribute	@r:link	link	required			.	.	.	.	.
-a:CT_VideoFile/@contentType	MEDIA	CT_VideoFile	attribute	@contentType	string	optional			.	.	.	.	.
+a:CT_VideoFile/extLst	MEDIA	CT_VideoFile	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_VideoFile/@r:link	MEDIA	CT_VideoFile	attribute	@r:link	link	required			y	y	y	.	.
+a:CT_VideoFile/@contentType	MEDIA	CT_VideoFile	attribute	@contentType	string	optional			y	y	y	.	.
 a:CT_QuickTimeFile	MEDIA		type	CT_QuickTimeFile					.	.	.	.	.
-a:CT_QuickTimeFile/extLst	MEDIA	CT_QuickTimeFile	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_QuickTimeFile/@r:link	MEDIA	CT_QuickTimeFile	attribute	@r:link	link	required			.	.	.	.	.
-a:CT_AudioCDTime	MEDIA		type	CT_AudioCDTime					.	.	.	.	.
-a:CT_AudioCDTime/@track	MEDIA	CT_AudioCDTime	attribute	@track	unsignedByte	required			.	.	.	.	.
-a:CT_AudioCDTime/@time	MEDIA	CT_AudioCDTime	attribute	@time	unsignedInt	optional	0		.	.	.	.	.
+a:CT_QuickTimeFile/extLst	MEDIA	CT_QuickTimeFile	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_QuickTimeFile/@r:link	MEDIA	CT_QuickTimeFile	attribute	@r:link	link	required			y	y	y	.	.
+a:CT_AudioCDTime	MEDIA		type	CT_AudioCDTime					y	y	y	.	.
+a:CT_AudioCDTime/@track	MEDIA	CT_AudioCDTime	attribute	@track	unsignedByte	required			y	y	y	.	.
+a:CT_AudioCDTime/@time	MEDIA	CT_AudioCDTime	attribute	@time	unsignedInt	optional	0		y	y	y	.	.
 a:CT_AudioCD	MEDIA		type	CT_AudioCD					.	.	.	.	.
-a:CT_AudioCD/st	MEDIA	CT_AudioCD	element	st	CT_AudioCDTime				.	.	.	.	.
-a:CT_AudioCD/end	MEDIA	CT_AudioCD	element	end	CT_AudioCDTime				.	.	.	.	.
-a:CT_AudioCD/extLst	MEDIA	CT_AudioCD	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:EG_Media	MEDIA		type	EG_Media					.	.	.	.	.
-a:EG_Media/audioCd	MEDIA	EG_Media	element	audioCd	CT_AudioCD	choice			.	.	.	.	.
-a:EG_Media/wavAudioFile	MEDIA	EG_Media	element	wavAudioFile	CT_EmbeddedWAVAudioFile	choice			.	.	.	.	.
-a:EG_Media/audioFile	MEDIA	EG_Media	element	audioFile	CT_AudioFile	choice			.	.	.	.	.
-a:EG_Media/videoFile	MEDIA	EG_Media	element	videoFile	CT_VideoFile	choice			.	.	.	.	.
-a:EG_Media/quickTimeFile	MEDIA	EG_Media	element	quickTimeFile	CT_QuickTimeFile	choice			.	.	.	.	.
-a:<videoFile>	MEDIA		root	<videoFile>	CT_VideoFile				.	.	.	.	.
+a:CT_AudioCD/st	MEDIA	CT_AudioCD	element	st	CT_AudioCDTime				y	y	y	.	.
+a:CT_AudioCD/end	MEDIA	CT_AudioCD	element	end	CT_AudioCDTime				y	y	y	.	.
+a:CT_AudioCD/extLst	MEDIA	CT_AudioCD	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:EG_Media	MEDIA		type	EG_Media					y	y	y	.	.
+a:EG_Media/audioCd	MEDIA	EG_Media	element	audioCd	CT_AudioCD	choice			y	y	y	.	.
+a:EG_Media/wavAudioFile	MEDIA	EG_Media	element	wavAudioFile	CT_EmbeddedWAVAudioFile	choice			y	y	y	.	.
+a:EG_Media/audioFile	MEDIA	EG_Media	element	audioFile	CT_AudioFile	choice			y	y	y	.	.
+a:EG_Media/videoFile	MEDIA	EG_Media	element	videoFile	CT_VideoFile	choice			y	y	y	.	.
+a:EG_Media/quickTimeFile	MEDIA	EG_Media	element	quickTimeFile	CT_QuickTimeFile	choice			y	y	y	.	.
+a:<videoFile>	MEDIA		root	<videoFile>	CT_VideoFile				r	r	r	.	.
 a:ST_StyleMatrixColumnIndex	THEME		simple	ST_StyleMatrixColumnIndex				base=unsignedInt	.	.	.	.	.
 a:ST_FontCollectionIndex	THEME		simple	ST_FontCollectionIndex				base=token	.	.	.	.	.
 a:ST_FontCollectionIndex/=major	THEME	ST_FontCollectionIndex	value	=major					.	.	.	.	.
@@ -1542,11 +1542,11 @@ a:CT_SphereCoords	D3		type	CT_SphereCoords					y	y	y	.	.
 a:CT_SphereCoords/@lat	D3	CT_SphereCoords	attribute	@lat	ST_PositiveFixedAngle	required			y	y	y	.	.
 a:CT_SphereCoords/@lon	D3	CT_SphereCoords	attribute	@lon	ST_PositiveFixedAngle	required			y	y	y	.	.
 a:CT_SphereCoords/@rev	D3	CT_SphereCoords	attribute	@rev	ST_PositiveFixedAngle	required			y	y	y	.	.
-a:CT_RelativeRect	PIC		type	CT_RelativeRect					.	.	.	.	.
-a:CT_RelativeRect/@l	PIC	CT_RelativeRect	attribute	@l	ST_Percentage	optional	0%		.	.	.	.	.
-a:CT_RelativeRect/@t	PIC	CT_RelativeRect	attribute	@t	ST_Percentage	optional	0%		.	.	.	.	.
-a:CT_RelativeRect/@r	PIC	CT_RelativeRect	attribute	@r	ST_Percentage	optional	0%		.	.	.	.	.
-a:CT_RelativeRect/@b	PIC	CT_RelativeRect	attribute	@b	ST_Percentage	optional	0%		.	.	.	.	.
+a:CT_RelativeRect	PIC		type	CT_RelativeRect					y	y	y	.	.
+a:CT_RelativeRect/@l	PIC	CT_RelativeRect	attribute	@l	ST_Percentage	optional	0%		y	y	y	.	.
+a:CT_RelativeRect/@t	PIC	CT_RelativeRect	attribute	@t	ST_Percentage	optional	0%		y	y	y	.	.
+a:CT_RelativeRect/@r	PIC	CT_RelativeRect	attribute	@r	ST_Percentage	optional	0%		y	y	y	.	.
+a:CT_RelativeRect/@b	PIC	CT_RelativeRect	attribute	@b	ST_Percentage	optional	0%		y	y	y	.	.
 a:ST_RectAlignment	EFFECT		simple	ST_RectAlignment				base=token	y	.	.	.	.
 a:ST_RectAlignment/=tl	EFFECT	ST_RectAlignment	value	=tl					y	y	y	.	.
 a:ST_RectAlignment/=t	EFFECT	ST_RectAlignment	value	=t					y	y	y	.	.
@@ -1580,12 +1580,12 @@ a:ST_BlackWhiteMode/=blackWhite	SHAPE	ST_BlackWhiteMode	value	=blackWhite					y	
 a:ST_BlackWhiteMode/=black	SHAPE	ST_BlackWhiteMode	value	=black					y	.	.	.	.
 a:ST_BlackWhiteMode/=white	SHAPE	ST_BlackWhiteMode	value	=white					y	.	.	.	.
 a:ST_BlackWhiteMode/=hidden	SHAPE	ST_BlackWhiteMode	value	=hidden					y	.	.	.	.
-a:AG_Blob	PIC		type	AG_Blob					.	.	.	.	.
-a:AG_Blob/@r:embed	PIC	AG_Blob	attribute	@r:embed	embed	optional			.	.	.	.	.
-a:AG_Blob/@r:link	PIC	AG_Blob	attribute	@r:link	link	optional			.	.	.	.	.
-a:CT_EmbeddedWAVAudioFile	MEDIA		type	CT_EmbeddedWAVAudioFile					.	.	.	.	.
-a:CT_EmbeddedWAVAudioFile/@r:embed	MEDIA	CT_EmbeddedWAVAudioFile	attribute	@r:embed	embed	required			.	.	.	.	.
-a:CT_EmbeddedWAVAudioFile/@name	MEDIA	CT_EmbeddedWAVAudioFile	attribute	@name	string	optional			.	.	.	.	.
+a:AG_Blob	PIC		type	AG_Blob					y	y	y	.	.
+a:AG_Blob/@r:embed	PIC	AG_Blob	attribute	@r:embed	embed	optional			y	y	y	.	.
+a:AG_Blob/@r:link	PIC	AG_Blob	attribute	@r:link	link	optional			y	y	y	.	.
+a:CT_EmbeddedWAVAudioFile	MEDIA		type	CT_EmbeddedWAVAudioFile					y	y	y	.	.
+a:CT_EmbeddedWAVAudioFile/@r:embed	MEDIA	CT_EmbeddedWAVAudioFile	attribute	@r:embed	embed	required			y	y	y	.	.
+a:CT_EmbeddedWAVAudioFile/@name	MEDIA	CT_EmbeddedWAVAudioFile	attribute	@name	string	optional			y	y	y	.	.
 a:CT_Hyperlink	SHAPE		type	CT_Hyperlink					.	.	.	.	.
 a:CT_Hyperlink/snd	SHAPE	CT_Hyperlink	element	snd	CT_EmbeddedWAVAudioFile	0..1			.	.	.	.	.
 a:CT_Hyperlink/extLst	SHAPE	CT_Hyperlink	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
@@ -1617,9 +1617,9 @@ a:CT_ShapeLocking/extLst	SHAPE	CT_ShapeLocking	element	extLst	CT_OfficeArtExtens
 a:CT_ShapeLocking/AG_Locking	SHAPE	CT_ShapeLocking	attrgroup	AG_Locking	AG_Locking				.	.	.	.	.
 a:CT_ShapeLocking/@noTextEdit	SHAPE	CT_ShapeLocking	attribute	@noTextEdit	boolean	optional	false		y	.	.	.	.
 a:CT_PictureLocking	PIC		type	CT_PictureLocking					.	.	.	.	.
-a:CT_PictureLocking/extLst	PIC	CT_PictureLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
+a:CT_PictureLocking/extLst	PIC	CT_PictureLocking	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
 a:CT_PictureLocking/AG_Locking	PIC	CT_PictureLocking	attrgroup	AG_Locking	AG_Locking				.	.	.	.	.
-a:CT_PictureLocking/@noCrop	PIC	CT_PictureLocking	attribute	@noCrop	boolean	optional	false		.	.	.	.	.
+a:CT_PictureLocking/@noCrop	PIC	CT_PictureLocking	attribute	@noCrop	boolean	optional	false		y	y	y	.	.
 a:CT_GroupLocking	SHAPE		type	CT_GroupLocking					.	.	.	.	.
 a:CT_GroupLocking/extLst	SHAPE	CT_GroupLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_GroupLocking/@noGrp	SHAPE	CT_GroupLocking	attribute	@noGrp	boolean	optional	false		y	.	.	.	.
@@ -1659,9 +1659,9 @@ a:CT_NonVisualConnectorProperties/stCxn	SHAPE	CT_NonVisualConnectorProperties	el
 a:CT_NonVisualConnectorProperties/endCxn	SHAPE	CT_NonVisualConnectorProperties	element	endCxn	CT_Connection	0..1			.	.	.	.	.
 a:CT_NonVisualConnectorProperties/extLst	SHAPE	CT_NonVisualConnectorProperties	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_NonVisualPictureProperties	PIC		type	CT_NonVisualPictureProperties					.	.	.	.	.
-a:CT_NonVisualPictureProperties/picLocks	PIC	CT_NonVisualPictureProperties	element	picLocks	CT_PictureLocking	0..1			.	.	.	.	.
-a:CT_NonVisualPictureProperties/extLst	PIC	CT_NonVisualPictureProperties	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_NonVisualPictureProperties/@preferRelativeResize	PIC	CT_NonVisualPictureProperties	attribute	@preferRelativeResize	boolean	optional	true		.	.	.	.	.
+a:CT_NonVisualPictureProperties/picLocks	PIC	CT_NonVisualPictureProperties	element	picLocks	CT_PictureLocking	0..1			.	y	y	.	.
+a:CT_NonVisualPictureProperties/extLst	PIC	CT_NonVisualPictureProperties	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_NonVisualPictureProperties/@preferRelativeResize	PIC	CT_NonVisualPictureProperties	attribute	@preferRelativeResize	boolean	optional	true		y	y	y	.	.
 a:CT_NonVisualGroupDrawingShapeProps	SHAPE		type	CT_NonVisualGroupDrawingShapeProps					.	.	.	.	.
 a:CT_NonVisualGroupDrawingShapeProps/grpSpLocks	SHAPE	CT_NonVisualGroupDrawingShapeProps	element	grpSpLocks	CT_GroupLocking	0..1			.	.	.	.	.
 a:CT_NonVisualGroupDrawingShapeProps/extLst	SHAPE	CT_NonVisualGroupDrawingShapeProps	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
@@ -1749,15 +1749,15 @@ a:CT_GvmlConnector/nvCxnSpPr	SHAPE	CT_GvmlConnector	element	nvCxnSpPr	CT_GvmlCon
 a:CT_GvmlConnector/spPr	SHAPE	CT_GvmlConnector	element	spPr	CT_ShapeProperties				.	.	.	.	.
 a:CT_GvmlConnector/style	SHAPE	CT_GvmlConnector	element	style	CT_ShapeStyle	0..1			.	.	.	.	.
 a:CT_GvmlConnector/extLst	SHAPE	CT_GvmlConnector	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_GvmlPictureNonVisual	PIC		type	CT_GvmlPictureNonVisual					.	.	.	.	.
-a:CT_GvmlPictureNonVisual/cNvPr	PIC	CT_GvmlPictureNonVisual	element	cNvPr	CT_NonVisualDrawingProps				.	.	.	.	.
-a:CT_GvmlPictureNonVisual/cNvPicPr	PIC	CT_GvmlPictureNonVisual	element	cNvPicPr	CT_NonVisualPictureProperties				.	.	.	.	.
-a:CT_GvmlPicture	PIC		type	CT_GvmlPicture					.	.	.	.	.
-a:CT_GvmlPicture/nvPicPr	PIC	CT_GvmlPicture	element	nvPicPr	CT_GvmlPictureNonVisual				.	.	.	.	.
-a:CT_GvmlPicture/blipFill	PIC	CT_GvmlPicture	element	blipFill	CT_BlipFillProperties				.	.	.	.	.
-a:CT_GvmlPicture/spPr	PIC	CT_GvmlPicture	element	spPr	CT_ShapeProperties				.	.	.	.	.
-a:CT_GvmlPicture/style	PIC	CT_GvmlPicture	element	style	CT_ShapeStyle	0..1			.	.	.	.	.
-a:CT_GvmlPicture/extLst	PIC	CT_GvmlPicture	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
+a:CT_GvmlPictureNonVisual	PIC		type	CT_GvmlPictureNonVisual					r	r	r	.	.
+a:CT_GvmlPictureNonVisual/cNvPr	PIC	CT_GvmlPictureNonVisual	element	cNvPr	CT_NonVisualDrawingProps				r	r	r	.	.
+a:CT_GvmlPictureNonVisual/cNvPicPr	PIC	CT_GvmlPictureNonVisual	element	cNvPicPr	CT_NonVisualPictureProperties				r	r	r	.	.
+a:CT_GvmlPicture	PIC		type	CT_GvmlPicture					r	r	r	.	.
+a:CT_GvmlPicture/nvPicPr	PIC	CT_GvmlPicture	element	nvPicPr	CT_GvmlPictureNonVisual				r	r	r	.	.
+a:CT_GvmlPicture/blipFill	PIC	CT_GvmlPicture	element	blipFill	CT_BlipFillProperties				r	r	r	.	.
+a:CT_GvmlPicture/spPr	PIC	CT_GvmlPicture	element	spPr	CT_ShapeProperties				r	r	r	.	.
+a:CT_GvmlPicture/style	PIC	CT_GvmlPicture	element	style	CT_ShapeStyle	0..1			r	r	r	.	.
+a:CT_GvmlPicture/extLst	PIC	CT_GvmlPicture	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
 a:CT_GvmlGraphicFrameNonVisual	SHAPE		type	CT_GvmlGraphicFrameNonVisual					.	.	.	.	.
 a:CT_GvmlGraphicFrameNonVisual/cNvPr	SHAPE	CT_GvmlGraphicFrameNonVisual	element	cNvPr	CT_NonVisualDrawingProps				.	.	.	.	.
 a:CT_GvmlGraphicFrameNonVisual/cNvGraphicFramePr	SHAPE	CT_GvmlGraphicFrameNonVisual	element	cNvGraphicFramePr	CT_NonVisualGraphicFrameProperties				.	.	.	.	.
@@ -2099,33 +2099,33 @@ a:CT_StretchInfoProperties/fillRect	FILL	CT_StretchInfoProperties	element	fillRe
 a:EG_FillModeProperties	FILL		type	EG_FillModeProperties					y	y	y	.	.
 a:EG_FillModeProperties/tile	FILL	EG_FillModeProperties	element	tile	CT_TileInfoProperties	choice			y	y	y	.	.
 a:EG_FillModeProperties/stretch	FILL	EG_FillModeProperties	element	stretch	CT_StretchInfoProperties	choice			y	y	y	.	.
-a:ST_BlipCompression	PIC		simple	ST_BlipCompression				base=token	.	.	.	.	.
-a:ST_BlipCompression/=email	PIC	ST_BlipCompression	value	=email					.	.	.	.	.
-a:ST_BlipCompression/=screen	PIC	ST_BlipCompression	value	=screen					.	.	.	.	.
-a:ST_BlipCompression/=print	PIC	ST_BlipCompression	value	=print					.	.	.	.	.
-a:ST_BlipCompression/=hqprint	PIC	ST_BlipCompression	value	=hqprint					.	.	.	.	.
-a:ST_BlipCompression/=none	PIC	ST_BlipCompression	value	=none					.	.	.	.	.
+a:ST_BlipCompression	PIC		simple	ST_BlipCompression				base=token	y	.	.	.	.
+a:ST_BlipCompression/=email	PIC	ST_BlipCompression	value	=email					y	y	y	.	.
+a:ST_BlipCompression/=screen	PIC	ST_BlipCompression	value	=screen					y	y	y	.	.
+a:ST_BlipCompression/=print	PIC	ST_BlipCompression	value	=print					y	y	y	.	.
+a:ST_BlipCompression/=hqprint	PIC	ST_BlipCompression	value	=hqprint					y	y	y	.	.
+a:ST_BlipCompression/=none	PIC	ST_BlipCompression	value	=none					y	y	y	.	.
 a:CT_Blip	PIC		type	CT_Blip					.	.	.	.	.
-a:CT_Blip/alphaBiLevel	PIC	CT_Blip	element	alphaBiLevel	CT_AlphaBiLevelEffect	choice			.	.	.	.	.
-a:CT_Blip/alphaCeiling	PIC	CT_Blip	element	alphaCeiling	CT_AlphaCeilingEffect	choice			.	.	.	.	.
-a:CT_Blip/alphaFloor	PIC	CT_Blip	element	alphaFloor	CT_AlphaFloorEffect	choice			.	.	.	.	.
-a:CT_Blip/alphaInv	PIC	CT_Blip	element	alphaInv	CT_AlphaInverseEffect	choice			.	.	.	.	.
-a:CT_Blip/alphaMod	PIC	CT_Blip	element	alphaMod	CT_AlphaModulateEffect	choice			.	.	.	.	.
-a:CT_Blip/alphaModFix	PIC	CT_Blip	element	alphaModFix	CT_AlphaModulateFixedEffect	choice			.	.	.	.	.
-a:CT_Blip/alphaRepl	PIC	CT_Blip	element	alphaRepl	CT_AlphaReplaceEffect	choice			.	.	.	.	.
-a:CT_Blip/biLevel	PIC	CT_Blip	element	biLevel	CT_BiLevelEffect	choice			.	.	.	.	.
-a:CT_Blip/blur	PIC	CT_Blip	element	blur	CT_BlurEffect	choice			.	.	.	.	.
-a:CT_Blip/clrChange	PIC	CT_Blip	element	clrChange	CT_ColorChangeEffect	choice			.	.	.	.	.
-a:CT_Blip/clrRepl	PIC	CT_Blip	element	clrRepl	CT_ColorReplaceEffect	choice			.	.	.	.	.
-a:CT_Blip/duotone	PIC	CT_Blip	element	duotone	CT_DuotoneEffect	choice			.	.	.	.	.
-a:CT_Blip/fillOverlay	PIC	CT_Blip	element	fillOverlay	CT_FillOverlayEffect	choice			.	.	.	.	.
-a:CT_Blip/grayscl	PIC	CT_Blip	element	grayscl	CT_GrayscaleEffect	choice			.	.	.	.	.
-a:CT_Blip/hsl	PIC	CT_Blip	element	hsl	CT_HSLEffect	choice			.	.	.	.	.
-a:CT_Blip/lum	PIC	CT_Blip	element	lum	CT_LuminanceEffect	choice			.	.	.	.	.
-a:CT_Blip/tint	PIC	CT_Blip	element	tint	CT_TintEffect	choice			.	.	.	.	.
-a:CT_Blip/extLst	PIC	CT_Blip	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_Blip/AG_Blob	PIC	CT_Blip	attrgroup	AG_Blob	AG_Blob				.	.	.	.	.
-a:CT_Blip/@cstate	PIC	CT_Blip	attribute	@cstate	ST_BlipCompression	optional	none		.	.	.	.	.
+a:CT_Blip/alphaBiLevel	PIC	CT_Blip	element	alphaBiLevel	CT_AlphaBiLevelEffect	choice			y	y	y	.	.
+a:CT_Blip/alphaCeiling	PIC	CT_Blip	element	alphaCeiling	CT_AlphaCeilingEffect	choice			y	y	y	.	.
+a:CT_Blip/alphaFloor	PIC	CT_Blip	element	alphaFloor	CT_AlphaFloorEffect	choice			y	y	y	.	.
+a:CT_Blip/alphaInv	PIC	CT_Blip	element	alphaInv	CT_AlphaInverseEffect	choice			y	y	y	.	.
+a:CT_Blip/alphaMod	PIC	CT_Blip	element	alphaMod	CT_AlphaModulateEffect	choice			y	y	y	.	.
+a:CT_Blip/alphaModFix	PIC	CT_Blip	element	alphaModFix	CT_AlphaModulateFixedEffect	choice			y	y	y	.	.
+a:CT_Blip/alphaRepl	PIC	CT_Blip	element	alphaRepl	CT_AlphaReplaceEffect	choice			y	y	y	.	.
+a:CT_Blip/biLevel	PIC	CT_Blip	element	biLevel	CT_BiLevelEffect	choice			y	y	y	.	.
+a:CT_Blip/blur	PIC	CT_Blip	element	blur	CT_BlurEffect	choice			y	y	y	.	.
+a:CT_Blip/clrChange	PIC	CT_Blip	element	clrChange	CT_ColorChangeEffect	choice			y	y	y	.	.
+a:CT_Blip/clrRepl	PIC	CT_Blip	element	clrRepl	CT_ColorReplaceEffect	choice			y	y	y	.	.
+a:CT_Blip/duotone	PIC	CT_Blip	element	duotone	CT_DuotoneEffect	choice			y	y	y	.	.
+a:CT_Blip/fillOverlay	PIC	CT_Blip	element	fillOverlay	CT_FillOverlayEffect	choice			y	y	y	.	.
+a:CT_Blip/grayscl	PIC	CT_Blip	element	grayscl	CT_GrayscaleEffect	choice			y	y	y	.	.
+a:CT_Blip/hsl	PIC	CT_Blip	element	hsl	CT_HSLEffect	choice			y	y	y	.	.
+a:CT_Blip/lum	PIC	CT_Blip	element	lum	CT_LuminanceEffect	choice			y	y	y	.	.
+a:CT_Blip/tint	PIC	CT_Blip	element	tint	CT_TintEffect	choice			y	y	y	.	.
+a:CT_Blip/extLst	PIC	CT_Blip	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_Blip/AG_Blob	PIC	CT_Blip	attrgroup	AG_Blob	AG_Blob				y	y	y	.	.
+a:CT_Blip/@cstate	PIC	CT_Blip	attribute	@cstate	ST_BlipCompression	optional	none		y	y	y	.	.
 a:CT_BlipFillProperties	FILL		type	CT_BlipFillProperties					y	y	y	.	.
 a:CT_BlipFillProperties/blip	FILL	CT_BlipFillProperties	element	blip	CT_Blip	0..1			y	y	y	.	.
 a:CT_BlipFillProperties/srcRect	FILL	CT_BlipFillProperties	element	srcRect	CT_RelativeRect	0..1			y	y	y	.	.
@@ -2271,7 +2271,7 @@ a:EG_EffectProperties/effectLst	EFFECT	EG_EffectProperties	element	effectLst	CT_
 a:EG_EffectProperties/effectDag	EFFECT	EG_EffectProperties	element	effectDag	CT_EffectContainer	choice			y	y	y	.	.
 a:CT_EffectProperties	EFFECT		type	CT_EffectProperties					y	y	y	.	.
 a:CT_EffectProperties/EG_EffectProperties	EFFECT	CT_EffectProperties	group	EG_EffectProperties	EG_EffectProperties				y	y	y	.	.
-a:<blip>	PIC		root	<blip>	CT_Blip				.	.	.	.	.
+a:<blip>	PIC		root	<blip>	CT_Blip				r	r	r	.	.
 a:ST_ShapeType	GEOM		simple	ST_ShapeType				base=token	y	.	.	.	.
 a:ST_ShapeType/=line	GEOM	ST_ShapeType	value	=line					y	y	y	.	.
 a:ST_ShapeType/=lineInv	GEOM	ST_ShapeType	value	=lineInv					y	y	y	.	.
@@ -3218,14 +3218,14 @@ a:EG_TextRun/fld	TEXT	EG_TextRun	element	fld	CT_TextField	choice			y	y	y	.	.
 a:CT_RegularTextRun	TEXT		type	CT_RegularTextRun					y	y	y	.	.
 a:CT_RegularTextRun/rPr	TEXT	CT_RegularTextRun	element	rPr	CT_TextCharacterProperties	0..1			y	y	y	.	.
 a:CT_RegularTextRun/t	TEXT	CT_RegularTextRun	element	t	string				y	y	y	.	.
-pic:CT_PictureNonVisual	PIC		type	CT_PictureNonVisual					.	.	.	.	.
-pic:CT_PictureNonVisual/cNvPr	PIC	CT_PictureNonVisual	element	cNvPr	CT_NonVisualDrawingProps				.	.	.	.	.
-pic:CT_PictureNonVisual/cNvPicPr	PIC	CT_PictureNonVisual	element	cNvPicPr	CT_NonVisualPictureProperties				.	.	.	.	.
-pic:CT_Picture	PIC		type	CT_Picture					.	.	.	.	.
-pic:CT_Picture/nvPicPr	PIC	CT_Picture	element	nvPicPr	CT_PictureNonVisual				.	.	.	.	.
-pic:CT_Picture/blipFill	PIC	CT_Picture	element	blipFill	CT_BlipFillProperties				.	.	.	.	.
-pic:CT_Picture/spPr	PIC	CT_Picture	element	spPr	CT_ShapeProperties				.	.	.	.	.
-pic:<pic>	PIC		root	<pic>	CT_Picture				.	.	.	.	.
+pic:CT_PictureNonVisual	PIC		type	CT_PictureNonVisual					r	r	r	.	.
+pic:CT_PictureNonVisual/cNvPr	PIC	CT_PictureNonVisual	element	cNvPr	CT_NonVisualDrawingProps				r	r	r	.	.
+pic:CT_PictureNonVisual/cNvPicPr	PIC	CT_PictureNonVisual	element	cNvPicPr	CT_NonVisualPictureProperties				r	r	r	.	.
+pic:CT_Picture	PIC		type	CT_Picture					r	r	r	.	.
+pic:CT_Picture/nvPicPr	PIC	CT_Picture	element	nvPicPr	CT_PictureNonVisual				r	r	r	.	.
+pic:CT_Picture/blipFill	PIC	CT_Picture	element	blipFill	CT_BlipFillProperties				r	r	r	.	.
+pic:CT_Picture/spPr	PIC	CT_Picture	element	spPr	CT_ShapeProperties				r	r	r	.	.
+pic:<pic>	PIC		root	<pic>	CT_Picture				r	r	r	.	.
 lc:<lockedCanvas>	SHAPE		root	<lockedCanvas>	CT_GvmlGroupShape				.	.	.	.	.
 c:CT_Boolean	CHART		type	CT_Boolean					.	.	.	.	.
 c:CT_Boolean/@val	CHART	CT_Boolean	attribute	@val	boolean	optional	true		.	.	.	.	.
@@ -6976,20 +6976,20 @@ x:powerpoint/2016/summaryzoom:<summaryZm>	EXT		root	<summaryZm>	CT_SummaryZoom		
 x:powerpoint/2017/10/main:CT_ReadonlyRecommended	EXT		type	CT_ReadonlyRecommended					.	.	.	.	.
 x:powerpoint/2017/10/main:CT_ReadonlyRecommended/@val	EXT	CT_ReadonlyRecommended	attribute	@val	boolean	required			.	.	.	.	.
 x:powerpoint/2017/10/main:<readonlyRecommended>	EXT		root	<readonlyRecommended>	CT_ReadonlyRecommended				.	.	.	.	.
-x:powerpoint/2017/3/main:ST_DisplayLocation	MEDIA		simple	ST_DisplayLocation				base=string	.	.	.	.	.
-x:powerpoint/2017/3/main:ST_DisplayLocation/=media	MEDIA	ST_DisplayLocation	value	=media					.	.	.	.	.
-x:powerpoint/2017/3/main:ST_DisplayLocation/=slide	MEDIA	ST_DisplayLocation	value	=slide					.	.	.	.	.
-x:powerpoint/2017/3/main:CT_Track	MEDIA		type	CT_Track					.	.	.	.	.
-x:powerpoint/2017/3/main:CT_Track/@id	MEDIA	CT_Track	attribute	@id	ST_Guid	required			.	.	.	.	.
-x:powerpoint/2017/3/main:CT_Track/@label	MEDIA	CT_Track	attribute	@label	string	required			.	.	.	.	.
-x:powerpoint/2017/3/main:CT_Track/@lang	MEDIA	CT_Track	attribute	@lang	ST_TextLanguageID	optional			.	.	.	.	.
-x:powerpoint/2017/3/main:CT_Track/AG_Blob	MEDIA	CT_Track	attrgroup	AG_Blob	AG_Blob				.	.	.	.	.
-x:powerpoint/2017/3/main:CT_TrackList	MEDIA		type	CT_TrackList					.	.	.	.	.
-x:powerpoint/2017/3/main:CT_TrackList/track	MEDIA	CT_TrackList	element	track	CT_Track	0..unbounded			.	.	.	.	.
-x:powerpoint/2017/3/main:CT_TracksInfo	MEDIA		type	CT_TracksInfo					.	.	.	.	.
-x:powerpoint/2017/3/main:CT_TracksInfo/trackLst	MEDIA	CT_TracksInfo	element	trackLst	CT_TrackList	0..1			.	.	.	.	.
-x:powerpoint/2017/3/main:CT_TracksInfo/@displayLoc	MEDIA	CT_TracksInfo	attribute	@displayLoc	ST_DisplayLocation	required			.	.	.	.	.
-x:powerpoint/2017/3/main:<tracksInfo>	MEDIA		root	<tracksInfo>	CT_TracksInfo				.	.	.	.	.
+x:powerpoint/2017/3/main:ST_DisplayLocation	MEDIA		simple	ST_DisplayLocation				base=string	y	.	.	.	.
+x:powerpoint/2017/3/main:ST_DisplayLocation/=media	MEDIA	ST_DisplayLocation	value	=media					y	y	y	.	.
+x:powerpoint/2017/3/main:ST_DisplayLocation/=slide	MEDIA	ST_DisplayLocation	value	=slide					y	y	y	.	.
+x:powerpoint/2017/3/main:CT_Track	MEDIA		type	CT_Track					y	y	y	.	.
+x:powerpoint/2017/3/main:CT_Track/@id	MEDIA	CT_Track	attribute	@id	ST_Guid	required			y	y	y	.	.
+x:powerpoint/2017/3/main:CT_Track/@label	MEDIA	CT_Track	attribute	@label	string	required			y	y	y	.	.
+x:powerpoint/2017/3/main:CT_Track/@lang	MEDIA	CT_Track	attribute	@lang	ST_TextLanguageID	optional			y	y	y	.	.
+x:powerpoint/2017/3/main:CT_Track/AG_Blob	MEDIA	CT_Track	attrgroup	AG_Blob	AG_Blob				y	y	y	.	.
+x:powerpoint/2017/3/main:CT_TrackList	MEDIA		type	CT_TrackList					y	y	y	.	.
+x:powerpoint/2017/3/main:CT_TrackList/track	MEDIA	CT_TrackList	element	track	CT_Track	0..unbounded			y	y	y	.	.
+x:powerpoint/2017/3/main:CT_TracksInfo	MEDIA		type	CT_TracksInfo					y	y	y	.	.
+x:powerpoint/2017/3/main:CT_TracksInfo/trackLst	MEDIA	CT_TracksInfo	element	trackLst	CT_TrackList	0..1			y	y	y	.	.
+x:powerpoint/2017/3/main:CT_TracksInfo/@displayLoc	MEDIA	CT_TracksInfo	attribute	@displayLoc	ST_DisplayLocation	required			y	y	y	.	.
+x:powerpoint/2017/3/main:<tracksInfo>	MEDIA		root	<tracksInfo>	CT_TracksInfo				.	y	y	.	.
 x:powerpoint/2018/4/main:ST_ClassificationOutcomeType	EXT		simple	ST_ClassificationOutcomeType				base=token	.	.	.	.	.
 x:powerpoint/2018/4/main:ST_ClassificationOutcomeType/=none	EXT	ST_ClassificationOutcomeType	value	=none					.	.	.	.	.
 x:powerpoint/2018/4/main:ST_ClassificationOutcomeType/=hdr	EXT	ST_ClassificationOutcomeType	value	=hdr					.	.	.	.	.
@@ -7462,8 +7462,8 @@ x:drawing/2007/8/2/chart:CT_Style/@val	CHART	CT_Style	attribute	@val	ST_Style	re
 x:drawing/2007/8/2/chart:<pivotOptions>	CHART		root	<pivotOptions>	CT_PivotOptions				.	.	.	.	.
 x:drawing/2007/8/2/chart:<invertSolidFillFmt>	CHART		root	<invertSolidFillFmt>	CT_InvertSolidFillFmt				.	.	.	.	.
 x:drawing/2007/8/2/chart:<style>	CHART		root	<style>	CT_Style				.	.	.	.	.
-x:drawing/2010/picture:<style>	PIC		root	<style>	CT_ShapeStyle				.	.	.	.	.
-x:drawing/2010/picture:<extLst>	PIC		root	<extLst>	CT_OfficeArtExtensionList				.	.	.	.	.
+x:drawing/2010/picture:<style>	PIC		root	<style>	CT_ShapeStyle				r	r	r	.	.
+x:drawing/2010/picture:<extLst>	PIC		root	<extLst>	CT_OfficeArtExtensionList				r	r	r	.	.
 x:drawing/2012/chart:<pivotSource>	CHART		root	<pivotSource>	CT_PivotSource				.	.	.	.	.
 x:drawing/2012/chart:<numFmt>	CHART		root	<numFmt>	CT_NumFmt				.	.	.	.	.
 x:drawing/2012/chart:<spPr>	CHART		root	<spPr>	CT_ShapeProperties				.	.	.	.	.
@@ -8345,9 +8345,9 @@ x:drawing/2014/main:CT_Identifier	SHAPE		type	CT_Identifier					.	.	.	.	.
 x:drawing/2014/main:CT_Identifier/@val	SHAPE	CT_Identifier	attribute	@val	unsignedInt	required			.	.	.	.	.
 x:drawing/2014/main:<rowId>	SHAPE		root	<rowId>	CT_Identifier				.	.	.	.	.
 x:drawing/2014/main:<colId>	SHAPE		root	<colId>	CT_Identifier				.	.	.	.	.
-x:drawing/2016/SVG/main:CT_SVGBlip	PIC		type	CT_SVGBlip					.	.	.	.	.
-x:drawing/2016/SVG/main:CT_SVGBlip/AG_Blob	PIC	CT_SVGBlip	attrgroup	AG_Blob	AG_Blob				.	.	.	.	.
-x:drawing/2016/SVG/main:<svgBlip>	PIC		root	<svgBlip>	CT_SVGBlip				.	.	.	.	.
+x:drawing/2016/SVG/main:CT_SVGBlip	PIC		type	CT_SVGBlip					y	y	y	.	.
+x:drawing/2016/SVG/main:CT_SVGBlip/AG_Blob	PIC	CT_SVGBlip	attrgroup	AG_Blob	AG_Blob				y	y	y	.	.
+x:drawing/2016/SVG/main:<svgBlip>	PIC		root	<svgBlip>	CT_SVGBlip				.	y	y	.	.
 x:drawing/2016/11/main:CT_PictureAttributionSourceURL	SHAPE		type	CT_PictureAttributionSourceURL					.	.	.	.	.
 x:drawing/2016/11/main:CT_PictureAttributionSourceURL/@r:id	SHAPE	CT_PictureAttributionSourceURL	attribute	@r:id	id	required			.	.	.	.	.
 x:drawing/2016/11/main:<picAttrSrcUrl>	SHAPE		root	<picAttrSrcUrl>	CT_PictureAttributionSourceURL				.	.	.	.	.
@@ -8695,11 +8695,11 @@ x:drawing/2020/classificationShape:ST_ClassificationOutcomeType/=watermark	EXT	S
 x:drawing/2020/classificationShape:CT_ClassificationOutcome	EXT		type	CT_ClassificationOutcome					.	.	.	.	.
 x:drawing/2020/classificationShape:CT_ClassificationOutcome/@classificationOutcomeType	EXT	CT_ClassificationOutcome	attribute	@classificationOutcomeType	ST_ClassificationOutcomeType	optional			.	.	.	.	.
 x:drawing/2020/classificationShape:<classification>	EXT		root	<classification>	CT_ClassificationOutcome				.	.	.	.	.
-x:word/2020/oembed:CT_OEmbed	MEDIA		type	CT_OEmbed					.	.	.	.	.
-x:word/2020/oembed:CT_OEmbed/@oEmbedUrl	MEDIA	CT_OEmbed	attribute	@oEmbedUrl	string	required			.	.	.	.	.
-x:word/2020/oembed:CT_OEmbed/@mediaType	MEDIA	CT_OEmbed	attribute	@mediaType	string	required			.	.	.	.	.
-x:word/2020/oembed:CT_OEmbed/@picLocksAutoForOEmbed	MEDIA	CT_OEmbed	attribute	@picLocksAutoForOEmbed	boolean	optional	false		.	.	.	.	.
-x:word/2020/oembed:<oembed>	MEDIA		root	<oembed>	CT_OEmbed				.	.	.	.	.
+x:word/2020/oembed:CT_OEmbed	MEDIA		type	CT_OEmbed					y	y	y	.	.
+x:word/2020/oembed:CT_OEmbed/@oEmbedUrl	MEDIA	CT_OEmbed	attribute	@oEmbedUrl	string	required			y	y	y	.	.
+x:word/2020/oembed:CT_OEmbed/@mediaType	MEDIA	CT_OEmbed	attribute	@mediaType	string	required			y	y	y	.	.
+x:word/2020/oembed:CT_OEmbed/@picLocksAutoForOEmbed	MEDIA	CT_OEmbed	attribute	@picLocksAutoForOEmbed	boolean	optional	false		y	y	y	.	.
+x:word/2020/oembed:<oembed>	MEDIA		root	<oembed>	CT_OEmbed				.	y	y	.	.
 x:drawing/2021/scriptlink:CT_ScriptLink	CUSTOM		type	CT_ScriptLink					.	.	.	.	.
 x:drawing/2021/scriptlink:CT_ScriptLink/extLst	CUSTOM	CT_ScriptLink	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 x:drawing/2021/scriptlink:CT_ScriptLink/@val	CUSTOM	CT_ScriptLink	attribute	@val	string	optional			.	.	.	.	.
@@ -8724,9 +8724,9 @@ x:drawing/2021/livefeed:CT_LiveFeedProperties	CUSTOM		type	CT_LiveFeedProperties
 x:drawing/2021/livefeed:CT_LiveFeedProperties/backgroundProps	CUSTOM	CT_LiveFeedProperties	element	backgroundProps	CT_LiveFeedBackgroundProperties	0..1			.	.	.	.	.
 x:drawing/2021/livefeed:CT_LiveFeedProperties/extLst	CUSTOM	CT_LiveFeedProperties	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 x:drawing/2021/livefeed:<liveFeedProps>	CUSTOM		root	<liveFeedProps>	CT_LiveFeedProperties				.	.	.	.	.
-x:drawing/2022/imageformula:CT_ImageFormula	PIC		type	CT_ImageFormula					.	.	.	.	.
-x:drawing/2022/imageformula:CT_ImageFormula/@formula	PIC	CT_ImageFormula	attribute	@formula	string	optional			.	.	.	.	.
-x:drawing/2022/imageformula:<imageFormula>	PIC		root	<imageFormula>	CT_ImageFormula				.	.	.	.	.
+x:drawing/2022/imageformula:CT_ImageFormula	PIC		type	CT_ImageFormula					y	y	y	.	.
+x:drawing/2022/imageformula:CT_ImageFormula/@formula	PIC	CT_ImageFormula	attribute	@formula	string	optional			y	y	y	.	.
+x:drawing/2022/imageformula:<imageFormula>	PIC		root	<imageFormula>	CT_ImageFormula				.	y	y	.	.
 x:drawing/2015/06/chart:@formatcode2	CHART		rootattr	@formatcode2	ST_Xstring	optional			.	.	.	.	.
 x:drawing/2015/06/chart:<formatcode2>	CHART		root	<formatcode2>	ST_Xstring				.	.	.	.	.
 mc:<AlternateContent>	MCE		root	<AlternateContent>		optional		Part 3 9.1. Takes the first Choice whose Requires are understood, else Fallback. Both branches stay in the part	.	y	.	.	.
