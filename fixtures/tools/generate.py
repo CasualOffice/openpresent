@@ -255,6 +255,10 @@ def fixtures():
     yield from drawing_hostile()
     from generate_text import fixtures as text_fixtures  # imports this module, so not at the top
     yield from text_fixtures()
+    from generate_table import fixtures as table_fixtures  # imports this module, so not at the top
+    yield from table_fixtures()
+    from generate_media import fixtures as media_fixtures  # imports this module, so not at the top
+    yield from media_fixtures()
     from generate_shapes import fixtures as shape_fixtures  # imports this module, so not at the top
     yield from shape_fixtures()
     from generate_close import fixtures as close_fixtures  # as above

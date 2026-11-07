@@ -171,7 +171,6 @@ fn every_row_of_the_text_area_is_written_or_refused_or_left_alone() {
                     "{id}: nothing in the model, so nothing to write"
                 );
             }
-            (Outcome::Stated, Err(code)) => assert_eq!(code, "CS-EXP-0009", "{id}"),
             (outcome, other) => panic!("{id}: {outcome:?} gave {other:?}"),
         }
 
@@ -192,6 +191,29 @@ fn every_row_of_the_text_area_is_written_or_refused_or_left_alone() {
         }
     }
     assert!(written >= 110, "{written} rows written");
+}
+
+/// `uLn` is `a:CT_LineProperties` under another name, so a new child goes in at the same
+/// schema position: before an `extLst` that only the tree holds, and not after it.
+#[test]
+fn a_new_child_of_an_underline_line_goes_before_its_extension() {
+    let from = concat!(
+        r#"<a:bodyPr/><a:p><a:r><a:rPr><a:uLn w="1"><a:extLst><a:ext uri="{00000000-0000-0000-0000-000000000009}"/></a:extLst></a:uLn></a:rPr>"#,
+        r#"<a:t>x</a:t></a:r></a:p>"#
+    );
+    let mut wanted = read_part(slide_with_body(from).as_bytes());
+    let run = first_run_of_mut(&mut wanted.shape_tree_mut().unwrap().children[0]);
+    let properties = run.properties.as_mut().unwrap();
+    let Some(UnderlineLine::Line(line)) = properties.underline_line.as_mut() else {
+        panic!("no uLn");
+    };
+    line.fill = Some(Fill::None);
+    let bytes = patch_between(from, &wanted).unwrap();
+    let text = String::from_utf8(bytes.clone()).unwrap();
+    let fill = text.find("<a:noFill").unwrap();
+    let extension = text.find("<a:extLst").unwrap();
+    assert!(fill < extension, "{text}");
+    assert_eq!(read_part(&bytes), wanted);
 }
 
 #[test]
@@ -721,9 +743,7 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
     for change in [
         (|s| {
             let body = named_mut(s, "Bullets").text_body.as_mut().unwrap();
-            body.paragraphs[0].properties.as_mut().unwrap().bullet = Some(Bullet::Picture {
-                embed: Some("rId3".to_owned()),
-            });
+            body.paragraphs[0].properties.as_mut().unwrap().bullet = Some(Bullet::Picture(None));
         }) as fn(&mut SlidePart),
         |s| {
             named_mut(s, "No Autofit")
@@ -1141,17 +1161,11 @@ fn every_text_body_can_be_written_from_the_model() {
     /// only be told to keep what the tree has. A picture bullet's is Tier 1H's. A
     /// paragraph's `TextItem::Retained` is an inline equation's `mc:AlternateContent` or
     /// the like, Tier 1K's.
+    /// A retained item: the model holds a name and not its content.
     fn cannot_be_made(body: &TextBody) -> bool {
-        let picture = |p: &Option<Box<ParagraphProperties>>| {
-            p.as_ref()
-                .is_some_and(|p| matches!(p.bullet, Some(Bullet::Picture { .. })))
-        };
-        body.paragraphs.iter().any(|p| {
-            picture(&p.properties) || p.items.iter().any(|i| matches!(i, TextItem::Retained(_)))
-        }) || body
-            .list_style
-            .as_ref()
-            .is_some_and(|l| picture(&l.default) || l.levels.iter().any(picture))
+        body.paragraphs
+            .iter()
+            .any(|p| p.items.iter().any(|i| matches!(i, TextItem::Retained(_))))
     }
 
     #[derive(Default)]
@@ -1244,10 +1258,16 @@ fn every_text_body_can_be_written_from_the_model() {
         tally.written, tally.refused
     );
     assert!(tally.written > 1000, "{}", tally.written);
-    let by = |what: &str| tally.refused.iter().filter(|r| r.contains(what)).count();
-    assert_eq!(by("picture bullet"), 3, "{:?}", tally.refused);
-    assert_eq!(by("content this tier"), 2, "{:?}", tally.refused);
-    assert_eq!(tally.refused.len(), 5, "{:?}", tally.refused);
+    // A picture bullet is made now (`T1F-04`); only what is retained is refused.
+    assert!(
+        tally
+            .refused
+            .iter()
+            .all(|r| r.contains("content this tier")),
+        "{:?}",
+        tally.refused
+    );
+    assert_eq!(tally.refused.len(), 2, "{:?}", tally.refused);
 }
 
 #[test]

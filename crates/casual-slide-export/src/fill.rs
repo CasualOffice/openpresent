@@ -4,6 +4,8 @@ use casual_slide_model::fill::{
     Blip, BlipFill, BlipFillMode, Fill, GradientFill, GradientShade, PatternFill, RelativeRect,
 };
 
+use casual_slide_model::picture::{ImageFormula, OEmbed, SvgBlip};
+
 use crate::drawing::{Node, Space};
 use crate::effect::{effect_node, image_properties_node};
 
@@ -57,18 +59,68 @@ fn pattern(p: &PatternFill) -> Node {
         )
 }
 
+fn svg_blip(s: &SvgBlip) -> Node {
+    Node::extension("asvg:svgBlip")
+        .rel("embed", s.embed.as_ref())
+        .rel("link", s.link.as_ref())
+}
+
+fn image_formula(v: &ImageFormula) -> Node {
+    Node::extension("aif:imageFormula")
+        .lex("formula", v.formula.as_ref())
+        .ext_uri(v.ext_uri.as_ref())
+}
+
+fn oembed(o: &OEmbed) -> Node {
+    Node::extension("woe:oembed")
+        .lex("oEmbedUrl", o.o_embed_url.as_ref())
+        .lex("mediaType", o.media_type.as_ref())
+        .lex(
+            "picLocksAutoForOEmbed",
+            o.pic_locks_auto_for_o_embed.as_ref(),
+        )
+        .ext_uri(o.ext_uri.as_ref())
+}
+
+/// `a:CT_Blip`.
 // spec-audit: owner=blip
-fn blip(b: &Blip) -> Node {
+pub(crate) fn blip(b: &Blip) -> Node {
     let local_dpi = b
         .use_local_dpi
         .map(|v| Node::new(Space::A14, "useLocalDpi").lex("val", Some(&v)));
+    // A blip holds only these. Anything else is left out here, and refused by the read-back.
+    let effects = b.effects.iter().map(effect_node).filter(|n| {
+        matches!(
+            n.local(),
+            "alphaBiLevel"
+                | "alphaCeiling"
+                | "alphaFloor"
+                | "alphaInv"
+                | "alphaMod"
+                | "alphaModFix"
+                | "alphaRepl"
+                | "biLevel"
+                | "blur"
+                | "clrChange"
+                | "clrRepl"
+                | "duotone"
+                | "fillOverlay"
+                | "grayscl"
+                | "hsl"
+                | "lum"
+                | "tint"
+        )
+    });
     Node::a("blip")
         .rel("embed", b.embed.as_ref())
         .rel("link", b.link.as_ref())
-        .lex("cstate", b.compression.as_ref())
-        .list(b.effects.iter().map(effect_node))
+        .lex("cstate", b.cstate.as_ref())
+        .list(effects)
         .ext(b.image_properties.as_ref().map(image_properties_node))
         .ext(local_dpi)
+        .ext(b.svg.as_ref().map(svg_blip))
+        .ext(b.image_formula.as_ref().map(image_formula))
+        .ext(b.oembed.as_ref().map(oembed))
 }
 
 /// `a:CT_BlipFillProperties`: `a:blipFill`, or a picture's `p:blipFill`.

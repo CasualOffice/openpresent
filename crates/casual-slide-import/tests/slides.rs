@@ -381,9 +381,10 @@ fn every_node_kind_has_identity_transform_locks_and_links() {
             Some(true)
         )
     );
-    // What a node holds beyond this tier is in the report, by name.
+    // What a node holds beyond this tier is in the report, by name. A table no longer
+    // is: Tier 1G reads it.
     assert!(
-        s.findings.has(K::RetainedElement, "tbl"),
+        !s.findings.has(K::RetainedElement, "tbl"),
         "{:?}",
         s.findings
     );

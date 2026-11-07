@@ -33,6 +33,9 @@ use crate::properties::{
     Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns,
 };
 use crate::shape::{ShapeReader, SourceMap};
+use crate::table::{
+    TableBound, TableCounts, TableLimits, check_style_references, read_deck_table_styles,
+};
 use crate::text::{TextCounts, TextReader};
 use crate::theme::{read_color_map, read_color_map_override, read_style_matrix_ref};
 
@@ -54,6 +57,8 @@ pub struct SlideLimits {
     pub max_parts: usize,
     /// Entries in one master's `sldLayoutIdLst`. `CS-SLD-0004`.
     pub max_layout_ids: usize,
+    /// Bounds on tables and table styles.
+    pub table: TableLimits,
     /// Bounds on one drawing property of a shape or a run. `CS-DRW-0001`.
     pub drawing: DrawingLimits,
 }
@@ -66,6 +71,7 @@ impl Default for SlideLimits {
             max_slides: 100_000,
             max_parts: 250_000,
             max_layout_ids: 10_000,
+            table: TableLimits::default(),
             drawing: DrawingLimits::default(),
         }
     }
@@ -109,6 +115,16 @@ pub enum SlideError {
         /// The ordinal asked for.
         ordinal: u32,
     },
+    /// More of something in a table, or in the table style list, than
+    /// [`TableLimits`] allows.
+    Table {
+        /// Which bound.
+        bound: TableBound,
+        /// The part.
+        part: String,
+        /// The bound's value.
+        limit: usize,
+    },
 }
 
 impl SlideError {
@@ -121,6 +137,7 @@ impl SlideError {
             Self::TooManySlides { .. } => "CS-SLD-0003",
             Self::TooManyParts { .. } => "CS-SLD-0004",
             Self::NoSuchPart { .. } => "CS-SLD-0005",
+            Self::Table { bound, .. } => bound.code(),
         }
     }
 }
@@ -141,6 +158,13 @@ impl fmt::Display for SlideError {
                 write!(f, "[{code}] {what} over the limit {limit}")
             }
             Self::NoSuchPart { ordinal } => write!(f, "[{code}] no part {ordinal}"),
+            Self::Table { bound, part, limit } => {
+                write!(
+                    f,
+                    "[{code}] {part:?}: {} over the limit {limit}",
+                    bound.what()
+                )
+            }
         }
     }
 }
@@ -339,6 +363,7 @@ fn read_part(
                     map: map.as_deref_mut(),
                     color: &mut *color,
                     text_counts: TextCounts::default(),
+                    table_counts: TableCounts::default(),
                 };
                 p.common = Some(read_common(&mut shapes, &el)?);
             }
@@ -991,6 +1016,8 @@ pub struct ImportedSlides {
     pub findings: Findings,
     /// What the colour map readers noticed, across parts.
     pub color_findings: ColorFindings,
+    /// The `tableStyles` part, if there is one and it can be read.
+    pub table_styles: Option<casual_slide_model::table::TableStyleList>,
 }
 
 /// Index the deck and read every slide-like part. A part that is malformed or not
@@ -1032,9 +1059,19 @@ pub fn import_slide_parts(
             Err(err) => return Err(err),
         }
     }
+    let table_styles = read_deck_table_styles(
+        package,
+        limits,
+        import_limits,
+        &mut findings,
+        &mut color_findings,
+    )?;
+    let parts = SlideParts { structure, parts };
+    check_style_references(&parts, table_styles.as_ref(), &mut findings);
     Ok(ImportedSlides {
-        parts: SlideParts { structure, parts },
+        parts,
         findings,
         color_findings,
+        table_styles,
     })
 }

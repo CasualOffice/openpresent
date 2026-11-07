@@ -11,6 +11,7 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [01-ORD](01-ORD.md) | What and why; scope; targets | Draft for owner |
 | [02-ARCHITECTURE](02-ARCHITECTURE.md) | The shape; what is inherited from OpenCalc and what must differ | Draft for owner |
 | [03-OWNER-INSTRUCTIONS](03-OWNER-INSTRUCTIONS.md) | **Everything the owner instructed. Binding, and first in authority** | Live |
+| [04-MISTAKES-AND-RULES](04-MISTAKES-AND-RULES.md) | **Mistakes made, and the rule that stops each. Binds every session** | Live |
 | [05-PHASES-AND-TASKS](05-PHASES-AND-TASKS.md) | **What a phase, tier and task are; how each opens and closes** | Draft for owner |
 | [06-ROADMAP-AND-DELIVERY](06-ROADMAP-AND-DELIVERY.md) | The full roadmap: phases, tiers, exit gates | Draft for owner |
 | [07-SECURITY-THREAT-MODEL](07-SECURITY-THREAT-MODEL.md) | Every threat, its control, its test | Live |

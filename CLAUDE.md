@@ -7,6 +7,17 @@ Sister repo `../opencalc` is the architecture reference: copy from it with prove
 
 **[docs/03](docs/03-OWNER-INSTRUCTIONS.md) records everything the owner has instructed. Follow it without deviating.** Record each new instruction there in the same turn. If something seems wrong or conflicts, raise it; do not quietly choose. Within those instructions, make decisions yourself, thinking of the goal and the future, rather than asking.
 
+## Do not repeat these mistakes
+
+**Read [docs/04](docs/04-MISTAKES-AND-RULES.md) before starting work; its rules bind every session.** The ones that cost most:
+- Until Phase 1 closes, work only on model, import and export. No rendering, painting or fonts.
+- Biggest remaining work starts first. Independent stages all start at once.
+- Opening and editing the user's file comes first: neutralize attacks, refuse only what cannot be read.
+- Every status update gives the phase percentage, from the checklist, merged only. Short, plain language.
+- Say "stopped", "done" or "tested" only after checking by running. Read gate output before committing.
+- Nothing that can pop up or crash on the owner's desktop.
+- Decide, record it, carry on. Commit often, merge as soon as gates pass, keep the disk clear.
+
 ## What this is
 
 An **enterprise-grade** PowerPoint-compatible engine and editor, on **web and desktop**. Not an MVP or a demo.

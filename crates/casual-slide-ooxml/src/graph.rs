@@ -27,6 +27,12 @@ const COMPOUND_FILE_MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 
 const PML: &str = "application/vnd.openxmlformats-officedocument.presentationml.";
 const PPT_MACRO: &str = "application/vnd.ms-powerpoint.";
 
+/// Relationship types in `MS-PPTX` that a presentation's audio, video and captions use.
+const MICROSOFT_MEDIA_RELS: &[&str] = &[
+    "http://schemas.microsoft.com/office/2007/relationships/media",
+    "http://schemas.microsoft.com/office/2017/04/relationships/track",
+];
+
 /// Relationship types in ECMA-376 that a presentation may use (`docs/spec/parts.md`).
 /// Transitional files spell two with a hyphen, as real decks do; Strict does not.
 const KNOWN_RELS: &[&str] = &[
@@ -353,6 +359,14 @@ impl PresentationPackage {
         self.package.consumed()
     }
 
+    /// Read a part that is not XML, such as a picture or a clip, within a caller's ceiling.
+    /// A part declaring more than `max` is refused as `CS-PKG-0009` with nothing
+    /// decompressed.
+    pub fn read_part_capped(&mut self, name: &str, max: u64) -> Result<Vec<u8>, OoxmlError> {
+        let actual = self.actual_name(name)?;
+        Ok(self.package.read_part_capped(&actual, max)?)
+    }
+
     /// Read an XML part for use: its tree, keeping every branch and byte, and what
     /// markup compatibility says applies. Refuses a must-understand namespace that
     /// is not understood, in the part as read and not in a branch not taken.
@@ -555,6 +569,8 @@ fn inspect_type(
         // Core properties live in a namespace of their own.
         _ if r.rel_type.ends_with("/metadata/core-properties") => {}
         _ if r.rel_type.ends_with("/metadata/thumbnail") => {}
+        // `MS-PPTX` "Media Part" and "Track Part".
+        _ if MICROSOFT_MEDIA_RELS.contains(&r.rel_type.as_str()) => {}
         _ => note(FindingKind::UnknownRelationshipType, part, id),
     }
 }

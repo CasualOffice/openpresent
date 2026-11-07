@@ -55,7 +55,7 @@
 | F-006 | Microsoft's Open XML validator | Done | P0 | SDK 3.5.1 pinned, on Linux in CI. 31 decks: 25 clean, 6 only as recorded in `false-positives.tsv`. Installed `dotnet` by formula, since the cask needs `sudo` | Seeded invalid element rejected; not yet run on GitHub |
 | F-007 | Real PowerPoint-written decks | Done | P0 | 66 tested, 12 committed: 54 Windows, 11 Mac by `app.xml`, which can be false. All 66 open, import, save unedited and force-rewrite with 4,634 parts byte-identical. **Import reads only presentation, properties and theme parts, so slides are not yet shown to be understood.** None has Zoom or equations; the only Morph deck is local | [fixtures/real](../fixtures/real/README.md) |
 | UX-002 | Live-session measurements | Open | P1 | [50](50-POWERPOINT-UX-STUDY.md) §40 lists 21 measurements, and §42 the behaviours only a live session settles: marquee rule, group entry, undo depth, web default ribbon. Run with `PV-01`'s access, earlier if possible | Each recorded, and rules corrected |
-| PV-01 | PowerPoint verification | Open | P0 | Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Microsoft publishes no repair-trigger list, and a schema-valid deck can still prompt, so also open the seeded `RR-*` fixtures. Run whenever access exists; earlier is cheaper | Before first stable release |
+| PV-01 | PowerPoint verification | Open | P0 | Includes every row in `tools/ooxml-sdk/false-positives.tsv` (owner instruction 25). Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Microsoft publishes no repair-trigger list, and a schema-valid deck can still prompt, so also open the seeded `RR-*` fixtures. Run whenever access exists; earlier is cheaper | Before first stable release |
 | PPT-01 | Import legacy `.ppt` | Open | P2 | `DEC-08`. CFB and MS-PPT parsers with limits and fuzz targets | Phase 10 |
 | NAME-01 | Rename product to OpenPresent | In progress | P2 | README, AGENTS and docs renamed; docs 19 and 22 follow 1D's merge. GitHub description and topics set. Crate prefix, skill names and folder unchanged | No product use of the old name remains |
 | DOC-007 | Owner instruction log | Done | P0 | [03](03-OWNER-INSTRUCTIONS.md), first in authority, cited from `CLAUDE.md` | Exists, indexed |
@@ -101,7 +101,7 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged. All 12 committed real decks import through slide import. Open: `T1D-03`. Most spec rows still lack fixtures, so the tier gate is not met | Per-tier gate in 06 |
 | T-1E | Geometry, fills, lines, effects, 3D | In progress | P0 | Built and merged: 362 tests, 13 hostile decks, fuzz target, 12 real decks clean. No shape-level gradient or pattern in the real decks, only generated ones. Status marks need the audit to see `token_enum!` values (`STAT-01`) | Per-tier gate in 06 |
 | T-1F | Text model | In progress | P0 | Built and merged: text bodies, all properties, 41 autonumber schemes, inheritance chain, fuzz target. Real decks are fixed points. Open: `T1F-04` | Per-tier gate in 06 |
-| T-1G | Tables | Open | P0 | 113 rows | Per-tier gate |
+| T-1G | Tables | In progress | P0 | Gate met except item 1's reasons: 96 rows marked, 17 blank with reasons only in the report until `SPEC-09` can gate them | Per-tier gate in 06 |
 | T-1H | Pictures and media | Open | P0 | 116 rows | Per-tier gate |
 | T-1I | Timing and transitions | Open | P0 | 522 rows | Per-tier gate |
 | T-1J | Charts | Open | P0 | 1764 rows | Per-tier gate |
@@ -189,12 +189,12 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | DOC-010 | Register codes | Done | P1 | 107 codes; `check-error-codes.py` both directions | Gate seen failing |
 | F-009 | Clear rights on a Morph deck, and find Zoom and equation decks | Open | P1 | The only Morph deck stays local; Zoom and equations have no deck | Committed decks |
 | GEO-06 | Geometry labels | Done | P2 | Now GEO-02a to GEO-02e | Gate |
-| T1E-06 | Tier 1E leftovers | Open | P1 | `prstTxWarp` reader not called, `CT_FlatText`, `CT_Connection`, `DrawingLimits` not threaded through `SlideLimits`, colour findings lose `CS-CLR` on slide parts, older `2007/7/7` namespace reported not modelled | Per-tier gate |
-| DRAW-01 | `ST_PositiveCoordinate` wider than PowerPoint accepts | Open | P1 | MS-OI29500 2.1.1330: PowerPoint stops at 2147483647. We keep the schema's range, so a huge bevel could be written that it may reject | Writer refuses or clamps; test |
-| T1F-04 | Tier 1F leftovers | Open | P1 | Picture bullet with 1H; `bodyPr` `scene3d`, `sp3d`, `flatTx`; warp `avLst`; 5 bodies refused on full rewrite, assumed picture bullets, unchecked; `every_text_body_can_be_written_from_the_model` takes 75 s | Per-tier gate |
-| STYLE-01 | Inheritance gaps | Open | P0 | Theme object defaults (`txDef`, `lnDef`, `spDef`) and `p:style/fontRef` not in the chain, so text colour from a shape style resolves wrongly. MS-OI29500 2.1.1379, 1388, 1399 | BEH-02 table cases |
+| T1E-06 | Tier 1E leftovers | Done | P1 | `prstTxWarp`, `CT_FlatText`, `CT_Connection`, `DrawingLimits` through `SlideLimits`; older `2007/7/7` namespace read as `a14`, in-place edit there untested | Seen red |
+| DRAW-01 | `ST_PositiveCoordinate` limit | Done | P1 | New values above 2147483647 refused; held values kept | Tested at limit plus one |
+| T1F-04 | Tier 1F leftovers | Done | P1 | `bodyPr` 3D and warp modelled. 5 refused bodies: 3 picture bullets (1H), 2 inline equations (`T1K-02`), now pinned. The 75 s test is 19 s | Other refusals fail the test |
+| STYLE-01 | Inheritance gaps | Done | P0 | `p:style`, `txDef`, `lnDef`, `spDef`, `fontRef` in the chain. The layout's and `fontRef`'s places are Inferred; whether defaults narrow by shape kind is open until `PV-01` | BEH-02 cases seen red |
 | COLOR-04 | One rule for colour finding codes | Open | P2 | **Decided:** colour findings keep `CS-CLR` everywhere. Today 1E folds them to `CS-IMF` while `highlight` keeps `CS-CLR` | Same bad colour gives one code |
-| CLOSE-01 | Close Tiers 1E and 1F | In progress | P0 | Owner instruction 22. `T1E-06`, `T1F-04`, `STYLE-01`, `DRAW-01`; status marks for both, audited | Per-tier gate, item by item |
+| CLOSE-01 | Close Tiers 1E and 1F | In progress | P0 | Gate items 2 to 7 met. Item 1 not: of 1,399 rows, 1,128 `y y y`, 9 retained, 86 partly marked, 176 blank. 257 marks are `a14` picture effects the audit cannot place. Audit rules were made more generous; main session planted 40 false marks in unbuilt tiers and all were caught | Every row marked or with a named reason |
 | FID-04 | LibreOffice crashed on the owner's Mac | Open | P1 | 8 crash reports 2026-11-07. Of 184 writer results, 6 aborted, all from `rich-properties` and `strict-properties`, decks invalid on purpose; no baseline on unedited inputs, and a second run has no log. Tools refuse without `OPENPRESENT_ALLOW_SOFFICE=1`. F7 off here; run in a Linux container | One run with the cause recorded |
 | CLOSE-02 | Close Tiers 1A to 1D | In progress | P0 | Owner instruction 22. Export marks are low (27); many rows have no fixture | Per-tier gate, item by item |
 | F-010 | SDK refuses 6 real decks as written | Open | P2 | **Decided: `check.py` stays a report.** Signed `c:axId`, `mod` on `extLst`, `showLeaderLines`, `showDLblsOverMax`. The SDK is no stand-in for what PowerPoint writes in charts | Reviewed at `PV-01` |
@@ -205,6 +205,10 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | REC-05 | Recovery: edit and save | In progress | P0 | Unedited save returns original bytes; an edit writes a valid file through the preflight; report in plain language; host `strict` option | Damage corpus output passes F4 |
 | REC-06 | Compare with PowerPoint's refusals | Open | P1 | Claims wait for `PV-01` | Recorded per deck |
 | T1N-07 | Writer leftovers | Open | P1 | `check_zip` call in `emit` not proven by any test; 7 seeded decks do not open, save and report as docs/36 says; `fixtures/rr` not in CI's SDK job | Per-tier gate |
+| CLOSE-03 | Finish 1E and 1F marks | Open | P0 | Annotate `a14` effects for the audit; record reasons for rows left unmarked (`SPEC-09`) | Gate item 1 |
+| SPEC-09 | A place for named reasons | Open | P0 | Checklist has no column for why a row is unmarked, so "or carries a named reason" cannot be gated | `audit.py --check` fails on an unaccounted row |
+| T1C-03 | Theme default `spPr` not reported, no writer for object defaults | Open | P1 | Part of `T1C-02` | Silent-drop test covers themes |
+| T2E-01 | Built-in table style definitions | Open | P1 | Real decks name built-in GUIDs with an empty `tableStyles.xml`, so tables would look unstyled when rendered. Phase 2. Definitions must be ours, not copied | Styled tables render |
 | GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
@@ -243,13 +247,13 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1F-01 | Text structure | Done | P0 | `txBody`, `bodyPr`, `lstStyle`, paragraphs, runs, breaks, fields; `defaultTextStyle`, master text styles. Fills, lines and effects on runs go through 1E | Fixed point on real decks |
 | T1F-02 | Text properties | Done | P0 | Every run and paragraph property; fonts as the file states them, with no metrics | All enum values read from the checklist |
 | T1F-03 | Autofit properties | Done | P0 | Stored as written; recomputation is 2D6 | Stored values round-trip |
-| T1G-01 | Tables | In progress | P0 | `tbl`, grid, rows, cells, merges, cell properties, text via 1F | Fixed point; merged-cell fixtures |
-| T1G-02 | Table styles | In progress | P1 | `tableStyles.xml`, unknown style GUID reported (BEH-29) | Unknown GUID never crashes |
+| T1G-01 | Tables | Done | P0 | `a:tbl`, grid, rows, cells, merges, cell properties. Merge behaviour rests on synthetic fixtures only: no real deck has a merged table. Adding or removing rows, cells or columns is refused until Phase 6 | Fixed point; 20 mutants red |
+| T1G-02 | Table styles | Done | P1 | `tableStyles.xml`; unknown GUID reported. Real decks name built-in styles and we hold no definitions: `T2E-01` | Unknown GUID never crashes |
 | T1H-01 | Pictures | In progress | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
 | T1H-02 | SVG with PNG fallback | In progress | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
 | T1H-03 | Audio and video | In progress | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
-| T1I-01 | Timing tree | Open | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
-| T1I-02 | Transitions | Open | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
+| T1I-01 | Timing tree | In progress | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
+| T1I-02 | Transitions | In progress | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
 | T1J-01 | Classic charts | Open | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |
 | T1J-02 | Chart extensions and styles | Open | P1 | `c14`, `c15`, `c16`, chart style and colour parts. BEH-26 | Retained with base chart |
 | T1J-03 | 2016+ charts | Open | P1 | `cx:` with `AlternateContent` fallback, 8 layouts | Fallback kept with chart |
@@ -259,9 +263,9 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1L-01 | OLE and controls | Open | P1 | Retained with fallback image; never opened; `SEC-C07` | Bytes compared |
 | T1L-02 | VML | Open | P2 | Legacy drawing parts retained; schema-checked in F4 | Bytes compared |
 | T1L-03 | 3D models | Open | P2 | Retained with fallback until `D3-01` | Bytes compared |
-| T1M-01 | Comments | Open | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
-| T1M-02 | Sections, zoom, classification | Open | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
-| T1M-03 | Review and custom data | Open | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
+| T1M-01 | Comments | In progress | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
+| T1M-02 | Sections, zoom, classification | In progress | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
+| T1M-03 | Review and custom data | In progress | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
 | T1N-01 | Writer: part naming and rIds | Done | P0 | 11 PN and 10 RI rules, each with a seeded `RR-*` fixture. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
 | T1N-02 | Writer: content types and shared parts | Done | P0 | 10 CT and 10 SP rules, with fixtures. 3D models shared like media. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
 | T1N-03 | Writer: id rules and sections | Done | P0 | 9 ID and 5 NM rules, with fixtures. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |

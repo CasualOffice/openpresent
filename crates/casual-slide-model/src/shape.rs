@@ -214,8 +214,7 @@ impl Action {
     }
 }
 
-/// `a:CT_Hyperlink`, for `hlinkClick` and `hlinkHover`. `snd` and `extLst` stay in
-/// the tree.
+/// `a:CT_Hyperlink`, for `hlinkClick` and `hlinkHover`. `extLst` stays in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Hyperlink {
     /// `@r:id`. Empty is meaningful: an action with no target part.
@@ -234,6 +233,8 @@ pub struct Hyperlink {
     pub highlight_click: Option<bool>,
     /// `@endSnd`.
     pub end_sound: Option<bool>,
+    /// `snd`.
+    pub sound: Option<crate::media::EmbeddedWavAudioFile>,
 }
 
 /// `a:CT_NonVisualDrawingProps`, `cNvPr`.
@@ -369,7 +370,7 @@ pub struct Connection {
     pub site: u32,
 }
 
-/// Which `EG_Media` child `nvPr` holds. The media itself is Tier 1H.
+/// Which `EG_Media` child `nvPr` holds. [`crate::media::Media`] holds what it says.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MediaKind {
     /// `a:audioCd`.
@@ -384,14 +385,16 @@ pub enum MediaKind {
     QuickTimeFile,
 }
 
-/// `p:CT_ApplicationNonVisualDrawingProps`, `nvPr`. `custDataLst` and `extLst`
-/// stay in the tree.
+/// `p:CT_ApplicationNonVisualDrawingProps`, `nvPr`. `custDataLst` and other `extLst`
+/// entries stay in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AppNonVisual {
     /// `ph`.
     pub placeholder: Option<Placeholder>,
     /// The `EG_Media` child, if any.
-    pub media: Option<MediaKind>,
+    pub media: Option<crate::media::Media>,
+    /// `extLst/ext/p14:media`.
+    pub media_extension: Option<Box<crate::media::MediaExtension>>,
     /// `@isPhoto`.
     pub is_photo: Option<bool>,
     /// `@userDrawn`.
@@ -582,6 +585,8 @@ pub struct ShapeNode {
     /// `@useBgFill`, shapes only.
     // spec-audit: p:CT_Shape/@useBgFill
     pub use_bg_fill: Option<bool>,
+    /// `cNvPicPr/@preferRelativeResize`, pictures only.
+    pub prefer_relative_resize: Option<bool>,
     /// Geometry, fill, line, effects and 3D: Tier 1E.
     // spec-audit: p:CT_Shape/spPr
     // spec-audit: p:CT_Connector/spPr
@@ -596,9 +601,11 @@ pub struct ShapeNode {
     /// `@r:id`, content parts only.
     // spec-audit: p:CT_Rel/@r:id
     pub rel_id: Option<String>,
-    /// `txBody`, shapes only. A table cell's text is Tier 1G's.
+    /// `txBody`, shapes only. A table cell's text is in [`Self::table`].
     // spec-audit: p:CT_Shape/txBody
     pub text_body: Option<Box<TextBody>>,
+    /// `a:tbl` in the frame's `graphicData`, graphic frames only.
+    pub table: Option<Box<crate::table::Table>>,
     /// `p:style` on a shape, connector or picture: references into the theme.
     // spec-audit: p:CT_Shape/style
     // spec-audit: p:CT_Connector/style
@@ -629,10 +636,12 @@ impl ShapeNode {
             transform: None,
             bw_mode: None,
             use_bg_fill: None,
+            prefer_relative_resize: None,
             properties: crate::drawing::ShapeProperties::default(),
             graphic_uri: None,
             rel_id: None,
             text_body: None,
+            table: None,
             style: None,
             children: Vec::new(),
         }
@@ -641,6 +650,16 @@ impl ShapeNode {
     /// The node's placeholder, if it is one.
     pub fn placeholder(&self) -> Option<&Placeholder> {
         self.app.as_ref()?.placeholder.as_ref()
+    }
+
+    /// A media node's poster frame: the blip of the picture its `nvPr` sits on. `None`
+    /// on anything else, a picture with no media included.
+    pub fn poster(&self) -> Option<&crate::fill::Blip> {
+        let app = self.app.as_ref()?;
+        if app.media.is_none() && app.media_extension.is_none() {
+            return None;
+        }
+        self.properties.picture.as_ref()?.blip.as_ref()
     }
 
     /// Every node in the subtree, this one first, depth first. Iterative.

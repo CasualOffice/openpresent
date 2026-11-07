@@ -7,7 +7,8 @@
 //! Tier 1D resolves what Tier 1D models: placeholder matching, transform, colour
 //! map, background, header and footer flags, the visibility of master and layout
 //! shapes, a slide's hidden flag, and which master text style applies. Tier 1F adds
-//! every text property, in [`text`]. Fills and lines join as their tiers model them.
+//! every text property, in [`text`], and Tier 1G what a table's style says of a cell, in
+//! [`table`]. Fills and lines join as their tiers model them.
 //!
 //! # Placeholder matching (BEH-01)
 //!
@@ -47,6 +48,7 @@
 //! | Text style | Title placeholders take `titleStyle`; `dt`, `ftr`, `sldNum`, `hdr` and non-placeholders `otherStyle`; other placeholders `bodyStyle`; a notes body `notesStyle`; else the presentation default | ECMA-376 19.3.1.51 for title, body, other; the footer types Inferred |
 //! | Text properties | Run or paragraph, shape list style, the shape's `fontRef`, layout placeholder, the theme's object defaults, master placeholder, master text styles, presentation default | [`text`] |
 
+pub mod table;
 pub mod text;
 
 use casual_slide_model::presentation::{Point, PositiveSize};

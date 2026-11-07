@@ -7,11 +7,13 @@ pub mod effect;
 pub mod fill;
 pub mod geometry;
 pub mod line;
+pub mod media;
 pub mod presentation;
 pub mod properties;
 #[rustfmt::skip]
 mod schema_names;
 pub mod shape;
 pub mod slide;
+pub mod table;
 pub mod text;
 pub mod theme;

@@ -87,8 +87,6 @@ vt:CT_Vector/@size	M	CLOSE-02	Recomputed from the items on every write, so the m
 r:@pict	MIE	T-1L	VML only
 r:@href	MIE	T-1L	VML only
 r:@embed	M	CLOSE-01	The field is in fill.rs, owned by CLOSE-01: `spec-audit: r:@embed` belongs there
-p:CT_ApplicationNonVisualDrawingProps/EG_Media	MIE	T-1H	Media in nvPr is read with media
-p:CT_Picture/blipFill	M	T-1H	Held by the picture work, not yet a field of the shape node
 a:CT_LineStyleList/ln	M	T1C-02	Format scheme internals, after 1E
 a:CT_EffectStyleList/effectStyle	M	T1C-02	Format scheme internals, after 1E
 a:CT_StyleMatrix/fillStyleLst	E	T1C-02	Format scheme internals are not written until T1C-02
@@ -112,3 +110,7 @@ p:CT_GraphicalObjectFrameNonVisual/cNvPr	E	T1N-04	Patched in place; a required s
 p:CT_GraphicalObjectFrameNonVisual/nvPr	E	T1N-04	Patched in place; a required structural node a save does not create
 a:CT_NonVisualDrawingProps/hlinkClick	E	CLOSE-02	A save asked to restore a removed hyperlink does not put it back, seen in checklist_rows.rs; not yet diagnosed
 a:CT_NonVisualDrawingProps/hlinkHover	E	CLOSE-02	A save asked to restore a removed hyperlink does not put it back, seen in checklist_rows.rs; not yet diagnosed
+p:CT_Picture/blipFill	M	T-1H	The picture session holds it; no field of the shape node says this is the row
+r:@link	M	CLOSE-01	The field is in fill.rs, owned by CLOSE-01: `spec-audit: r:@link` belongs there
+p:CT_GraphicalObjectFrame/a:graphic	E	T1N-04	Patched in place; a required structural node a save does not create
+a:CT_GraphicalObject/graphicData	E	T1N-04	Patched in place; a required structural node a save does not create

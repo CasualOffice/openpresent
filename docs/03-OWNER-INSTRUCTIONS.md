@@ -33,6 +33,8 @@ by saying so.
 | 22 | 2026-11-07 | Do not leave work at "built". Complete it: a tier counts only when it meets its exit gate | [CLAUDE.md](../CLAUDE.md), [05](05-PHASES-AND-TASKS.md) |
 | 23 | 2026-11-07 | LibreOffice keeps crashing on the owner's machine: stop it. Tools must not start it unless asked on purpose | `OPENPRESENT_ALLOW_SOFFICE`, `FID-04` |
 | 24 | 2026-11-07 | We must open even malformed files, and edit them, including ones Microsoft discards or fails to open. That is an advantage, not a fault. Supersedes refusing malformed input | [29](29-RECOVERY.md), ADR-015, `REC-*` |
+| 25 | 2026-11-07 | Keep the list of known disagreements with Microsoft's validator: keep testing everything the standard allows, write down each disagreement with its reason, and recheck all of them against real PowerPoint before release. Editing `tools/ooxml-sdk/false-positives.tsv` is approved for this | `F-010`, `PV-01` |
+| 26 | 2026-11-07 | Write down your mistakes and their solutions, so they do not happen again | [04](04-MISTAKES-AND-RULES.md), [CLAUDE.md](../CLAUDE.md) |
 
 ## Boundaries set by the environment
 

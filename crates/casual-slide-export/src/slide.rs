@@ -8,7 +8,8 @@
 //! What this tier writes: a node's transform, `cNvPr` attributes, hyperlink
 //! attributes, locks, `txBox`, placeholder attributes, `isPhoto`, `userDrawn`,
 //! `useBgFill`, `bwMode`, through `drawing.rs` its geometry, fill, line, effects
-//! and 3D, and through `text.rs` its text body; a part's root attributes,
+//! and 3D, through `text.rs` its text body, and through `table.rs` a frame's table; a
+//! part's root attributes,
 //! `cSld/@name`, `clrMap` slots, `clrMapOvr`, `hf`, `txStyles` and `notesStyle`.
 //! Anything else that differs (a node added, removed
 //! or reordered, a background, a layout list) is refused as `CS-SLE-0001`, and
@@ -386,10 +387,12 @@ impl Patch<'_, '_> {
             || b.transform != a.transform
             || b.bw_mode != a.bw_mode
             || b.use_bg_fill != a.use_bg_fill
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
             || b.rel_id != a.rel_id
             || b.text_body != a.text_body
+            || b.table != a.table
             || b.style != a.style;
         if own_changed {
             let mapped = self
@@ -428,6 +431,7 @@ impl Patch<'_, '_> {
         let changed_nv = b.non_visual != a.non_visual
             || b.locks != a.locks
             || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.start_connection != a.start_connection
             || b.end_connection != a.end_connection
             || b.app != a.app;
@@ -453,6 +457,14 @@ impl Patch<'_, '_> {
             a.text_body.as_ref(),
             |w, el, before, after| patch_text_body(w, el, before.map(|b| &**b), after),
         )?;
+        if b.table != a.table {
+            crate::table::patch_frame_table(
+                &mut self.w,
+                el,
+                b.table.as_deref(),
+                a.table.as_deref(),
+            )?;
+        }
         if a.style.is_some()
             && !matches!(
                 a.kind,
@@ -519,9 +531,15 @@ impl Patch<'_, '_> {
                 )?;
             }
         }
-        if b.locks != a.locks || b.text_box != a.text_box {
+        if b.locks != a.locks
+            || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
+        {
             let el = self.child(container, ns::PML, a.kind.non_visual_properties())?;
             let el = self.need(el, "the kind's non-visual properties")?;
+            if a.kind == NodeKind::Picture {
+                return self.c_nv_pic_pr(&el, b, a);
+            }
             self.w
                 .attr(&el, "txBox", b.text_box.as_ref(), a.text_box.as_ref())?;
             let lock = a.kind.lock_element();
@@ -550,6 +568,26 @@ impl Patch<'_, '_> {
         Ok(())
     }
 
+    fn c_nv_pic_pr(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
+        self.w.attr(
+            el,
+            "preferRelativeResize",
+            b.prefer_relative_resize.as_ref(),
+            a.prefer_relative_resize.as_ref(),
+        )?;
+        sync_ordered(
+            &mut self.w,
+            el,
+            ns::DML,
+            "a",
+            &["picLocks", "extLst"],
+            "picLocks",
+            b.locks.as_ref(),
+            a.locks.as_ref(),
+            pic_locks,
+        )?;
+        Ok(())
+    }
     // spec-audit: owner=cNvPr
 
     fn drawing(&mut self, el: &Elem, b: &NonVisualDrawing, a: &NonVisualDrawing) -> Result<()> {
@@ -585,9 +623,7 @@ impl Patch<'_, '_> {
     // spec-audit: owner=nvPr
 
     fn app(&mut self, el: &Elem, b: &AppNonVisual, a: &AppNonVisual) -> Result<()> {
-        if b.media != a.media {
-            return Err(self.unsupported("media"));
-        }
+        crate::media::patch_app_media(&mut self.w, el, b, a)?;
         self.w
             .attr(el, "isPhoto", b.is_photo.as_ref(), a.is_photo.as_ref())?;
         self.w.attr(
@@ -784,6 +820,32 @@ fn patch_text_styles(
     Ok(())
 }
 
+/// `AG_Locking`, as any node has it, and `noCrop`, which only a picture does.
+fn pic_locks(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&Locks>,
+    a: &Locks,
+) -> std::result::Result<(), ExportError> {
+    w.attr(
+        el,
+        "noCrop",
+        b.and_then(|b| b.no_crop.as_ref()),
+        a.no_crop.as_ref(),
+    )?;
+    let without = |l: &Locks| Locks {
+        no_crop: None,
+        ..*l
+    };
+    patch_locks(
+        w,
+        el,
+        NodeKind::Picture,
+        b.map(without).as_ref(),
+        &without(a),
+    )
+}
+
 // spec-audit: owner=spLocks,grpSpLocks,cxnSpLocks,picLocks,graphicFrameLocks
 fn patch_locks(
     w: &mut Writer<'_>,
@@ -850,7 +912,14 @@ pub(crate) fn patch_hyperlink(
         b.highlight_click.as_ref(),
         a.highlight_click.as_ref(),
     )?;
-    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())
+    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())?;
+    if b.sound != a.sound {
+        let holder = |link: &Hyperlink| {
+            crate::drawing::Node::a("hlink").opt(link.sound.as_ref().map(crate::media::snd))
+        };
+        crate::drawing::patch(w, el, Some(&holder(b)), &holder(a))?;
+    }
+    Ok(())
 }
 
 // spec-audit: owner=ph
