@@ -529,7 +529,6 @@ fn models(bytes: Vec<u8>) -> (Deck, Vec<Option<SlidePart>>) {
 /// `REC-08`, 1R gate item 4: a recovered deck is a fixed point. What the repair writes reads
 /// as the recovered deck did, and saving that unedited gives it back.
 #[test]
-#[ignore = "finding REC-08: repair_deck refuses layout-local-header, INV-TH-02 stale thumbnail"]
 fn a_recovered_deck_is_a_fixed_point() {
     for (name, bytes) in recovered_decks() {
         let before = models(bytes.clone());
