@@ -14,7 +14,7 @@ here that the code does not keep is a defect, and is a tracker row, not a doc ed
 
 Status, as in [07](07-SECURITY-THREAT-MODEL.md): **Tested** means a test or hostile
 fixture exercises the ceiling. **Untested** means the code enforces it and nothing has
-been seen to fail without it, so it may not be relied on (`SEC-016`).
+been seen to fail without it, so it may not be relied on (`SEC-016`). **Partial** means a fixture or test exercises it, but the guard has not been seen to fail with it removed.
 
 ## Layers
 
@@ -74,13 +74,13 @@ The recovering XML reader, `crates/casual-slide-ooxml/src/recover_xml.rs` (`REC-
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `max_xml_part_bytes` | `256 << 20` | One XML part handed to the walker or the tree, refused on its declared size before inflating (`SEC-P13`) | CS-XML-0006 | **Untested** (`SEC-016`) |
-| `max_xml_elements` | `20_000_000` | Elements in one part | CS-XML-0001 | **Untested** (`SEC-016`) |
+| `max_xml_part_bytes` | `256 << 20` | One XML part handed to the walker or the tree, refused on its declared size before inflating (`SEC-P13`) | CS-XML-0006 | Tested; fixture `xml-part-over-size`, seen red with the cap removed (`SEC-016`) |
+| `max_xml_elements` | `20_000_000` | Elements in one part | CS-XML-0001 | Tested; fixture `xml-too-many-elements`, seen red with the cap removed (`SEC-016`) |
 | `max_xml_depth` | `256` | Nesting depth in one part | CS-XML-0002 | Tested; `hostile/deep-nesting.bin` |
-| `max_xml_attributes` | `1024` | Attributes on one element | CS-XML-0003 | **Untested** (`SEC-016`) |
-| `max_part_relationships` | `200_000` | Relationships declared by one part | CS-OPC-0002 | **Untested** (`SEC-016`) |
-| `max_total_relationships` | `2_000_000` | Relationships across the package | CS-OPC-0002 | **Untested** (`SEC-016`) |
-| `max_content_types` | `200_000` | Entries in `[Content_Types].xml` | CS-OPC-0003 | **Untested** (`SEC-016`) |
+| `max_xml_attributes` | `1024` | Attributes on one element | CS-XML-0003 | Tested; fixture `xml-too-many-attributes`, seen red with the cap removed (`SEC-016`) |
+| `max_part_relationships` | `200_000` | Relationships declared by one part | CS-OPC-0002 | Tested; fixture `rels-per-part`, seen red with the cap removed (`SEC-016`) |
+| `max_total_relationships` | `2_000_000` | Relationships across the package | CS-OPC-0002 | Tested; fixture `rels-total`, seen red with the cap removed (`SEC-016`) |
+| `max_content_types` | `200_000` | Entries in `[Content_Types].xml` | CS-OPC-0003 | Tested; fixture `content-types-flood`, seen red with the cap removed (`SEC-016`) |
 | `MAX_ENCODING_LAYERS` | `8` | Rounds of percent-decoding a part name or target may need; more is refused (`OPC-01`) | CS-FND-0011 as a finding | Tested |
 | `MAX_REPORTED_ID_BYTES` | `64` | Bytes of a relationship id a finding will repeat, with its form checked as an NCName; longer or otherwise is left out, and still works as an id (`DOC-009`) | none: left out of the finding | Tested |
 
@@ -243,15 +243,15 @@ Each fixture is seen to read with its bound raised by one (`raising_each_limit_b
 
 | Field | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `max_chart_parts` | `8_192` | Chart-family parts read in one deck | CS-CHT-0001 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
-| `max_series` | `4_096` | Series in one part | CS-CHT-0002 | Tested; `hostile/chart-limit-series.bin` |
-| `max_points` | `1_048_576` | Cached points in one part | CS-CHT-0003 | Tested; `hostile/chart-limit-points.bin` |
-| `max_data_points` | `262_144` | `dPt` and `cx:dataPoint` in one part | CS-CHT-0004 | Tested; `hostile/chart-limit-data-points.bin` |
-| `max_data_labels` | `262_144` | `dLbl` and `cx:dataLabel` in one part | CS-CHT-0005 | Tested; `hostile/chart-limit-data-labels.bin` |
-| `max_levels` | `4_096` | `lvl` in one part | CS-CHT-0006 | Tested; `hostile/chart-limit-levels.bin` |
-| `max_anchors` | `65_536` | Anchors in one chart drawing | CS-CHT-0007 | Tested; `hostile/chart-limit-anchors.bin` |
-| `max_extensions` | `262_144` | `ext` in one part | CS-CHT-0008 | Tested; `hostile/chart-limit-extensions.bin` |
-| `max_group_depth` | `64` | Groups nested in one chart drawing, the one recursion in these schemas | CS-CHT-0009 | Tested; `hostile/chart-limit-group-depth.bin` |
+| `max_chart_parts` | `8_192` | Chart-family parts read in one deck | CS-CHT-0001 | Partial: with the bound lowered: a deck crossing the default is too large to commit; guard not seen failing (`SEC-021`) |
+| `max_series` | `4_096` | Series in one part | CS-CHT-0002 | Partial: `hostile/chart-limit-series.bin`; guard not seen failing (`SEC-021`) |
+| `max_points` | `1_048_576` | Cached points in one part | CS-CHT-0003 | Partial: `hostile/chart-limit-points.bin`; guard not seen failing (`SEC-021`) |
+| `max_data_points` | `262_144` | `dPt` and `cx:dataPoint` in one part | CS-CHT-0004 | Partial: `hostile/chart-limit-data-points.bin`; guard not seen failing (`SEC-021`) |
+| `max_data_labels` | `262_144` | `dLbl` and `cx:dataLabel` in one part | CS-CHT-0005 | Partial: `hostile/chart-limit-data-labels.bin`; guard not seen failing (`SEC-021`) |
+| `max_levels` | `4_096` | `lvl` in one part | CS-CHT-0006 | Partial: `hostile/chart-limit-levels.bin`; guard not seen failing (`SEC-021`) |
+| `max_anchors` | `65_536` | Anchors in one chart drawing | CS-CHT-0007 | Partial: `hostile/chart-limit-anchors.bin`; guard not seen failing (`SEC-021`) |
+| `max_extensions` | `262_144` | `ext` in one part | CS-CHT-0008 | Partial: `hostile/chart-limit-extensions.bin`; guard not seen failing (`SEC-021`) |
+| `max_group_depth` | `64` | Groups nested in one chart drawing, the one recursion in these schemas | CS-CHT-0009 | Partial: `hostile/chart-limit-group-depth.bin`; guard not seen failing (`SEC-021`) |
 
 What is damaged but not over a bound is read as far as it goes and reported: `hostile/chart-bad-structure.bin`. What is rooted wrongly is set aside: `hostile/chart-wrong-root.bin`; what is not XML likewise, built in `crates/casual-slide-export/tests/chart.rs`, as every `open` deck in the corpus is held to parse part by part. A workbook that could not be read if anyone tried is untouched: `hostile/chart-workbook-corrupt.bin`.
 
@@ -261,14 +261,14 @@ What is damaged but not over a bound is read as far as it goes and reported: `ho
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Tested through the bounds below |
-| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Tested; `hostile/graphics-limit-depth.bin` |
-| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
-| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Tested; `hostile/graphics-limit-points.bin` |
-| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Tested; `hostile/graphics-limit-connections.bin` |
-| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Tested; `hostile/graphics-limit-layout-nodes.bin` |
-| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Tested; `hostile/graphics-limit-drawing-shapes.bin` |
-| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Tested; `hostile/graphics-limit-traces.bin` |
+| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Partial: through the bounds below; guard not seen failing (`SEC-021`) |
+| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Partial: `hostile/graphics-limit-depth.bin`; guard not seen failing (`SEC-021`) |
+| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Partial: with the bound lowered: a deck crossing the default is too large to commit; guard not seen failing (`SEC-021`) |
+| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Partial: `hostile/graphics-limit-points.bin`; guard not seen failing (`SEC-021`) |
+| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Partial: `hostile/graphics-limit-connections.bin`; guard not seen failing (`SEC-021`) |
+| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Partial: `hostile/graphics-limit-layout-nodes.bin`; guard not seen failing (`SEC-021`) |
+| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Partial: `hostile/graphics-limit-drawing-shapes.bin`; guard not seen failing (`SEC-021`) |
+| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Partial: `hostile/graphics-limit-traces.bin`; guard not seen failing (`SEC-021`) |
 
 ## Export
 
@@ -297,19 +297,19 @@ Past one of these the part is set aside and named, or the list left out, and the
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Tested; `hostile/comment-limit-comments.bin` |
-| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Tested; `hostile/comment-limit-authors.bin` |
-| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Tested; `hostile/comment-limit-replies.bin` |
-| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Tested; `hostile/comment-limit-reactions.bin` |
-| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Tested; `hostile/comment-limit-task-events.bin` |
-| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Tested; `hostile/comment-limit-monikers.bin` |
-| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Tested at a lowered bound: 100,001 parts is past `CS-PKG-0002` first |
-| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Tested; `hostile/section-limit-sections.bin` |
-| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Tested; `hostile/section-limit-slides.bin` |
-| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Tested; `hostile/tags-limit-tags.bin` |
-| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Tested; `hostile/marks-limit-part.bin` |
-| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Tested; `hostile/custom-limit-schema-refs.bin` |
-| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Tested; `hostile/custom-limit-labels.bin` |
+| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Partial: `hostile/comment-limit-comments.bin`; guard not seen failing (`SEC-021`) |
+| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Partial: `hostile/comment-limit-authors.bin`; guard not seen failing (`SEC-021`) |
+| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Partial: `hostile/comment-limit-replies.bin`; guard not seen failing (`SEC-021`) |
+| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Partial: `hostile/comment-limit-reactions.bin`; guard not seen failing (`SEC-021`) |
+| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Partial: `hostile/comment-limit-task-events.bin`; guard not seen failing (`SEC-021`) |
+| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Partial: `hostile/comment-limit-monikers.bin`; guard not seen failing (`SEC-021`) |
+| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Partial: at a lowered bound: 100,001 parts is past `CS-PKG-0002` first; guard not seen failing (`SEC-021`) |
+| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Partial: `hostile/section-limit-sections.bin`; guard not seen failing (`SEC-021`) |
+| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Partial: `hostile/section-limit-slides.bin`; guard not seen failing (`SEC-021`) |
+| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Partial: `hostile/tags-limit-tags.bin`; guard not seen failing (`SEC-021`) |
+| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Partial: `hostile/marks-limit-part.bin`; guard not seen failing (`SEC-021`) |
+| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Partial: `hostile/custom-limit-schema-refs.bin`; guard not seen failing (`SEC-021`) |
+| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Partial: `hostile/custom-limit-labels.bin`; guard not seen failing (`SEC-021`) |
 
 ## Tools
 
