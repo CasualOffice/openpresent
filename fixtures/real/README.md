@@ -52,6 +52,12 @@ no row under Results yet. Their images were not looked at; `gs-z11091145` has on
 `z17301875` six small ones. A Morph search matched only the word, without checking for a
 Morph transition, so no deck is recorded as Morph. No Zoom marker was found.
 
+`pptxts-modern-comments.pptx` (`T-1M`) is the first deck here with a modern comment part
+(`ppt/comments/modernComment_*.xml`, one comment with a reply, and `ppt/authors.xml`). Searched
+2026-11-08: every `.pptx` in the Open XML SDK and Apache POI trees and in four MIT repositories
+naming `modernComment`; two decks had one, and the other holds images, so it was not taken. No
+section or Zoom deck was added.
+
 ## Provenance
 
 | File | Committed | URL | Licence | Attribution | Date | SHA-256 | Writer, from app.xml | Platform | `lang` values, most used first |
@@ -126,6 +132,7 @@ Morph transition, so no deck is recorded as Morph. No Zoom marker was found.
 | `gs-shapecrawler-074-ru.pptx` | **Yes** | [source](https://raw.githubusercontent.com/ShapeCrawler/ShapeCrawler/e4fc9defdb5ab7d194f6a1d5369da3a5a209d308/ShapeCrawler.Tests/Assets/074%20google%20slides.pptx) | MIT | [ShapeCrawler](https://github.com/ShapeCrawler/ShapeCrawler) | 2026-11-08 | `c6f50aa118f853203fb450241468d2baadde6ff9aa87d18c90e76fa75f2bd37b` | Google Slides, by test below: no app.xml, `Google Shape;` names; source names it google slides | Google Slides | ru |
 | `gs-unstructured-fake-en.pptx` | **Yes** | [source](https://raw.githubusercontent.com/Unstructured-IO/unstructured/293d235cfcd5f5e89c3cc5ff85562005e182ae33/example-docs/fake-power-point.pptx) | Apache-2.0 | [unstructured](https://github.com/Unstructured-IO/unstructured) | 2026-11-08 | `a51aba9c0f5f5615047b0a65e2ca8e8c434e2213986914bc71e30bd6a243901f` | Google Slides, by test below: no app.xml, `Google Shape;` names, `ppt/metadata`, Google's schema | Google Slides | en-US |
 | `z17301875-diagnostic-de.pptx` | **Yes** | [source](https://zenodo.org/records/17301875/files/251008-Quality%20criterias_diagnostic%20test.pptx?download=1) | CC-BY-4.0 | Röhrig, Bernd; Schmitt, Andrea, *Quality criterias for a diagnostic test*, doi:10.5281/zenodo.17301875 | 2026-11-08 | `3e1e8bd0533d3f17d9a53019ae4e1ca49768bf58fa9a42dabca0355607781cf8` | Microsoft Office PowerPoint (equation deck) | Not determined | de-DE |
+| `pptxts-modern-comments.pptx` | **Yes** | [source](https://raw.githubusercontent.com/shbernal/pptx-ts/b9b28d4406039f75ff53a160603ed5bd1e37197e/test/read/fixtures/modern-comments.pptx) | MIT | [pptx-ts](https://github.com/shbernal/pptx-ts) | 2026-11-08 | `1ebba022ad3831e8e6cf91a40a53e08dc65246479090d165b576f3af9734f0b0` | Microsoft Office PowerPoint 16.0000; comment and reply created 30 ms apart, so likely written by a script or tool, not typed in PowerPoint | Not determined | en-US |
 
 ## Results
 
