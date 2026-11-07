@@ -14,13 +14,17 @@ use casual_slide_import::presentation::{import_deck, import_presentation};
 use casual_slide_import::properties::{Findings, ImportLimits};
 use casual_slide_import::slide::{SlideLimits, import_slide_part, import_slide_parts};
 use casual_slide_model::color::Color;
+use casual_slide_model::d3::{
+    Camera, FlatText, LightRig, LightRigDirection, LightRigType, PresetCamera, Scene3D,
+};
 use casual_slide_model::effect::{Effect, EffectProperties};
 use casual_slide_model::fill::{Fill, GradientFill};
 use casual_slide_model::line::Line;
 use casual_slide_model::shape::ShapeNode;
 use casual_slide_model::slide::{SlideKind, SlidePart, SlideParts};
 use casual_slide_model::text::{
-    Autofit, CharacterProperties, Paragraph, TextListStyle, TextRun, UnderlineLine, Written,
+    Autofit, BodyProperties, CharacterProperties, Paragraph, Text3D, TextListStyle, TextRun,
+    UnderlineLine, Written,
 };
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, Relationship, TargetMode, XmlTree};
 
@@ -539,8 +543,9 @@ fn property_edits_stay_valid_to_the_schema() {
         props.inset_left = Some(Written::new(casual_slide_model::presentation::Coordinate(
             7,
         )));
-        props.warp = Some(casual_slide_model::text::TextWarp {
-            preset: Some("textPlain".to_owned()),
+        props.warp = Some(casual_slide_model::geometry::PresetTextShape {
+            preset: casual_slide_model::geometry::TextShapeType::parse_lexical("textPlain"),
+            adjust: Some(Vec::new()),
         });
     })
     .unwrap();
@@ -1107,10 +1112,84 @@ fn every_deck_takes_a_text_edit_and_stays_as_valid_as_it_was() {
 /// The creating path, on everything real: take each text body away, then ask for it
 /// back. Whatever a real deck holds is written from the model, read back the same, and
 /// valid; a body holding what another tier owns is refused and counted, never mangled.
+/// Warp, scene and 3D edits on a deck: only what was named changes, the edit reads back,
+/// and the part stays schema-valid.
+#[test]
+fn a_bodys_warp_and_3d_edits_stay_valid_to_the_schema() {
+    let source = read_fixture("generated/text-warp-and-3d.pptx");
+    type Edit = fn(&mut BodyProperties);
+    let edits: [(&str, Edit); 5] = [
+        ("Warp only", |b| {
+            b.warp.as_mut().unwrap().adjust.as_mut().unwrap()[0].formula =
+                Some("val 5400000".to_owned());
+        }),
+        ("Scene and extrusion", |b| {
+            b.text_3d = Some(Text3D::Flat(FlatText {
+                z: Some(casual_slide_model::presentation::Coordinate(7)),
+            }));
+        }),
+        ("Scene and flat", |b| {
+            b.text_3d = Some(Text3D::Shape(Box::default()));
+        }),
+        ("Flat bare", |b| {
+            b.scene3d = Some(Box::new(Scene3D {
+                camera: Some(Camera {
+                    preset: PresetCamera::parse_lexical("orthographicFront"),
+                    ..Camera::default()
+                }),
+                light_rig: Some(LightRig {
+                    rig: LightRigType::parse_lexical("flat"),
+                    direction: LightRigDirection::parse_lexical("t"),
+                    ..LightRig::default()
+                }),
+                ..Scene3D::default()
+            }));
+            b.text_3d = None;
+        }),
+        ("Warp no list", |b| b.warp = None),
+    ];
+    for (name, edit) in edits {
+        let edited = edit_slide(&source, |part| {
+            let body = named_mut(part, name).text_body.as_mut().unwrap();
+            edit(body.properties.as_mut().unwrap());
+        })
+        .unwrap_or_else(|e| panic!("{name}: {e}"));
+        f4_validates(&edited);
+    }
+}
+
 #[test]
 fn every_text_body_can_be_written_from_the_model() {
-    let mut written = 0usize;
-    let mut refused = 0usize;
+    /// What refusing a body rests on: the model holds no content for either, so it can
+    /// only be told to keep what the tree has. A picture bullet's is Tier 1H's. A
+    /// paragraph's `TextItem::Retained` is an inline equation's `mc:AlternateContent` or
+    /// the like, Tier 1K's.
+    fn cannot_be_made(body: &TextBody) -> bool {
+        let picture = |p: &Option<Box<ParagraphProperties>>| {
+            p.as_ref()
+                .is_some_and(|p| matches!(p.bullet, Some(Bullet::Picture { .. })))
+        };
+        body.paragraphs.iter().any(|p| {
+            picture(&p.properties) || p.items.iter().any(|i| matches!(i, TextItem::Retained(_)))
+        }) || body
+            .list_style
+            .as_ref()
+            .is_some_and(|l| picture(&l.default) || l.levels.iter().any(picture))
+    }
+
+    #[derive(Default)]
+    struct Tally {
+        written: usize,
+        refused: Vec<String>,
+    }
+
+    let xml = OoxmlLimits::default();
+    let limits = SlideLimits::default();
+    let import_limits = ImportLimits::default();
+    // A slide is written once however many decks hold its bytes, and counted for each.
+    type Key = (Vec<u8>, Vec<String>);
+    let mut seen: BTreeMap<Key, (usize, Vec<String>)> = BTreeMap::new();
+    let mut tally = Tally::default();
     for path in all_decks() {
         if path.contains("five-hundred") {
             continue;
@@ -1125,55 +1204,73 @@ fn every_text_body_can_be_written_from_the_model() {
             let mut pkg = open(source.clone());
             let bytes = pkg.read_part(&name).unwrap();
             let rels = pkg.relationships_of(&name).to_vec();
-            let limits = SlideLimits::default();
-            let import_limits = ImportLimits::default();
-            let xml = OoxmlLimits::default();
-            let ids: Vec<_> = part
-                .shape_tree()
-                .into_iter()
-                .flat_map(ShapeNode::descendants)
-                .filter(|n| n.text_body.is_some())
-                .map(|n| n.id)
-                .collect();
-            for id in ids {
+            let key = (bytes.clone(), rels.iter().map(|r| r.id.clone()).collect());
+            let (written, refused) = seen.entry(key).or_insert_with(|| {
+                let ids: Vec<_> = part
+                    .shape_tree()
+                    .into_iter()
+                    .flat_map(ShapeNode::descendants)
+                    .filter(|n| n.text_body.is_some())
+                    .map(|n| n.id)
+                    .collect();
+                let patched = |tree: &mut XmlTree, to: &SlidePart| {
+                    patch_slide_part(tree, &name, false, &rels, to, &limits, &import_limits, &xml)
+                };
+                // All of a part's bodies at once: each patch is read back whole against
+                // the model, so every body is held to what one alone would be.
                 let mut emptied = part.clone();
-                let node = emptied.node_mut(id).unwrap();
-                node.text_body = None;
+                for id in &ids {
+                    emptied.node_mut(*id).unwrap().text_body = None;
+                }
                 let mut tree = XmlTree::parse(&bytes, &name, &xml).unwrap();
-                match patch_slide_part(
-                    &mut tree,
-                    &name,
-                    false,
-                    &rels,
-                    &emptied,
-                    &limits,
-                    &import_limits,
-                    &xml,
-                ) {
-                    Ok(_) => {}
-                    // A shape in an alternate branch.
-                    Err(e) if e.code() == "CS-SLE-0002" => continue,
-                    Err(e) => panic!("{path} {name}: {e}"),
+                if patched(&mut tree, &emptied).is_ok() && patched(&mut tree, part).is_ok() {
+                    return (ids.len(), Vec::new());
                 }
-                match patch_slide_part(
-                    &mut tree,
-                    &name,
-                    false,
-                    &rels,
-                    part,
-                    &limits,
-                    &import_limits,
-                    &xml,
-                ) {
-                    Ok(_) => written += 1,
-                    Err(e) if e.code() == "CS-EXP-0009" => refused += 1,
-                    Err(e) => panic!("{path} {name}: {e}"),
+                // Something here will not go through: find out which, one at a time.
+                let (mut written, mut refused) = (0, Vec::new());
+                for id in ids {
+                    let mut emptied = part.clone();
+                    emptied.node_mut(id).unwrap().text_body = None;
+                    let mut tree = XmlTree::parse(&bytes, &name, &xml).unwrap();
+                    match patched(&mut tree, &emptied) {
+                        Ok(_) => {}
+                        // A shape in an alternate branch.
+                        Err(e) if e.code() == "CS-SLE-0002" => continue,
+                        Err(e) => panic!("{name}: {e}"),
+                    }
+                    match patched(&mut tree, part) {
+                        Ok(_) => written += 1,
+                        Err(e) if e.code() == "CS-EXP-0009" => {
+                            let node = part
+                                .shape_tree()
+                                .into_iter()
+                                .flat_map(ShapeNode::descendants)
+                                .find(|n| n.id == id)
+                                .unwrap();
+                            assert!(
+                                node.text_body.as_deref().is_some_and(cannot_be_made),
+                                "{name}: refused, and holding nothing the model cannot make: {e}"
+                            );
+                            refused.push(format!("{e}"));
+                        }
+                        Err(e) => panic!("{name}: {e}"),
+                    }
                 }
-            }
+                (written, refused)
+            });
+            tally.written += *written;
+            tally.refused.extend(refused.iter().cloned());
         }
     }
-    eprintln!("written from the model: {written}; refused, holding another tier's: {refused}");
-    assert!(written > 1000, "{written} written, {refused} refused");
+    eprintln!(
+        "written from the model: {}; refused: {:?}",
+        tally.written, tally.refused
+    );
+    assert!(tally.written > 1000, "{}", tally.written);
+    let by = |what: &str| tally.refused.iter().filter(|r| r.contains(what)).count();
+    assert_eq!(by("picture bullet"), 3, "{:?}", tally.refused);
+    assert_eq!(by("content this tier"), 2, "{:?}", tally.refused);
+    assert_eq!(tally.refused.len(), 5, "{:?}", tally.refused);
 }
 
 #[test]

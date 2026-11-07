@@ -188,6 +188,7 @@ pub(crate) struct TableReader<'a, 'r> {
     pub r: &'a mut Reader<'r>,
     pub rels: &'a [Relationship],
     pub limits: &'a TableLimits,
+    pub drawing: DrawingLimits,
     pub color: &'a mut ColorFindings,
     pub text_counts: &'a mut TextCounts,
     pub counts: &'a mut TableCounts,
@@ -215,6 +216,7 @@ impl TableReader<'_, '_> {
     }
 
     /// `a:CT_Table`.
+    // spec-audit: a:<tbl>
     pub fn tbl(&mut self, el: &Elem) -> Result<Table, SlideError> {
         self.r.finish(el);
         let limits = *self.limits;
@@ -274,6 +276,7 @@ impl TableReader<'_, '_> {
         Ok(table)
     }
 
+    // spec-audit: owner=gridCol
     fn tbl_grid(&mut self, el: &Elem) -> Result<TableGrid, SlideError> {
         self.r.finish(el);
         let limit = self.limits.max_columns;
@@ -401,6 +404,7 @@ impl TableReader<'_, '_> {
                     rels: self.rels,
                     color: &mut *self.color,
                     counts: &mut *self.text_counts,
+                    drawing: self.drawing,
                 };
                 cell.tx_body = Some(Box::new(text.body(&child)?));
             } else {
@@ -447,7 +451,7 @@ impl TableReader<'_, '_> {
                 self.r.note(K::DuplicateElement, &child, None);
                 continue;
             }
-            let limits = DrawingLimits::default();
+            let limits = self.drawing;
             match name {
                 "fill" => p.fill = read_fill(self.r, self.rels, limits, &child)?,
                 "cell3D" => p.cell3d = Some(self.cell3d(&child)?),
@@ -494,6 +498,7 @@ impl TableReader<'_, '_> {
     }
 
     /// `a:CT_Cell3D`, in a cell or a style.
+    // spec-audit: owner=tcPr,tcStyle
     fn cell3d(&mut self, el: &Elem) -> Result<Cell3D, SlideError> {
         let mut e = el.clone();
         let mut out = Cell3D {
@@ -512,7 +517,7 @@ impl TableReader<'_, '_> {
                 self.r.note(K::DuplicateElement, &child, None);
                 continue;
             }
-            let mut ctx = Ctx::new(&mut *self.r, self.rels, DrawingLimits::default());
+            let mut ctx = Ctx::new(&mut *self.r, self.rels, self.drawing);
             if name == "bevel" {
                 out.bevel = ctx.guard(&child, |c| c.bevel(&child))?;
             } else {
@@ -558,7 +563,7 @@ impl TableReader<'_, '_> {
                 self.r.note(K::DuplicateElement, &child, None);
                 continue;
             }
-            let limits = DrawingLimits::default();
+            let limits = self.drawing;
             match slot {
                 "fill" => p.fill = read_fill(self.r, self.rels, limits, &child)?,
                 "effects" => p.effects = read_effects(self.r, self.rels, limits, &child)?,
@@ -623,6 +628,7 @@ impl TableReader<'_, '_> {
         Ok(style)
     }
 
+    // spec-audit: owner=tblStyle,tableStyle
     fn tbl_bg(&mut self, el: &Elem) -> Result<TableBackgroundStyle, SlideError> {
         self.r.finish(el);
         let mut out = TableBackgroundStyle::default();
@@ -675,8 +681,8 @@ impl TableReader<'_, '_> {
                 self.r.note(K::DuplicateElement, &child, None);
             } else {
                 any = true;
-                out = read_fill(self.r, self.rels, DrawingLimits::default(), &child)?
-                    .map(TableStyleFill::Inline);
+                out =
+                    read_fill(self.r, self.rels, self.drawing, &child)?.map(TableStyleFill::Inline);
             }
         }
         if !any {
@@ -697,7 +703,7 @@ impl TableReader<'_, '_> {
                 self.r.note(K::DuplicateElement, &child, None);
             } else {
                 any = true;
-                out = read_effects(self.r, self.rels, DrawingLimits::default(), &child)?
+                out = read_effects(self.r, self.rels, self.drawing, &child)?
                     .map(TableStyleEffect::Inline);
             }
         }
@@ -707,6 +713,7 @@ impl TableReader<'_, '_> {
         Ok(out)
     }
 
+    // spec-audit: owner=wholeTbl,band1H,band2H,band1V,band2V,lastCol,firstCol,lastRow,seCell,swCell,firstRow,neCell,nwCell
     fn part_style(&mut self, el: &Elem) -> Result<TablePartStyle, SlideError> {
         self.r.finish(el);
         let mut out = TablePartStyle::default();
@@ -752,6 +759,7 @@ impl TableReader<'_, '_> {
         value
     }
 
+    // spec-audit: owner=wholeTbl,band1H,band2H,band1V,band2V,lastCol,firstCol,lastRow,seCell,swCell,firstRow,neCell,nwCell
     fn tc_tx_style(&mut self, el: &Elem) -> Result<TableStyleTextStyle, SlideError> {
         let mut e = el.clone();
         let mut out = TableStyleTextStyle {
@@ -788,6 +796,7 @@ impl TableReader<'_, '_> {
         Ok(out)
     }
 
+    // spec-audit: owner=wholeTbl,band1H,band2H,band1V,band2V,lastCol,firstCol,lastRow,seCell,swCell,firstRow,neCell,nwCell
     fn tc_style(&mut self, el: &Elem) -> Result<TableStyleCellStyle, SlideError> {
         self.r.finish(el);
         let mut out = TableStyleCellStyle::default();
@@ -855,6 +864,7 @@ impl TableReader<'_, '_> {
     }
 
     /// `a:CT_ThemeableLineStyle`.
+    // spec-audit: owner=left,right,top,bottom,insideH,insideV,tl2br,tr2bl
     fn border(&mut self, el: &Elem) -> Result<TableBorder, SlideError> {
         self.r.finish(el);
         let mut out = TableBorder::Empty;
@@ -868,7 +878,7 @@ impl TableReader<'_, '_> {
             } else {
                 any = true;
                 if child.local == "ln" {
-                    let line = read_line(self.r, self.rels, DrawingLimits::default(), &child)?;
+                    let line = read_line(self.r, self.rels, self.drawing, &child)?;
                     if let Some(line) = line {
                         out = TableBorder::Line(Box::new(line));
                     }
@@ -887,6 +897,8 @@ impl TableReader<'_, '_> {
 }
 
 /// Read a `tableStyles` part.
+// spec-audit: owner=tblStyleLst
+// spec-audit: a:<tblStyleLst>
 #[allow(clippy::too_many_arguments)]
 pub fn import_table_styles(
     tree: &XmlTree,
@@ -908,6 +920,7 @@ pub fn import_table_styles(
         r: &mut reader,
         rels,
         limits: &limits.table,
+        drawing: limits.drawing,
         color,
         text_counts: &mut text_counts,
         counts: &mut counts,

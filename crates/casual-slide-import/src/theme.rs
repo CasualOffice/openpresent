@@ -1,7 +1,7 @@
 //! Reads theme parts, and colour maps wherever they live, into the model.
 //!
 //! What a theme holds beyond the model (the rest of a fill, an effect, a shape
-//! default, an unknown extension) stays in the tree. Elements unknown to the
+//! default's `spPr`, an unknown extension) stays in the tree. Elements unknown to the
 //! schema are reported as `CS-CLR-0009`. Those the schema has but another area
 //! owns are expected to be retained, and are not reported.
 
@@ -18,6 +18,12 @@ use casual_slide_ooxml::{ElementId, OoxmlError, OoxmlLimits, PresentationPackage
 use crate::color::{
     FindingKind, Findings, bounded_children, dml_name, read_color_choice, read_optional_color,
 };
+use crate::drawing::{DrawingFinding, DrawingLimits};
+use crate::properties::{
+    Elem, Findings as PropertyFindings, ImportError, ImportFindingKind as K, ImportLimits,
+    Reader as PropertyReader, ns,
+};
+use crate::text::{TextCounts, TextReader};
 
 /// The Office 2013 theme extension's namespace.
 pub const THEME_ML_2012: &str = "http://schemas.microsoft.com/office/thememl/2012/main";
@@ -112,11 +118,14 @@ pub fn import_theme_limited(
 ) -> Result<Imported<Theme>, ThemeImportError> {
     let root = expect_root(tree, "theme")?;
     let mut findings = Findings::with_limits(limits);
-    let value = Reader {
+    let mut value = Reader {
         tree,
         findings: &mut findings,
     }
     .theme(root);
+    if let Some(defaults) = value.object_defaults.as_mut() {
+        read_definition_text(tree, defaults, &mut findings);
+    }
     Ok(Imported { value, findings })
 }
 
@@ -736,8 +745,8 @@ impl Reader<'_> {
         for child in self.children(el) {
             match dml_name(self.tree, child) {
                 Some("spPr") => out.has_shape_properties = true,
-                Some("bodyPr") => out.has_body_properties = true,
-                Some("lstStyle") => out.has_list_style = true,
+                // Read by `read_definition_text`, which has what a text reader needs.
+                Some("bodyPr" | "lstStyle") => {}
                 Some("style") => self.once(&mut out.style, child, Self::shape_style),
                 Some("extLst") => out.extensions = self.extensions(child),
                 _ => self.unknown(child),
@@ -835,4 +844,72 @@ impl Reader<'_> {
         }
         out
     }
+}
+
+/// Fill in each object default's `bodyPr` and `lstStyle` with the text readers. A theme
+/// reports in its own list, so what they notice is carried over; a theme that crosses a
+/// text bound keeps what was read before it, reported, and the deck opens.
+fn read_definition_text(tree: &XmlTree, defaults: &mut ObjectDefaults, findings: &mut Findings) {
+    const PART: &str = "theme";
+    let limits = ImportLimits::default();
+    let mut noticed = PropertyFindings::new(limits.max_findings);
+    let capped = {
+        let mut r = PropertyReader::new(tree, PART, &limits, &mut noticed);
+        definition_text(&mut r, defaults, findings).is_err()
+    };
+    for f in noticed.iter() {
+        let kind = match f.kind {
+            K::MissingRequired => FindingKind::MissingRequired,
+            K::DuplicateElement => FindingKind::Duplicate,
+            K::RetainedElement | K::RetainedAttribute => FindingKind::Unmodelled,
+            K::Color(kind) => kind,
+            K::Drawing(DrawingFinding::OverLimit) => FindingKind::ListCapped,
+            K::Drawing(DrawingFinding::PercentRounded) => FindingKind::PercentRounded,
+            _ => FindingKind::BadValue,
+        };
+        findings.carry(kind, &f.element);
+    }
+    if capped {
+        findings.carry(FindingKind::ListCapped, "objectDefaults");
+    }
+}
+
+fn definition_text(
+    r: &mut PropertyReader<'_>,
+    defaults: &mut ObjectDefaults,
+    findings: &mut Findings,
+) -> Result<(), ImportError> {
+    let root = Elem::root(r.tree, r.part)?;
+    for holder in r.children(&root)? {
+        if !holder.is(ns::DML, "objectDefaults") {
+            continue;
+        }
+        for definition in r.children(&holder)? {
+            if !definition.in_namespace(ns::DML) {
+                continue;
+            }
+            let slot = match definition.local.as_str() {
+                "spDef" => defaults.shape.as_mut(),
+                "lnDef" => defaults.line.as_mut(),
+                "txDef" => defaults.text.as_mut(),
+                _ => None,
+            };
+            let Some(slot) = slot else { continue };
+            for child in r.children(&definition)? {
+                let mut text = TextReader {
+                    r: &mut *r,
+                    rels: &[],
+                    color: &mut *findings,
+                    counts: &mut TextCounts::default(),
+                    drawing: DrawingLimits::default(),
+                };
+                if child.is(ns::DML, "bodyPr") && slot.body_properties.is_none() {
+                    slot.body_properties = Some(text.body_properties(&child)?);
+                } else if child.is(ns::DML, "lstStyle") && slot.list_style.is_none() {
+                    slot.list_style = Some(text.list_style(&child)?);
+                }
+            }
+        }
+    }
+    Ok(())
 }

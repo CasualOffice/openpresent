@@ -1,9 +1,10 @@
 //! `scene3d` and `sp3d` as what the tree should say (`docs/spec/D3.md`).
 
-use casual_slide_model::d3::{Bevel, LightRig, Scene3D, Shape3D, SphereCoords, Vector3D};
+use casual_slide_model::d3::{Bevel, FlatText, LightRig, Scene3D, Shape3D, SphereCoords, Vector3D};
 
 use crate::drawing::{Node, Space};
 
+// spec-audit: owner=rot,camera,lightRig
 fn sphere(s: &SphereCoords) -> Node {
     Node::a("rot")
         .ang("lat", s.latitude)
@@ -11,6 +12,7 @@ fn sphere(s: &SphereCoords) -> Node {
         .ang("rev", s.revolution)
 }
 
+// spec-audit: owner=norm,up
 fn vector(local: &'static str, v: &Vector3D) -> Node {
     Node::a(local)
         .lex("dx", v.dx.as_ref())
@@ -19,6 +21,7 @@ fn vector(local: &'static str, v: &Vector3D) -> Node {
 }
 
 /// `a:CT_LightRig`.
+// spec-audit: owner=scene3d,hiddenScene3d,cell3D
 pub(crate) fn light_rig(r: &LightRig) -> Node {
     Node::a("lightRig")
         .lex("rig", r.rig.as_ref())
@@ -27,6 +30,7 @@ pub(crate) fn light_rig(r: &LightRig) -> Node {
 }
 
 /// `a:CT_Scene3D`, under the name it has here.
+// spec-audit: owner=scene3d,hiddenScene3d
 pub(crate) fn scene3d_node(s: &Scene3D, space: Space, local: &'static str) -> Node {
     let camera = s.camera.as_ref().map(|c| {
         Node::a("camera")
@@ -51,19 +55,21 @@ pub(crate) fn scene3d_node(s: &Scene3D, space: Space, local: &'static str) -> No
     Node::new(space, local).opt(camera).opt(rig).opt(backdrop)
 }
 
+// spec-audit: owner=bevelT,bevelB,bevel
 pub(crate) fn bevel(local: &'static str, b: &Bevel) -> Node {
     Node::a(local)
-        .lex("w", b.width.as_ref())
-        .lex("h", b.height.as_ref())
+        .pos("w", b.width.as_ref())
+        .pos("h", b.height.as_ref())
         .lex("prst", b.preset.as_ref())
 }
 
 /// `a:CT_Shape3D`, under the name it has here.
+// spec-audit: owner=sp3d,hiddenSp3d
 pub(crate) fn sp3d_node(s: &Shape3D, space: Space, local: &'static str) -> Node {
     Node::new(space, local)
         .lex("z", s.z.as_ref())
-        .lex("extrusionH", s.extrusion_height.as_ref())
-        .lex("contourW", s.contour_width.as_ref())
+        .pos("extrusionH", s.extrusion_height.as_ref())
+        .pos("contourW", s.contour_width.as_ref())
         .lex("prstMaterial", s.material.as_ref())
         .opt(s.bevel_top.as_ref().map(|b| bevel("bevelT", b)))
         .opt(s.bevel_bottom.as_ref().map(|b| bevel("bevelB", b)))
@@ -77,4 +83,10 @@ pub(crate) fn sp3d_node(s: &Shape3D, space: Space, local: &'static str) -> Node 
                 .as_ref()
                 .map(|c| Node::a("contourClr").color(Some(c))),
         )
+}
+
+/// `a:CT_FlatText`, a text body's `flatTx`.
+// spec-audit: owner=flatTx
+pub(crate) fn flat_text_node(f: &FlatText) -> Node {
+    Node::a("flatTx").lex("z", f.z.as_ref())
 }

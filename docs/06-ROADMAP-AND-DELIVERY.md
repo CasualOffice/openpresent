@@ -75,13 +75,14 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | **1K** | SmartArt, equations, ink | 1263 | 1E, 1F |
 | **1L** | OLE, VML, 3D models, retained with fallback | 951 | 1H |
 | **1M** | Comments, review, sections, zoom, labels, tags, custom XML | 876 | 1D |
+| **1R** | **Recovery: open and edit damaged decks, including what Microsoft refuses** ([29](29-RECOVERY.md)) | damage corpus | 1A |
 | **1N** | **The writer:** part naming, rId allocation, content types, shared parts, id rules, app.xml, thumbnails, signature drop, save-as matrix ([36](36-EXPORT-AND-SAVE.md)) | invariants | 1A; grows with each tier |
 
 ### Phase 1 plan
 
 Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re-read from `tools/spec-audit/audit.py`, not from this page.
 
-**Where it stands (2026-11-07).** Built, not closed: 1A, 1B, 1C. Merging: 1D. Not started: 1E to 1M. Designed, not built: 1N. **No checklist row is marked `y` yet**, so the status columns are the first job (`STAT-01`): until they are filled, no tier can show its gate.
+**Where it stands (2026-11-07).** See [14](14-EXECUTION-TRACKER.md) for current state; no tier is closed until its gate is met. Status columns are filled by `tools/spec-audit`; a row needs code, a test and a fixture.
 
 **Two corrections this plan makes to the table above.**
 - **1C cannot close before 1E and 1F.** A theme's format scheme is made of fills, lines and effects, and object defaults of text and shape properties. So 1C finishes as `T1C-02` after those tiers.
@@ -122,6 +123,7 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 - [ ] Every exported corpus deck passes schema validation and Microsoft's validator, and LibreOffice reopens it. The PowerPoint check is `PV-01`.
 - [ ] Corpus includes real decks from PowerPoint on Windows and Mac, Keynote and Google Slides, with provenance recorded.
 - [ ] A 500-slide deck opens within its budget, and a hostile corpus run shows no crash or hang.
+- [ ] The damage corpus opens, or is refused only under [29](29-RECOVERY.md)'s rules; an edit to a recovered deck writes a valid file.
 - [ ] Owner sign-off.
 
 ## Phase 2 — Layout and render

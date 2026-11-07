@@ -24,6 +24,7 @@ use casual_slide_model::line::{CompoundLine, Line, LineCap, LineDash, LineJoin, 
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{NodeKind, ShapeNode};
 use casual_slide_model::slide::{SlideKind, SlidePart, SlideParts};
+use casual_slide_model::theme::FontCollectionIndex;
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
 
 const PART: &str = "ppt/slides/slide1.xml";
@@ -1251,4 +1252,600 @@ fn a_long_path_is_replaced_without_costing_its_square() {
     let new = String::from_utf8(tree.to_bytes()).unwrap();
     assert_eq!(new.matches("<a:close/>").count(), 20_000);
     assert!(!new.contains("lnTo"));
+}
+
+fn body_slide(body: &str, style: &str) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld {NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2" name="s"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/>{style}<p:txBody>{body}<a:p/></p:txBody></p:sp></p:spTree></p:cSld></p:sld>"#
+    )
+}
+
+/// From what one spelling reads as to another's model, and back: each way the bytes that
+/// result read as asked, and hold the `wanted` strings in that order.
+fn writes(from: &str, to: &str, wanted: &[&str]) -> String {
+    let mut tree = read(from).tree;
+    let after = read(to).part;
+    patch(&mut tree, &after).unwrap_or_else(|e| panic!("{e}: {to}"));
+    let out = String::from_utf8(tree.to_bytes()).unwrap();
+    assert_eq!(read(&out).part, after, "{out}");
+    let mut at = 0;
+    for piece in wanted {
+        let found = out[at..]
+            .find(piece)
+            .unwrap_or_else(|| panic!("{piece} not after {at} in {out}"));
+        at += found + piece.len();
+    }
+    out
+}
+
+const WARP: &str = r#"<a:prstTxWarp prst="textWave1"><a:avLst><a:gd name="adj1" fmla="val 12500"/><a:gd name="adj2" fmla="val 0"/></a:avLst></a:prstTxWarp>"#;
+const SCENE_XML: &str = r#"<a:scene3d><a:camera prst="orthographicFront"/><a:lightRig rig="threePt" dir="t"/></a:scene3d>"#;
+const SP3D_XML: &str = r#"<a:sp3d z="1" extrusionH="2"><a:bevelT w="3" h="4"/></a:sp3d>"#;
+
+#[test]
+fn a_bodys_warp_scene_and_3d_are_made_from_nothing_at_their_schema_places() {
+    let base = body_slide("<a:bodyPr/>", "");
+    let full = body_slide(
+        &format!(r#"<a:bodyPr wrap="none">{WARP}<a:noAutofit/>{SCENE_XML}{SP3D_XML}</a:bodyPr>"#),
+        "",
+    );
+    writes(
+        &base,
+        &full,
+        &[
+            "prstTxWarp",
+            "avLst",
+            "adj1",
+            "adj2",
+            "noAutofit",
+            "scene3d",
+            "sp3d",
+        ],
+    );
+    // And taken away again, all of it.
+    let out = writes(&full, &base, &["bodyPr"]);
+    assert!(!out.contains("prstTxWarp") && !out.contains("scene3d") && !out.contains("sp3d"));
+    // With what is already there.
+    let autofit = body_slide(
+        r#"<a:bodyPr><a:spAutoFit/><a:extLst><a:ext uri="u"/></a:extLst></a:bodyPr>"#,
+        "",
+    );
+    writes(
+        &autofit,
+        &body_slide(
+            &format!(
+                r#"<a:bodyPr>{WARP}<a:spAutoFit/>{SCENE_XML}<a:flatTx z="9"/><a:extLst><a:ext uri="u"/></a:extLst></a:bodyPr>"#
+            ),
+            "",
+        ),
+        &["prstTxWarp", "spAutoFit", "scene3d", "flatTx", "extLst"],
+    );
+}
+
+#[test]
+fn a_warp_adjust_edit_changes_that_attribute_and_no_other_byte() {
+    let xml = body_slide(&format!("<a:bodyPr>{WARP}</a:bodyPr>"), "");
+    let r = read(&xml);
+    let mut after = r.part.clone();
+    let body = after.shape_tree_mut().unwrap().children[0]
+        .text_body
+        .as_mut()
+        .unwrap();
+    body.properties
+        .as_mut()
+        .unwrap()
+        .warp
+        .as_mut()
+        .unwrap()
+        .adjust
+        .as_mut()
+        .unwrap()[1]
+        .formula = Some("val 7".to_owned());
+    let mut tree = r.tree;
+    patch(&mut tree, &after).unwrap();
+    assert_eq!(
+        String::from_utf8(tree.to_bytes()).unwrap(),
+        xml.replace(r#"name="adj2" fmla="val 0""#, r#"name="adj2" fmla="val 7""#)
+    );
+    // An absent list and an empty one differ: an emptied list stays.
+    let emptied = body_slide(
+        r#"<a:bodyPr><a:prstTxWarp prst="textWave1"><a:avLst/></a:prstTxWarp></a:bodyPr>"#,
+        "",
+    );
+    let out = writes(&xml, &emptied, &["avLst"]);
+    assert!(!out.contains("adj1"));
+    let bare = body_slide(
+        r#"<a:bodyPr><a:prstTxWarp prst="textWave1"/></a:bodyPr>"#,
+        "",
+    );
+    let out = writes(&emptied, &bare, &["prstTxWarp"]);
+    assert!(!out.contains("avLst"));
+}
+
+#[test]
+fn the_text_3d_choice_replaces_itself_and_leaves_no_other() {
+    let sp3d = body_slide(&format!("<a:bodyPr>{SP3D_XML}</a:bodyPr>"), "");
+    let flat = body_slide(r#"<a:bodyPr><a:flatTx z="5"/></a:bodyPr>"#, "");
+    let out = writes(&sp3d, &flat, &["flatTx"]);
+    assert!(!out.contains("sp3d"), "{out}");
+    let out = writes(&flat, &sp3d, &["sp3d"]);
+    assert!(!out.contains("flatTx"), "{out}");
+    // A file holding both reads the first and reports the second, which stays in the tree.
+    // An edit choosing the second leaves only that, or the reader would find both.
+    let both = body_slide(r#"<a:bodyPr><a:sp3d/><a:flatTx z="5"/></a:bodyPr>"#, "");
+    assert!(!read(&both).findings.is_empty());
+    let out = writes(&both, &flat, &["flatTx"]);
+    assert!(!out.contains("sp3d"), "{out}");
+}
+
+/// One the model could not hold, over a bound, is still in the tree: choosing the other of
+/// the choice takes it away, or the reader would find it first.
+#[test]
+fn choosing_flat_text_replaces_an_extrusion_left_out_over_a_bound() {
+    let limits = SlideLimits {
+        drawing: casual_slide_import::drawing::DrawingLimits {
+            max_items_per_property: 1,
+            ..Default::default()
+        },
+        ..SlideLimits::default()
+    };
+    let xml = body_slide(
+        r#"<a:bodyPr><a:sp3d z="1"><a:bevelT/><a:bevelB/></a:sp3d></a:bodyPr>"#,
+        "",
+    );
+    let mut tree = XmlTree::parse(xml.as_bytes(), PART, &OoxmlLimits::default()).unwrap();
+    let mut findings = Findings::new(100);
+    let mut color = ColorFindings::default();
+    let import = ImportLimits::default();
+    let mut after = import_slide_part(
+        &tree,
+        PART,
+        &[],
+        SlideKind::Slide,
+        0,
+        &limits,
+        &import,
+        &mut findings,
+        &mut color,
+    )
+    .unwrap();
+    let props = after.shape_tree_mut().unwrap().children[0]
+        .text_body
+        .as_mut()
+        .unwrap()
+        .properties
+        .as_mut()
+        .unwrap();
+    assert_eq!(props.text_3d, None, "left out over the bound");
+    props.text_3d = Some(casual_slide_model::text::Text3D::Flat(
+        casual_slide_model::d3::FlatText { z: None },
+    ));
+    patch_slide_part(
+        &mut tree,
+        PART,
+        false,
+        &[],
+        &after,
+        &limits,
+        &import,
+        &OoxmlLimits::default(),
+    )
+    .unwrap();
+    let out = String::from_utf8(tree.to_bytes()).unwrap();
+    assert!(out.contains("flatTx") && !out.contains("sp3d"), "{out}");
+}
+
+/// `DRAW-01`, `MS-OI29500` 2.1.1330: every `ST_PositiveCoordinate` a shape's properties
+/// hold stops at 2147483647 when it is new, and what a file already holds stays.
+#[test]
+fn a_new_coordinate_past_what_powerpoint_accepts_is_refused_and_nothing_changes() {
+    const LIMIT: i64 = 2_147_483_647;
+    let bodies: [&str; 14] = [
+        r#"<a:sp3d extrusionH="{}"/>"#,
+        r#"<a:sp3d contourW="{}"/>"#,
+        r#"<a:sp3d><a:bevelT w="{}"/></a:sp3d>"#,
+        r#"<a:sp3d><a:bevelB h="{}"/></a:sp3d>"#,
+        r#"<a:effectLst><a:blur rad="{}"/></a:effectLst>"#,
+        r#"<a:effectLst><a:glow rad="{}"><a:srgbClr val="000000"/></a:glow></a:effectLst>"#,
+        r#"<a:effectLst><a:softEdge rad="{}"/></a:effectLst>"#,
+        r#"<a:effectLst><a:innerShdw blurRad="{}"><a:srgbClr val="000000"/></a:innerShdw></a:effectLst>"#,
+        r#"<a:effectLst><a:outerShdw dist="{}"><a:srgbClr val="000000"/></a:outerShdw></a:effectLst>"#,
+        r#"<a:effectLst><a:prstShdw prst="shdw1" dist="{}"><a:srgbClr val="000000"/></a:prstShdw></a:effectLst>"#,
+        r#"<a:effectLst><a:reflection blurRad="{}"/></a:effectLst>"#,
+        r#"<a:effectLst><a:reflection dist="{}"/></a:effectLst>"#,
+        r#"<a:custGeom><a:pathLst><a:path w="{}"/></a:pathLst></a:custGeom>"#,
+        r#"<a:custGeom><a:pathLst><a:path h="{}"/></a:pathLst></a:custGeom>"#,
+    ];
+    for template in bodies {
+        let with = |v: i64| spt(&template.replace("{}", &v.to_string()));
+        let small = read(&with(1));
+        let huge = read(&with(LIMIT + 1));
+        let mut tree = small.tree.clone();
+        let before = tree.to_bytes();
+        assert_eq!(
+            patch(&mut tree, &huge.part).unwrap_err(),
+            "CS-EXP-0002",
+            "{template}"
+        );
+        // Refusing happens before any save: the saved form of the attempt is not offered.
+        let mut fresh = small.tree.clone();
+        let exact = read(&with(LIMIT));
+        patch(&mut fresh, &exact.part).unwrap_or_else(|e| panic!("{e}: {template}"));
+        assert_eq!(
+            read(std::str::from_utf8(&fresh.to_bytes()).unwrap()).part,
+            exact.part
+        );
+        assert_ne!(fresh.to_bytes(), before);
+        // A file saying more keeps it: an edit elsewhere leaves it, byte for byte.
+        let mut tree = huge.tree.clone();
+        let mut after = huge.part.clone();
+        after.shape_tree_mut().unwrap().children[0].properties.line = Some(Box::new(Line {
+            width: Some(1),
+            ..Line::default()
+        }));
+        patch(&mut tree, &after).unwrap_or_else(|e| panic!("{e}: {template}"));
+        let out = String::from_utf8(tree.to_bytes()).unwrap();
+        assert!(out.contains(&(LIMIT + 1).to_string()), "{out}");
+    }
+
+    // On a body's 3D too, and on a shape's extent.
+    let body = |v: i64| {
+        body_slide(
+            &format!(r#"<a:bodyPr><a:sp3d extrusionH="{v}"/></a:bodyPr>"#),
+            "",
+        )
+    };
+    let mut tree = read(&body(1)).tree;
+    assert_eq!(
+        patch(&mut tree, &read(&body(LIMIT + 1)).part).unwrap_err(),
+        "CS-EXP-0002"
+    );
+
+    let size = |cx: i64, cy: i64| {
+        spt(&format!(
+            r#"<a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>"#
+        ))
+    };
+    let mut tree = read(&size(1, 1)).tree;
+    assert_eq!(
+        patch(&mut tree, &read(&size(LIMIT + 1, 1)).part).unwrap_err(),
+        "CS-EXP-0002"
+    );
+    let mut tree = read(&size(1, 1)).tree;
+    assert_eq!(
+        patch(&mut tree, &read(&size(1, LIMIT + 1)).part).unwrap_err(),
+        "CS-EXP-0002"
+    );
+    let mut tree = read(&size(1, 1)).tree;
+    patch(&mut tree, &read(&size(LIMIT, LIMIT)).part).unwrap();
+    // An extent the file already holds does not stop a change to the other.
+    let mut tree = read(&size(LIMIT + 1, 1)).tree;
+    patch(&mut tree, &read(&size(LIMIT + 1, 2)).part).unwrap();
+    assert!(
+        String::from_utf8(tree.to_bytes())
+            .unwrap()
+            .contains(&(LIMIT + 1).to_string())
+    );
+}
+
+/// `DRAW-01`, `MS-OI29500` 2.1.1292: a dash stop of zero or less is kept where a file has
+/// one, and never written new.
+#[test]
+fn a_new_dash_stop_of_zero_or_less_is_refused() {
+    let with = |d: i32, sp: i32| {
+        spt(&format!(
+            r#"<a:ln><a:custDash><a:ds d="{d}" sp="{sp}"/></a:custDash></a:ln>"#
+        ))
+    };
+    for (d, sp) in [(0, 1), (1, 0)] {
+        let mut tree = read(&with(1, 1)).tree;
+        assert_eq!(
+            patch(&mut tree, &read(&with(d, sp)).part).unwrap_err(),
+            "CS-EXP-0002",
+            "{d} {sp}"
+        );
+    }
+    // Below zero the reader does not believe, so only a model says it.
+    let r = read(&with(1, 1));
+    let mut after = r.part.clone();
+    let line = after.shape_tree_mut().unwrap().children[0]
+        .properties
+        .line
+        .as_mut()
+        .unwrap();
+    let Some(LineDash::Custom(stops)) = line.dash.as_mut() else {
+        panic!("no dash")
+    };
+    stops[0].dash = Some(Percentage(-5));
+    let mut tree = r.tree.clone();
+    assert_eq!(patch(&mut tree, &after).unwrap_err(), "CS-EXP-0002");
+    let mut tree = read(&with(1, 1)).tree;
+    patch(&mut tree, &read(&with(2, 3)).part).unwrap();
+    let held = read(&with(0, 1));
+    let mut tree = held.tree.clone();
+    assert_eq!(patch(&mut tree, &held.part), Ok(0));
+}
+
+const STYLE_XML: &str = r#"<p:style><a:lnRef idx="1"><a:schemeClr val="accent1"/></a:lnRef><a:fillRef idx="2"><a:schemeClr val="accent2"/></a:fillRef><a:effectRef idx="0"><a:schemeClr val="accent3"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></p:style>"#;
+
+#[test]
+fn a_shape_style_is_edited_in_place_and_made_at_its_schema_place() {
+    let xml = body_slide("<a:bodyPr/>", STYLE_XML);
+    let r = read(&xml);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+    let mut after = r.part.clone();
+    let style = after.shape_tree_mut().unwrap().children[0]
+        .style
+        .as_mut()
+        .unwrap();
+    style.font.as_mut().unwrap().idx = FontCollectionIndex::from_xml("major");
+    style.line.as_mut().unwrap().idx = Some(3);
+    let mut tree = r.tree;
+    patch(&mut tree, &after).unwrap();
+    assert_eq!(
+        String::from_utf8(tree.to_bytes()).unwrap(),
+        xml.replace(r#"fontRef idx="minor""#, r#"fontRef idx="major""#)
+            .replace(r#"lnRef idx="1""#, r#"lnRef idx="3""#)
+    );
+
+    // A colour is a choice inside its reference.
+    let green = xml.replace(
+        r#"<a:lnRef idx="1"><a:schemeClr val="accent1"/></a:lnRef>"#,
+        r#"<a:lnRef idx="1"><a:srgbClr val="00FF00"/></a:lnRef>"#,
+    );
+    let out = writes(&xml, &green, &["lnRef", "srgbClr", "fillRef"]);
+    assert!(!out.contains(r#"schemeClr val="accent1""#));
+
+    // Made between `spPr` and `txBody`, and taken away.
+    let bare = body_slide("<a:bodyPr/>", "");
+    writes(
+        &bare,
+        &xml,
+        &[
+            "p:spPr",
+            "p:style",
+            "lnRef",
+            "fillRef",
+            "effectRef",
+            "fontRef",
+            "p:txBody",
+        ],
+    );
+    let out = writes(&xml, &bare, &["p:txBody"]);
+    assert!(!out.contains("p:style"));
+}
+
+#[test]
+fn a_style_short_of_a_reference_or_on_a_group_is_refused() {
+    let xml = body_slide("<a:bodyPr/>", STYLE_XML);
+    let r = read(&xml);
+    let mut after = r.part.clone();
+    after.shape_tree_mut().unwrap().children[0]
+        .style
+        .as_mut()
+        .unwrap()
+        .effect = None;
+    let mut tree = r.tree.clone();
+    assert_eq!(patch(&mut tree, &after).unwrap_err(), "CS-EXP-0009");
+
+    let mut after = r.part.clone();
+    after.shape_tree_mut().unwrap().style = after.shape_tree().unwrap().children[0].style.clone();
+    let mut tree = r.tree.clone();
+    assert_eq!(patch(&mut tree, &after).unwrap_err(), "CS-SLE-0001");
+}
+
+/// `CT_Connection`, on the deck that shows it: edited in place, schema-valid, and it
+/// reads back.
+#[test]
+fn a_connectors_ends_are_edited_in_place() {
+    let source =
+        std::fs::read(repo().join("fixtures/generated/text-object-defaults.pptx")).unwrap();
+    let mut wanted = model(&source);
+    let ordinal = ordinal_of_slide(&wanted);
+    let slide = wanted.get_mut(ordinal).unwrap();
+    let connector = named(slide, "Connector");
+    assert_eq!(
+        connector.start_connection,
+        Some(casual_slide_model::shape::Connection { spid: 10, site: 1 })
+    );
+    connector.end_connection = Some(casual_slide_model::shape::Connection { spid: 11, site: 2 });
+    let mut pkg = open(source.clone());
+    let out = save_slide_parts(
+        &mut pkg,
+        &wanted.structure,
+        &[wanted.get(ordinal).unwrap()],
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    assert_eq!(model(&out.bytes), wanted);
+    let (old, new) = (parts(&source), parts(&out.bytes));
+    let old = String::from_utf8(old["ppt/slides/slide1.xml"].clone()).unwrap();
+    let new = String::from_utf8(new["ppt/slides/slide1.xml"].clone()).unwrap();
+    assert_eq!(
+        new,
+        old.replace(
+            r#"<a:endCxn id="12" idx="3"/>"#,
+            r#"<a:endCxn id="11" idx="2"/>"#
+        )
+    );
+    f4_validates(&source, &out.bytes, "connector ends");
+}
+
+/// Forced from a model through the writer, on the decks made for this: every part of a
+/// shape can be taken away and put back, and each pass validates (per-tier gate 3).
+#[test]
+fn the_shape_decks_rewrite_from_the_model_and_stay_valid() {
+    for deck in [
+        "shape-fills",
+        "text-warp-and-3d",
+        "text-object-defaults",
+        "drawing-extension-lists",
+        "drawing-every-element",
+    ] {
+        let source = std::fs::read(repo().join(format!("fixtures/generated/{deck}.pptx"))).unwrap();
+        let wanted = model(&source);
+        let ordinal = ordinal_of_slide(&wanted);
+        let mut emptied = wanted.clone();
+        let tree_of = emptied.get_mut(ordinal).unwrap().shape_tree_mut().unwrap();
+        fn strip(n: &mut ShapeNode) {
+            // What cannot be added is left: a known `uri` is needed for an extension, and a
+            // blip's `imgProps` cannot be made (T1E-04).
+            let picture = n.properties.picture.take();
+            let hidden = n.properties.hidden.take();
+            let blip = n
+                .properties
+                .fill
+                .take()
+                .filter(|f| matches!(f, Fill::Blip(_)));
+            n.properties = ShapeProperties {
+                picture,
+                hidden,
+                fill: blip,
+                ..ShapeProperties::default()
+            };
+            n.style = None;
+            n.children.iter_mut().for_each(strip);
+        }
+        tree_of.children.iter_mut().for_each(strip);
+        let mut pkg = open(source.clone());
+        let stripped = save_slide_parts(
+            &mut pkg,
+            &emptied.structure,
+            &[emptied.get(ordinal).unwrap()],
+            &SlideLimits::default(),
+            &ImportLimits::default(),
+        )
+        .unwrap_or_else(|e| panic!("{deck}: {e}"));
+        let mut pkg = open(stripped.bytes.clone());
+        let rewritten = save_slide_parts(
+            &mut pkg,
+            &wanted.structure,
+            &[wanted.get(ordinal).unwrap()],
+            &SlideLimits::default(),
+            &ImportLimits::default(),
+        )
+        .unwrap_or_else(|e| panic!("{deck}: {e}"));
+        assert_eq!(model(&rewritten.bytes), wanted, "{deck}: a fixed point");
+        f4_validates(&source, &rewritten.bytes, deck);
+        // For Microsoft's validator, which needs `dotnet` and runs outside this test.
+        if let Some(dir) = std::env::var_os("REWRITTEN_DECKS_TO") {
+            let dir = Path::new(&dir);
+            std::fs::write(dir.join(format!("{deck}-rewritten.pptx")), &rewritten.bytes).unwrap();
+            std::fs::write(dir.join(format!("{deck}-stripped.pptx")), &stripped.bytes).unwrap();
+        }
+    }
+}
+
+/// Every element and attribute row of the areas survives being written from nothing: the
+/// deck that holds them all goes through the writer with its properties taken away and put
+/// back, and each row is in the part that comes out.
+#[test]
+fn every_row_of_the_areas_is_in_what_the_writer_writes() {
+    let source =
+        std::fs::read(repo().join("fixtures/generated/drawing-every-element.pptx")).unwrap();
+    let wanted = model(&source);
+    let ordinal = ordinal_of_slide(&wanted);
+    let mut emptied = wanted.clone();
+    fn strip(n: &mut ShapeNode) {
+        let picture = n.properties.picture.take();
+        let hidden = n.properties.hidden.take();
+        let blip = n
+            .properties
+            .fill
+            .take()
+            .filter(|f| matches!(f, Fill::Blip(_)));
+        n.properties = ShapeProperties {
+            picture,
+            hidden,
+            fill: blip,
+            ..ShapeProperties::default()
+        };
+        n.children.iter_mut().for_each(strip);
+    }
+    emptied
+        .get_mut(ordinal)
+        .unwrap()
+        .shape_tree_mut()
+        .unwrap()
+        .children
+        .iter_mut()
+        .for_each(strip);
+    let mut pkg = open(source);
+    let stripped = save_slide_parts(
+        &mut pkg,
+        &emptied.structure,
+        &[emptied.get(ordinal).unwrap()],
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    let mut pkg = open(stripped.bytes);
+    let rewritten = save_slide_parts(
+        &mut pkg,
+        &wanted.structure,
+        &[wanted.get(ordinal).unwrap()],
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    let xml = String::from_utf8(parts(&rewritten.bytes)[PART].clone()).unwrap();
+    let text = std::fs::read_to_string(repo().join("docs/spec/checklist.tsv")).unwrap();
+    let mut checked = 0;
+    for line in text.lines() {
+        let cols: Vec<&str> = line.split('\t').collect();
+        let (Some(id), Some(area), Some(kind)) = (cols.first(), cols.get(1), cols.get(3)) else {
+            continue;
+        };
+        if !matches!(*area, "GEOM" | "FILL" | "LINE" | "EFFECT" | "D3") {
+            continue;
+        }
+        // In other decks, or other tiers': `the_shape_decks_rewrite_from_the_model_and_stay_valid`
+        // and casual-slide-import's `elsewhere` say which.
+        const NOT_HERE: &[&str] = &[
+            "CT_BackgroundFormatting",
+            "CT_WholeE2oFormatting",
+            "CT_FlatText",
+            "EG_Text3D",
+            "CT_PresetTextShape",
+            "EG_TextGeometry",
+            "CT_Connection",
+            "CT_TextMath",
+            "CT_ContentPartLocking",
+            "CT_NonVisualInkContentPartProperties",
+            "CT_GvmlContentPart",
+            "CT_CameraTool",
+            "CT_CompatExt",
+            "CT_IsGvmlCanvas",
+            "@legacySpreadsheetColorIndex",
+            "ST_LegacySpreadsheetColorIndex",
+            "<m>",
+            "<cameraTool>",
+            "<compatExt>",
+            "<isCanvas>",
+            "<contentPart>",
+            "extLst",
+        ];
+        if NOT_HERE.iter().any(|n| id.contains(n)) {
+            continue;
+        }
+        let tail = id.rsplit('/').next().unwrap();
+        let found = match *kind {
+            "attribute" => {
+                let name = tail.trim_start_matches('@').rsplit(':').next().unwrap();
+                xml.contains(&format!(" {name}=\"")) || xml.contains(&format!(":{name}=\""))
+            }
+            "element" => {
+                let name = tail.rsplit(':').next().unwrap();
+                xml.contains(&format!(":{name} "))
+                    || xml.contains(&format!(":{name}>"))
+                    || xml.contains(&format!(":{name}/>"))
+            }
+            _ => continue,
+        };
+        assert!(found, "{id} did not come back");
+        checked += 1;
+    }
+    assert!(checked > 300, "{checked}");
 }

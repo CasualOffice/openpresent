@@ -1,0 +1,6 @@
+# Fixtures and manifests read the same on every OS.
+*.tsv text eol=lf
+*.pptx binary
+*.ppsx binary
+*.potx binary
+*.bin binary

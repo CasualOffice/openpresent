@@ -135,6 +135,7 @@ fn malformed(w: &Writer<'_>) -> ExportError {
     }
 }
 
+// spec-audit: owner=tcPr,tcStyle
 fn cell3d(c: &Cell3D) -> Node {
     Node::a("cell3D")
         .lex("prstMaterial", c.prst_material.as_ref())
@@ -142,6 +143,7 @@ fn cell3d(c: &Cell3D) -> Node {
         .opt(c.light_rig.as_ref().map(light_rig))
 }
 
+// spec-audit: owner=tcPr
 fn headers(h: &Headers) -> Node {
     Node::a("headers").list(
         h.header
@@ -243,6 +245,7 @@ fn tc_bdr(b: &TableCellBorderStyle) -> Node {
         .opt(one("tr2bl", &b.tr2bl))
 }
 
+// spec-audit: owner=wholeTbl,band1H,band2H,band1V,band2V,lastCol,firstCol,lastRow,seCell,swCell,firstRow,neCell,nwCell
 fn tc_style(c: &TableStyleCellStyle) -> Node {
     Node::a("tcStyle")
         .opt(c.tc_bdr.as_ref().map(tc_bdr))
@@ -250,6 +253,7 @@ fn tc_style(c: &TableStyleCellStyle) -> Node {
         .opt(c.cell3d.as_ref().map(cell3d))
 }
 
+// spec-audit: owner=wholeTbl,band1H,band2H,band1V,band2V,lastCol,firstCol,lastRow,seCell,swCell,firstRow,neCell,nwCell
 fn tc_tx_style(t: &TableStyleTextStyle) -> Node {
     let b = t.bold.map(|v| v.as_xml().to_owned());
     let i = t.italic.map(|v| v.as_xml().to_owned());
@@ -276,6 +280,19 @@ fn tbl_bg(b: &TableBackgroundStyle) -> Node {
         .opt(b.effect.as_ref().map(style_effect))
 }
 
+// spec-audit: a:CT_TableStyle/wholeTbl
+// spec-audit: a:CT_TableStyle/band1H
+// spec-audit: a:CT_TableStyle/band2H
+// spec-audit: a:CT_TableStyle/band1V
+// spec-audit: a:CT_TableStyle/band2V
+// spec-audit: a:CT_TableStyle/lastCol
+// spec-audit: a:CT_TableStyle/firstCol
+// spec-audit: a:CT_TableStyle/lastRow
+// spec-audit: a:CT_TableStyle/seCell
+// spec-audit: a:CT_TableStyle/swCell
+// spec-audit: a:CT_TableStyle/firstRow
+// spec-audit: a:CT_TableStyle/neCell
+// spec-audit: a:CT_TableStyle/nwCell
 fn tbl_style(local: &'static str, s: &TableStyle) -> Node {
     Node::a(local)
         .lex("styleId", s.style_id.as_ref())
@@ -333,6 +350,7 @@ fn counted(w: &Writer<'_>, parent: &Elem, local: &str, expected: usize) -> Resul
     }
 }
 
+// spec-audit: owner=tc
 fn patch_cell(w: &mut Writer<'_>, el: &Elem, b: &TableCell, a: &TableCell) -> Result {
     patch(w, el, Some(&tc(b)), &tc(a))?;
     sync_ordered(
@@ -391,6 +409,7 @@ fn patch_tr(w: &mut Writer<'_>, el: &Elem, b: &TableRow, a: &TableRow) -> Result
     Ok(())
 }
 
+// spec-audit: a:<tbl>
 fn patch_table(w: &mut Writer<'_>, el: &Elem, b: &Table, a: &Table) -> Result {
     if b.rows.len() != a.rows.len() {
         return Err(unsupported(w, "a row added to or removed from a table"));
@@ -457,6 +476,8 @@ pub(crate) fn patch_frame_table(
     patch_table(w, &table, b, a)
 }
 
+// spec-audit: owner=tblStyleLst
+// spec-audit: a:<tblStyleLst>
 fn list_node(l: &TableStyleList) -> Node {
     Node::a("tblStyleLst")
         .lex("def", l.def.as_ref())

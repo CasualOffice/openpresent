@@ -35,3 +35,4 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [64-SPK-01-TEXT-COST](64-SPK-01-TEXT-COST.md) | Measurements behind ADR-004 and ADR-005: bundle, layout, frame time, appearance | Measured |
 | [15-CI-AND-RELEASE-GATES](15-CI-AND-RELEASE-GATES.md) | Test levels, the CI job contract, repository gates, no-retry flake policy, gates per phase, tag-only releases with dry-run default | Live |
 | [21-PARSER-LIMITS](21-PARSER-LIMITS.md) | Every parser limit the code holds, its default, its code and whether a test proves it; checked against the code | Live |
+| [29-RECOVERY](29-RECOVERY.md) | **Opening and editing damaged decks, including what Microsoft refuses** | Accepted; being built |

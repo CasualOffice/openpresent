@@ -4,9 +4,9 @@
 //!
 //! A value that can be used goes in the model, with its written form where the type
 //! has several. One that cannot is reported and left out, and stays in the tree. What
-//! other tiers still own (3D, a warp's `avLst`, a picture bullet's content, `extLst`) is
-//! reported and stays in the tree. A run's fill, line and effects go through Tier 1E's
-//! readers, with their own bounds. A count over a bound in
+//! other tiers still own (a picture bullet's content, `extLst`) is reported and stays in
+//! the tree. A run's fill, line and effects, and a body's warp and 3D, go through Tier
+//! 1E's readers, with their own bounds. A count over a bound in
 //! [`TextLimits`] refuses the part. Nothing here recurses on input: a text body has a
 //! fixed depth, and colours have their own bound.
 //!
@@ -22,13 +22,14 @@ use casual_slide_model::text::{
     Bullet, BulletColor, BulletFont, BulletSize, CharacterProperties, FONT_SCALE_MAX,
     FONT_SCALE_MIN, FONT_SIZE_MIN, LineBreak, Paragraph, ParagraphProperties, SPACING_PERCENT_MAX,
     SPACING_POINT_MAX, TEXT_COLUMNS_MAX, TEXT_LEVEL_MAX, TEXT_MARGIN_MAX, TEXT_POINT_MAX, TabStop,
-    TextBody, TextField, TextItem, TextListStyle, TextPoint, TextRun, TextSpacing, TextWarp,
+    Text3D, TextBody, TextField, TextItem, TextListStyle, TextPoint, TextRun, TextSpacing,
     UnderlineFill, UnderlineLine, Written,
 };
 use casual_slide_ooxml::Relationship;
 
 use crate::color::{Findings as ColorFindings, read_color_choice};
-use crate::drawing::{DrawingLimits, is_fill_element, read_effects, read_fill, read_line};
+use crate::drawing::{Ctx, DrawingLimits, is_fill_element, read_effects, read_fill, read_line};
+use crate::geometry::read_preset_text_shape;
 use crate::presentation::read_text_font;
 use crate::properties::{
     Elem, ImportError, ImportFindingKind as K, Reader, TextBound, is_guid, ns,
@@ -77,6 +78,7 @@ pub(crate) struct TextReader<'a, 'r> {
     pub rels: &'a [Relationship],
     pub color: &'a mut ColorFindings,
     pub counts: &'a mut TextCounts,
+    pub drawing: DrawingLimits,
 }
 
 fn coordinate32(c: &Written<Coordinate>) -> bool {
@@ -108,6 +110,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextBody`, under whichever element holds it.
+    // spec-audit: owner=txBody
     pub fn body(&mut self, el: &Elem) -> Result<TextBody, ImportError> {
         self.r.finish(el);
         let limits = self.r.limits.text;
@@ -161,8 +164,11 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextBodyProperties`.
+    // spec-audit: owner=bodyPr
     pub fn body_properties(&mut self, el: &Elem) -> Result<BodyProperties, ImportError> {
         let mut e = el.clone();
+        let drawing = self.drawing;
+        let rels = self.rels;
         let r = &mut *self.r;
         let mut b = BodyProperties {
             rotation: r.attr(&mut e, "rot")?,
@@ -188,25 +194,44 @@ impl TextReader<'_, '_> {
             compat_line_spacing: r.attr(&mut e, "compatLnSpc")?,
             warp: None,
             autofit: None,
+            scene3d: None,
+            text_3d: None,
         };
         r.finish(&e);
+        // A property over a bound is left out, and is still one seen.
+        let mut seen = HashSet::new();
         for child in r.children(el)? {
             if !child.in_namespace(ns::DML) {
                 r.retained(&child);
                 continue;
             }
+            let slot = match child.local.as_str() {
+                "sp3d" | "flatTx" => Some("text3d"),
+                "prstTxWarp" => Some("warp"),
+                "scene3d" => Some("scene3d"),
+                _ => None,
+            };
+            if slot.is_some_and(|slot| !seen.insert(slot)) {
+                r.note(K::DuplicateElement, &child, None);
+                continue;
+            }
             match child.local.as_str() {
-                "prstTxWarp" if b.warp.is_some() => r.note(K::DuplicateElement, &child, None),
-                "prstTxWarp" => {
-                    let mut warp = child.clone();
-                    b.warp = Some(TextWarp {
-                        preset: r.required(&mut warp, "prst", |_| true)?,
-                    });
-                    r.finish(&warp);
-                    for inner in r.children(&child)? {
-                        // `avLst` is the geometry tier's.
-                        r.retained(&inner);
-                    }
+                "prstTxWarp" => b.warp = read_preset_text_shape(r, drawing, &child)?,
+                "scene3d" => {
+                    let mut ctx = Ctx::new(&mut *r, rels, drawing);
+                    b.scene3d = ctx.guard(&child, |c| c.scene3d(&child))?.map(Box::new);
+                }
+                "sp3d" => {
+                    let mut ctx = Ctx::new(&mut *r, rels, drawing);
+                    b.text_3d = ctx
+                        .guard(&child, |c| c.sp3d(&child))?
+                        .map(|s| Text3D::Shape(Box::new(s)));
+                }
+                "flatTx" => {
+                    let mut ctx = Ctx::new(&mut *r, rels, drawing);
+                    b.text_3d = ctx
+                        .guard(&child, |c| c.flat_text(&child))?
+                        .map(Text3D::Flat);
                 }
                 "noAutofit" | "normAutofit" | "spAutoFit" if b.autofit.is_some() => {
                     r.note(K::DuplicateElement, &child, None);
@@ -234,7 +259,7 @@ impl TextReader<'_, '_> {
                         r.retained(&inner);
                     }
                 }
-                // `scene3d`, `sp3d`, `flatTx`: Tier 1E. `extLst` stays.
+                // `extLst` stays.
                 _ => r.retained(&child),
             }
         }
@@ -242,6 +267,16 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextListStyle`, under whichever element holds it.
+    // spec-audit: a:CT_TextListStyle/lvl1pPr
+    // spec-audit: a:CT_TextListStyle/lvl2pPr
+    // spec-audit: a:CT_TextListStyle/lvl3pPr
+    // spec-audit: a:CT_TextListStyle/lvl4pPr
+    // spec-audit: a:CT_TextListStyle/lvl5pPr
+    // spec-audit: a:CT_TextListStyle/lvl6pPr
+    // spec-audit: a:CT_TextListStyle/lvl7pPr
+    // spec-audit: a:CT_TextListStyle/lvl8pPr
+    // spec-audit: a:CT_TextListStyle/lvl9pPr
+    // spec-audit: owner=lstStyle
     pub fn list_style(&mut self, el: &Elem) -> Result<TextListStyle, ImportError> {
         self.r.finish(el);
         let mut style = TextListStyle::default();
@@ -275,6 +310,7 @@ impl TextReader<'_, '_> {
         self.paragraph_properties(el)
     }
 
+    // spec-audit: owner=p
     fn paragraph(&mut self, el: &Elem) -> Result<Paragraph, ImportError> {
         self.r.finish(el);
         let limits = self.r.limits.text;
@@ -331,6 +367,7 @@ impl TextReader<'_, '_> {
         Ok(p)
     }
 
+    // spec-audit: owner=r
     fn run(&mut self, el: &Elem) -> Result<TextRun, ImportError> {
         self.r.finish(el);
         let mut run = TextRun::default();
@@ -359,6 +396,7 @@ impl TextReader<'_, '_> {
         Ok(run)
     }
 
+    // spec-audit: owner=br
     fn line_break(&mut self, el: &Elem) -> Result<LineBreak, ImportError> {
         self.r.finish(el);
         let mut br = LineBreak::default();
@@ -374,6 +412,7 @@ impl TextReader<'_, '_> {
         Ok(br)
     }
 
+    // spec-audit: owner=fld
     fn field(&mut self, el: &Elem) -> Result<TextField, ImportError> {
         let mut e = el.clone();
         let mut field = TextField {
@@ -410,6 +449,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextParagraphProperties`: `pPr`, or a list style level.
+    // spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr
     pub fn paragraph_properties(&mut self, el: &Elem) -> Result<ParagraphProperties, ImportError> {
         let mut e = el.clone();
         let r = &mut *self.r;
@@ -525,6 +565,7 @@ impl TextReader<'_, '_> {
         Ok(p)
     }
 
+    // spec-audit: owner=buBlip
     fn bullet_picture(&mut self, el: &Elem) -> Result<Bullet, ImportError> {
         self.r.finish(el);
         let mut embed = None;
@@ -555,6 +596,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextSpacing`. `None`, reported, if it holds nothing usable.
+    // spec-audit: owner=lnSpc,spcBef,spcAft,spcPct,spcPts
     fn spacing(&mut self, el: &Elem) -> Result<Option<TextSpacing>, ImportError> {
         self.r.finish(el);
         let mut value = None;
@@ -590,6 +632,7 @@ impl TextReader<'_, '_> {
         Ok(value)
     }
 
+    // spec-audit: owner=tabLst,tab
     fn tabs(&mut self, el: &Elem) -> Result<Vec<TabStop>, ImportError> {
         self.r.finish(el);
         let limit = self.r.limits.text.max_tab_stops;
@@ -617,6 +660,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextCharacterProperties`: `rPr`, `defRPr` or `endParaRPr`.
+    // spec-audit: owner=rPr,defRPr,endParaRPr
     pub fn character(&mut self, el: &Elem) -> Result<CharacterProperties, ImportError> {
         let mut e = el.clone();
         let r = &mut *self.r;
@@ -672,15 +716,14 @@ impl TextReader<'_, '_> {
             }
             match name {
                 "ln" => {
-                    c.line = read_line(self.r, self.rels, DrawingLimits::default(), &child)?
-                        .map(Box::new);
+                    c.line = read_line(self.r, self.rels, self.drawing, &child)?.map(Box::new);
                 }
                 "noFill" | "solidFill" | "gradFill" | "blipFill" | "pattFill" | "grpFill" => {
-                    c.fill = read_fill(self.r, self.rels, DrawingLimits::default(), &child)?;
+                    c.fill = read_fill(self.r, self.rels, self.drawing, &child)?;
                 }
                 "effectLst" | "effectDag" => {
-                    c.effects = read_effects(self.r, self.rels, DrawingLimits::default(), &child)?
-                        .map(Box::new);
+                    c.effects =
+                        read_effects(self.r, self.rels, self.drawing, &child)?.map(Box::new);
                 }
                 "highlight" => {
                     self.r.finish(&child);
@@ -691,9 +734,8 @@ impl TextReader<'_, '_> {
                     c.underline_line = Some(UnderlineLine::FollowText);
                 }
                 "uLn" => {
-                    c.underline_line =
-                        read_line(self.r, self.rels, DrawingLimits::default(), &child)?
-                            .map(|line| UnderlineLine::Line(Box::new(line)));
+                    c.underline_line = read_line(self.r, self.rels, self.drawing, &child)?
+                        .map(|line| UnderlineLine::Line(Box::new(line)));
                 }
                 "uFillTx" => {
                     finish_empty(self.r, &child)?;
@@ -708,7 +750,7 @@ impl TextReader<'_, '_> {
                         } else if fill.is_some() {
                             self.r.note(K::DuplicateElement, &inner, None);
                         } else {
-                            fill = read_fill(self.r, self.rels, DrawingLimits::default(), &inner)?;
+                            fill = read_fill(self.r, self.rels, self.drawing, &inner)?;
                         }
                     }
                     c.underline_fill = Some(UnderlineFill::Fill(fill));

@@ -6,6 +6,7 @@ use crate::drawing::{Node, Space};
 use crate::fill::fill_node;
 use crate::geometry::geometry_node;
 
+// spec-audit: owner=headEnd,tailEnd
 fn end(local: &'static str, e: &LineEnd) -> Node {
     Node::a(local)
         .lex("type", e.end_type.as_ref())
@@ -13,6 +14,7 @@ fn end(local: &'static str, e: &LineEnd) -> Node {
         .lex("len", e.length.as_ref())
 }
 
+// spec-audit: owner=lineSketchStyleProps,type
 fn sketch(s: &LineSketch) -> Node {
     let kind = s.sketch_type.as_ref().map(|choice| {
         let picked = choice.map(|c| {
@@ -39,13 +41,14 @@ fn sketch(s: &LineSketch) -> Node {
 }
 
 /// `a:CT_LineProperties`, under the name it has here.
+// spec-audit: owner=ln,hiddenLine,ds,custDash,prstDash,miter
 pub(crate) fn line_node(l: &Line, space: Space, local: &'static str) -> Node {
     let dash = l.dash.as_ref().map(|d| match d {
         LineDash::Preset(v) => Node::a("prstDash").lex("val", v.as_ref()),
         LineDash::Custom(stops) => Node::a("custDash").list(
             stops
                 .iter()
-                .map(|s| Node::a("ds").pct("d", s.dash).pct("sp", s.space)),
+                .map(|s| Node::a("ds").dash("d", s.dash).dash("sp", s.space)),
         ),
     });
     let join = l.join.map(|j| match j {

@@ -349,11 +349,12 @@ pub struct ConnectionSite {
 }
 
 /// One command of a path, in document order.
+/// In `a:CT_Path2D`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathCommand {
-    /// `moveTo`.
+    /// `moveTo/pt`.
     MoveTo(Option<AdjPoint>),
-    /// `lnTo`.
+    /// `lnTo/pt`.
     LineTo(Option<AdjPoint>),
     /// `arcTo`, each as written.
     ArcTo {
@@ -366,9 +367,9 @@ pub enum PathCommand {
         /// `@swAng`.
         swing_angle: Option<String>,
     },
-    /// `quadBezTo`: its `pt` children, of which the schema wants two.
+    /// `quadBezTo/pt`: its children, of which the schema wants two.
     QuadBezTo(Vec<AdjPoint>),
-    /// `cubicBezTo`: its `pt` children, of which the schema wants three.
+    /// `cubicBezTo/pt`: its children, of which the schema wants three.
     CubicBezTo(Vec<AdjPoint>),
     /// `close`.
     Close,
@@ -395,17 +396,17 @@ pub struct Path2D {
 /// `a:CT_CustomGeometry2D`. An absent list and an empty one differ.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CustomGeometry {
-    /// `avLst`.
+    /// `avLst/gd`.
     pub adjust: Option<Vec<GeomGuide>>,
-    /// `gdLst`.
+    /// `gdLst/gd`.
     pub guides: Option<Vec<GeomGuide>>,
-    /// `ahLst`.
+    /// `ahLst/ahXY`, `ahLst/ahPolar`.
     pub handles: Option<Vec<AdjustHandle>>,
-    /// `cxnLst`.
+    /// `cxnLst/cxn`.
     pub sites: Option<Vec<ConnectionSite>>,
     /// `rect`.
     pub rect: Option<GeomRect>,
-    /// `pathLst`.
+    /// `pathLst/path`.
     pub paths: Option<Vec<Path2D>>,
 }
 
@@ -423,7 +424,7 @@ pub struct PresetGeometry {
 pub struct PresetTextShape {
     /// `@prst`.
     pub preset: Option<TextShapeType>,
-    /// `avLst`.
+    /// `avLst/gd`.
     pub adjust: Option<Vec<GeomGuide>>,
 }
 

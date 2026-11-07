@@ -27,6 +27,7 @@ use casual_slide_ooxml::{
 };
 
 use crate::color::Findings as ColorFindings;
+use crate::drawing::DrawingLimits;
 use crate::presentation::is_optional_part_fault;
 use crate::properties::{
     Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns,
@@ -58,6 +59,8 @@ pub struct SlideLimits {
     pub max_layout_ids: usize,
     /// Bounds on tables and table styles.
     pub table: TableLimits,
+    /// Bounds on one drawing property of a shape or a run. `CS-DRW-0001`.
+    pub drawing: DrawingLimits,
 }
 
 impl Default for SlideLimits {
@@ -69,6 +72,7 @@ impl Default for SlideLimits {
             max_parts: 250_000,
             max_layout_ids: 10_000,
             table: TableLimits::default(),
+            drawing: DrawingLimits::default(),
         }
     }
 }
@@ -359,13 +363,16 @@ fn read_part(
             "clrMapOvr" => p.color_map_override = read_color_map_override(tree, el.id, color),
             "hf" => p.header_footer = Some(read_header_footer(r, &el)?),
             "sldLayoutIdLst" => p.layout_ids = Some(read_layout_ids(r, &el, rels, limits)?),
-            "txStyles" => p.text_styles = Some(read_text_styles(r, &el, rels, color)?),
+            "txStyles" => {
+                p.text_styles = Some(read_text_styles(r, &el, rels, color, limits.drawing)?)
+            }
             _ => {
                 let mut text = TextReader {
                     r: &mut *r,
                     rels,
                     color: &mut *color,
                     counts: &mut TextCounts::default(),
+                    drawing: limits.drawing,
                 };
                 p.notes_style = Some(text.list_style(&el)?);
             }
@@ -553,6 +560,7 @@ fn read_text_styles(
     el: &Elem,
     rels: &[Relationship],
     color: &mut ColorFindings,
+    drawing: DrawingLimits,
 ) -> Result<MasterTextStyles, SlideError> {
     r.finish(el);
     let mut styles = MasterTextStyles::default();
@@ -577,6 +585,7 @@ fn read_text_styles(
             rels,
             color: &mut *color,
             counts: &mut TextCounts::default(),
+            drawing,
         };
         *slot = Some(text.list_style(&child)?);
     }

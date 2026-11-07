@@ -164,7 +164,7 @@ pub struct GradientFill {
     pub flip: Option<TileFlipMode>,
     /// `@rotWithShape`.
     pub rotate_with_shape: Option<bool>,
-    /// `gsLst`. An absent list and an empty one differ.
+    /// `gsLst/gs`. An absent list and an empty one differ.
     pub stops: Option<Vec<GradientStop>>,
     /// `lin` or `path`.
     pub shade: Option<GradientShade>,
@@ -205,7 +205,7 @@ pub struct TileInfo {
 pub enum BlipFillMode {
     /// `tile`.
     Tile(TileInfo),
-    /// `stretch`, with its `fillRect`.
+    /// `stretch/fillRect`.
     Stretch(Option<RelativeRect>),
 }
 
@@ -243,6 +243,7 @@ pub struct BlipFill {
 }
 
 /// `EG_FillProperties`.
+/// A line holds these too, as `EG_LineFillProperties`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Fill {
     /// `noFill`.

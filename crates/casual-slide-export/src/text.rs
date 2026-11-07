@@ -5,14 +5,15 @@
 //! So what a run holds beyond the model stays with it, and a retained element, such as
 //! an equation's `mc:AlternateContent`, stays where it is.
 //!
-//! A run's fill, line, effects and underline go through Tier 1E's writer. A picture
-//! bullet can be kept or removed, and not made from here: asking for one is refused as
+//! A run's fill, line, effects and underline, and a body's warp and 3D, go through Tier
+//! 1E's writer. A picture bullet can be kept or removed, and not made from here: asking for one is refused as
 //! `CS-EXP-0009`, and nothing is saved.
 //! A change that would leave required content out (`bodyPr`, the last `p`, `a:t`) is
 //! refused the same way.
 
 use casual_slide_import::properties::{Elem, ns};
 use casual_slide_model::color::Color;
+use casual_slide_model::d3::{FlatText, Shape3D};
 use casual_slide_model::effect::EffectProperties;
 use casual_slide_model::fill::Fill;
 use casual_slide_model::line::Line;
@@ -21,13 +22,16 @@ use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::Hyperlink;
 use casual_slide_model::text::{
     Autofit, BodyProperties, BooleanElement, Bullet, BulletColor, BulletFont, BulletSize,
-    CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TabStop, TextBody, TextField,
-    TextItem, TextListStyle, TextRun, TextSpacing, TextWarp, UnderlineFill, UnderlineLine, Written,
+    CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TabStop, Text3D, TextBody,
+    TextField, TextItem, TextListStyle, TextRun, TextSpacing, UnderlineFill, UnderlineLine,
+    Written,
 };
 
+use crate::d3::{flat_text_node, scene3d_node, sp3d_node};
 use crate::drawing::{Space, patch};
 use crate::effect::effect_properties_node;
 use crate::fill::fill_node;
+use crate::geometry::warp_node;
 use crate::line::line_node;
 use crate::presentation::patch_text_font;
 use crate::properties::{ExportError, Writer};
@@ -206,6 +210,7 @@ fn bullet_percent(
 }
 
 /// `a:CT_TextBody`, under whichever element holds it.
+// spec-audit: owner=txBody,lstStyle
 pub(crate) fn patch_text_body(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -276,6 +281,7 @@ pub(crate) fn patch_text_body(
 }
 
 /// `a:CT_TextBodyProperties`.
+// spec-audit: owner=bodyPr,normAutofit
 fn patch_body_properties(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -317,14 +323,7 @@ fn patch_body_properties(
         "prstTxWarp",
         b.and_then(|b| b.warp.as_ref()),
         a.warp.as_ref(),
-        |w, el, before: Option<&TextWarp>, after| {
-            w.attr(
-                el,
-                "prst",
-                before.and_then(|b| b.preset.as_ref()),
-                after.preset.as_ref(),
-            )
-        },
+        |w, el, before, after| patch(w, el, before.map(warp_node).as_ref(), &warp_node(after)),
     )?;
     let before = b.and_then(|b| b.autofit.as_ref());
     if before != a.autofit.as_ref() {
@@ -360,11 +359,102 @@ fn patch_body_properties(
             }
         }
     }
-    Ok(())
+    patch_body_3d(w, el, b, a)
+}
+
+fn text_3d_shape(t: Option<&Text3D>) -> Option<&Shape3D> {
+    match t {
+        Some(Text3D::Shape(s)) => Some(s),
+        _ => None,
+    }
+}
+
+fn text_3d_flat(t: Option<&Text3D>) -> Option<FlatText> {
+    match t {
+        Some(Text3D::Flat(f)) => Some(*f),
+        _ => None,
+    }
+}
+
+/// `scene3d` and the `EG_Text3D` choice. One the model could not hold (over a bound)
+/// goes when the choice is made the other way, or the reader would find both.
+// spec-audit: owner=bodyPr
+fn patch_body_3d(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&BodyProperties>,
+    a: &BodyProperties,
+) -> Result {
+    sync_ordered(
+        w,
+        el,
+        ns::DML,
+        "a",
+        BODY_PROPERTIES_ORDER,
+        "scene3d",
+        b.and_then(|b| b.scene3d.as_deref()),
+        a.scene3d.as_deref(),
+        |w, el, before, after| {
+            let node = |s| scene3d_node(s, Space::Dml, "scene3d");
+            patch(w, el, before.map(node).as_ref(), &node(after))
+        },
+    )?;
+    let before = b.and_then(|b| b.text_3d.as_ref());
+    if before == a.text_3d.as_ref() {
+        return Ok(());
+    }
+    match a.text_3d {
+        Some(Text3D::Shape(_)) => w.remove_all(el, ns::DML, "flatTx")?,
+        Some(Text3D::Flat(_)) => w.remove_all(el, ns::DML, "sp3d")?,
+        None => {}
+    }
+    sync_ordered(
+        w,
+        el,
+        ns::DML,
+        "a",
+        BODY_PROPERTIES_ORDER,
+        "sp3d",
+        text_3d_shape(before),
+        text_3d_shape(a.text_3d.as_ref()),
+        |w, el, before, after| {
+            let node = |s| sp3d_node(s, Space::Dml, "sp3d");
+            patch(w, el, before.map(node).as_ref(), &node(after))
+        },
+    )?;
+    let (old, new) = (text_3d_flat(before), text_3d_flat(a.text_3d.as_ref()));
+    sync_ordered(
+        w,
+        el,
+        ns::DML,
+        "a",
+        BODY_PROPERTIES_ORDER,
+        "flatTx",
+        old.as_ref(),
+        new.as_ref(),
+        |w, el, before, after| {
+            patch(
+                w,
+                el,
+                before.map(flat_text_node).as_ref(),
+                &flat_text_node(after),
+            )
+        },
+    )
 }
 
 /// `a:CT_TextListStyle`, under whichever element holds it. Its children are in
 /// DrawingML whatever namespace the holder is in.
+// spec-audit: a:CT_TextListStyle/lvl1pPr
+// spec-audit: a:CT_TextListStyle/lvl2pPr
+// spec-audit: a:CT_TextListStyle/lvl3pPr
+// spec-audit: a:CT_TextListStyle/lvl4pPr
+// spec-audit: a:CT_TextListStyle/lvl5pPr
+// spec-audit: a:CT_TextListStyle/lvl6pPr
+// spec-audit: a:CT_TextListStyle/lvl7pPr
+// spec-audit: a:CT_TextListStyle/lvl8pPr
+// spec-audit: a:CT_TextListStyle/lvl9pPr
+// spec-audit: owner=lstStyle
 pub(crate) fn patch_list_style(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -424,6 +514,7 @@ fn boxed_character(
 }
 
 /// `a:CT_TextParagraphProperties`.
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buSzPct,buSzPts,buAutoNum,buChar,buFont,lnSpc
 fn patch_paragraph_properties(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -520,6 +611,7 @@ fn patch_paragraph_properties(
     )
 }
 
+// spec-audit: owner=lnSpc,spcBef,spcAft,spcPct,spcPts
 fn patch_spacing(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -547,6 +639,7 @@ fn patch_spacing(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr
 fn patch_bullet_color(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -570,6 +663,7 @@ fn patch_bullet_color(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buSzPct,buSzPts
 fn patch_bullet_size(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -604,6 +698,7 @@ fn patch_bullet_size(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buFont
 fn patch_bullet_font(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -630,6 +725,7 @@ fn patch_bullet_font(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buAutoNum,buChar,buBlip
 fn patch_bullet(w: &mut Writer<'_>, el: &Elem, b: Option<&Bullet>, a: Option<&Bullet>) -> Result {
     const GROUP: &[&str] = &["buNone", "buAutoNum", "buChar", "buBlip"];
     if b == a {
@@ -672,6 +768,7 @@ fn patch_bullet(w: &mut Writer<'_>, el: &Elem, b: Option<&Bullet>, a: Option<&Bu
 
 // `sync_ordered`'s value type is the field's own, `Vec` included.
 #[allow(clippy::ptr_arg)]
+// spec-audit: owner=tabLst,pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,tab
 fn patch_tabs(w: &mut Writer<'_>, el: &Elem, b: Option<&Vec<TabStop>>, a: &Vec<TabStop>) -> Result {
     let elements: Vec<Elem> = el
         .children(w.tree, w.part)?
@@ -777,6 +874,7 @@ fn patch_effects(
 }
 
 /// `a:CT_TextCharacterProperties`.
+// spec-audit: owner=rPr,defRPr,endParaRPr
 fn patch_character(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -918,6 +1016,7 @@ fn patch_character(
 
 // `sync_ordered`'s value type is the field's own, `Box` included.
 #[allow(clippy::borrowed_box)]
+// spec-audit: owner=hlinkClick,hlinkMouseOver
 fn patch_run_hyperlink(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -941,6 +1040,7 @@ fn patch_run_hyperlink(
     patch_hyperlink(w, el, &stated, a)
 }
 
+// spec-audit: owner=rPr,defRPr,endParaRPr
 fn patch_highlight(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -960,6 +1060,7 @@ fn patch_highlight(
     }
 }
 
+// spec-audit: owner=rPr,defRPr,endParaRPr
 fn patch_underline(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1006,6 +1107,7 @@ fn patch_underline(
 }
 
 /// `a:CT_TextParagraph`.
+// spec-audit: owner=p,pPr
 fn patch_paragraph(w: &mut Writer<'_>, el: &Elem, b: Option<&Paragraph>, a: &Paragraph) -> Result {
     let old_properties = b.and_then(|b| b.properties.as_ref());
     if old_properties != a.properties.as_ref() {
@@ -1044,6 +1146,7 @@ fn patch_paragraph(w: &mut Writer<'_>, el: &Elem, b: Option<&Paragraph>, a: &Par
     )
 }
 
+// spec-audit: owner=p
 fn patch_items(w: &mut Writer<'_>, el: &Elem, before: &[TextItem], after: &[TextItem]) -> Result {
     let elements: Vec<Elem> = el
         .children(w.tree, w.part)?
@@ -1098,6 +1201,7 @@ fn patch_items(w: &mut Writer<'_>, el: &Elem, before: &[TextItem], after: &[Text
     Ok(())
 }
 
+// spec-audit: owner=r
 fn patch_run(w: &mut Writer<'_>, el: &Elem, b: Option<&TextRun>, a: &TextRun) -> Result {
     if a.text.is_none() && b.is_none_or(|b| b.text.is_some()) {
         return Err(unsupported(w, "a run with no text element"));
@@ -1126,6 +1230,7 @@ fn patch_run(w: &mut Writer<'_>, el: &Elem, b: Option<&TextRun>, a: &TextRun) ->
     )
 }
 
+// spec-audit: owner=br
 fn patch_break(w: &mut Writer<'_>, el: &Elem, b: Option<&LineBreak>, a: &LineBreak) -> Result {
     sync_ordered(
         w,
@@ -1140,6 +1245,7 @@ fn patch_break(w: &mut Writer<'_>, el: &Elem, b: Option<&LineBreak>, a: &LineBre
     )
 }
 
+// spec-audit: owner=fld,pPr
 fn patch_field(w: &mut Writer<'_>, el: &Elem, b: Option<&TextField>, a: &TextField) -> Result {
     if a.id.is_none() && b.is_none_or(|b| b.id.is_some()) {
         return Err(unsupported(w, "a field with no id"));

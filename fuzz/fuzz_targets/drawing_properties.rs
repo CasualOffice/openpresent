@@ -17,6 +17,7 @@ use casual_slide_model::fill::{Fill, GradientFill, GradientStop};
 use casual_slide_model::geometry::Geometry;
 use casual_slide_model::line::{Line, LineDash, LineJoin};
 use casual_slide_model::slide::{SlideKind, SlidePart};
+use casual_slide_model::theme::{FontRef, ShapeStyle, StyleMatrixRef};
 use casual_slide_ooxml::{OoxmlLimits, XmlTree};
 use libfuzzer_sys::fuzz_target;
 
@@ -126,4 +127,26 @@ fuzz_target!(|data: &[u8]| {
     edit(|p| p.sp3d = None);
     edit(|p| p.geometry = None);
     edit(|p| p.hidden = None);
+
+    // `p:style`, on a shape: made whole, or taken away.
+    for style in [
+        Some(Box::new(ShapeStyle {
+            line: Some(StyleMatrixRef { idx: Some(1), color: Some(Color::srgb(1, 2, 3)) }),
+            fill: Some(StyleMatrixRef::default()),
+            effect: Some(StyleMatrixRef::default()),
+            font: Some(FontRef::default()),
+        })),
+        None,
+    ] {
+        let mut wanted = before.clone();
+        let Some(node) = wanted.shape_tree_mut().and_then(|t| t.children.first_mut()) else {
+            break;
+        };
+        node.style = style;
+        let mut edited = tree.clone();
+        if patch_slide_part(&mut edited, PART, false, &[], &wanted, &slide, &import, &xml).is_ok() {
+            let again = XmlTree::parse(&edited.to_bytes(), PART, &xml).unwrap();
+            assert_eq!(read(&again, &slide, &import).as_ref(), Some(&wanted));
+        }
+    }
 });

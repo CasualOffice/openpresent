@@ -39,7 +39,7 @@
 //! | Header, footer | Layout `hf`, else master `hf`, as a unit; an absent attribute of a present `hf` is the schema's `true` | Inferred |
 //! | Master shapes | Hidden if the slide or the layout says `showMasterSp="0"`; layout shapes hidden if the slide does | ECMA-376 19.3.1.38, 19.3.1.39; the slide hiding both is Inferred |
 //! | Text style | Title placeholders take `titleStyle`; `dt`, `ftr`, `sldNum`, `hdr` and non-placeholders `otherStyle`; other placeholders `bodyStyle`; a notes body `notesStyle`; else the presentation default | ECMA-376 19.3.1.51 for title, body, other; the footer types Inferred |
-//! | Text properties | Run or paragraph, shape list style, layout placeholder, master placeholder, master text styles, presentation default | [`text`] |
+//! | Text properties | Run or paragraph, shape list style, the shape's `fontRef`, layout placeholder, the theme's object defaults, master placeholder, master text styles, presentation default | [`text`] |
 
 pub mod table;
 pub mod text;

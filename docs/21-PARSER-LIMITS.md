@@ -133,15 +133,17 @@ These are constants, not fields of `ImportLimits`, so a host cannot tighten them
 | `max_dash_stops` | `1_024` | `ds` in one `custDash` | CS-DRW-0001 | Tested; hostile fixture |
 | `max_effects` | `1_024` | Effects in one list, blip or container | CS-DRW-0001 | Tested; hostile fixture |
 | `max_effect_depth` | `32` | Nesting of containers, and of fills in effects in blips, which the schema does not bound | CS-DRW-0001 | Tested; two hostile fixtures |
-| `max_picture_effects` | `4_096` | `imgEffect` in one layer, marks in one `backgroundRemoval` | CS-DRW-0001 | Bound by the same check as `max_effects`; no hostile fixture |
+| `max_picture_effects` | `4_096` | `imgEffect` in one layer, marks in one `backgroundRemoval` | CS-DRW-0001 | Tested; hostile fixture |
 | `max_guides` | `4_096` | `gd` in one `avLst` or `gdLst` | CS-DRW-0001 | Tested; hostile fixture |
 | `max_handles` | `256` | Children of one `ahLst` | CS-DRW-0001 | Tested; hostile fixture |
 | `max_sites` | `4_096` | `cxn` in one `cxnLst` | CS-DRW-0001 | Tested; hostile fixture |
 | `max_paths` | `1_024` | `path` in one `pathLst` | CS-DRW-0001 | Tested; hostile fixture |
 | `max_path_commands` | `262_144` | Commands in one path | CS-DRW-0001 | Tested; hostile fixture |
-| `max_items_per_property` | `1_000_000` | Elements read for one property, whatever its shape | CS-DRW-0001 | Bound by the same check as the lists; no hostile fixture, as `max_elements` reaches first by default |
+| `max_items_per_property` | `1_000_000` | Elements read for one property, whatever its shape | CS-DRW-0001 | Tested by tightening it through `SlideLimits`; no hostile fixture, as `max_elements` reaches first by default |
 
-A shape path uses `DrawingLimits::default()`. `read_fill`, `read_line`, `read_effects`, `read_blip_fill` and `read_preset_text_shape` take limits, which is how `one_under_each_limit_is_read` tightens one.
+`SlideLimits::drawing` carries these to every reader on a slide-like part: a shape's properties, a picture's fill, and a text body's warp, 3D, run fills, lines and effects (`slide_limits_reach_every_drawing_reader`). A presentation's `defaultTextStyle` and a theme's `objectDefaults` are read outside `SlideLimits`, with `DrawingLimits::default()`. `read_fill`, `read_line`, `read_effects`, `read_blip_fill` and `read_preset_text_shape` take limits, which is how `one_under_each_limit_is_read` tightens one.
+
+Hostile fixtures added for `CLOSE-01`: `text-limit-warp-guides`, `text-limit-3d-depth`, `text-bad-3d`, `drawing-limit-picture-effects`, `shape-style-bad-values`, `theme-object-defaults-bad-values`.
 
 ## Geometry
 

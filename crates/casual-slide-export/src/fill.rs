@@ -7,6 +7,7 @@ use casual_slide_model::fill::{
 use crate::drawing::{Node, Space};
 use crate::effect::{effect_node, image_properties_node};
 
+// spec-audit: owner=tileRect,fillToRect,fillRect,srcRect
 fn rect(local: &'static str, r: &RelativeRect) -> Node {
     Node::a(local)
         .pct("l", r.l)
@@ -15,6 +16,7 @@ fn rect(local: &'static str, r: &RelativeRect) -> Node {
         .pct("b", r.b)
 }
 
+// spec-audit: owner=gradFill,gs,gsLst,lin,path,ln,spPr
 fn gradient(g: &GradientFill) -> Node {
     let shade = g.shade.as_ref().map(|shade| match shade {
         GradientShade::Linear { angle, scaled } => Node::a("lin")
@@ -39,6 +41,7 @@ fn gradient(g: &GradientFill) -> Node {
         .opt(g.tile_rect.as_ref().map(|r| rect("tileRect", r)))
 }
 
+// spec-audit: owner=pattFill,ln,spPr
 fn pattern(p: &PatternFill) -> Node {
     Node::a("pattFill")
         .lex("prst", p.preset.as_ref())
@@ -54,6 +57,7 @@ fn pattern(p: &PatternFill) -> Node {
         )
 }
 
+// spec-audit: owner=blip
 fn blip(b: &Blip) -> Node {
     let local_dpi = b
         .use_local_dpi
@@ -68,6 +72,7 @@ fn blip(b: &Blip) -> Node {
 }
 
 /// `a:CT_BlipFillProperties`: `a:blipFill`, or a picture's `p:blipFill`.
+// spec-audit: owner=blipFill,stretch,tile
 pub(crate) fn blip_fill_node(f: &BlipFill, space: Space) -> Node {
     let mode = f.mode.as_ref().map(|mode| match mode {
         BlipFillMode::Tile(t) => Node::a("tile")
@@ -88,6 +93,7 @@ pub(crate) fn blip_fill_node(f: &BlipFill, space: Space) -> Node {
 }
 
 /// One element of `EG_FillProperties`.
+// spec-audit: owner=ln,spPr,grpSpPr
 pub(crate) fn fill_node(fill: &Fill) -> Node {
     match fill {
         Fill::None => Node::a("noFill"),

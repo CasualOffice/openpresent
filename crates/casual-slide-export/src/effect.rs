@@ -8,6 +8,7 @@ use casual_slide_model::effect::{
 use crate::drawing::{Node, Space, color_node};
 use crate::fill::fill_node;
 
+// spec-audit: owner=cont,effectDag,alphaMod,blend
 fn container(local: &'static str, c: &EffectContainer) -> Node {
     Node::a(local)
         .lex("type", c.container_type.as_ref())
@@ -16,6 +17,7 @@ fn container(local: &'static str, c: &EffectContainer) -> Node {
 }
 
 /// One effect.
+// spec-audit: owner=effectLst,effectDag,cont,blip,alphaMod,blend
 pub(crate) fn effect_node(e: &Effect) -> Node {
     match e {
         Effect::Container(c) => container("cont", c),
@@ -38,7 +40,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             .lex("blend", blend.as_ref())
             .opt(c.as_ref().map(|c| container("cont", c))),
         Effect::Blur { radius, grow } => Node::a("blur")
-            .lex("rad", radius.as_ref())
+            .pos("rad", radius.as_ref())
             .lex("grow", grow.as_ref()),
         Effect::ColorChange {
             use_alpha,
@@ -55,7 +57,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             .lex("blend", blend.as_ref())
             .opt(fill.as_ref().map(fill_node)),
         Effect::Glow { radius, color } => Node::a("glow")
-            .lex("rad", radius.as_ref())
+            .pos("rad", radius.as_ref())
             .color(color.as_ref()),
         Effect::Grayscale => Node::a("grayscl"),
         Effect::Hsl { hue, sat, lum } => Node::a("hsl")
@@ -68,16 +70,16 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             direction,
             color,
         } => Node::a("innerShdw")
-            .lex("blurRad", blur_radius.as_ref())
-            .lex("dist", distance.as_ref())
+            .pos("blurRad", blur_radius.as_ref())
+            .pos("dist", distance.as_ref())
             .ang("dir", *direction)
             .color(color.as_ref()),
         Effect::Luminance { bright, contrast } => Node::a("lum")
             .pct("bright", *bright)
             .pct("contrast", *contrast),
         Effect::OuterShadow(s) => Node::a("outerShdw")
-            .lex("blurRad", s.blur_radius.as_ref())
-            .lex("dist", s.distance.as_ref())
+            .pos("blurRad", s.blur_radius.as_ref())
+            .pos("dist", s.distance.as_ref())
             .ang("dir", s.direction)
             .pct("sx", s.sx)
             .pct("sy", s.sy)
@@ -93,16 +95,16 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             color,
         } => Node::a("prstShdw")
             .lex("prst", preset.as_ref())
-            .lex("dist", distance.as_ref())
+            .pos("dist", distance.as_ref())
             .ang("dir", *direction)
             .color(color.as_ref()),
         Effect::Reflection(r) => Node::a("reflection")
-            .lex("blurRad", r.blur_radius.as_ref())
+            .pos("blurRad", r.blur_radius.as_ref())
             .pct("stA", r.start_alpha)
             .pct("stPos", r.start_position)
             .pct("endA", r.end_alpha)
             .pct("endPos", r.end_position)
-            .lex("dist", r.distance.as_ref())
+            .pos("dist", r.distance.as_ref())
             .ang("dir", r.direction)
             .ang("fadeDir", r.fade_direction)
             .pct("sx", r.sx)
@@ -112,7 +114,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             .lex("algn", r.align.as_ref())
             .lex("rotWithShape", r.rotate_with_shape.as_ref()),
         Effect::RelativeOffset { tx, ty } => Node::a("relOff").pct("tx", *tx).pct("ty", *ty),
-        Effect::SoftEdge(v) => Node::a("softEdge").lex("rad", v.as_ref()),
+        Effect::SoftEdge(v) => Node::a("softEdge").pos("rad", v.as_ref()),
         Effect::Tint { hue, amount } => Node::a("tint").ang("hue", *hue).pct("amt", *amount),
         Effect::Transform(t) => Node::a("xfrm")
             .pct("sx", t.sx)
@@ -125,6 +127,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
 }
 
 /// `effectLst` or `effectDag`.
+// spec-audit: owner=effectLst,effectDag
 pub(crate) fn effect_properties_node(p: &EffectProperties) -> Node {
     match p {
         EffectProperties::List(list) => Node::a("effectLst").list(list.iter().map(effect_node)),
@@ -132,6 +135,7 @@ pub(crate) fn effect_properties_node(p: &EffectProperties) -> Node {
     }
 }
 
+// spec-audit: owner=foregroundMark,backgroundMark
 fn mark(local: &'static str, m: &RemovalMark) -> Node {
     Node::new(Space::A14, local)
         .pct("x1", m.x1)
@@ -169,6 +173,7 @@ fn artistic_name(effect: ArtisticEffect) -> &'static str {
     }
 }
 
+// spec-audit: owner=imgEffect,imgLayer
 fn picture_effect(e: &PictureEffect) -> Node {
     let kind = e.kind.as_ref().map(|kind| match kind {
         PictureEffectKind::Artistic {
@@ -204,6 +209,7 @@ fn picture_effect(e: &PictureEffect) -> Node {
 }
 
 /// `a14:imgProps`.
+// spec-audit: owner=imgProps,imgLayer
 pub(crate) fn image_properties_node(p: &ImageProperties) -> Node {
     let layer = p.layer.as_ref().map(|l| {
         Node::new(Space::A14, "imgLayer")

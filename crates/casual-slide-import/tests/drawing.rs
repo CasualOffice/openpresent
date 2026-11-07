@@ -12,14 +12,22 @@ use casual_slide_import::properties::{
 };
 use casual_slide_import::slide::{SlideLimits, import_slide_parts};
 use casual_slide_model::color::Percentage;
+use casual_slide_model::d3::FlatText;
 use casual_slide_model::drawing::ShapeProperties;
 use casual_slide_model::effect::{Effect, EffectProperties, PictureEffectKind};
 use casual_slide_model::fill::Fill;
 use casual_slide_model::geometry::{Geometry, TextShapeType};
 use casual_slide_model::line::{LineDash, LineJoin, LineSketchType};
+use casual_slide_model::presentation::Coordinate;
+use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::ShapeNode;
 use casual_slide_model::slide::{SlideKind, SlidePart};
+use casual_slide_model::text::{Autofit, Text3D};
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
+
+fn lex<T: Lexical>(v: Option<&T>) -> Option<String> {
+    v.map(Lexical::to_lexical)
+}
 
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -86,17 +94,20 @@ fn elsewhere(id: &str) -> Option<&'static str> {
             "CT_WholeE2oFormatting",
             "table cell and theme object defaults, T1C-02",
         ),
-        ("CT_FlatText", "a run's or text body's 3D, read with text"),
-        ("EG_Text3D", "a run's or text body's 3D, read with text"),
+        ("CT_FlatText", "a body's: generated/text-warp-and-3d.pptx"),
+        ("EG_Text3D", "a body's: generated/text-warp-and-3d.pptx"),
         (
             "CT_PresetTextShape",
-            "prstTxWarp is in a text body: read_preset_text_shape",
+            "a body's: generated/text-warp-and-3d.pptx",
         ),
         (
             "EG_TextGeometry",
-            "prstTxWarp is in a text body: read_preset_text_shape",
+            "a body's: generated/text-warp-and-3d.pptx",
         ),
-        ("CT_Connection", "stCxn and endCxn: Tier 1D"),
+        (
+            "CT_Connection",
+            "stCxn and endCxn: generated/text-object-defaults.pptx",
+        ),
         ("CT_TextMath", "a14:m, equations: Tier 1K"),
         ("CT_ContentPartLocking", "a14 content parts: Tier 1K"),
         (
@@ -646,4 +657,428 @@ fn real_decks_are_modelled_and_what_is_not_is_named() {
     // No real deck's lists come near a limit, and none repeats a choice.
     assert_eq!(codes.get("CS-DRW-0001"), None, "{codes:?}");
     assert_eq!(codes.get("CS-DRW-0004"), None, "{codes:?}");
+}
+
+/// `MS-OI29500` 2.1.1379's order needs these on the model: a body's warp with its adjusts,
+/// its scene, and the `EG_Text3D` choice either way (T1E-06, T1F-04).
+#[test]
+fn a_bodys_warp_scene_and_3d_are_read_with_nothing_retained() {
+    let d = load("generated/text-warp-and-3d.pptx");
+    let on_slide: Vec<_> = d
+        .findings
+        .iter()
+        .filter(|f| f.part.contains("slides/slide"))
+        .collect();
+    assert!(on_slide.is_empty(), "{on_slide:#?}");
+    let props = |name| {
+        d.named(name)
+            .text_body
+            .as_ref()
+            .unwrap()
+            .properties
+            .clone()
+            .unwrap()
+    };
+
+    let warp = props("Warp only").warp.unwrap();
+    assert_eq!(lex(warp.preset.as_ref()).as_deref(), Some("textArchUp"));
+    let adjust = warp.adjust.unwrap();
+    assert_eq!(adjust[0].name.as_deref(), Some("adj"));
+    assert_eq!(adjust[0].formula.as_deref(), Some("val 10800000"));
+    assert_eq!(props("Warp no list").warp.unwrap().adjust, None);
+    assert_eq!(props("Warp empty list").warp.unwrap().adjust, Some(vec![]));
+
+    let extruded = props("Scene and extrusion");
+    assert!(extruded.scene3d.as_ref().unwrap().camera.is_some());
+    let Some(Text3D::Shape(s)) = extruded.text_3d else {
+        panic!("no sp3d")
+    };
+    assert_eq!(s.z, Some(Coordinate(12_700)));
+    assert_eq!(
+        s.bevel_top.as_ref().unwrap().width,
+        Some(Coordinate(63_500))
+    );
+    assert!(s.contour_color.is_some());
+
+    assert_eq!(
+        props("Scene and flat").text_3d,
+        Some(Text3D::Flat(FlatText {
+            z: Some(Coordinate(50_800))
+        }))
+    );
+    assert_eq!(
+        props("Flat bare").text_3d,
+        Some(Text3D::Flat(FlatText { z: None })),
+        "absent stays absent"
+    );
+    let all = props("Everything");
+    assert!(all.warp.is_some() && all.scene3d.is_some());
+    assert!(matches!(all.text_3d, Some(Text3D::Shape(_))));
+    assert_eq!(all.autofit, Some(Autofit::None));
+}
+
+#[test]
+fn hostile_warps_and_3d_are_reported_and_a_duplicate_of_the_choice_is_not_read() {
+    let d = load("hostile/text-bad-3d.bin");
+    let props = d
+        .named("s")
+        .text_body
+        .as_ref()
+        .unwrap()
+        .properties
+        .clone()
+        .unwrap();
+    assert!(d.findings.has(K::DuplicateElement, "prstTxWarp"));
+    assert!(d.findings.has(K::DuplicateElement, "scene3d"));
+    assert!(
+        d.findings.has(K::DuplicateElement, "flatTx"),
+        "{:?}",
+        d.findings
+    );
+    assert!(
+        d.findings.has(K::MalformedValue, "prstTxWarp"),
+        "{:?}",
+        d.findings
+    );
+    assert!(d.findings.has(K::RetainedElement, "(unknown)"));
+    assert!(d.findings.has(K::MissingRequired, "gd"), "{:?}", d.findings);
+    assert!(
+        matches!(props.text_3d, Some(Text3D::Shape(_))),
+        "first of the choice"
+    );
+
+    // Too many transforms on a colour in a body's `sp3d`, under the colour's own code.
+    assert!(
+        d.findings.iter().any(|f| f.kind.code() == "CS-CLR-0002"),
+        "{:?}",
+        d.findings
+    );
+
+    let d = load("hostile/text-limit-warp-guides.bin");
+    let body = d.named("s").text_body.as_ref().unwrap();
+    assert_eq!(body.properties.as_ref().unwrap().warp, None);
+    assert!(
+        d.findings.has(K::Drawing(D::OverLimit), "prstTxWarp"),
+        "{:?}",
+        d.findings
+    );
+
+    let d = load("hostile/text-limit-3d-depth.bin");
+    assert!(
+        d.findings.has(K::RetainedElement, "(unknown)"),
+        "{:?}",
+        d.findings
+    );
+
+    let d = load("hostile/drawing-limit-picture-effects.bin");
+    assert!(d.first().fill.is_none());
+    assert!(
+        d.findings.has(K::Drawing(D::OverLimit), "blipFill"),
+        "{:?}",
+        d.findings
+    );
+
+    let d = load("hostile/shape-style-bad-values.bin");
+    let style = d.named("s").style.as_ref().unwrap();
+    assert!(style.line.as_ref().unwrap().idx.is_none());
+    assert!(
+        d.findings.has(K::DuplicateElement, "style"),
+        "{:?}",
+        d.findings
+    );
+}
+
+/// `MS-OI29500` has them under `CS-CLR` on a theme; a slide part's report is the same list.
+#[test]
+fn a_colour_finding_in_a_shapes_properties_keeps_its_own_code() {
+    let d = load("hostile/drawing-bad-values.bin");
+    let codes: Vec<_> = d.findings.iter().map(|f| f.kind.code()).collect();
+    assert!(codes.iter().any(|c| c.starts_with("CS-CLR-")), "{codes:?}");
+    assert!(
+        d.findings
+            .iter()
+            .any(|f| f.kind == K::Color(casual_slide_import::color::FindingKind::BadColorValue)),
+        "{codes:?}"
+    );
+}
+
+/// A deck's limits reach the drawing readers (T1E-06): a tighter `SlideLimits` leaves out
+/// what the default reads, on a shape, a picture, a run, a warp and a master's text style.
+#[test]
+fn slide_limits_reach_every_drawing_reader() {
+    let open_with = |path: &str, drawing: DrawingLimits| {
+        let bytes = std::fs::read(repo().join("fixtures").join(path)).unwrap();
+        let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+        let deck = import_deck(&mut pkg, &ImportLimits::default())
+            .unwrap()
+            .deck;
+        let limits = SlideLimits {
+            drawing,
+            ..SlideLimits::default()
+        };
+        import_slide_parts(
+            &mut pkg,
+            &deck.presentation,
+            &limits,
+            &ImportLimits::default(),
+        )
+        .unwrap()
+    };
+    let tight = DrawingLimits {
+        max_gradient_stops: 1,
+        max_guides: 0,
+        max_items_per_property: 1,
+        ..DrawingLimits::default()
+    };
+    let over = K::Drawing(D::OverLimit);
+
+    // On a shape, and with every limit at its default the same deck reads clean.
+    let every = open_with("generated/drawing-every-element.pptx", tight);
+    assert!(every.findings.has(over, "gradFill"), "{:?}", every.findings);
+    assert!(every.findings.has(over, "custGeom"));
+    let same = open_with(
+        "generated/drawing-every-element.pptx",
+        DrawingLimits::default(),
+    );
+    assert!(!same.findings.has(over, "gradFill"));
+    // A picture's own `p:blipFill`, which the node holds beside `spPr`.
+    let picture = |parts: &casual_slide_import::slide::ImportedSlides| {
+        parts
+            .parts
+            .parts
+            .iter()
+            .flatten()
+            .filter_map(|p| p.shape_tree())
+            .flat_map(ShapeNode::descendants)
+            .find(|n| n.kind == casual_slide_model::shape::NodeKind::Picture)
+            .unwrap()
+            .properties
+            .picture
+            .clone()
+    };
+    assert_eq!(picture(&every), None, "left out over the bound");
+    assert!(picture(&same).is_some());
+
+    // A body's warp and 3D.
+    let warp = open_with("generated/text-warp-and-3d.pptx", tight);
+    assert!(warp.findings.has(over, "prstTxWarp"), "{:?}", warp.findings);
+    assert!(warp.findings.has(over, "scene3d"), "{:?}", warp.findings);
+
+    // A run's own fill, and one in the master's text styles.
+    let text = open_with("generated/text-every-property.pptx", tight);
+    assert!(text.findings.has(over, "ln"), "{:?}", text.findings);
+    const LEVEL: &str = r#"<a:lvl1pPr><a:defRPr><a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="000000"/></a:gs><a:gs pos="1000"><a:srgbClr val="000000"/></a:gs></a:gsLst></a:gradFill></a:defRPr></a:lvl1pPr>"#;
+    let master = |root: &str, kind, limits: DrawingLimits| {
+        let styles = if root == "sldMaster" {
+            format!("<p:txStyles><p:titleStyle>{LEVEL}</p:titleStyle></p:txStyles>")
+        } else {
+            format!("<p:notesStyle>{LEVEL}</p:notesStyle>")
+        };
+        let xml = format!(
+            r#"<p:{root} xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree/></p:cSld>{styles}</p:{root}>"#
+        );
+        let tree = XmlTree::parse(xml.as_bytes(), "m", &OoxmlLimits::default()).unwrap();
+        let import = ImportLimits::default();
+        let mut findings = Findings::new(100);
+        let mut color = casual_slide_import::color::Findings::default();
+        let part = casual_slide_import::slide::import_slide_part(
+            &tree,
+            "m",
+            &[],
+            kind,
+            0,
+            &SlideLimits {
+                drawing: limits,
+                ..SlideLimits::default()
+            },
+            &import,
+            &mut findings,
+            &mut color,
+        )
+        .unwrap();
+        let style = part
+            .notes_style
+            .clone()
+            .or_else(|| part.text_styles.clone().and_then(|t| t.title))
+            .unwrap();
+        style.levels[0].clone().unwrap().default_run.unwrap().fill
+    };
+    for (root, kind) in [
+        ("sldMaster", SlideKind::Master),
+        ("notesMaster", SlideKind::NotesMaster),
+    ] {
+        assert!(
+            master(root, kind, DrawingLimits::default()).is_some(),
+            "{root}"
+        );
+        assert_eq!(master(root, kind, tight), None, "{root}");
+    }
+}
+
+/// The real deck that uses the older namespace, and a synthetic with hidden properties in
+/// it: both read as the released one does.
+#[test]
+fn the_older_a14_namespace_reads_as_the_released_one() {
+    let d = load("generated/drawing-extension-lists.pptx");
+    let hidden = d
+        .named("Older namespace")
+        .properties
+        .hidden
+        .clone()
+        .unwrap();
+    assert!(matches!(hidden.fill, Some(Fill::Solid(Some(_)))));
+    assert_eq!(hidden.line.unwrap().width, Some(9525));
+    assert!(
+        !d.findings.has(K::RetainedElement, "hiddenFill"),
+        "{:?}",
+        d.findings
+    );
+
+    let real = load("real/sdk-animation.pptx");
+    assert!(
+        !real.findings.has(K::RetainedElement, "useLocalDpi"),
+        "the real deck's own use of it"
+    );
+}
+
+/// What this deck says is reported where it should be, and nowhere else.
+#[test]
+fn every_extension_slot_in_3d_and_a_sketch_is_retained_and_named() {
+    let d = load("generated/drawing-extension-lists.pptx");
+    let slide: Vec<_> = d
+        .findings
+        .iter()
+        .filter(|f| f.part.contains("slides/slide"))
+        .map(|f| f.element.clone())
+        .collect();
+    assert_eq!(
+        slide,
+        ["extLst"],
+        "scene3d, backdrop, sp3d, the sketch, by name"
+    );
+    for mode in [
+        "none",
+        "norm",
+        "lighten",
+        "lightenLess",
+        "darken",
+        "darkenLess",
+    ] {
+        let node = d.named(&format!("Path {mode}"));
+        let Some(Geometry::Custom(g)) = &node.properties.geometry else {
+            panic!("{mode}")
+        };
+        let path = &g.paths.as_ref().unwrap()[0];
+        assert_eq!(lex(path.fill.as_ref()).as_deref(), Some(mode));
+    }
+}
+
+/// Each gradient kind and pattern, as a shape holding text, the kind no real deck here has.
+#[test]
+fn gradient_and_pattern_fills_on_placed_shapes_read_with_their_text() {
+    let d = load("generated/shape-fills.pptx");
+    assert_eq!(
+        d.findings
+            .iter()
+            .filter(|f| f.part.contains("slides/slide"))
+            .count(),
+        0,
+        "{:?}",
+        d.findings
+    );
+    let Some(Fill::Gradient(g)) = &d.named("Radial").properties.fill else {
+        panic!("radial")
+    };
+    assert_eq!(g.stops.as_ref().unwrap().len(), 2);
+    assert!(d.named("Radial").text_body.is_some());
+    assert!(d.named("Radial").transform.is_some());
+    let text = std::fs::read_to_string(repo().join("docs/spec/checklist.tsv")).unwrap();
+    let patterns: Vec<_> = text
+        .lines()
+        .filter_map(|l| {
+            l.split('\t')
+                .next()?
+                .strip_prefix("a:ST_PresetPatternVal/=")
+        })
+        .collect();
+    assert!(patterns.len() >= 54);
+    for pattern in patterns {
+        let node = d.named(pattern);
+        assert!(node.text_body.is_some(), "{pattern}");
+        let Some(Fill::Pattern(p)) = &node.properties.fill else {
+            panic!("{pattern}")
+        };
+        assert_eq!(lex(p.preset.as_ref()).as_deref(), Some(pattern));
+        assert!(
+            p.foreground.is_some() && p.background.is_some(),
+            "{pattern}"
+        );
+    }
+}
+
+/// `p:style` on the kinds that hold one; and in a theme's object defaults, a `bodyPr` and
+/// `lstStyle` that are text, and bad values reported in the theme's own list.
+#[test]
+fn a_shape_style_and_a_themes_object_defaults_are_read() {
+    let d = load("generated/text-object-defaults.pptx");
+    assert!(
+        !d.findings.has(K::RetainedElement, "style"),
+        "{:?}",
+        d.findings
+    );
+    let style = d.named("Styled").style.as_ref().unwrap();
+    assert_eq!(style.line.as_ref().unwrap().idx, Some(1));
+    assert_eq!(
+        style.font.as_ref().unwrap().idx,
+        Some(casual_slide_model::theme::FontCollectionIndex::Major)
+    );
+    assert!(d.named("Connector").style.is_some());
+    assert_eq!(d.named("No style").style, None);
+    assert!(d.named("Connector").start_connection.is_some());
+    assert!(d.named("Connector").end_connection.is_some());
+
+    let theme = |file: &str| {
+        let bytes = std::fs::read(repo().join("fixtures").join(file)).unwrap();
+        let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+        let xml = pkg.read_part("ppt/theme/theme1.xml").unwrap();
+        let tree = XmlTree::parse(&xml, "ppt/theme/theme1.xml", &OoxmlLimits::default()).unwrap();
+        casual_slide_import::theme::import_theme(&tree).unwrap()
+    };
+    let good = theme("generated/text-object-defaults.pptx");
+    assert!(good.findings.items.is_empty(), "{:?}", good.findings);
+    let defaults = good.value.object_defaults.unwrap();
+    let tx = defaults.text.unwrap();
+    assert_eq!(
+        lex(tx.body_properties.unwrap().anchor.as_ref()).as_deref(),
+        Some("ctr")
+    );
+    let run = tx.list_style.unwrap().levels[0]
+        .clone()
+        .unwrap()
+        .default_run
+        .unwrap();
+    assert_eq!(run.size, Some(2100));
+    assert_eq!(
+        defaults.line.unwrap().body_properties.unwrap().columns,
+        Some(3)
+    );
+    assert!(defaults.shape.unwrap().style.is_some());
+
+    let bad = theme("hostile/theme-object-defaults-bad-values.bin");
+    let codes = bad.findings.codes();
+    assert!(codes.contains(&"CS-CLR-0005"), "{codes:?}");
+    assert!(codes.contains(&"CS-CLR-0009"), "{codes:?}");
+    assert!(
+        codes.contains(&"CS-CLR-0010"),
+        "a tab list over its bound: {codes:?}"
+    );
+    let defaults = bad.value.object_defaults.unwrap();
+    let sp = defaults.shape.unwrap();
+    assert_eq!(
+        sp.body_properties.unwrap().columns,
+        None,
+        "99 is out of range"
+    );
+    assert!(sp.list_style.is_some());
+    assert_eq!(defaults.line.unwrap().list_style, None);
 }

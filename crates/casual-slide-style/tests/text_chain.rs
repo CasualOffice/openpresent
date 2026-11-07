@@ -8,8 +8,10 @@ use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::ImportLimits;
 use casual_slide_import::slide::{SlideLimits, import_slide_parts};
 use casual_slide_model::color::Color;
+use casual_slide_model::d3::{Backdrop, FlatText, Point3D, Scene3D};
 use casual_slide_model::effect::EffectProperties;
 use casual_slide_model::fill::Fill;
+use casual_slide_model::geometry::{GeomGuide, PresetTextShape};
 use casual_slide_model::line::Line;
 use casual_slide_model::presentation::{Coordinate, Percentage, TextFont};
 use casual_slide_model::shape::{
@@ -19,18 +21,24 @@ use casual_slide_model::slide::{CommonSlideData, MasterTextStyles, SlideKind, Sl
 use casual_slide_model::text::{
     Autofit, BodyProperties, BooleanElement, Bullet, BulletColor, BulletFont, BulletSize, CapsType,
     CharacterProperties, FontAlign, HorizontalOverflow, Paragraph, ParagraphProperties, StrikeType,
-    TabStop, TextAlign, TextAnchor, TextBody, TextItem, TextListStyle, TextPoint, TextRun,
-    TextSpacing, TextVertical, TextWarp, TextWrap, UnderlineFill, UnderlineLine, UnderlineType,
+    TabStop, Text3D, TextAlign, TextAnchor, TextBody, TextItem, TextListStyle, TextPoint, TextRun,
+    TextSpacing, TextVertical, TextWrap, UnderlineFill, UnderlineLine, UnderlineType,
     VerticalOverflow, Written,
 };
+use casual_slide_model::theme::{
+    FontCollectionIndex, FontRef, ObjectDefaults, ShapeDefinition, ShapeStyle,
+};
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
-use casual_slide_style::text::{TextChain, TextLevel as L, paragraph_level};
+use casual_slide_style::text::{FontScript, RunFont, TextChain, TextLevel as L, paragraph_level};
 use casual_slide_style::{Chain, TextStyle};
 
 /// The levels below a run or a paragraph, nearest first.
-const STYLE_LEVELS: [L; 5] = [
+const STYLE_LEVELS: [L; 8] = [
     L::ShapeListStyle,
     L::LayoutPlaceholder,
+    L::ThemeTextDefault,
+    L::ThemeLineDefault,
+    L::ThemeShapeDefault,
     L::MasterPlaceholder,
     L::MasterTextStyles,
     L::PresentationDefault,
@@ -42,6 +50,20 @@ struct Levels {
     layout: SlidePart,
     master: SlidePart,
     default: TextListStyle,
+    theme: ObjectDefaults,
+}
+
+/// One of a short list, whatever level a family's value was made for.
+fn pick<T: Copy>(list: &[T], i: i32) -> T {
+    list[i as usize % list.len()]
+}
+
+fn definition() -> Option<ShapeDefinition> {
+    Some(ShapeDefinition {
+        body_properties: Some(BodyProperties::default()),
+        list_style: Some(TextListStyle::default()),
+        ..ShapeDefinition::default()
+    })
 }
 
 fn body_placeholder(part: u32, node: u32, ph: Placeholder) -> ShapeNode {
@@ -99,6 +121,12 @@ fn levels() -> Levels {
         ),
         master,
         default: TextListStyle::default(),
+        theme: ObjectDefaults {
+            shape: definition(),
+            line: definition(),
+            text: definition(),
+            ..ObjectDefaults::default()
+        },
     }
 }
 
@@ -132,8 +160,43 @@ impl Levels {
                 .as_mut()
                 .unwrap(),
             L::PresentationDefault => &mut self.default,
+            L::ThemeTextDefault | L::ThemeLineDefault | L::ThemeShapeDefault => {
+                self.theme_definition(level).list_style.as_mut().unwrap()
+            }
             other => panic!("{other:?} holds no list style"),
         }
+    }
+
+    fn theme_definition(&mut self, level: L) -> &mut ShapeDefinition {
+        match level {
+            L::ThemeTextDefault => self.theme.text.as_mut().unwrap(),
+            L::ThemeLineDefault => self.theme.line.as_mut().unwrap(),
+            L::ThemeShapeDefault => self.theme.shape.as_mut().unwrap(),
+            other => panic!("{other:?} is no object default"),
+        }
+    }
+
+    /// The `bodyPr` at one of the levels that holds one.
+    fn body_mut(&mut self, level: L) -> &mut BodyProperties {
+        let part = match level {
+            L::ShapeBody => &mut self.slide,
+            L::LayoutPlaceholder => &mut self.layout,
+            L::MasterPlaceholder => &mut self.master,
+            other => {
+                return self
+                    .theme_definition(other)
+                    .body_properties
+                    .as_mut()
+                    .unwrap();
+            }
+        };
+        shape_mut(part)
+            .text_body
+            .as_mut()
+            .unwrap()
+            .properties
+            .as_mut()
+            .unwrap()
     }
 
     fn chain(&self) -> TextChain<'_> {
@@ -145,6 +208,7 @@ impl Levels {
         chain.text_chain(
             &self.slide.shape_tree().unwrap().children[0],
             Some(&self.default),
+            Some(&self.theme),
         )
     }
 }
@@ -179,11 +243,11 @@ fn paragraph_families() -> Vec<ParagraphFamily> {
         "marL", margin_left, |i| i;
         "marR", margin_right, |i| i;
         "indent", indent, |i| i;
-        "algn", align, |i| [TextAlign::Left, TextAlign::Center, TextAlign::Right, TextAlign::Justified, TextAlign::Distributed, TextAlign::ThaiDistributed, TextAlign::JustifiedLow][i as usize];
+        "algn", align, |i| pick(&[TextAlign::Left, TextAlign::Center, TextAlign::Right, TextAlign::Justified, TextAlign::Distributed, TextAlign::ThaiDistributed, TextAlign::JustifiedLow], i);
         "defTabSz", default_tab_size, |i| Written::new(Coordinate(i64::from(i)));
         "rtl", rtl, |i| i % 2 == 0;
         "eaLnBrk", east_asian_line_break, |i| i % 2 == 0;
-        "fontAlgn", font_align, |i| [FontAlign::Auto, FontAlign::Top, FontAlign::Center, FontAlign::Baseline, FontAlign::Bottom, FontAlign::Auto, FontAlign::Top][i as usize];
+        "fontAlgn", font_align, |i| pick(&[FontAlign::Auto, FontAlign::Top, FontAlign::Center, FontAlign::Baseline, FontAlign::Bottom, FontAlign::Auto, FontAlign::Top], i);
         "latinLnBrk", latin_line_break, |i| i % 2 == 0;
         "hangingPunct", hanging_punctuation, |i| i % 2 == 0;
         "lnSpc", line_spacing, spacing;
@@ -417,10 +481,10 @@ fn body_families() -> Vec<BodyFamily> {
     body_family!(
         "rot", rotation, |i| i;
         "spcFirstLastPara", space_first_last_paragraph, |i| i % 2 == 0;
-        "vertOverflow", vertical_overflow, |i| [VerticalOverflow::Overflow, VerticalOverflow::Ellipsis, VerticalOverflow::Clip][i as usize];
-        "horzOverflow", horizontal_overflow, |i| [HorizontalOverflow::Overflow, HorizontalOverflow::Clip, HorizontalOverflow::Overflow][i as usize];
-        "vert", vertical, |i| [TextVertical::Horz, TextVertical::Vert, TextVertical::EaVert][i as usize];
-        "wrap", wrap, |i| [TextWrap::None, TextWrap::Square, TextWrap::None][i as usize];
+        "vertOverflow", vertical_overflow, |i| pick(&[VerticalOverflow::Overflow, VerticalOverflow::Ellipsis, VerticalOverflow::Clip], i);
+        "horzOverflow", horizontal_overflow, |i| pick(&[HorizontalOverflow::Overflow, HorizontalOverflow::Clip, HorizontalOverflow::Overflow], i);
+        "vert", vertical, |i| pick(&[TextVertical::Horz, TextVertical::Vert, TextVertical::EaVert], i);
+        "wrap", wrap, |i| pick(&[TextWrap::None, TextWrap::Square, TextWrap::None], i);
         "lIns", inset_left, inset;
         "tIns", inset_top, inset;
         "rIns", inset_right, inset;
@@ -429,37 +493,33 @@ fn body_families() -> Vec<BodyFamily> {
         "spcCol", column_spacing, |i| i;
         "rtlCol", rtl_columns, |i| i % 2 == 0;
         "fromWordArt", from_word_art, |i| i % 2 == 0;
-        "anchor", anchor, |i| [TextAnchor::Top, TextAnchor::Center, TextAnchor::Bottom][i as usize];
+        "anchor", anchor, |i| pick(&[TextAnchor::Top, TextAnchor::Center, TextAnchor::Bottom], i);
         "anchorCtr", anchor_center, |i| i % 2 == 0;
         "forceAA", force_antialias, |i| i % 2 == 0;
         "upright", upright, |i| i % 2 == 0;
         "compatLnSpc", compat_line_spacing, |i| i % 2 == 0;
-        "prstTxWarp", warp, |i| TextWarp { preset: Some(format!("p{i}")) };
+        "prstTxWarp", warp, |i| PresetTextShape { preset: None, adjust: Some(vec![GeomGuide { name: Some(format!("a{i}")), formula: None }]) };
+        "scene3d", scene3d, |i| Box::new(Scene3D { backdrop: Some(Backdrop { anchor: Some(Point3D { x: Some(Coordinate(i64::from(i))), ..Point3D::default() }), ..Backdrop::default() }), ..Scene3D::default() });
+        "text3d", text_3d, |i| Text3D::Flat(FlatText { z: Some(Coordinate(i64::from(i))) });
         "autofit", autofit, |i| match i { 0 => Autofit::None, 1 => Autofit::Shape, _ => Autofit::Normal { font_scale: None, line_spacing_reduction: None } };
     )
 }
 
 #[test]
-fn every_body_family_comes_from_the_shape_or_its_placeholders() {
-    type PartOf = fn(&mut Levels) -> &mut SlidePart;
-    let places: [(L, PartOf); 3] = [
-        (L::ShapeBody, |l| &mut l.slide),
-        (L::LayoutPlaceholder, |l| &mut l.layout),
-        (L::MasterPlaceholder, |l| &mut l.master),
+fn every_body_family_comes_from_the_shape_its_placeholders_or_the_themes_defaults() {
+    let places = [
+        L::ShapeBody,
+        L::LayoutPlaceholder,
+        L::ThemeTextDefault,
+        L::ThemeLineDefault,
+        L::ThemeShapeDefault,
+        L::MasterPlaceholder,
     ];
     for family in body_families() {
         for first in 0..places.len() {
             let mut l = levels();
-            for (i, (_, part)) in places.iter().enumerate().skip(first) {
-                let shape = shape_mut(part(&mut l));
-                let props = shape
-                    .text_body
-                    .as_mut()
-                    .unwrap()
-                    .properties
-                    .as_mut()
-                    .unwrap();
-                (family.set)(props, i as i32);
+            for (i, place) in places.iter().enumerate().skip(first) {
+                (family.set)(l.body_mut(*place), i as i32);
             }
             let own = l.slide.shape_tree().unwrap().children[0]
                 .text_body
@@ -477,7 +537,7 @@ fn every_body_family_comes_from_the_shape_or_its_placeholders() {
             (family.set)(&mut expected, first as i32);
             assert_eq!(
                 (found.from, Some(found.value)),
-                (places[first].0, (family.get)(&expected)),
+                (places[first], (family.get)(&expected)),
                 "{} first said at {first}",
                 family.name
             );
@@ -551,6 +611,152 @@ fn a_group_fill_on_a_run_is_no_fill() {
         *chain.run_fill(Some(&solid), None).unwrap().value,
         Fill::Solid(None)
     );
+}
+
+/// BEH-02, `p:style/fontRef` (`MS-OI29500` 20.1.2.2.37): who answers a run's colour and
+/// font, with each level saying or not.
+#[test]
+fn a_shapes_font_reference_sits_under_its_own_text_body_and_over_the_rest() {
+    let color = |i| Fill::Solid(Some(Color::srgb(i, 0, 0)));
+    let says = |i| CharacterProperties {
+        fill: Some(color(i)),
+        latin: Some(font(i32::from(i))),
+        ..CharacterProperties::default()
+    };
+    struct Case {
+        what: &'static str,
+        kind: NodeKind,
+        run: bool,
+        shape_list: bool,
+        font_ref: Option<(u8, FontCollectionIndex)>,
+        layout: bool,
+        theme: bool,
+        fill_from: Option<L>,
+        font_from: Option<L>,
+    }
+    let base = || Case {
+        what: "",
+        kind: NodeKind::Shape,
+        run: false,
+        shape_list: false,
+        font_ref: Some((9, FontCollectionIndex::Minor)),
+        layout: true,
+        theme: true,
+        fill_from: Some(L::ShapeStyle),
+        font_from: Some(L::ShapeStyle),
+    };
+    let cases = [
+        Case {
+            what: "the run says",
+            run: true,
+            fill_from: Some(L::Run),
+            font_from: Some(L::Run),
+            ..base()
+        },
+        Case {
+            what: "the shape's list style says",
+            shape_list: true,
+            fill_from: Some(L::ShapeListStyle),
+            font_from: Some(L::ShapeListStyle),
+            ..base()
+        },
+        Case {
+            what: "only the reference, over the layout and the theme",
+            ..base()
+        },
+        Case {
+            what: "a reference with idx none gives no font, and still a colour",
+            font_ref: Some((9, FontCollectionIndex::None)),
+            font_from: Some(L::LayoutPlaceholder),
+            ..base()
+        },
+        Case {
+            what: "no reference: the layout",
+            font_ref: None,
+            fill_from: Some(L::LayoutPlaceholder),
+            font_from: Some(L::LayoutPlaceholder),
+            ..base()
+        },
+        Case {
+            what: "no reference, no layout: the theme's defaults",
+            font_ref: None,
+            layout: false,
+            fill_from: Some(L::ThemeTextDefault),
+            font_from: Some(L::ThemeTextDefault),
+            ..base()
+        },
+        Case {
+            what: "a connector's reference is not used",
+            kind: NodeKind::Connector,
+            layout: false,
+            theme: false,
+            fill_from: None,
+            font_from: None,
+            ..base()
+        },
+        Case {
+            what: "a picture's reference is not used",
+            kind: NodeKind::Picture,
+            layout: false,
+            theme: false,
+            fill_from: None,
+            font_from: None,
+            ..base()
+        },
+    ];
+    for case in cases {
+        let mut l = levels();
+        let at = |list: &mut TextListStyle, i| {
+            list.levels[0] = Some(Box::new(ParagraphProperties {
+                default_run: Some(Box::new(says(i))),
+                ..ParagraphProperties::default()
+            }));
+        };
+        if case.shape_list {
+            at(l.style_mut(L::ShapeListStyle), 1);
+        }
+        if case.layout {
+            at(l.style_mut(L::LayoutPlaceholder), 2);
+        }
+        if case.theme {
+            at(l.style_mut(L::ThemeTextDefault), 3);
+        }
+        let shape = shape_mut(&mut l.slide);
+        shape.kind = case.kind;
+        shape.style = case.font_ref.map(|(i, idx)| {
+            Box::new(ShapeStyle {
+                font: Some(FontRef {
+                    idx: Some(idx),
+                    color: Some(Color::srgb(i, 0, 0)),
+                }),
+                ..ShapeStyle::default()
+            })
+        });
+        let run = says(0);
+        let run = case.run.then_some(&run);
+        let chain = l.chain();
+        assert_eq!(
+            chain.run_fill(run, None).map(|f| f.from),
+            case.fill_from,
+            "fill: {}",
+            case.what
+        );
+        assert_eq!(
+            chain.run_font(run, None, FontScript::Latin).map(|f| f.from),
+            case.font_from,
+            "font: {}",
+            case.what
+        );
+        if case.fill_from == Some(L::ShapeStyle) {
+            assert_eq!(*chain.run_fill(run, None).unwrap().value, color(9));
+        }
+        if case.font_from == Some(L::ShapeStyle) {
+            assert_eq!(
+                chain.run_font(run, None, FontScript::Latin).unwrap().value,
+                RunFont::Theme(FontCollectionIndex::Minor)
+            );
+        }
+    }
 }
 
 /// `MS-OI29500` 2.1.1383: Office ignores `defPPr`. So a `defPPr` at the nearest level
@@ -707,7 +913,7 @@ fn the_chain_through_import_gives_each_level_its_own_value() {
     let c = Chain::of(&parts, ordinal);
     let slide = parts.get(ordinal).unwrap();
     let shape = named(slide, "Inheriting");
-    let text = c.text_chain(shape, Some(&default));
+    let text = c.text_chain(shape, Some(&default), None);
     assert_eq!(text.list_style_count(), 5);
     let body = shape.text_body.as_ref().unwrap();
     let props = |at: usize| body.paragraphs[at].properties.as_deref();
@@ -796,7 +1002,7 @@ fn the_chain_through_import_gives_each_level_its_own_value() {
     // A shape with no placeholder skips both placeholders, and takes `otherStyle`.
     let free = named(slide, "Free Text");
     assert_eq!(c.text_style(free).value, TextStyle::Other);
-    let text = c.text_chain(free, Some(&default));
+    let text = c.text_chain(free, Some(&default), None);
     assert_eq!(text.list_style_count(), 2);
     let u = text.run(None, None, |c| c.underline).unwrap();
     assert_eq!((u.value, u.from), (UnderlineType::Sng, L::MasterTextStyles));
@@ -806,7 +1012,7 @@ fn the_chain_through_import_gives_each_level_its_own_value() {
 
     // A bare placeholder, with neither `lstStyle` nor own values: the layout's first.
     let bare = named(slide, "Bare Placeholder");
-    let text = c.text_chain(bare, Some(&default));
+    let text = c.text_chain(bare, Some(&default), None);
     assert_eq!(text.list_style_count(), 4);
     let size = text.font_size(None, None);
     assert_eq!((size.value, size.from), (4000, L::LayoutPlaceholder));
@@ -819,7 +1025,7 @@ fn the_chain_through_import_gives_each_level_its_own_value() {
         master: c.master,
     };
     let held = named(layout_part, "Layout Body");
-    let text = on_layout.text_chain(held, Some(&default));
+    let text = on_layout.text_chain(held, Some(&default), None);
     let size = text.font_size(None, None);
     assert_eq!((size.value, size.from), (4000, L::ShapeListStyle));
     let spc = text.run(None, None, |c| c.spacing.as_ref()).unwrap();
@@ -831,7 +1037,7 @@ fn the_chain_through_import_gives_each_level_its_own_value() {
         master: c.master,
     };
     let held = named(c.master.unwrap(), "Master Body");
-    let text = on_master.text_chain(held, Some(&default));
+    let text = on_master.text_chain(held, Some(&default), None);
     let size = text.font_size(None, None);
     assert_eq!((size.value, size.from), (3000, L::ShapeListStyle));
     let i = text.run(None, None, |c| c.italic).unwrap();
@@ -839,7 +1045,7 @@ fn the_chain_through_import_gives_each_level_its_own_value() {
     let kern = text.run(None, None, |c| c.kerning).unwrap();
     assert_eq!(kern.from, L::PresentationDefault);
     // No default given, and the chain ends sooner, with no panic.
-    let text = on_master.text_chain(held, None);
+    let text = on_master.text_chain(held, None, None);
     assert_eq!(text.run(None, None, |c| c.kerning), None);
 }
 
@@ -869,8 +1075,83 @@ fn the_list_style_chosen_is_the_one_in_force() {
         without.text_style(free).value,
         TextStyle::PresentationDefault
     );
-    let text = without.text_chain(free, Some(&default));
+    let text = without.text_chain(free, Some(&default), None);
     assert_eq!(text.list_style_count(), 1);
     let size = text.font_size(None, None);
     assert_eq!((size.value, size.from), (1000, L::PresentationDefault));
+}
+
+/// The chain through import, from a theme's object defaults and a shape's `p:style`, in
+/// `fixtures/generated/text-object-defaults.pptx`. The theme's `txDef` is what the shape's
+/// own part cannot answer; without the theme or the style the answer differs.
+#[test]
+fn object_defaults_and_font_references_answer_through_import() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/generated");
+    let bytes = std::fs::read(root.join("text-object-defaults.pptx")).unwrap();
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let theme_xml = pkg.read_part("ppt/theme/theme1.xml").unwrap();
+    let xml = OoxmlLimits::default();
+    let tree =
+        casual_slide_ooxml::XmlTree::parse(&theme_xml, "ppt/theme/theme1.xml", &xml).unwrap();
+    let theme = casual_slide_import::theme::import_theme(&tree).unwrap();
+    assert!(theme.findings.items.is_empty(), "{:?}", theme.findings);
+    let defaults = theme.value.object_defaults.as_ref().unwrap();
+    let presentation =
+        casual_slide_import::presentation::import_deck(&mut pkg, &ImportLimits::default())
+            .unwrap()
+            .deck
+            .presentation;
+    let parts = import_slide_parts(
+        &mut pkg,
+        &presentation,
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap()
+    .parts;
+    let ordinal = parts.structure.slide(0).unwrap();
+    let c = Chain::of(&parts, ordinal);
+    let slide = parts.get(ordinal).unwrap();
+
+    let styled = named(slide, "Styled");
+    let text = c.text_chain(styled, None, Some(defaults));
+    let own = styled.text_body.as_ref().unwrap();
+    let para = own.paragraphs.first().unwrap();
+    let pp = para.properties.as_deref();
+    assert_eq!(text.run_fill(None, pp).unwrap().from, L::ShapeStyle);
+    assert_eq!(
+        text.run_font(None, pp, FontScript::Latin).unwrap().value,
+        RunFont::Theme(FontCollectionIndex::Major)
+    );
+    assert_eq!(text.font_size(None, pp).value, 2100, "txDef's defRPr");
+    assert_eq!(text.font_size(None, pp).from, L::ThemeTextDefault);
+    assert_eq!(
+        text.body(own.properties.as_ref(), |b| b.columns).unwrap(),
+        casual_slide_style::text::TextResolved {
+            value: 3,
+            from: L::ThemeLineDefault
+        },
+        "lnDef's bodyPr: txDef does not say"
+    );
+    assert_eq!(
+        text.body(own.properties.as_ref(), |b| b.rotation)
+            .unwrap()
+            .from,
+        L::ThemeShapeDefault,
+        "spDef's bodyPr: neither txDef nor lnDef says"
+    );
+
+    let line = named(slide, "Connector");
+    let text = c.text_chain(line, None, None);
+    assert_eq!(
+        text.run_fill(None, None),
+        None,
+        "`MS-OI29500` on 20.1.2.2.37 (a)"
+    );
+
+    let bare = named(slide, "No style");
+    let with = c.text_chain(bare, None, Some(defaults));
+    let without = c.text_chain(bare, None, None);
+    assert_eq!(with.font_size(None, None).value, 2100);
+    assert_eq!(without.font_size(None, None).from, L::SchemaDefault);
 }
