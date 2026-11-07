@@ -25,7 +25,8 @@ by saying so.
 | 14 | 2026-11-07 | Note everything instructed, and do not deviate | This page, [CLAUDE.md](../CLAUDE.md) |
 | 15 | 2026-11-07 | Use cyan as the colour | `DEC-03` |
 | 16 | 2026-11-07 | Complete Phase 0 soon | Phase 0 exit criteria prioritised over other work; workers commit each criterion as soon as it is done |
-| 17 | 2026-11-07 | Push directly to `main`; no pull requests for now. Supersedes CLAUDE.md's rule against committing to `main` until the owner says otherwise | [CLAUDE.md](../CLAUDE.md), `openslide-merge` skill || 18 | 2026-11-07 | Update the README and repo overview. While Phase 0 completes, plan out all of Phase 1 | README, GitHub description and topics; [06](06-ROADMAP-AND-DELIVERY.md) Phase 1 plan; task rows in [14](14-EXECUTION-TRACKER.md) |
+| 17 | 2026-11-07 | Push directly to `main`; no pull requests for now. Supersedes CLAUDE.md's rule against committing to `main` until the owner says otherwise | [CLAUDE.md](../CLAUDE.md), `openslide-merge` skill |
+| 18 | 2026-11-07 | Update the README and repo overview. While Phase 0 completes, plan out all of Phase 1 | README, GitHub description and topics; [06](06-ROADMAP-AND-DELIVERY.md) Phase 1 plan; task rows in [14](14-EXECUTION-TRACKER.md) |
 
 ## Boundaries set by the environment
 

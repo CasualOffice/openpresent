@@ -207,7 +207,7 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1C-01 | Tier 1C leftovers | Open | P1 | `COLOR-01`; effect reference; `themeManager`; export setters for panose, pitch, charset, style reference index | Tests seen red |
 | T1C-02 | Close Tier 1C | Open | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
 | T1D-02 | Merge and close Tier 1D | Open | P0 | Session running. Then adapt to the stricter reader and removed `XmlTree::attribute` | Per-tier gate |
-| SKEL-01X | Skeleton: minimal layout and PNG | Open | P0 | Creates `-layout` and `-render` with composition, presets, solid fills and one-font text, enough to see 5 decks. Compared in F7 only | 5 decks rendered and inspected |
+| SKEL-02 | Skeleton: minimal layout and PNG | Open | P0 | Creates `-layout` and `-render` with composition, presets, solid fills and one-font text, enough to see 5 decks. Compared in F7 only | 5 decks rendered and inspected |
 | T1E-01 | Geometry binding | Open | P0 | `prstGeom`, `custGeom`, `avLst` into the model; calls `-geometry`; `GEO-04` | All 187 presets round-trip |
 | T1E-02 | Fills | Open | P0 | Solid, gradient, pattern, blip, group, none; rotate-with-shape | Every `ST_PresetPatternVal`; fixed point |
 | T1E-03 | Lines | Open | P1 | Width, cap, compound, dash, join, arrowheads, sketch extension | Every enum value |
