@@ -809,3 +809,219 @@ fn the_engine_and_f4_resolve_markup_compatibility_alike() {
         );
     }
 }
+
+// --- F4-02, F4-03: what PowerPoint writes, and the real errors next to it ------------
+
+fn bullet_size(val: &str) -> String {
+    slide(&format!(
+        "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/>\
+         <p:txBody><a:bodyPr/><a:p><a:pPr><a:buSzPct val=\"{val}\"/></a:pPr></a:p></p:txBody></p:sp>"
+    ))
+}
+
+/// A chart with the named axis ids, `tail` after its plot area and `series` in its bar chart.
+fn chart(axis: &str, cross: &str, series: &str, tail: &str) -> String {
+    format!(
+        "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart>\
+         <c:plotArea><c:barChart><c:barDir val=\"bar\"/>{series}<c:axId val=\"{axis}\"/><c:axId val=\"{cross}\"/></c:barChart>\
+         <c:catAx><c:axId val=\"{axis}\"/><c:scaling/><c:delete val=\"0\"/><c:axPos val=\"b\"/><c:crossAx val=\"{cross}\"/></c:catAx>\
+         <c:valAx><c:axId val=\"{cross}\"/><c:scaling/><c:delete val=\"0\"/><c:axPos val=\"l\"/><c:crossAx val=\"{axis}\"/></c:valAx>\
+         </c:plotArea>{tail}</c:chart></c:chartSpace>"
+    )
+}
+
+fn plain_chart(tail: &str) -> String {
+    chart("1", "2", "", tail)
+}
+
+/// The status F4 gives the slide part, with and without the allowances.
+fn f4_with_and_without(work: &Path, xml: &str) -> (String, String) {
+    let (with, _) = f4_on(work, "seeded.pptx", &with_part(MINIMAL, SLIDE_PART, xml));
+    let path = work.join("seeded.pptx");
+    let (without, _) = run_f4(&["--no-allowances", path.to_str().unwrap()]);
+    (
+        part_status(&with, SLIDE_PART).to_owned(),
+        part_status(&without, SLIDE_PART).to_owned(),
+    )
+}
+
+#[test]
+fn f4_allowance_each_accepts_what_powerpoint_writes_and_is_needed() {
+    if !f4_ready() {
+        return;
+    }
+    let work = scratch("f4-allowed");
+    let c15 = "xmlns:c15=\"http://schemas.microsoft.com/office/drawing/2012/chart\"";
+    let cases = [
+        ("F4A-1 numeric bullet size", bullet_size("130000")),
+        ("F4A-1 lowest numeric", bullet_size("25000")),
+        ("F4A-1 highest numeric", bullet_size("400000")),
+        (
+            "F4A-3 and 4 signed axis ids",
+            chart("-1884094432", "-1884097184", "", ""),
+        ),
+        (
+            "F4A-5 empty extension",
+            plain_chart("<c:extLst><c:ext uri=\"{X}\"/></c:extLst>"),
+        ),
+        (
+            "F4A-5 extension with two children",
+            plain_chart(&format!(
+                "<c:extLst><c:ext uri=\"{{X}}\" {c15}><c15:layout/><c15:showLeaderLines val=\"0\"/></c:ext></c:extLst>"
+            )),
+        ),
+        (
+            "F4A-6 showDLblsOverMax after the extension list",
+            plain_chart(
+                "<c:extLst><c:ext uri=\"{X}\" xmlns:u=\"urn:u\"><u:v/></c:ext></c:extLst><c:showDLblsOverMax val=\"0\"/>",
+            ),
+        ),
+    ];
+    for (name, xml) in cases {
+        let (with, without) = f4_with_and_without(&work, &xml);
+        assert_eq!(with, "valid", "{name} should pass F4");
+        assert_eq!(without, "invalid", "{name}: this allowance is not needed");
+    }
+    // What the XSD always accepted still passes.
+    for xml in [
+        bullet_size("100%"),
+        plain_chart("<c:showDLblsOverMax val=\"0\"/><c:extLst/>"),
+    ] {
+        let (with, without) = f4_with_and_without(&work, &xml);
+        assert_eq!((with.as_str(), without.as_str()), ("valid", "valid"));
+    }
+}
+
+#[test]
+fn f4_allowance_none_lets_a_real_error_through() {
+    if !f4_ready() {
+        return;
+    }
+    let work = scratch("f4-refused");
+    let idx = "<c:ser><c:idx val=\"-1\"/><c:order val=\"0\"/></c:ser>";
+    let order = "<c:ser><c:idx val=\"0\"/><c:order val=\"-1\"/></c:ser>";
+    let over = "<c:showDLblsOverMax val=\"0\"/>";
+    let cases = [
+        ("bullet size under 25%", bullet_size("24999")),
+        ("bullet size over 400%", bullet_size("400001")),
+        ("bullet size of text", bullet_size("large")),
+        ("bullet size percent over 400%", bullet_size("401%")),
+        ("axis id under 32 bits", chart("-2147483649", "2", "", "")),
+        ("axis id over 32 bits", chart("4294967296", "2", "", "")),
+        ("axis id not an integer", chart("1.5", "2", "", "")),
+        ("cross axis not an integer", chart("1", "x", "", "")),
+        ("a signed series index", chart("1", "2", idx, "")),
+        ("a signed series order", chart("1", "2", order, "")),
+        (
+            "a second showDLblsOverMax",
+            plain_chart(&format!("{over}<c:extLst/>{over}")),
+        ),
+        (
+            "showDLblsOverMax twice, together",
+            plain_chart(&format!("{over}{over}")),
+        ),
+        (
+            "an unknown element where the empty extension is allowed",
+            plain_chart("<c:ext uri=\"{X}\"/>"),
+        ),
+        ("an unknown chart element", plain_chart("<c:notAnElement/>")),
+    ];
+    for (name, xml) in cases {
+        let (with, _) = f4_with_and_without(&work, &xml);
+        assert_eq!(with, "invalid", "F4 accepted {name}");
+    }
+}
+
+#[test]
+fn f4_stops_on_a_stale_allowance_or_a_schema_that_will_not_compile() {
+    if !f4_ready() {
+        return;
+    }
+    let out = Command::new("python3")
+        .arg(fixtures().join("../tools/f4/test_validate.py"))
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn f4_never_relaxes_strict() {
+    if !f4_ready() {
+        return;
+    }
+    let work = scratch("f4-strict-numeric");
+    let transitional = bullet_size("130000");
+    let strict_slide = transitional
+        .replace(
+            "http://schemas.openxmlformats.org/presentationml/2006/main",
+            "http://purl.oclc.org/ooxml/presentationml/main",
+        )
+        .replace(
+            "http://schemas.openxmlformats.org/drawingml/2006/main",
+            "http://purl.oclc.org/ooxml/drawingml/main",
+        );
+    let (report, code) = f4_on(
+        &work,
+        "strict.pptx",
+        &with_part("generated/strict-synthetic.pptx", SLIDE_PART, &strict_slide),
+    );
+    assert_eq!(code, 1, "{report}");
+    assert_eq!(part_status(&report, SLIDE_PART), "invalid", "{report}");
+}
+
+#[test]
+fn f4_passes_area_text_with_nothing_recorded() {
+    if !f4_ready() {
+        return;
+    }
+    let deck = fixtures().join("generated/area-text.pptx");
+    let (report, code) = run_f4(&["--no-known", deck.to_str().unwrap()]);
+    assert_eq!(code, 0, "{report}");
+    assert!(!report.contains("recorded"), "{report}");
+}
+
+#[test]
+fn f4_recorded_failures_cover_only_what_they_say() {
+    if !f4_ready() {
+        return;
+    }
+    let name = "real/sdk-strict-animclr.pptx";
+    let deck = fixtures().join(name);
+    let (report, code) = run_f4(&[deck.to_str().unwrap()]);
+    assert_eq!(code, 0, "{report}");
+    assert_eq!(part_status(&report, "ppt/theme/theme1.xml"), "recorded");
+
+    let (report, code) = run_f4(&["--no-known", deck.to_str().unwrap()]);
+    assert_eq!(code, 1, "{report}");
+    assert_eq!(part_status(&report, "ppt/theme/theme1.xml"), "invalid");
+
+    // A real error in the same deck, in a part that has a recorded failure, still fails.
+    let work = scratch("f4-recorded");
+    let pkg = PresentationPackage::open(read(name), OoxmlLimits::default()).unwrap();
+    let mut pkg = pkg;
+    let theme = String::from_utf8(pkg.read_part("ppt/theme/theme1.xml").unwrap()).unwrap();
+    let seeded = theme.replacen(
+        "</a:themeElements>",
+        "<a:notAnElement/></a:themeElements>",
+        1,
+    );
+    assert_ne!(seeded, theme);
+    let (report, code) = f4_on(
+        &work,
+        "sdk-strict-animclr.pptx",
+        &with_part(name, "ppt/theme/theme1.xml", &seeded),
+    );
+    assert_eq!(code, 1, "{report}");
+    assert_eq!(part_status(&report, "ppt/theme/theme1.xml"), "invalid");
+    // The same part under another deck's name is not covered by the row.
+    let (report, code) = f4_on(
+        &work,
+        "other.pptx",
+        &with_part(name, "ppt/theme/theme1.xml", &theme),
+    );
+    assert_eq!(code, 1, "{report}");
+}
