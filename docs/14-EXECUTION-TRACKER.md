@@ -51,7 +51,7 @@
 | SPEC-03 | Independent count check | Done | P1 | `tools/spec-audit/count.py`: 8730 rows, 0 mismatches | Tests see a dropped row and an added attribute fail; in CI |
 | SPEC-04 | Enumerate extension parts and relationship types | Open | P1 | Not in [spec/parts.md](spec/parts.md) | Listed from MS-PPTX and MS-ODRAWXML |
 | SPEC-05 | Checklist generated | Done | P0 | 8730 rows from 77 schemas; an unassigned type fails generation | Staleness and unassigned-namespace failures both seen |
-| PKG-01 | Read budget is cumulative | Open | P2 | `read_part` charges a whole-package budget on every read, so an editor re-reading parts can exhaust it on a legitimate deck | A long session does not refuse |
+| PKG-01 | Read budget was cumulative | Done | P2 | Each part charged once | Refused on first reread before the fix |
 | F-006 | Microsoft's Open XML validator in the fidelity tools | Open | P0 | Needs `dotnet`. Closest available stand-in for PowerPoint's strictness | Rejects a seeded invalid part; corpus exports pass |
 | F-007 | Real PowerPoint-written decks as input | Open | P0 | Find decks with clear reuse rights, record provenance. Unclear rights: test locally, never commit | At least 20 decks, Windows and Mac, open and round-trip |
 | UX-002 | Live-session measurements | Open | P1 | [50](50-POWERPOINT-UX-STUDY.md) §40 lists 21 measurements, and §42 the behaviours only a live session settles: marquee rule, group entry, undo depth, web default ribbon. Run with `PV-01`'s access, earlier if possible | Each recorded, and rules corrected |
@@ -59,10 +59,10 @@
 | PPT-01 | Import legacy `.ppt` | Open | P2 | `DEC-08`. CFB and MS-PPT parsers with limits and fuzz targets | Phase 10 |
 | NAME-01 | Rename product to OpenPresent in docs and site | Open | P2 | After parallel sessions merge. Crate prefix and folder unchanged | No product use of the old name remains |
 | DOC-007 | Owner instruction log | Done | P0 | [03](03-OWNER-INSTRUCTIONS.md), first in authority, cited from `CLAUDE.md` | Exists, indexed |
-| SEC-015 | Deck content leaks into error messages | Open | P0 | **Confirmed by audit:** `unknown target mode {other:?}` in `rels.rs`, repeated keys in `content_types.rs`, and quick-xml's messages carry file text. Log contract broken | A fixture with a marker string; no message contains it |
-| SEC-016 | Caps with no test | Open | P0 | Removing element, attribute, walker size, per-part and total relationship, and content-type caps left all tests green | Hostile fixture per cap, each seen red |
-| SEC-017 | Tests that do not test their claim | Open | P1 | `read_part` could drop `initial_capacity`; a media read at open would pass `opening_a_deck_does_not_read_its_media`; removing our declared-size bound passes because `zip` also enforces it | Tests through the real path; assert `consumed()` |
-| FUZZ-01 | `XmlTree::parse` has no fuzz target | Open | P1 | A second reader, with different config | Target exists, campaign clean |
+| SEC-015 | Deck content in error messages | Done | P0 | 7 leaks found, 0 now, by a marker planted through every PKG, XML, OPC, MCE and FND code. Import's own CS-IMP, CS-IMF and CS-CLR codes are not covered: `SEC-018` | `no_document_text.rs` |
+| SEC-016 | Caps with no test | Done | P0 | Fixture per cap | Each of 7 caps removed in turn went red |
+| SEC-017 | Tests that did not test their claim | Done | P1 | Allocation and `consumed()` now tested through the real path; docs/07 corrected on `zip`'s role | Seen red under mutation |
+| FUZZ-01 | `XmlTree::parse` fuzz target | Done | P1 | `xml_tree`. First campaign found a dropped second BOM, fixed. 1.5M runs in 301 s clean, then 562k on final code | No artifact |
 | CI-01 | Gate that crates never depend on a server | Open | P2 | Stated in 19; OpenCalc has it, we do not | Seeded edge fails |
 | SPEC-06 | Catch-all area rules removed | Done | P0 | Audit seeded `ZZ_Unassigned`, filed silently under PRES. The final rules now name their types | Seeded type fails generation; output unchanged |
 | FID-01 | Autonumber behaviour | Open | P1 | LibreOffice resave changes `arabicParenBoth` to `2)`, and Thai and Hebrew schemes to a bullet. Renders two paragraphs with `startAt=2` as `(b) (b)`; PowerPoint's behaviour unknown. Feeds BEH-11 | Fixture against a reference |
@@ -159,22 +159,25 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | COLOR-01 | Finish Tier 1C security | Open | P1 | Skill requires a fuzz target, hostile fixtures and limits in `OoxmlLimits`; caps are constants so far (64 transforms). In-test byte mutation is no substitute | Target runs clean; fixtures seen red |
 | COLOR-02 | Colour arithmetic left open by the standard | Open | P1 | `inv` encoded against LibreOffice's linear, `gray` weights, gamma transfer, `hueMod` clamp, half-up rounding, HSL state, `sysClr` fallback from Windows defaults recalled from memory, `masterClrMapping` chain. Each pinned by an `open_*` test. BEH-03, BEH-04 | Settled by `PV-01` or `F-007` |
 | COLOR-03 | Four `lumMod` 50% values differ by one step from recalled PowerPoint palette | Open | P2 | `ED7D31`, `A5A5A5`, `FFC000`, `70AD47`. The PowerPoint values are from memory. The standard's own examples contradict each other on rounding | A real Office theme via `F-007` |
-| XML-01 | `XmlTree::attribute` ignores namespace | Open | P1 | A foreign `x:val` shadows `val`, a parser differential. `plain_attribute` added and used by import; the old one remains for others to misuse | Removed or renamed; test |
-| XML-02 | Walker accepts malformed and duplicate attributes | Open | P0 | `<r a/>` passes `walk` and `XmlTree::parse`. `attributes_valid` guards colour reads only, and other readers can disagree about the same bytes | Refused in `walk`; hostile fixture |
+| XML-01 | `XmlTree::attribute` ignored namespace | Done | P1 | Removed. `attr()`, used for `.rels` and content types, has the same flaw: `XML-04` | compile_fail doctest |
+| XML-02 | Walker accepted malformed and duplicate attributes | Done | P0 | Refused in `walk`, so all readers agree. Existing decks still open and round-trip | Main session removed the repeat check and saw red; 8 `xml-*` hostile decks |
 | SPEC-07 | Standard's internal inconsistencies recorded | Done | P2 | `dkSeaGreen` differs from `darkSeaGreen`, `ltGoldenrodYellow` from `lightGoldenrodYellow`, followed as written. Worked examples for `hslClr` 240/100/50, `lumMod` and `blueOff` contradict computation or themselves | Tests pin each |
 | GEOM-01 | Path boolean engine for merge shapes | Open | P1 | In `-geometry`, Phase 4. Must be deterministic like the rest | Golden shapes |
 | D3-01 | 3D model rendering and editing | Open | P2 | **Decided, clone goal:** Edit in Phase 10, Retain with fallback until then. Spec level changed to match | Phase 10 |
-| PKG-02 | Part name comparison uses Unicode lowercase | Open | P1 | `Package` uses `to_lowercase`. Read, no failing test yet. Must follow OPC's equivalence, shared with `OPC-01` | Fixture |
-| PKG-03 | Rewrite's fixed timestamp relies on a feature staying off | Open | P2 | If `zip`'s `time` feature enters through unification, determinism breaks silently | Set explicitly; test |
-| PKG-04 | `PresentationPackage::read_part` is uncapped | Open | P0 | Import of optional parts decompresses before the tree refuses size, bounded only by the package budget. Add a capped read | Test on `consumed()` |
-| PKG-05 | Duplicate security rule | Open | P1 | `resolve_internal` is private, so import copies it as `resolve_target`. Export it and delete the copy | One rule, tested |
-| XML-03 | Walker admits non-XML | Open | P0 | NUL in names, `a="1"b="2"`, undeclared prefixes. With `XML-02`: refuse in `walk`, so all readers agree | Hostile fixtures |
+| PKG-02 | Part name comparison | In progress | P1 | One rule in the package crate. Import's `locate_part` and export's `add_part` still use `eq_ignore_ascii_case`, so percent-encoded targets can differ from the graph | Both use `part_name_key` |
+| PKG-03 | Fixed timestamp | Done | P2 | Set explicitly | Red with `zip`'s `time` feature on |
+| PKG-04 | Uncapped `read_part` | Done | P0 | `read_xml_part`, used by import and export | Refuses with nothing decompressed |
+| PKG-05 | Duplicate security rule | Done | P1 | `resolve_internal` exported, import's copy deleted | Existing tests cover the rule |
+| XML-03 | Walker admitted non-XML | Done | P0 | 56 of 58 hostile vectors were admitted, all refused now | Hostile fixtures |
 | WR-06 | Signature parts not dropped on edit | Open | P1 | `SaveOutcome.signature_invalidated` reports it; docs/07 says drop. Part of `WR-04` | Signed fixture |
 | SPEC-08 | Checklist area for markup compatibility | Open | P0 | Hand-written rows for `mc:Ignorable`, `ProcessContent`, `MustUnderstand`, `AlternateContent`, `Choice`, `Requires`, `Fallback`, tied to BEH-18 | Rows in `docs/spec` |
 | TXT-04 | White-on-dark text weight | Open | P1 | `fillText` has 25 to 68% more ink on macOS dark backgrounds. Viewed: `Path2D` is correct and legible but visibly lighter. Try weight compensation; compare to PowerPoint via `PV-01` | Compared on dark slides |
 | TXT-05 | Low-end and no-GPU clients | Open | P1 | Software rendering of dense CJK reaches 27 to 36 ms, over a frame. Known weak case | Measured on a named device |
 | TXT-06 | Windows, Firefox, Safari check | Open | P1 | Windows Chrome is the platform most likely to favour `fillText`. Before Phase 3 closes | Same PNG viewed on each |
 | TXT-07 | Thai and similar line breaking | Open | P1 | `unicode-linebreak` has no dictionary; icu_segmenter adds 297 KiB. Load per script, on demand | Fixture passes |
+| XML-04 | `attr()` matches any namespace | Open | P1 | Used for `.rels` and content types. Same flaw as `XML-01` | Foreign attribute test |
+| SEC-018 | Marker test for import codes | Open | P1 | CS-IMP, CS-IMF and CS-CLR not covered by `no_document_text.rs` | Marker finds none |
+| DOC-009 | Confirm docs/20 wording on relationship ids | Open | P2 | Now permits them in messages, though file-supplied and unchecked as NCName. Tighten by checking the form | Check added |
 | GOV-01 | Gates, governance and release | Open | P1 | Port OpenCalc's self-test, doc-claims, doc-references, tracker-shape, fuzz-lock, host-seams and post-merge. Add SECURITY, CONTRIBUTING, CHANGELOG, NOTICE. docs/15 for test strategy and release | Phase 0 exit |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |

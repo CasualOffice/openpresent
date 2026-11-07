@@ -3,6 +3,7 @@
 `casual-slide-ooxml` admits a package and reports its structure. It maps nothing into the model.
 
 - **One XML path.** `xml::walk` is the only way in; `XmlTree::parse` runs it first, then reads a second time. It refuses any DOCTYPE and undeclared entities, and bounds size, elements, depth and attributes. `tools/check-repo.py` fails if `quick_xml` appears elsewhere.
+- **What `walk` refuses** beyond its bounds: any DOCTYPE, undeclared entities, malformed or repeated attributes, control characters in names, undeclared prefixes, and more than one root. A fault in the main part refuses the deck.
 - **Opening reads structure only:** content types, `.rels`, and the main part, which is walked in full. Media is never read, so no decoder is reachable by opening a file.
 - **The graph** is a breadth-first walk with a visited set. A cycle costs one visit.
 - **Nothing external is followed.** Targets are classified after removing the whitespace browsers ignore, and reported.
