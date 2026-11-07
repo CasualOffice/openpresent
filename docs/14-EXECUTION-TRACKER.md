@@ -95,19 +95,21 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 
 | ID | Title | St | Sev | Mechanism | Gate |
 | --- | --- | --- | --- | --- | --- |
-| T-1A | Package, part graph, properties, repackager | In progress | P0 | Structure, properties, repackager, MCE, Strict built and merged. Open: `XML-02`, `SEC-015`, `SEC-016`, `SEC-017`, `PKG-04`, `SPEC-08` | Per-tier gate in 06 |
-| T-1B | Presentation part, view state | In progress | P0 | Built and merged, with fuzz target. Removing a whole part refused; `defaultTextStyle`, `penClr`, `clrMru`, `extLst` retained, not modelled; app counts not recalculated | Per-tier gate |
-| T-1C | Colour and theme | In progress | P0 | Model, import and export built and merged; 236 workspace tests pass. Audit: code references 314 COLOR and 159 THEME rows partly. Remaining: `COLOR-01`, `COLOR-02`, `COLOR-03`, effect reference, format scheme internals, object defaults, `themeManager` | Per-tier gate in 06 |
-| T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged. All 12 committed real decks import through slide import. Open: `T1D-03`. Most spec rows still lack fixtures, so the tier gate is not met | Per-tier gate in 06 |
-| T-1E | Geometry, fills, lines, effects, 3D | In progress | P0 | Built and merged: 362 tests, 13 hostile decks, fuzz target, 12 real decks clean. No shape-level gradient or pattern in the real decks, only generated ones. Status marks need the audit to see `token_enum!` values (`STAT-01`) | Per-tier gate in 06 |
-| T-1F | Text model | In progress | P0 | Built and merged: text bodies, all properties, 41 autonumber schemes, inheritance chain, fuzz target. Real decks are fixed points. Open: `T1F-04` | Per-tier gate in 06 |
-| T-1G | Tables | In progress | P0 | Gate met except item 1's reasons: 96 rows marked, 17 blank with reasons only in the report until `SPEC-09` can gate them | Per-tier gate in 06 |
-| T-1H | Pictures and media | Open | P0 | 116 rows | Per-tier gate |
-| T-1I | Timing and transitions | Open | P0 | 522 rows | Per-tier gate |
-| T-1J | Charts | Open | P0 | 1764 rows | Per-tier gate |
-| T-1K | SmartArt, equations, ink | Open | P0 | 1263 rows | Per-tier gate |
-| T-1L | OLE, VML, 3D retained | Open | P0 | 951 rows | Per-tier gate |
-| T-1M | Comments, review, sections, zoom, labels | Open | P0 | 876 rows | Per-tier gate |
+| T-1A | Package, part graph, properties, repackager | In progress | P0 | Built and merged; the listed fixes are Done. 278 of 401 rows `y`/`r` in M, I, E; 64 `n/a`; 59 blank, each accounted for (`audit.py --check` 0 failures, 2026-11-08). Open: `T1A-02`, `CLOSE-02`, `REL-01`, `SEC-P10`, `SEC-P11`. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1B | Presentation part, view state | In progress | P0 | Built and merged, fuzz target. 280 of 297 rows `y`/`r`, 15 `n/a`, 2 blank with reasons. Open: `T1B-02` (whole-part removal). Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1C | Colour and theme | In progress | P0 | Built and merged; format scheme and object defaults landed (`T1C-02`, `T1C-03`). 437 of 473 rows `y`/`r`, 17 `n/a`, 19 blank, accounted for. Open: `COLOR-02`, `COLOR-03`, `CLOSE-04`. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged; `T1D-03` Done. 479 of 564 rows `y`/`r`, 35 `n/a`, 50 blank, accounted for. Open: `CLOSE-02`, `CLOSE-04`, `SEC-X07`. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1E | Geometry, fills, lines, effects, 3D | In progress | P0 | Built and merged, fuzz targets run. 1,014 of 1,082 rows `y`/`r`, 48 `n/a`, 20 blank, accounted for. Open: `CLOSE-01`, `CLOSE-04`. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1F | Text model | In progress | P0 | Built and merged, `text_bodies` fuzzed (431,274 inputs). 276 of 317 rows `y`/`r`, 35 `n/a`, 6 blank, accounted for. Open: `CLOSE-01`, `CLOSE-04`, `WR-11`. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1G | Tables | In progress | P0 | Built and merged; 20 mutants red, and the 5 that stayed green now tested (`d86ffb4`). All 113 rows `y`/`r`. `tables` fuzz target has no run recorded. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1H | Pictures and media | In progress | P0 | Built and merged; mutation run, two survivors fixed (`a5ce265`). 114 of 116 rows `y`/`r`, 2 `n/a`. Open: `T1N-08`; MEDIA rests on synthetic decks. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1I | Timing and transitions | In progress | P0 | Built and merged; each hostile fixture seen to fail with its check removed; mutation run (`9c3f6e3`); `timing_trees` fuzzed. 463 of 522 rows `y`/`r`, 49 `n/a`, 10 blank with reasons. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1J | Charts | In progress | P0 | Built and merged, generated from the schemas. 1,612 of 1,764 rows `y`/`r`, 110 `n/a`, 42 blank, accounted for. Guards not mutation-tested (`SEC-021`); `charts` fuzz never run (`FUZZ-02`); `cx:` and `cs:` have no F4 schema (`F4-05`); `REL-01`, `F-010`. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1K | SmartArt, equations, ink | In progress | P0 | Built and merged. 1,098 of 1,263 rows `y`/`r`, 165 blank with reasons. Guards not mutation-tested (`SEC-021`); `graphics` fuzz never run (`FUZZ-02`); `T1K-04`, `T1K-05`, `F-009`. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1L | OLE, VML, 3D retained | In progress | P0 | Built and merged; retained-object tests seen to fail (`a35c0e7`). 946 of 951 rows `y`/`r`, 5 `n/a`. VML is not schema-checked (`F4-04`). Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1M | Comments, review, sections, zoom, labels | In progress | P0 | Built and merged. 733 of 876 rows `y`/`r`, 89 `n/a`, 54 blank with reasons. One mutation run on comment authors (`46b4e3a`), not the whole tier (`SEC-021`); `review_parts` fuzz never run (`FUZZ-02`); `REL-01`; no real deck holds a modern comment, section or zoom. Not closed | Per-tier gate in 06; items in §Tier gates |
+| T-1N | The writer | In progress | P0 | `T1N-01` to `T1N-04` Done, 62 of 62 rules seen red. `T1N-05` to `T1N-08` built (`4c8f7b5`), not proven. Open: `T1N-07` (`check_zip` mutation not run), `WR-11`, `WR-04`. 39 rules Inferred or Unverified wait for `PV-01`. Not closed | Invariants in 36; items in §Tier gates |
+| T-1R | Recovery: open and edit damaged decks | In progress | P0 | `REC-01` to `REC-05` built. Sample damage corpus measured: 320 decks, 318 open, an edit to each opens under `strict` (docs/29). Not run: `DAMAGE_FULL=1`; `xml_recover`, `package_salvage`, `deck_recover` never compiled or run (`FUZZ-02`). `REC-06` waits for `PV-01`. Not closed | Damage corpus in 29; items in §Tier gates |
 | T-2A | Composition | Open | P0 | Render | 51 ladder |
 | T-2B | Shapes | Open | P0 | Render | 51 ladder |
 | T-2C | Effects | Open | P1 | Render | 51 ladder |
@@ -194,7 +196,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | T1F-04 | Tier 1F leftovers | Done | P1 | `bodyPr` 3D and warp modelled. 5 refused bodies: 3 picture bullets (1H), 2 inline equations (`T1K-02`), now pinned. The 75 s test is 19 s | Other refusals fail the test |
 | STYLE-01 | Inheritance gaps | Done | P0 | `p:style`, `txDef`, `lnDef`, `spDef`, `fontRef` in the chain. The layout's and `fontRef`'s places are Inferred; whether defaults narrow by shape kind is open until `PV-01` | BEH-02 cases seen red |
 | COLOR-04 | One rule for colour finding codes | Open | P2 | **Decided:** colour findings keep `CS-CLR` everywhere. Today 1E folds them to `CS-IMF` while `highlight` keeps `CS-CLR` | Same bad colour gives one code |
-| CLOSE-01 | Close Tiers 1E and 1F | In progress | P0 | Gate items 2 to 7 met. Item 1 not: of 1,399 rows, 1,128 `y y y`, 9 retained, 86 partly marked, 176 blank. 257 marks are `a14` picture effects the audit cannot place. Audit rules were made more generous; main session planted 40 false marks in unbuilt tiers and all were caught | Every row marked or with a named reason |
+| CLOSE-01 | Close Tiers 1E and 1F | In progress | P0 | Item 1 met as the audit sees it on 2026-11-08: 1E 1,014 of 1,082 rows `y`/`r`, 1F 276 of 317, every blank accounted for, `audit.py --check` 0 failures. Item 6 is weaker than it says: `CLOSE-04`. Main session earlier planted 40 false marks in unbuilt tiers and all were caught | Every row marked or with a named reason |
 | FID-04 | LibreOffice crashed on the owner's Mac | In progress | P1 | Instruction 33: keep validating, never on the desktop. Linux container `openpresent-lo` (LibreOffice 25.2.3, no network) reopened 112 of 112 `.pptx` in `fixtures/rr/good`, `fixtures/rr/sa`, `fixtures/real`, to non-empty PDF. Not yet: other save-as extensions, edited real decks, and the cause of the 6 earlier aborts | One run with the cause recorded |
 | CLOSE-02 | Close Tiers 1A to 1D | In progress | P0 | Owner instruction 22. Export marks are low (27); many rows have no fixture | Per-tier gate, item by item |
 | F-010 | SDK refuses 6 real decks as written | Open | P2 | **Decided: `check.py` stays a report.** Signed `c:axId`, `mod` on `extLst`, `showLeaderLines`, `showDLblsOverMax`. The SDK is no stand-in for what PowerPoint writes in charts | Reviewed at `PV-01` |
@@ -205,11 +207,19 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | REC-05 | Recovery: edit and save | In progress | P0 | Unedited save returns original bytes; an edit writes a valid file through the preflight; report in plain language; host `strict` option | Damage corpus output passes F4 |
 | REC-06 | Compare with PowerPoint's refusals | Open | P1 | Claims wait for `PV-01` | Recorded per deck |
 | T1N-07 | Writer leftovers | Open | P1 | `check_zip` call in `emit` not proven by any test; 7 seeded decks do not open, save and report as docs/36 says; `fixtures/rr` not in CI's SDK job | Per-tier gate |
-| CLOSE-03 | Finish 1E and 1F marks | Open | P0 | Annotate `a14` effects for the audit; record reasons for rows left unmarked (`SPEC-09`) | Gate item 1 |
-| SPEC-09 | A place for named reasons | Open | P0 | Checklist has no column for why a row is unmarked, so "or carries a named reason" cannot be gated | `audit.py --check` fails on an unaccounted row |
+| CLOSE-03 | Finish 1E and 1F marks | Done | P0 | Annotate `a14` effects for the audit; record reasons for rows left unmarked (`SPEC-09`). `6cd7634`, `af31890`: `a14` reads annotated, reasons recorded, audit 0 failures | Gate item 1 |
+| SPEC-09 | A place for named reasons | Done | P0 | `docs/spec/open-rows.tsv` names a tracker row and reason per blank; `audit.py --check` gates every Phase 1 tier, and `test_audit.py` holds that an unreasoned blank fails | `audit.py --check` fails on an unaccounted row |
 | T1C-03 | Theme default `spPr` not reported, no writer for object defaults | Done | P1 | Part of `T1C-02` | Silent-drop test covers themes |
 | T2E-01 | Built-in table style definitions | Open | P1 | Real decks name built-in GUIDs with an empty `tableStyles.xml`, so tables would look unstyled when rendered. Phase 2. Definitions must be ours, not copied | Styled tables render |
-| T1N-08 | Wire `replace_media` to the writer | In progress | P1 | Only plans today; a replacement needing a new relationship cannot be saved. No real deck holds audio or video, so MEDIA rests on synthetic decks until `PV-01` | Saved deck holds the new image |
+| T1N-08 | Wire `replace_media` to the writer | In progress | P1 | `4c8f7b5` says the plan now saves; no test seen red recorded. No real deck holds audio or video, so MEDIA rests on synthetic decks until `PV-01` | Saved deck holds the new image |
+| F4-04 | VML is not schema-checked | Open | P1 | `schemas/ooxml/vml-main.xsd` imports `wml.xsd` and `vml-wordprocessingDrawing.xsd`, which are not vendored, so xmllint cannot compile it (run 2026-11-08) and F4 leaves `.vml` unchecked. Tier 1L gate item 5 | A seeded invalid VML part fails F4 |
+| F4-05 | `cx:` and `cs:` parts have no schema in F4 | Open | P1 | `tools/f4/validate.py` maps no schema for `drawing/2014/chartex` or `drawing/2012/chartStyle`, so those parts report `no-schema`. Candidates are in `schemas/ms-extensions/`. Tier 1J gate item 5 | A seeded invalid `cx:` part fails F4 |
+| CLOSE-04 | Silent-drop test reads with no relationships | Open | P0 | `crates/casual-slide-import/tests/silent_drop.rs` calls `import_slide_part` with `&[]`, so any element reached through an `r:id` is read without its target and its removal may go unnoticed. Gate item 6 for 1C to 1F | Test with the part's relationships, seen red on a dropped `r:id` element |
+| REL-01 | `CS-FND-0007` on relationship types we read | Open | P1 | `KNOWN_RELS` in `casual-slide-ooxml/src/graph.rs` lacks Microsoft's types for chartEx, chart style and colours, modern comments and authors, which import reads. A healthy deck is reported as holding unknown relationships | Real deck with these types gives no `CS-FND-0007` |
+| FUZZ-02 | Fuzz targets never run | Open | P0 | `charts`, `review_parts`, `graphics`, `xml_recover`, `package_salvage`, `deck_recover` have never been run; docs/29 says the last three have not been compiled. Gate item 7 for 1J, 1K, 1M, 1R | A recorded clean campaign each, one at a time |
+| SEC-021 | Tier 1J, 1K and 1M guards not seen failing | Open | P0 | Limits and damage handling in these tiers have hostile fixtures and tests, but no session removed each guard and saw a test fail, except `4d64f03` (signed axis ids) and `46b4e3a` (comment authors). docs/07 `SEC-C12`, `SEC-C20` and docs/21's `ChartLimits`, `GraphicLimits`, `ReviewLimits` say Partial until then | Each guard removed in turn goes red |
+| T1K-04 | 2016 ink brush property values not modelled | Open | P2 | `x:drawing/2016/ink:ST_ExtendedBrushPropertyName` and its values are read as text, untyped in the schema; 16 rows blank with that reason | Values typed, or the reason accepted at close |
+| T1K-05 | `a:EG_TextBullet` not modelled under Tier 1K | Open | P2 | Reported by the Tier 1K session. `text.rs`'s `Bullet` models it for slide text and the checklist marks it there; the generated diagram, math and ink modules name no `TextBullet`. Find whether a bullet in a diagram's text is read, retained or dropped | Fixture with a bullet in a diagram |
 | WR-11 | `Writer::uri` takes the second URI in Strict | Open | P1 | A new `a14` element would get the pre-release namespace. Seen in code, not run | Failing test first |
 | CI-09 | GitHub CI cannot start | Open | P0 | Account billing: "recent account payments have failed or your spending limit needs to be increased". Only the owner can fix it. No clean CI on `main` since `8ec65a3` | CI green on `main` |
 | GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
@@ -236,10 +246,10 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | ID | Title | St | Sev | Mechanism | Gate |
 | --- | --- | --- | --- | --- | --- |
 | STAT-01 | Checklist status marks | Done | P0 | One rule proposes and gates a mark: code at the schema's spot, a test naming it, a fixture holding it. 604 of 1,735 rows in 1A to 1D marked; M 487, I 178, E 27. 240 of COLOR's M are enum values | False marks fail `audit.py --check` |
-| T1A-02 | Close Tier 1A | Open | P0 | `SPEC-08`, `PKG-02`, `XML-04`, `SEC-018`, `DOC-009`, `F4-02` | Per-tier gate |
-| T1B-02 | Close Tier 1B | Open | P1 | Whole-part removal rule; `defaultTextStyle` follows `T1F-01`; app counts follow `T1N-05` | Per-tier gate |
+| T1A-02 | Close Tier 1A | In progress | P0 | `SPEC-08`, `PKG-02`, `XML-04`, `SEC-018`, `DOC-009`, `F4-02` | Per-tier gate |
+| T1B-02 | Close Tier 1B | In progress | P1 | Whole-part removal rule; `defaultTextStyle` follows `T1F-01`; app counts follow `T1N-05` | Per-tier gate |
 | T1C-01 | Tier 1C leftovers | Done | P1 | Effect reference, `themeManager`, setters | Seen red |
-| T1C-02 | Close Tier 1C | Done | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
+| T1C-02 | Tier 1C format scheme and object defaults | Done | P0 | Format scheme internals, after 1E; object defaults, after 1F. Read, reported and written, seen red (`3043ec7`). Closing the tier is `T-1C` | Per-tier gate |
 | T1D-02 | Merge Tier 1D | Done | P0 | Merged onto the parser fixes; 372 tests pass | Gates pass |
 | SKEL-02 | Skeleton: minimal layout and PNG | Blocked | P1 | Waits with `SKEL-01` | Phase 1 closed |
 | T1E-01 | Geometry binding | Done | P0 | `prstGeom`, `custGeom`, `avLst`; compiled, not evaluated. `GEO-04` is separate | Enum values read from the checklist; edits change only named nodes |
@@ -257,15 +267,15 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1H-03 | Audio and video | Done | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
 | T1I-01 | Timing tree | Done | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
 | T1I-02 | Transitions | Done | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
-| T1J-01 | Classic charts | Open | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |
-| T1J-02 | Chart extensions and styles | Open | P1 | `c14`, `c15`, `c16`, chart style and colour parts. BEH-26 | Retained with base chart |
-| T1J-03 | 2016+ charts | Open | P1 | `cx:` with `AlternateContent` fallback, 8 layouts | Fallback kept with chart |
-| T1K-01 | SmartArt parts | Open | P0 | Data, layout, style, colours and drawing as linked parts; layout never run on load; `SEC-C12` | 5 parts stay consistent |
-| T1K-02 | Equations | Open | P1 | OMML, 326 rows; fallback retained | Fixed point |
-| T1K-03 | Ink | Open | P2 | `contentPart`, InkML, actions; fallback retained | Fixed point |
-| T1L-01 | OLE and controls | Open | P1 | Retained with fallback image; never opened; `SEC-C07` | Bytes compared |
-| T1L-02 | VML | Open | P2 | Legacy drawing parts retained; schema-checked in F4 | Bytes compared |
-| T1L-03 | 3D models | Open | P2 | Retained with fallback until `D3-01` | Bytes compared |
+| T1J-01 | Classic charts | In progress | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |
+| T1J-02 | Chart extensions and styles | In progress | P1 | `c14`, `c15`, `c16`, chart style and colour parts. BEH-26 | Retained with base chart |
+| T1J-03 | 2016+ charts | In progress | P1 | `cx:` with `AlternateContent` fallback, 8 layouts | Fallback kept with chart |
+| T1K-01 | SmartArt parts | In progress | P0 | Data, layout, style, colours and drawing as linked parts; layout never run on load; `SEC-C12` | 5 parts stay consistent |
+| T1K-02 | Equations | In progress | P1 | OMML, 326 rows; fallback retained | Fixed point |
+| T1K-03 | Ink | In progress | P2 | `contentPart`, InkML, actions; fallback retained | Fixed point |
+| T1L-01 | OLE and controls | In progress | P1 | Retained with fallback image; never opened; `SEC-C07` | Bytes compared |
+| T1L-02 | VML | In progress | P2 | Legacy drawing parts retained. Not schema-checked in F4 yet: `F4-04` | Bytes compared |
+| T1L-03 | 3D models | In progress | P2 | Retained with fallback until `D3-01` | Bytes compared |
 | T1M-01 | Comments | In progress | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
 | T1M-02 | Sections, zoom, classification | In progress | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
 | T1M-03 | Review and custom data | In progress | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
@@ -273,6 +283,28 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1N-02 | Writer: content types and shared parts | Done | P0 | 10 CT and 10 SP rules, with fixtures. 3D models shared like media. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
 | T1N-03 | Writer: id rules and sections | Done | P0 | 9 ID and 5 NM rules, with fixtures. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
 | T1N-04 | Writer: add, duplicate, delete slide at file level | Done | P0 | 7 SL rules. 284 results from 71 inputs with 0 new F4 or SDK findings. 39 rules across 1N are Inferred or Unverified, listed in docs/36 for `PV-01` | 62 of 62 seen red with the rule disabled; main session reran `sdk-rr` with 0 new findings |
-| T1N-05 | Writer: docProps, thumbnails, signature drop | Open | P1 | App counts recalculated; `WR-06` | Fixtures |
-| T1N-06 | Writer: save-as matrix | Open | P1 | `WR-05`: 121 pairs | Fixture per pair |
+| T1N-05 | Writer: docProps, thumbnails, signature drop | In progress | P1 | App counts recalculated; `WR-06` | Fixtures |
+| T1N-06 | Writer: save-as matrix | In progress | P1 | `WR-05`: 121 pairs | Fixture per pair |
 | P1X-01 | Phase 1 exit run | Open | P0 | `CORP-01` corpus at target, 500-slide budget, hostile corpus with no crash or hang, all tiers closed | Evidence assembled for owner sign-off |
+
+## Tier gates, 2026-11-08
+
+The seven items of the per-tier gate in [06](06-ROADMAP-AND-DELIVERY.md), read from git and the docs at `3f4d132`. **No tier is closed.** "Audit" means `tools/spec-audit/audit.py --check`, 0 failures over every Phase 1 tier, which also enforces item 2 for every `y`. Item 3's unedited byte identity and forced tree rewrite hold for the corpus (`WR-01`); a forced rewrite from each tier's model is not recorded per tier. "Not recorded" means no commit or doc shows it, not that it fails.
+
+| Tier | 1 Marks | 2 Fixtures | 3 Writer | 4 Fixed point | 5 F4 | 6 Silent drop | 7 Limits, fuzz | Left |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1A | Met by audit | Met | Met (`WR-01`) | Not recorded | Corpus passes with recorded allowances (`F4-03`) | Not recorded | Met; caps seen red (`SEC-016`), fuzz run (`F-005`) | `T1A-02`, `CLOSE-02`, `REL-01`, `SEC-P10`, `SEC-P11` |
+| 1B | Met | Met | Met | Not recorded | Corpus passes with recorded allowances (`F4-03`) | Not recorded | Met; caps tested, fuzz target | `T1B-02` |
+| 1C | Met | Met | Met | Generated themes are fixed points (`3043ec7`) | Corpus passes with recorded allowances (`F4-03`) | Themes covered (`a6f8d21`), without relationships | Met; seen red, fuzz run (`COLOR-01`) | `CLOSE-04`, `COLOR-02`, `COLOR-03` |
+| 1D | Met | Met | Met | Real decks import (`T-1D`); not recorded as a fixed point | Corpus passes with recorded allowances (`F4-03`) | Partial: `CLOSE-04` | Met; caps seen red (`T1D-03`) | `CLOSE-02`, `CLOSE-04`, `SEC-X07` |
+| 1E | Met | Met | Met | Not recorded | Corpus passes with recorded allowances (`F4-03`) | Partial: `CLOSE-04` | Met; fixtures, `drawing_properties` and `geometry` fuzzed | `CLOSE-04` |
+| 1F | Met | Met | Met | Real decks (`T1F-01`) | Corpus passes with recorded allowances (`F4-03`) | Partial: `CLOSE-04` | Met; `text_bodies` fuzzed | `CLOSE-04`, `WR-11` |
+| 1G | Met | Met | Met | Met (`T1G-01`) | Known validator disagreements recorded | Met (`d86ffb4`) | Fixtures; 20 mutants red; `tables` fuzz has no run recorded | `tables` fuzz run |
+| 1H | Met | Met | Met | Not recorded | Not recorded | Not recorded | Fixtures at and past each bound; `media_references` fuzz has no run recorded | `T1N-08`, fuzz run |
+| 1I | Met | Met | Met | Met (`T1I-01`) | Rewritten decks through both validators (`9c3f6e3`) | Met (`9c3f6e3`) | Met; seen red, `timing_trees` fuzzed | Owner review of 10 reasons |
+| 1J | Met | Met | Met; `rewrite_from_model` holds every row | Not recorded on real decks | Not met: `F4-05` | Tests exist, not mutation-checked | Not met: `SEC-021`, `FUZZ-02` | `F4-05`, `REL-01`, `SEC-021`, `FUZZ-02`, `F-010` |
+| 1K | Met | Met | Met | Not recorded | Not recorded | Tests exist (`graphics.rs`), not mutation-checked | Not met: `SEC-021`, `FUZZ-02` | `SEC-021`, `FUZZ-02`, `T1K-04`, `T1K-05`, `F-009` |
+| 1L | Met | Met | Retained bytes compared | n/a, retained | Not met for VML: `F4-04` | Met (`a35c0e7`) | Fixtures; retained-object tests seen red | `F4-04`, `SEC-C07` row |
+| 1M | Met | Met | Met | Not recorded | Not recorded; modern comments have no F4 schema | Unknown attributes reported (`46b4e3a`) | Not met: `SEC-021`, `FUZZ-02` | `REL-01`, `SEC-021`, `FUZZ-02`; no real deck with modern comments |
+| 1N | n/a | `RR-*` fixtures | `T1N-01` to `-04` met | — | 0 new F4 or SDK findings over 284 results | — | `writer_plan` fuzz target; `check_zip` unproven | `T1N-05` to `-08`, `T1N-07`, `WR-11`, `WR-04` |
+| 1R | n/a | Damage corpus, sample | Edit to each recovered deck opens under `strict` | — | F4 passes except outputs with `CS-REC-0104` (owner instruction 34) | — | Not met: `FUZZ-02`; `DAMAGE_FULL=1` not run | `REC-01` to `REC-06`, `FUZZ-02` |
