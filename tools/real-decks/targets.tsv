@@ -1,0 +1,34 @@
+axis	value	min	scope	why
+total	decks	60	corpus	F-007's 66 decks are the first long tail; the exit corpus must not shrink below what found its bugs
+total	committed	12	committed	CI sees only committed decks; twelve is what F-007 first committed
+producer	PowerPoint Windows	20	corpus	docs/06: real decks from PowerPoint on Windows. The main target, so the most decks
+producer	PowerPoint Mac	5	corpus	docs/06: PowerPoint on Mac. Five, since Mac wrote the signed axis ids Windows does not (T1J-04)
+producer	Keynote	3	corpus	docs/06: Keynote. Three, so one deck's oddity is not taken for the writer's
+producer	Google Slides	3	corpus	docs/06: Google Slides. Three, for the same reason
+producer	LibreOffice	2	corpus	docs/51 names it; two already committed in fixtures/producers
+version	2007	2	corpus	docs/01 promises any .pptx. 2007 is the first writer of the format and omits later parts
+version	2010	3	corpus	Introduced the p14 extensions and transitions
+version	2013	3	corpus	Introduced the p15 extensions
+version	2016+	10	corpus	What most users save today
+language	distinct	10	corpus	The lang attribute's first subtag, most used in the deck; language reaches proofing, fonts and fallback
+script	Latin	20	corpus	The majority of decks
+script	Cyrillic	2	corpus	Non-Latin, left to right
+script	Arabic	2	corpus	Right to left, with shaping, for 2D2
+script	Hebrew	1	corpus	Right to left without joining
+script	Han	2	corpus	East Asian line rules and fonts, for 2D5
+script	Kana	2	corpus	Japanese, with its own line-break rules
+script	Hangul	2	corpus	Korean, with its own word rules
+script	Devanagari	1	corpus	Complex shaping, for 2D2
+script	Thai	1	corpus	No word spaces, for line breaking in 2D2
+script	Greek	1	corpus	A distinct script Office treats as Latin-like
+slides	1-5	10	corpus	Small decks: most of the corpus by count
+slides	6-20	10	corpus	The ordinary deck
+slides	21-50	5	corpus	A long deck
+slides	51+	1	corpus	A real long deck; the 500-slide budget is generated
+bytes	under 1 MB	10	corpus	Mostly XML, so most exercise of the parsers
+bytes	1 to 10 MB	5	corpus	The ordinary deck with pictures
+bytes	over 10 MB	1	corpus	Media-heavy, tested locally only: large decks are not committed
+feature	morph	1	committed	F-009's gate: committed
+feature	zoom	1	committed	F-009's gate: committed
+feature	math	1	committed	F-009's gate: committed
+feature	strict-saved	1	corpus	STRICT-02's gate: a real Strict deck, with Strict's own value forms

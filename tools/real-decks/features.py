@@ -78,11 +78,15 @@ def scripts_of(text):
 def producer_of(application, alltext):
     """Who wrote the package: `(producer, evidence)`.
 
-    app.xml alone cannot be believed: Keynote and Google Slides can name PowerPoint, and
-    a deck from another tool can too. So marks only those writers leave come first.
+    app.xml alone cannot be believed: Keynote can name PowerPoint, and a deck from another
+    tool can too. So marks only those writers leave come first. Google's shape names survive
+    a later save in PowerPoint, which then writes app.xml, and PowerPoint wrote those bytes:
+    of the decks with those names, only one with no application named counts as Google's
+    (inferred, from what the corpus's own decks show, and to be rechecked against a deck
+    known to come straight from Google).
     """
-    if "Google Shape;" in alltext:
-        return "Google Slides", "shape names Google writes"
+    if "Google Shape;" in alltext and not application:
+        return "Google Slides", "shape names Google writes, and no application in app.xml"
     if "Body Level One" in alltext and "Title Text" in alltext:
         return "Keynote", "master placeholder text Keynote writes"
     application = application or ""

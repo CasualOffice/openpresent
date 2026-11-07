@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """F-007: import, forced rewrite, F4 and the SDK validator over real decks.
 
-    python3 -I tools/real-decks/check.py --report out.json DIR_OR_DECK ...
+    python3 -I tools/real-decks/check.py --report out.json [--keep-exports DIR] DIR_OR_DECK ...
+
+`--keep-exports` keeps each forced rewrite, for a LibreOffice reopen in a container.
 
 Reports every failure per deck and stops at none of them. Findings are the point: these
 are decks we did not write. Exits 0 if every deck passed every stage, 1 if not, 2 if a
@@ -12,6 +14,7 @@ Builds the runner under target/real-decks.
 
 import json
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -52,12 +55,29 @@ def summary(result):
     }
 
 
+def sdk_of(paths):
+    """The SDK validator's result per deck name; empty if it could not run."""
+    done = subprocess.run(
+        [sys.executable, "-I", str(ROOT / "tools/ooxml-sdk/validate.py"), "--json", *map(str, paths)],
+        capture_output=True, text=True, check=False,
+    )
+    if done.stdout.startswith("{"):
+        return {d["deck"]: d for d in json.loads(done.stdout)["decks"]}
+    print(done.stdout.strip()[:200])
+    return {}
+
+
 def main(argv):
     args = argv[1:]
     report = None
     if "--report" in args:
         at = args.index("--report")
         report = args[at + 1]
+        del args[at:at + 2]
+    keep = None
+    if "--keep-exports" in args:
+        at = args.index("--keep-exports")
+        keep = pathlib.Path(args[at + 1])
         del args[at:at + 2]
     decks = decks_in(args)
     if not decks:
@@ -84,16 +104,12 @@ def main(argv):
         original = f4(decks)
         rewritten_paths = sorted(out.iterdir())
         rewritten = f4(rewritten_paths) if rewritten_paths else {}
-
-    sdk = {}
-    done = subprocess.run(
-        [sys.executable, "-I", str(ROOT / "tools/ooxml-sdk/validate.py"), "--json", *map(str, decks)],
-        capture_output=True, text=True, check=False,
-    )
-    if done.stdout.startswith("{"):
-        sdk = {d["deck"]: d for d in json.loads(done.stdout)["decks"]}
-    else:
-        print(done.stdout.strip()[:200])
+        sdk = sdk_of(decks)
+        sdk_after = sdk_of(rewritten_paths) if rewritten_paths else {}
+        if keep:
+            keep.mkdir(parents=True, exist_ok=True)
+            for path in rewritten_paths:
+                shutil.copyfile(path, keep / path.name)
 
     features = json.loads(subprocess.run(
         [sys.executable, "-I", str(HERE / "features.py"), "--json", *map(str, decks)],
@@ -119,6 +135,8 @@ def main(argv):
             ],
             "f4_no_schema": sum(p["status"] == "no-schema" for p in (before or {}).get("parts", [])),
             "f4_same_after_rewrite": None if after is None else summary(before) == summary(after),
+            "f4_after": after and after["status"],
+            "sdk_after": sdk_after.get(name, {}).get("verdict"),
             "sdk": sdk.get(name, {}).get("status"),
             "sdk_reason": sdk.get(name, {}).get("reason"),
             "sdk_total": sdk.get(name, {}).get("total"),
