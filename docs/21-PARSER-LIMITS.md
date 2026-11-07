@@ -262,12 +262,12 @@ What is damaged but not over a bound is read as far as it goes and reported: `ho
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
 | `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Partial: through the bounds below; guard not seen failing (`SEC-021`) |
-| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Partial: `hostile/graphics-limit-depth.bin`; guard not seen failing (`SEC-021`) |
-| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Partial: with the bound lowered: a deck crossing the default is too large to commit; guard not seen failing (`SEC-021`) |
-| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Partial: `hostile/graphics-limit-points.bin`; guard not seen failing (`SEC-021`) |
-| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Partial: `hostile/graphics-limit-connections.bin`; guard not seen failing (`SEC-021`) |
-| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Partial: `hostile/graphics-limit-layout-nodes.bin`; guard not seen failing (`SEC-021`) |
-| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Partial: `hostile/graphics-limit-drawing-shapes.bin`; guard not seen failing (`SEC-021`) |
+| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Tested: `hostile/graphics-limit-depth.bin`, `hostile/graphics-limit-math-depth.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` and `an_equation_over_a_bound_stays_in_the_tree_and_is_reported` failed (`SEC-021`) |
+| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Tested: with the bound lowered, as a deck crossing the default is too large to commit; guard removed, `the_element_bound_and_each_bound_at_its_value` failed (`SEC-021`) |
+| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Tested: `hostile/graphics-limit-points.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
+| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Tested: `hostile/graphics-limit-connections.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
+| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Tested: `hostile/graphics-limit-layout-nodes.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
+| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Tested: `hostile/graphics-limit-drawing-shapes.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
 | `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Partial: `hostile/graphics-limit-traces.bin`; guard not seen failing (`SEC-021`) |
 
 ## Export
