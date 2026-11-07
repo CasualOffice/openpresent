@@ -98,6 +98,7 @@ fn patch_text_attribute(
 
 /// Set one slot of the theme's colour scheme. This is the "edit a theme colour"
 /// the fidelity contract is written against.
+// spec-audit: owner=themeElements,clrScheme
 pub fn set_scheme_color(
     tree: &mut XmlTree,
     slot: ColorSchemeIndex,
@@ -118,6 +119,7 @@ fn set_slot(
 }
 
 /// Set one slot of a `themeOverride` part's colour scheme.
+// spec-audit: owner=themeOverride
 pub fn set_override_scheme_color(
     tree: &mut XmlTree,
     slot: ColorSchemeIndex,
@@ -128,6 +130,7 @@ pub fn set_override_scheme_color(
 }
 
 /// Set one slot of an extra colour scheme, by its place in the list.
+// spec-audit: owner=extraClrSchemeLst,extraClrScheme
 pub fn set_extra_scheme_color(
     tree: &mut XmlTree,
     index: usize,
@@ -156,6 +159,7 @@ fn nth_named(
 }
 
 /// Set a custom colour's value, by its place in the list.
+// spec-audit: owner=custClrLst,custClr
 pub fn set_custom_color(
     tree: &mut XmlTree,
     index: usize,
@@ -168,6 +172,7 @@ pub fn set_custom_color(
 
 /// Add a custom colour at the end of the list, creating the list in its schema
 /// position if the theme has none.
+// spec-audit: owner=custClrLst,custClr
 pub fn add_custom_color(
     tree: &mut XmlTree,
     name: Option<&str>,
@@ -194,30 +199,35 @@ pub fn add_custom_color(
 }
 
 /// Set the theme's name.
+// spec-audit: owner=theme
 pub fn set_theme_name(tree: &mut XmlTree, name: &str) -> Result<bool, ExportError> {
     let root = tree.root();
     patch_text_attribute(tree, root, "name", name)
 }
 
 /// Set the colour scheme's name.
+// spec-audit: owner=clrScheme
 pub fn set_color_scheme_name(tree: &mut XmlTree, name: &str) -> Result<bool, ExportError> {
     let el = step(tree, theme_elements(tree)?, "clrScheme")?;
     patch_text_attribute(tree, el, "name", name)
 }
 
 /// Set the font scheme's name.
+// spec-audit: owner=fontScheme
 pub fn set_font_scheme_name(tree: &mut XmlTree, name: &str) -> Result<bool, ExportError> {
     let el = step(tree, theme_elements(tree)?, "fontScheme")?;
     patch_text_attribute(tree, el, "name", name)
 }
 
 /// Set the format scheme's name.
+// spec-audit: owner=fmtScheme
 pub fn set_format_scheme_name(tree: &mut XmlTree, name: &str) -> Result<bool, ExportError> {
     let el = step(tree, theme_elements(tree)?, "fmtScheme")?;
     patch_text_attribute(tree, el, "name", name)
 }
 
 /// Set the typeface of a font scheme's `latin`, `ea` or `cs`.
+// spec-audit: owner=majorFont,minorFont,latin,ea,cs
 pub fn set_typeface(
     tree: &mut XmlTree,
     role: FontRole,
@@ -232,6 +242,7 @@ pub fn set_typeface(
 
 /// Set the typeface of a supplemental font, adding the `font` entry in its schema
 /// position if this script has none.
+// spec-audit: owner=font
 pub fn set_supplemental_font(
     tree: &mut XmlTree,
     role: FontRole,
@@ -285,6 +296,7 @@ fn patch_optional_attribute(
 }
 
 /// Set a font's `@panose`, ten bytes as hex text, or take it away.
+// spec-audit: owner=latin,ea,cs
 pub fn set_font_panose(
     tree: &mut XmlTree,
     role: FontRole,
@@ -300,6 +312,7 @@ pub fn set_font_panose(
 
 /// Set a font's `@pitchFamily`, or take it away. `ST_PitchFamily` lists its values: a
 /// pitch from 0 to 2, with a family from 0 to 5 in the high nibble, spelled in decimal.
+// spec-audit: owner=latin,ea,cs
 pub fn set_font_pitch_family(
     tree: &mut XmlTree,
     role: FontRole,
@@ -319,6 +332,7 @@ pub fn set_font_pitch_family(
 }
 
 /// Set a font's `@charset`, an `xsd:byte`, or take it away.
+// spec-audit: owner=latin,ea,cs
 pub fn set_font_charset(
     tree: &mut XmlTree,
     role: FontRole,
@@ -335,6 +349,7 @@ pub fn set_font_charset(
 }
 
 /// Set `@idx` of a `CT_StyleMatrixReference`: `lnRef`, `fillRef`, `effectRef`.
+// spec-audit: owner=lnRef,fillRef,effectRef
 pub fn set_style_matrix_index(
     tree: &mut XmlTree,
     reference: ElementId,
@@ -344,6 +359,7 @@ pub fn set_style_matrix_index(
 }
 
 /// Set `@idx` of a `CT_FontReference`.
+// spec-audit: owner=fontRef
 pub fn set_font_reference_index(
     tree: &mut XmlTree,
     reference: ElementId,
@@ -372,6 +388,7 @@ pub fn set_effect_reference(
 
 /// Set one attribute of a `CT_ColorMapping` element: `p:clrMap` on a master,
 /// `a:overrideClrMapping`.
+// spec-audit: owner=clrMap
 pub fn set_color_map_slot(
     tree: &mut XmlTree,
     map: ElementId,
@@ -384,6 +401,7 @@ pub fn set_color_map_slot(
 /// Make a `clrMapOvr` hold this choice, replacing the other. An override with the
 /// same values as the one there changes nothing; a colour map's `extLst` is kept
 /// when the choice stays an override. A map with slots absent keeps those absent.
+// spec-audit: owner=clrMapOvr,overrideClrMapping
 pub fn set_color_map_override(
     tree: &mut XmlTree,
     holder: ElementId,

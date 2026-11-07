@@ -137,6 +137,7 @@ fn existing_list<T>(
     Ok(out)
 }
 
+// spec-audit: owner=sldId
 fn patch_slide_id(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -151,6 +152,7 @@ fn patch_slide_id(
     w.rel_attr(el, before.map(|b| b.rel_id.as_str()), Some(&after.rel_id))
 }
 
+// spec-audit: owner=sldMasterId
 fn patch_master_id(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -170,6 +172,7 @@ fn patch_master_id(
 }
 
 #[allow(clippy::ptr_arg)] // The shape `sync_child` and `sync_list` call, with `T = String`.
+// spec-audit: owner=notesMasterId,handoutMasterId,regular,bold,italic,boldItalic,smartTags,sld
 fn patch_rel_entry(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -179,6 +182,7 @@ fn patch_rel_entry(
     w.rel_attr(el, before.map(String::as_str), Some(after))
 }
 
+// spec-audit: owner=sldSz
 fn patch_slide_size(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -195,6 +199,7 @@ fn patch_slide_size(
     )
 }
 
+// spec-audit: owner=notesSz,gridSpacing
 fn patch_positive_size(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -238,6 +243,7 @@ pub(crate) fn patch_text_font(
     )
 }
 
+// spec-audit: owner=embeddedFont
 fn patch_embedded_font(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -291,6 +297,7 @@ fn patch_embedded_font(
     Ok(())
 }
 
+// spec-audit: owner=custShow
 fn patch_custom_show(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -325,6 +332,7 @@ fn patch_custom_show(
     )
 }
 
+// spec-audit: owner=photoAlbum
 fn patch_photo_album(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -343,6 +351,7 @@ fn patch_photo_album(
     w.attr(el, "frame", b.frame.as_ref(), after.frame.as_ref())
 }
 
+// spec-audit: owner=custDataLst
 fn patch_customer_data(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -442,6 +451,7 @@ fn patch_modify_verifier(
 }
 
 /// Patch a tree of `p:presentation` to say `after`. Returns the nodes changed.
+// spec-audit: owner=presentation
 pub fn patch_presentation(
     tree: &mut XmlTree,
     part: &str,
@@ -626,6 +636,7 @@ pub fn patch_presentation(
 }
 
 /// Replace a slide list choice among `el`'s children.
+// spec-audit: owner=showPr,htmlPubPr
 fn patch_slide_list(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -660,6 +671,7 @@ fn patch_slide_list(
     Ok(())
 }
 
+// spec-audit: owner=htmlPubPr
 fn patch_html_publish(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -685,6 +697,7 @@ fn patch_html_publish(
     )
 }
 
+// spec-audit: owner=webPr
 fn patch_web(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -711,6 +724,7 @@ fn patch_web(
     Ok(())
 }
 
+// spec-audit: owner=prnPr
 fn patch_print(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -750,6 +764,7 @@ fn patch_print(
     )
 }
 
+// spec-audit: owner=present,browse,kiosk
 fn patch_show_type(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -783,6 +798,7 @@ fn patch_show_type(
     patch_show_type_attr(w, &created, None, new)
 }
 
+// spec-audit: owner=browse,kiosk
 fn patch_show_type_attr(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -808,6 +824,7 @@ fn patch_show_type_attr(
     }
 }
 
+// spec-audit: owner=showPr
 fn patch_show(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -845,6 +862,7 @@ fn patch_show(
 }
 
 /// Patch a tree of `p:presentationPr` to say `after`. Returns the nodes changed.
+// spec-audit: owner=presentationPr
 pub fn patch_presentation_properties(
     tree: &mut XmlTree,
     part: &str,
@@ -910,6 +928,7 @@ pub fn patch_presentation_properties(
     Ok(w.changes)
 }
 
+// spec-audit: owner=sx,sy
 fn patch_ratio(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -920,6 +939,7 @@ fn patch_ratio(
     w.attr(el, "d", before.map(|b| &b.d), Some(&after.d))
 }
 
+// spec-audit: owner=scale
 fn patch_scale(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -949,6 +969,7 @@ fn patch_scale(
     )
 }
 
+// spec-audit: owner=origin
 fn patch_point(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -959,6 +980,7 @@ fn patch_point(
     w.attr::<Coordinate>(el, "y", before.map(|b| &b.y), Some(&after.y))
 }
 
+// spec-audit: owner=cViewPr
 fn patch_common_view(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -994,6 +1016,7 @@ fn patch_common_view(
     )
 }
 
+// spec-audit: owner=guide
 fn patch_guide(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1005,6 +1028,7 @@ fn patch_guide(
     w.attr(el, "pos", b.pos.as_ref(), after.pos.as_ref())
 }
 
+// spec-audit: owner=cSldViewPr
 fn patch_common_slide_view(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1065,6 +1089,7 @@ fn patch_common_slide_view(
 }
 
 /// `slideViewPr/cSldViewPr` and `notesViewPr/cSldViewPr`.
+// spec-audit: owner=slideViewPr,notesViewPr
 fn patch_slide_view_holder(
     w: &mut Writer<'_>,
     root: &Elem,
@@ -1096,6 +1121,7 @@ fn patch_slide_view_holder(
     )
 }
 
+// spec-audit: owner=restoredLeft,restoredTop
 fn patch_normal_portion(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1111,6 +1137,7 @@ fn patch_normal_portion(
     )
 }
 
+// spec-audit: owner=normalViewPr
 fn patch_normal_view(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1152,6 +1179,7 @@ fn patch_normal_view(
     )
 }
 
+// spec-audit: owner=sld
 fn patch_outline_slide(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1167,6 +1195,7 @@ fn patch_outline_slide(
     )
 }
 
+// spec-audit: owner=outlineViewPr
 fn patch_outline_view(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1211,6 +1240,7 @@ fn patch_outline_view(
 }
 
 /// Patch a tree of `p:viewPr` to say `after`. Returns the nodes changed.
+// spec-audit: owner=viewPr
 pub fn patch_view_properties(
     tree: &mut XmlTree,
     part: &str,

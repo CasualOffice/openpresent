@@ -103,4 +103,6 @@ files. They cannot prove we match PowerPoint, and no claim saying so may be made
 Everything is checksummed in a manifest, and third-party material needs a rights review before commit. Confidential
 decks are never committed.
 
+**What a mark rests on (`CLOSE-02`).** `y` needs code, a test and a fixture, and two tests then check that behaviour agrees with the marks, by local name: `casual-slide-import/tests/checklist_rows.rs` removes a construct from a deck and the model must change; `casual-slide-export/tests/checklist_rows.rs` removes it and asks for the deck as it was, and the save must put it back. `r` means the node stays in the tree through any edit and the report names it, resting on `casual-slide-export/tests/retention.rs` and `casual-slide-import/tests/report.rs`, which puts a stranger on each element and fails if the report does not change. `n/a` is allowed only where the audit can see it from the schemas. A blank in a closing tier needs a line in [spec/open-rows.tsv](spec/open-rows.tsv) naming a tracker row and the reason, or `audit.py --check` fails.
+
 **Coverage is to be a gate (`SPEC-01`):** the audit reports which checklist rows no fixture exercises. A row with no fixture cannot be `y`.

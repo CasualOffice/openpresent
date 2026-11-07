@@ -38,6 +38,7 @@ use crate::table::{
 };
 use crate::text::{TextCounts, TextReader};
 use crate::theme::{read_color_map, read_color_map_override, read_style_matrix_ref};
+use crate::timing::{MotionReader, TimingLimits, branch_index, check_references};
 
 const TRANSITIONAL_RELS: &str =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
@@ -61,6 +62,8 @@ pub struct SlideLimits {
     pub table: TableLimits,
     /// Bounds on one drawing property of a shape or a run. `CS-DRW-0001`.
     pub drawing: DrawingLimits,
+    /// Bounds on a part's timing and transition. `CS-TMG-0001`.
+    pub timing: TimingLimits,
 }
 
 impl Default for SlideLimits {
@@ -73,6 +76,7 @@ impl Default for SlideLimits {
             max_layout_ids: 10_000,
             table: TableLimits::default(),
             drawing: DrawingLimits::default(),
+            timing: TimingLimits::default(),
         }
     }
 }
@@ -196,6 +200,13 @@ pub fn is_part_fault(err: &SlideError) -> bool {
     matches!(err, SlideError::Import(e) if is_optional_part_fault(e))
 }
 
+fn is_too_deep(err: &SlideError) -> bool {
+    matches!(
+        err,
+        SlideError::Import(ImportError::Ooxml(OoxmlError::TooDeep { .. }))
+    )
+}
+
 /// One slide-like part read, with what was noticed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportedPart {
@@ -274,6 +285,14 @@ pub fn import_slide_part_mapped(
 }
 
 #[allow(clippy::too_many_arguments)]
+// spec-audit: owner=sld,sldLayout,sldMaster,notes,notesMaster,handoutMaster
+// `kind.root()` names these: p:<sld> p:<sldLayout> p:<sldMaster> p:<notes> p:<notesMaster> p:<handoutMaster>
+// spec-audit: p:<sld>
+// spec-audit: p:<sldLayout>
+// spec-audit: p:<sldMaster>
+// spec-audit: p:<notes>
+// spec-audit: p:<notesMaster>
+// spec-audit: p:<handoutMaster>
 fn read_part(
     tree: &XmlTree,
     part: &str,
@@ -311,7 +330,18 @@ fn read_part(
     }
     r.finish(&root);
     let mut seen = HashSet::new();
+    let has_motion = matches!(
+        kind,
+        SlideKind::Slide | SlideKind::Layout | SlideKind::Master
+    );
+    let branches = branch_index(&compatibility.alternates);
     for el in r.children(&root)? {
+        if has_motion
+            && MotionReader::new(&mut *r, rels, &mut *color, limits.timing, &branches)
+                .root_child(&el, &mut p)
+        {
+            continue;
+        }
         if !el.in_namespace(ns::PML) {
             r.retained(&el);
             continue;
@@ -333,7 +363,7 @@ fn read_part(
             _ => false,
         };
         if !modelled {
-            // `transition`, `timing`, `extLst`: Tier 1I and 1M.
+            // `extLst`: Tier 1M.
             r.retained(&el);
             continue;
         }
@@ -381,9 +411,13 @@ fn read_part(
     if p.common.is_none() {
         r.note(K::MissingRequired, &root, None);
     }
+    if let Some(timing) = &mut p.timing {
+        check_references(r, timing);
+    }
     Ok(p)
 }
 
+// spec-audit: owner=cSld
 fn read_common(
     shapes: &mut ShapeReader<'_, '_, '_>,
     el: &Elem,
@@ -395,12 +429,17 @@ fn read_common(
         name,
         background: None,
         shape_tree: None,
+        controls: Vec::new(),
     };
     let mut seen = HashSet::new();
     for child in shapes.r.children(&el)? {
+        if child.is(ns::PML, "controls") && common.controls.is_empty() {
+            common.controls = crate::retained::read_controls(shapes.r, shapes.rels, &child)?;
+            continue;
+        }
         let known = child.in_namespace(ns::PML) && matches!(child.local.as_str(), "bg" | "spTree");
         if !known {
-            // `custDataLst`, `controls`, `extLst`: Tier 1L and 1M.
+            // `custDataLst`, `extLst`: Tier 1M.
             shapes.r.retained(&child);
             continue;
         }
@@ -429,6 +468,7 @@ const FILLS: &[&str] = &[
     "grpFill",
 ];
 
+// spec-audit: owner=bg
 fn read_background(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -481,6 +521,7 @@ fn read_background(
 }
 
 /// `p:hf`.
+// spec-audit: owner=hf
 pub fn read_header_footer(r: &mut Reader<'_>, el: &Elem) -> Result<HeaderFooter, SlideError> {
     let mut el = el.clone();
     let hf = HeaderFooter {
@@ -494,6 +535,7 @@ pub fn read_header_footer(r: &mut Reader<'_>, el: &Elem) -> Result<HeaderFooter,
     Ok(hf)
 }
 
+// spec-audit: owner=sldLayoutIdLst
 fn read_layout_ids(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -555,6 +597,7 @@ fn read_layout_ids(
     Ok(out)
 }
 
+// spec-audit: owner=txStyles
 fn read_text_styles(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -856,6 +899,16 @@ pub fn index_deck(
             e.master = master;
         }
     }
+    // A master the presentation relates to but no list names is not read. It stays in the
+    // package, and the report says so.
+    if ix.structure.notes_master.is_none() && ix.follow(&main, "notesMaster", findings).is_some() {
+        findings.note_role(K::RetainedElement, &main, "notesMaster");
+    }
+    if ix.structure.handout_master.is_none()
+        && ix.follow(&main, "handoutMaster", findings).is_some()
+    {
+        findings.note_role(K::RetainedElement, &main, "handoutMaster");
+    }
     // A master reached only from a layout has not had its theme found.
     for &master in &ix.structure.masters.clone() {
         let needs = ix
@@ -1029,7 +1082,8 @@ pub fn import_slide_parts(
                 );
                 parts.push(Some(part.value));
             }
-            Err(err) if is_part_fault(&err) => {
+            // A part nested past the XML limit is that part's, however it got there.
+            Err(err) if is_part_fault(&err) || is_too_deep(&err) => {
                 findings.note(K::UnreadablePart, &entry.part, "", None);
                 parts.push(None);
             }

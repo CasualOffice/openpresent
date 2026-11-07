@@ -38,6 +38,9 @@ pub const A16: &[&str] = &["http://schemas.microsoft.com/office/drawing/2014/mai
 /// `adec:`, where `decorative` lives.
 pub const ADEC: &[&str] = &["http://schemas.microsoft.com/office/drawing/2017/decorative"];
 /// Markup compatibility.
+use crate::retained::{model_beside_picture, read_frame_content};
+use casual_slide_model::retained::RetainedObject;
+
 const MC: &[&str] = &[MARKUP_COMPATIBILITY];
 
 /// Where a node came from in the tree, for an export that patches it in place.
@@ -106,10 +109,12 @@ impl ShapeReader<'_, '_, '_> {
     }
 
     /// Read `spTree`, or any group, as a node.
+    // spec-audit: owner=spTree
     pub fn tree(&mut self, el: &Elem) -> Result<ShapeNode, SlideError> {
         self.node(el, NodeKind::Group, 0, false)
     }
 
+    // spec-audit: owner=sp,cxnSp,pic,graphicFrame,grpSp,contentPart
     fn node(
         &mut self,
         el: &Elem,
@@ -206,7 +211,9 @@ impl ShapeReader<'_, '_, '_> {
                     n.properties.picture = fill.map(Box::new);
                 }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
-                "graphic" => n.graphic_uri = self.graphic(&child, &mut n.table)?,
+                "graphic" => {
+                    n.graphic_uri = self.graphic(&child, &mut n.table, &mut n.retained)?;
+                }
                 "txBody" => {
                     let mut text = TextReader {
                         r: &mut *self.r,
@@ -267,7 +274,11 @@ impl ShapeReader<'_, '_, '_> {
         for child in self.r.children(&branch)? {
             match node_kind(&child) {
                 Some(kind) => {
-                    let c = self.node(&child, kind, depth + 1, true)?;
+                    let mut c = self.node(&child, kind, depth + 1, true)?;
+                    if kind == NodeKind::Picture {
+                        c.retained =
+                            model_beside_picture(self.r, self.rels, el, &child)?.map(Box::new);
+                    }
                     group.children.push(c);
                 }
                 None => self.r.retained(&child),
@@ -282,6 +293,7 @@ impl ShapeReader<'_, '_, '_> {
         }
     }
 
+    // spec-audit: owner=nvSpPr,nvCxnSpPr,nvPicPr,nvGraphicFramePr,nvGrpSpPr
     fn non_visual(&mut self, el: &Elem, n: &mut ShapeNode) -> Result<(), SlideError> {
         self.r.finish(el);
         let mut seen = HashSet::new();
@@ -309,6 +321,7 @@ impl ShapeReader<'_, '_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=cNvPr
     fn drawing(&mut self, el: &Elem) -> Result<NonVisualDrawing, SlideError> {
         let mut el = el.clone();
         let mut d = NonVisualDrawing {
@@ -351,6 +364,8 @@ impl ShapeReader<'_, '_, '_> {
 
     /// `a16:creationId` and `adec:decorative` from `cNvPr/extLst`. Other extensions
     /// stay in the tree.
+    // spec-audit: x:drawing/2014/main:<creationId>
+    // spec-audit: x:drawing/2017/decorative:<decorative>
     fn drawing_extensions(
         &mut self,
         el: &Elem,
@@ -377,10 +392,12 @@ impl ShapeReader<'_, '_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=hlinkClick,hlinkHover
     fn hyperlink(&mut self, el: &Elem) -> Result<Hyperlink, SlideError> {
         Ok(read_hyperlink(self.r, self.rels, el)?)
     }
 
+    // spec-audit: owner=cNvSpPr,cNvCxnSpPr,cNvPicPr,cNvGraphicFramePr,cNvGrpSpPr
     fn kind_properties(&mut self, el: &Elem, n: &mut ShapeNode) -> Result<(), SlideError> {
         let mut el = el.clone();
         if n.kind == NodeKind::Shape {
@@ -440,6 +457,7 @@ impl ShapeReader<'_, '_, '_> {
         Ok(locks)
     }
 
+    // spec-audit: owner=spLocks,grpSpLocks,cxnSpLocks,picLocks,graphicFrameLocks
     fn locks(&mut self, el: &Elem, kind: NodeKind) -> Result<Locks, SlideError> {
         let mut el = el.clone();
         let mut locks = Locks::default();
@@ -456,14 +474,16 @@ impl ShapeReader<'_, '_, '_> {
         Ok(locks)
     }
 
+    // spec-audit: owner=stCxn,endCxn
     fn connection(&mut self, el: &Elem) -> Result<Option<Connection>, SlideError> {
         let mut el = el.clone();
         let spid = self.r.required::<u32>(&mut el, "id", |_| true)?;
         let site = self.r.required::<u32>(&mut el, "idx", |_| true)?;
-        self.r.finish(&el);
+        self.r.finish_leaf(&el)?;
         Ok(spid.zip(site).map(|(spid, site)| Connection { spid, site }))
     }
 
+    // spec-audit: owner=nvPr
     fn app(&mut self, el: &Elem, _kind: NodeKind) -> Result<AppNonVisual, SlideError> {
         let mut el = el.clone();
         let mut app = AppNonVisual {
@@ -485,7 +505,7 @@ impl ShapeReader<'_, '_, '_> {
                     self.r.note(K::DuplicateElement, &child, None);
                     continue;
                 }
-                // MS-OI29500 2.1.1126: PowerPoint allows none on a connector or a
+                // MS-OI29500, Part 1 Section 19.3.1.33: PowerPoint allows none on a connector or a
                 // group. Read as written all the same; the resolver matches none.
                 app.placeholder = Some(self.placeholder(&child)?);
             } else if child.is(ns::PML, "extLst") {
@@ -503,6 +523,7 @@ impl ShapeReader<'_, '_, '_> {
         Ok(app)
     }
 
+    // spec-audit: owner=ph
     fn placeholder(&mut self, el: &Elem) -> Result<Placeholder, SlideError> {
         let mut el = el.clone();
         let ph = Placeholder {
@@ -519,6 +540,7 @@ impl ShapeReader<'_, '_, '_> {
         Ok(ph)
     }
 
+    // spec-audit: owner=spPr,grpSpPr
     fn properties(&mut self, el: &Elem, n: &mut ShapeNode) -> Result<(), SlideError> {
         let mut el = el.clone();
         n.bw_mode = self.r.attr(&mut el, "bwMode")?;
@@ -545,6 +567,7 @@ impl ShapeReader<'_, '_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=xfrm
     fn transform(&mut self, el: &Elem, group: bool) -> Result<Transform, SlideError> {
         let mut el = el.clone();
         let mut t = Transform {
@@ -577,10 +600,13 @@ impl ShapeReader<'_, '_, '_> {
         Ok(t)
     }
 
+    // spec-audit: owner=graphic
+    // spec-audit: a:<graphic>
     fn graphic(
         &mut self,
         el: &Elem,
         table: &mut Option<Box<Table>>,
+        retained: &mut Option<Box<RetainedObject>>,
     ) -> Result<Option<String>, SlideError> {
         self.r.finish(el);
         let mut uri = None;
@@ -596,6 +622,9 @@ impl ShapeReader<'_, '_, '_> {
             for inner in self.r.children(&data)? {
                 if !inner.is(ns::DML, "tbl") {
                     self.r.retained(&inner);
+                    if retained.is_none() {
+                        *retained = read_frame_content(self.r, self.rels, &inner)?.map(Box::new);
+                    }
                 } else if table.is_some() {
                     self.r.note(K::DuplicateElement, &inner, None);
                 } else {
@@ -617,6 +646,7 @@ impl ShapeReader<'_, '_, '_> {
 }
 
 /// `a:CT_Hyperlink`, on a shape or a run.
+// spec-audit: owner=hlinkClick,hlinkHover
 pub(crate) fn read_hyperlink(
     r: &mut Reader<'_>,
     rels: &[Relationship],
@@ -656,6 +686,7 @@ pub(crate) fn read_hyperlink(
 }
 
 /// `a:CT_Point2D`. `None` unless both coordinates are usable.
+// spec-audit: owner=off,chOff
 pub fn read_point(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -664,6 +695,6 @@ pub fn read_point(
     let range = |c: &Coordinate| (COORDINATE_MIN..=POSITIVE_COORDINATE_MAX).contains(&c.0);
     let x = r.required::<Coordinate>(&mut el, "x", range)?;
     let y = r.required::<Coordinate>(&mut el, "y", range)?;
-    r.finish(&el);
+    r.finish_leaf(&el)?;
     Ok(x.zip(y).map(|(x, y)| Point { x, y }))
 }

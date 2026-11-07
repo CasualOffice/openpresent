@@ -10,6 +10,7 @@ pub mod line;
 pub mod media;
 pub mod presentation;
 pub mod properties;
+pub mod retained;
 #[rustfmt::skip]
 mod schema_names;
 pub mod shape;
@@ -17,3 +18,5 @@ pub mod slide;
 pub mod table;
 pub mod text;
 pub mod theme;
+pub mod timing;
+pub mod transition;

@@ -125,3 +125,10 @@ path = "fuzz_targets/text_bodies.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "timing_trees"
+path = "fuzz_targets/timing_trees.rs"
+test = false
+doc = false
+bench = false
