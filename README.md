@@ -45,13 +45,13 @@ OpenPresent is designed around that problem:
 
 | Area | State |
 | --- | --- |
-| Package reading: bounded ZIP, part graph, content types, relationships | 🟡 Built, fuzzed, tier open |
+| Package reading: bounded ZIP, part graph, content types, relationships | ✅ Tier 1A closed |
 | Opening damaged decks: salvage, XML recovery, repair | 🟡 Built, tier open; its fuzz targets not yet run |
 | Saving: unedited byte-identical, edits patch only what changed; the writer | 🟡 Built, tier open |
 | Markup compatibility, Strict and Transitional, percent-encoded part names | 🟡 Built, tier open |
 | Geometry: all 187 preset shapes and 41 text warps | ✅ Built |
 | Presentation part, view state, colour, themes | 🟡 Built, tier open |
-| Slides, masters, layouts, shape tree, inheritance | 🟡 Built, tier open |
+| Slides, masters, layouts, shape tree, inheritance | ✅ Tier 1D closed |
 | Fills, lines, effects, 3D, text, tables, pictures, media | 🟡 Built, tier open |
 | Animations and transitions | 🟡 Built, tier open |
 | Charts, SmartArt, equations, ink | 🟡 Built, tier open; limits not yet mutation-tested |
