@@ -967,11 +967,16 @@ pub fn load_part(
         &mut findings,
         &mut color,
     )?;
+    // A repair got here first: what was read is what it could keep, and the report says so.
+    let damaged = package.is_damaged(&entry.part);
+    if damaged {
+        findings.note(K::UnreadablePart, &entry.part, "", None);
+    }
     Ok(ImportedPart {
         value,
         findings,
         color_findings: color,
-        damaged: package.is_damaged(&entry.part),
+        damaged,
     })
 }
 

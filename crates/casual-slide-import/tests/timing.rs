@@ -704,7 +704,7 @@ fn a_value_too_long_to_read_leaves_timing_and_transition_unread_not_the_deck() {
     assert!(deck.findings.has(bad, "timing") && deck.findings.has(bad, "transition"));
 }
 
-/// Deeper than XML itself allows: the strict reader refuses the part, before anything here
+/// Deeper than XML itself allows: the walker refuses the part, before anything here
 /// sees it. That is that slide's fault, as any slide's (`REC-03`, `REC-04` will read more
 /// of it). The deck opens without it.
 #[test]
@@ -715,19 +715,31 @@ fn timing_past_the_xml_depth_loses_that_slide_at_worst_and_not_the_deck() {
         max_xml_depth: 40,
         ..OoxmlLimits::default()
     };
-    let mut pkg =
-        PresentationPackage::open(fixture("hostile/timing-limit-depth.bin"), xml).unwrap();
-    let presentation = import_deck(&mut pkg, &ImportLimits::default())
+    let read = |mut pkg: PresentationPackage| {
+        let presentation = import_deck(&mut pkg, &ImportLimits::default())
+            .unwrap()
+            .deck
+            .presentation;
+        import_slide_parts(
+            &mut pkg,
+            &presentation,
+            &SlideLimits::default(),
+            &ImportLimits::default(),
+        )
         .unwrap()
-        .deck
-        .presentation;
-    let deck = import_slide_parts(
-        &mut pkg,
-        &presentation,
-        &SlideLimits::default(),
-        &ImportLimits::default(),
-    )
-    .unwrap();
+    };
+    let bytes = fixture("hostile/timing-limit-depth.bin");
+
+    // The slide stays in its place, marked damaged, so slide order survives (docs/29).
+    let deck = read(PresentationPackage::open(bytes.clone(), xml).unwrap());
+    let slide = deck.parts.structure.slides[0];
+    assert!(deck.parts.get(slide).is_some());
+    assert!(deck.damaged.contains(&slide));
+    assert_eq!(first(&deck).timing, None);
+    assert!(deck.findings.iter().any(|f| f.kind == K::UnreadablePart));
+
+    // Under `strict`, that slide is left out.
+    let deck = read(PresentationPackage::open_strict(bytes, xml).unwrap());
     assert!(deck.parts.get(deck.parts.structure.slides[0]).is_none());
     assert!(deck.findings.iter().any(|f| f.kind == K::UnreadablePart));
 }

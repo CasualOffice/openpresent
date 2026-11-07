@@ -43,6 +43,15 @@ fn deck_with(path: &str, limits: &SlideLimits) -> Result<ImportedSlides, SlideEr
     import_slide_parts(&mut pkg, &presentation, limits, &import)
 }
 
+/// As [`deck_with`], refusing what a limit stops: the codes a host asking for `strict` sees.
+fn deck_strict(path: &str, limits: &SlideLimits) -> Result<ImportedSlides, SlideError> {
+    let bytes = std::fs::read(fixtures().join(path)).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
+    let import = ImportLimits::default();
+    let presentation = import_deck(&mut pkg, &import).unwrap().deck.presentation;
+    import_slide_parts(&mut pkg, &presentation, limits, &import)
+}
+
 fn deck(path: &str) -> ImportedSlides {
     deck_with(path, &SlideLimits::default()).unwrap_or_else(|e| panic!("{path}: {e}"))
 }
@@ -565,7 +574,11 @@ fn a_tablestyles_part_that_cannot_be_read_is_reported_and_the_deck_opens() {
 
 #[test]
 fn hostile_tables_refuse_with_their_codes_and_open_above_the_bound() {
-    let code = |path: &str| deck_with(path, &SlideLimits::default()).unwrap_err().code();
+    let code = |path: &str| {
+        deck_strict(path, &SlideLimits::default())
+            .unwrap_err()
+            .code()
+    };
     assert_eq!(code("hostile/table-limit-rows.bin"), "CS-TBL-0001");
     assert_eq!(code("hostile/table-limit-columns.bin"), "CS-TBL-0002");
     assert_eq!(
@@ -582,35 +595,35 @@ fn hostile_tables_refuse_with_their_codes_and_open_above_the_bound() {
         limits
     };
     assert!(
-        deck_with(
+        deck_strict(
             "hostile/table-limit-rows.bin",
             &raised(|t| t.max_rows = 4_097)
         )
         .is_ok()
     );
     assert!(
-        deck_with(
+        deck_strict(
             "hostile/table-limit-columns.bin",
             &raised(|t| t.max_columns = 4_097)
         )
         .is_ok()
     );
     assert!(
-        deck_with(
+        deck_strict(
             "hostile/table-limit-cells-in-table.bin",
             &raised(|t| t.max_cells_per_table = 1_052_672)
         )
         .is_ok()
     );
     assert!(
-        deck_with(
+        deck_strict(
             "hostile/table-limit-styles.bin",
             &raised(|t| t.max_table_styles = 4_097)
         )
         .is_ok()
     );
     assert!(
-        deck_with(
+        deck_strict(
             "hostile/table-limit-headers.bin",
             &raised(|t| t.max_headers_per_cell = 1_025)
         )
@@ -619,11 +632,26 @@ fn hostile_tables_refuse_with_their_codes_and_open_above_the_bound() {
 
     // Too large a deck to commit at the default, so with the bound lowered.
     let tight = raised(|t| t.max_cells_per_part = 3);
-    let err = deck_with(EVERY, &tight).unwrap_err();
+    let err = deck_strict(EVERY, &tight).unwrap_err();
     assert_eq!(err.code(), "CS-TBL-0004");
     assert_eq!(TableBound::CellsInPart.code(), "CS-TBL-0004");
     let roomy = raised(|t| t.max_cells_per_part = 5);
-    assert!(deck_with(EVERY, &roomy).is_ok());
+    assert!(deck_strict(EVERY, &roomy).is_ok());
+
+    // Without `strict`, each stops work on its slide alone: the deck opens and says so.
+    for path in [
+        "hostile/table-limit-rows.bin",
+        "hostile/table-limit-columns.bin",
+        "hostile/table-limit-cells-in-table.bin",
+        "hostile/table-limit-headers.bin",
+    ] {
+        let opened = deck_with(path, &SlideLimits::default()).unwrap();
+        assert_eq!(opened.damaged.len(), 1, "{path}");
+        assert!(
+            opened.findings.iter().any(|f| f.kind == K::UnreadablePart),
+            "{path}"
+        );
+    }
 }
 
 /// What stands where a document's text can stand.

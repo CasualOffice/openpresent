@@ -176,6 +176,19 @@ fn with_part(bytes: &[u8], part: &str, text: String) -> Vec<u8> {
     open(bytes.to_vec()).save_with(&edits).unwrap()
 }
 
+/// Findings are distinct, and every name no schema has is one name, `(unknown)` (`SEC-018`).
+/// So a stranger the deck already holds in a part would hide the one added here: take the
+/// deck's own out of `rich-properties`, and each added stranger has to change the report.
+fn without_made_up_names(bytes: Vec<u8>) -> Vec<u8> {
+    let part = "ppt/presentation.xml";
+    let text = String::from_utf8(open(bytes.clone()).read_part(part).unwrap()).unwrap();
+    let plain = text.replace("<x:y/>", "").replace("<x:kept a=\"1\"/>", "");
+    if plain == text {
+        return bytes;
+    }
+    with_part(&bytes, part, plain)
+}
+
 /// Every element read here: an attribute it does not know, and a child it does not know, each
 /// change the report. Otherwise the file holds something the user is never told of.
 #[test]
@@ -183,7 +196,7 @@ fn an_unread_attribute_or_element_is_always_reported() {
     let mut silent = Vec::new();
     let mut checked = 0;
     for deck in DECKS {
-        let bytes = std::fs::read(fixtures().join(deck)).unwrap();
+        let bytes = without_made_up_names(std::fs::read(fixtures().join(deck)).unwrap());
         let before = report(&bytes);
         let retained: BTreeSet<String> = {
             let mut pkg = open(bytes.clone());
