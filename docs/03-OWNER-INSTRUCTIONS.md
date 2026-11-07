@@ -43,6 +43,7 @@ by saying so.
 | 32 | 2026-11-07 | Run one broad gate, not a gate for every small thing and test. CI on `main` is that gate; a merge only has to compile | [CLAUDE.md](../CLAUDE.md) |
 | 33 | 2026-11-08 | Corrects how instruction 23 was read: do not crash LibreOffice, but keep using it to validate. The owner never said to stop | `FID-04`, F7 |
 | 34 | 2026-11-08 | A flipped byte in a part that still parses: keep the bytes and tell the user, rather than replace the part with a stand-in, even though that file stays invalid until the part is repaired | [29](29-RECOVERY.md), [06](06-ROADMAP-AND-DELIVERY.md) |
+| 35 | 2026-11-08 | The colour must look modern and premium, not dated. What it was said about is being confirmed | `DEC-03` |
 
 ## Boundaries set by the environment
 
