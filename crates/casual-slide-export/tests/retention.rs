@@ -75,11 +75,20 @@ fn every_node_of_every_deck_survives_an_edit() {
         let number = model.presentation.first_slide_num.unwrap_or(1);
         model.presentation.first_slide_num = Some(number.saturating_add(1));
         let saved = save_deck(&mut pkg, &model, &limits).unwrap();
-        assert_eq!(saved.changed_parts, [main.clone()], "{deck}");
+        assert_eq!(asked_for(&saved.changed_parts), [main.clone()], "{deck}");
         let mut after = open(saved.bytes);
         let mut source = open(bytes.clone());
-        assert_eq!(after.part_names(), names, "{deck}: parts lost or invented");
+        let names: Vec<String> = names.into_iter().filter(|n| survives_an_edit(n)).collect();
+        let left: Vec<String> = after
+            .part_names()
+            .into_iter()
+            .filter(|n| survives_an_edit(n))
+            .collect();
+        assert_eq!(left, names, "{deck}: parts lost or invented");
         for name in &names {
+            if saved.changed_parts.contains(name) && *name != main {
+                continue;
+            }
             let (old, new) = (source.read_part(name), after.read_part(name));
             let (old, new) = (old.unwrap(), new.unwrap());
             if name == &main {
@@ -152,4 +161,9 @@ fn asked_for(changed: &[String]) -> Vec<String> {
         })
         .cloned()
         .collect()
+}
+
+/// Whether an edit keeps this part. A signature set and a thumbnail go (`T1N-05`).
+fn survives_an_edit(name: &str) -> bool {
+    !name.starts_with("_xmlsignatures/") && !name.starts_with("docProps/thumbnail")
 }

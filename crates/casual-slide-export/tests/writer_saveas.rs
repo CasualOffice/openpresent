@@ -380,6 +380,7 @@ fn a_pdf_and_a_ppt_do_not_open_and_a_slideshow_does() {
 fn every_input_of_this_tier_meets_its_manifest_row() {
     let manifest = std::fs::read_to_string(root().join("fixtures/manifest.tsv")).unwrap();
     let mut seen = 0usize;
+    let mut wrong = Vec::new();
     for line in manifest.lines().skip(1) {
         let cols: Vec<&str> = line.split('\t').collect();
         let is_ours = [
@@ -409,8 +410,11 @@ fn every_input_of_this_tier_meets_its_manifest_row() {
         codes.sort_unstable();
         codes.dedup();
         let wanted: Vec<&str> = cols[2].split(' ').skip(1).collect();
-        assert_eq!(codes, wanted, "{}: {:?}", cols[0], pkg.findings());
+        if codes != wanted {
+            wrong.push(format!("{}: {codes:?}", cols[0]));
+        }
     }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
     assert_eq!(seen, 19);
 }
 

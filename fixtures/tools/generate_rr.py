@@ -488,11 +488,11 @@ def fixtures():
     yield "generated/rr-app.pptx", zipped(with_properties(app_xml(), core_xml())), "open"
     yield "generated/rr-app-unknown-groups.pptx", zipped(with_properties(app_xml("Titres des diapositives"), core_xml())), "open"
     yield "generated/rr-core-text-revision.pptx", zipped(with_properties(app_xml(), core_xml("draft"))), "open"
-    yield "generated/rr-signed.pptx", zipped(signed()), "open CS-FND-0009"
-    yield "generated/rr-signed-vba.pptm", zipped(signed_vba()), "open CS-FND-0008 CS-FND-0009"
+    yield "generated/rr-signed.pptx", zipped(signed()), "open CS-FND-0007 CS-FND-0009"
+    yield "generated/rr-signed-vba.pptm", zipped(signed_vba()), "open CS-FND-0007 CS-FND-0008 CS-FND-0009"
     yield "generated/rr-thumbnail.pptx", zipped(thumbnail()), "open"
     yield "generated/rr-macro-action.pptm", zipped(macro_action()), "open CS-FND-0008"
-    yield "generated/rr-activex.pptx", zipped(active_x()), "open"
+    yield "generated/rr-activex.pptx", zipped(active_x()), "open CS-FND-0007 CS-FND-0010"
     for extension in ("pptx", "pptm", "ppsx", "ppsm", "potx", "potm"):
         expect = "open CS-FND-0008" if extension.endswith("m") else "open"
         yield f"generated/rr-sa.{extension}", sa_deck(extension), expect

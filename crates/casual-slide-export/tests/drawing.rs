@@ -721,8 +721,14 @@ fn f4_validates(source: &[u8], edited: &[u8], label: &str) {
         return;
     };
     assert_eq!(
-        before.keys().collect::<Vec<_>>(),
-        after.keys().collect::<Vec<_>>(),
+        before
+            .keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
+        after
+            .keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
         "{label}"
     );
     for (part, (status, errors)) in &after {
