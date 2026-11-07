@@ -260,6 +260,8 @@ This is legal, not corrupt: [the drawing is an extension][diag] to a format that
 | `INV-FB-14` | **Render:** until a diagram layout engine exists, the frame draws an unmistakable placeholder and the report says "parsed, not rendered" | Inferred, from "report outcomes faithfully" in [AGENTS.md](../AGENTS.md). What PowerPoint does is Unverified, though the overview suggests it lays out from data |
 | `INV-FB-15` | **Save:** the graphic frame and all four parts are copied unchanged. No drawing, `relId` or relationship is written, so no empty drawing can mislead a reader. Move and resize are allowed; data edits are blocked | Inferred, our policy, and the row below |
 
+**As built, Tier 1K.** `INV-FB-01`: `save_diagram` blocks a data edit the stored drawing does not show as `CS-SAV-0009`, and `Diagram::set_point_text` makes the one data edit it can show, text in the point and in its shapes, with geometry not recomputed. A definition edit is kept, and `DiagramSave::stale_drawing` says so. `INV-FB-03`: an inline equation's edit with its fallback unchanged is refused as `CS-EXP-0009`, and editing both is allowed; an equation in a shape-level `mc:Choice` is read and its edit is `CS-SAV-0009`. `INV-FB-06`: a stroke edit is saved, and `InkSave::stale_fallback` says the picture shows the old strokes. Regenerating any of these is Tier 2's.
+
 ## Save-as matrix
 
 Rows open, columns save. Each cell is a fixture: **`RR-SA-<open>-<save>`**, with 121 in all, so `WR-05`'s gate is the grid.

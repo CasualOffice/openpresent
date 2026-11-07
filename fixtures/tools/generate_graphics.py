@@ -44,6 +44,8 @@ DATA_EXT_URI = "http://schemas.microsoft.com/office/drawing/2008/diagram"
 
 # How deep a type may recur, so that an instance holds each row without growing forever.
 RECURSE = {"diagram": 2, "math": 1, "ink": 2}
+# How many times one instance writes a type out in full, so that it stays small.
+EXPANSIONS = 3
 # Simple types of other schemas, and those whose patterns matter.
 NAMED_VALUES = {
     "ST_Guid": GUID % 1, "ST_Percentage": "50%", "ST_String": "x", "ST_OnOff": "1", "ST_TwipsMeasure": "10",
@@ -64,6 +66,7 @@ class Maker:
         self.ext_roots = [(sp.DGM14, "cNvPr"), (sp.DGM14, "recolorImg"), (sp.DGM1611, "autoBuNodeInfoLst"),
                           (sp.DGM1612, "spPr"), (sp.DGM1612, "lstStyle")]
         self.ids = 0
+        self.expanded = {}
 
     def turn(self, key, options):
         at = self.turns.get(key, 0)
@@ -162,7 +165,8 @@ class Maker:
         out = []
         for g, _ in t.retained_groups:
             if g == (DML, "EG_ColorChoice"):
-                out.append('<a:srgbClr val="0000FF"/><a:schemeClr val="accent1"/>')
+                out.append('<a:scrgbClr r="1" g="1" b="1"/><a:srgbClr val="0000FF"/><a:hslClr hue="1" sat="1" lum="1"/>'
+                           '<a:sysClr val="window"/><a:schemeClr val="accent1"/><a:prstClr val="red"/>')
             elif g == (DML, "EG_Text3D"):
                 out.append(self.turn("text3d", ['<a:sp3d z="1"/>', '<a:flatTx z="2"/>']))
             elif g == (DML, "EG_TextBullet"):
@@ -182,8 +186,10 @@ class Maker:
     def instance(self, key, name, stack, minimal=False):
         t = self.s.types[key]
         limit = RECURSE[self.module]
-        if not minimal and stack.count(key) >= limit:
+        if not minimal and (stack.count(key) >= limit or self.expanded.get(key, 0) >= EXPANSIONS):
             minimal = True
+        if not minimal:
+            self.expanded[key] = self.expanded.get(key, 0) + 1
         attrs = self.attrs(t, required_only=minimal)
         if t.text is not None:
             value = self.turn(t.text, self.tokens(t.text) or ["x"])
@@ -214,6 +220,7 @@ class Maker:
     def every_row(self, ns, local):
         typ = self.s.elements[(ns, local)]
         name = self.qname(ns, local)
+        self.expanded = {}
         return self.instance(typ, name, [])
 
 

@@ -335,7 +335,8 @@ class Module:
             name = self.names.struct((t.ns, t.name))
             prefix = t.prefix
             fields = self.fields(t)
-            out.append(f"/// `{prefix}:{t.name}`.\n#[derive(Debug, Clone, Default, PartialEq, Eq)]\npub struct {name} {{\n")
+            also = "".join(f" Includes `{g}`." for g in sorted(set(t.included)))
+            out.append(f"/// `{prefix}:{t.name}`.{also}\n#[derive(Debug, Clone, Default, PartialEq, Eq)]\npub struct {name} {{\n")
             for a in t.attrs:
                 rust = st_info(self.names, a.st)[0]
                 out.append(f"    /// `@{a.local}`.\n    pub {fields[id(a)]}: Option<{rust}>,\n")
@@ -359,7 +360,7 @@ class Module:
                 out.append(f"    /// The repeating choice, in file order.\n    pub items: Vec<{self.item_enum(t)}>,\n")
             out.append("}\n\n")
             if self.items(t):
-                out.append(f"/// One child of `{prefix}:{t.name}`'s repeating choice.\n#[derive(Debug, Clone, PartialEq, Eq)]\npub enum {self.item_enum(t)} {{\n")
+                out.append(f"/// One child of `{prefix}:{t.name}`'s repeating choice.{also}\n#[derive(Debug, Clone, PartialEq, Eq)]\npub enum {self.item_enum(t)} {{\n")
                 for c in self.items(t):
                     var = self.variant(c, t)
                     rust = self.rust_of(c)

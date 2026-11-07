@@ -200,7 +200,7 @@ pub struct ManualBreak {
     pub aln_at: Option<i64>,
 }
 
-/// `m:CT_RPR`.
+/// `m:CT_RPR`. Includes `EG_ScriptStyle`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RPR {
     /// `lit`.
@@ -716,7 +716,7 @@ pub struct OMathArgPr {
     pub arg_sz: Option<Box<Integer2>>,
 }
 
-/// `m:CT_OMathArg`.
+/// `m:CT_OMathArg`. Includes `EG_OMathElements`. Includes `EG_OMathMathElements`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct OMathArg {
     /// `argPr`.
@@ -727,7 +727,7 @@ pub struct OMathArg {
     pub items: Vec<OMathArgItem>,
 }
 
-/// One child of `m:CT_OMathArg`'s repeating choice.
+/// One child of `m:CT_OMathArg`'s repeating choice. Includes `EG_OMathElements`. Includes `EG_OMathMathElements`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OMathArgItem {
     /// `acc`.
@@ -853,14 +853,14 @@ pub struct OMathPara {
     pub o_math: Vec<OMath>,
 }
 
-/// `m:CT_OMath`.
+/// `m:CT_OMath`. Includes `EG_OMathElements`. Includes `EG_OMathMathElements`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct OMath {
     /// The repeating choice, in file order.
     pub items: Vec<OMathItem>,
 }
 
-/// One child of `m:CT_OMath`'s repeating choice.
+/// One child of `m:CT_OMath`'s repeating choice. Includes `EG_OMathElements`. Includes `EG_OMathMathElements`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OMathItem {
     /// `acc`.

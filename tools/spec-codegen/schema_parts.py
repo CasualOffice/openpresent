@@ -90,6 +90,7 @@ class Type:
         self.text = None  # the simple type of simple content
         self.choices = []  # lists of locals of which a file may hold one
         self.retained_groups = []
+        self.included = []  # local groups and attribute groups expanded here
 
 
 class Simple:
@@ -207,6 +208,7 @@ class Schemas:
                 many = repeated or self._occurs(ch)
                 opt = optional or ch.get("minOccurs") == "0"
                 if target in self.groups:
+                    t.included.append(target[1])
                     group, group_resolve = self.groups[target]
                     self._particles(t, group, group_resolve, many, opt, in_choice)
                 else:
@@ -235,6 +237,7 @@ class Schemas:
             elif tag == "attributeGroup":
                 group, group_resolve = self.attr_groups.get(resolve(ch.get("ref")), (None, None))
                 if group is not None:
+                    t.included.append(resolve(ch.get("ref"))[1])
                     self._particles(t, group, group_resolve, repeated, optional, in_choice)
 
     def _attribute(self, t, ch, resolve):

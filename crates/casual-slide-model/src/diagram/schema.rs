@@ -860,7 +860,7 @@ pub struct DataModel {
     pub ext_lst: Option<Box<Extensions>>,
 }
 
-/// `dgm:CT_Constraint`.
+/// `dgm:CT_Constraint`. Includes `AG_ConstraintAttributes`. Includes `AG_ConstraintRefAttributes`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Constraint {
     /// `@type`.
@@ -896,7 +896,7 @@ pub struct Constraints {
     pub constr: Vec<Constraint>,
 }
 
-/// `dgm:CT_NumericRule`.
+/// `dgm:CT_NumericRule`. Includes `AG_ConstraintAttributes`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct NumericRule {
     /// `@type`.
@@ -924,7 +924,7 @@ pub struct Rules {
     pub rule: Vec<NumericRule>,
 }
 
-/// `dgm:CT_PresentationOf`.
+/// `dgm:CT_PresentationOf`. Includes `AG_IteratorAttributes`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PresentationOf {
     /// `@axis`.
@@ -1044,7 +1044,7 @@ pub enum LayoutNodeItem {
     ExtLst(Box<Extensions>),
 }
 
-/// `dgm:CT_ForEach`.
+/// `dgm:CT_ForEach`. Includes `AG_IteratorAttributes`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ForEach {
     /// `@name`.
@@ -1067,7 +1067,7 @@ pub struct ForEach {
     pub items: Vec<ForEachItem>,
 }
 
-/// One child of `dgm:CT_ForEach`'s repeating choice.
+/// One child of `dgm:CT_ForEach`'s repeating choice. Includes `AG_IteratorAttributes`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ForEachItem {
     /// `alg`.
@@ -1090,7 +1090,7 @@ pub enum ForEachItem {
     ExtLst(Box<Extensions>),
 }
 
-/// `dgm:CT_When`.
+/// `dgm:CT_When`. Includes `AG_IteratorAttributes`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct When {
     /// `@name`.
@@ -1119,7 +1119,7 @@ pub struct When {
     pub items: Vec<WhenItem>,
 }
 
-/// One child of `dgm:CT_When`'s repeating choice.
+/// One child of `dgm:CT_When`'s repeating choice. Includes `AG_IteratorAttributes`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WhenItem {
     /// `alg`.
