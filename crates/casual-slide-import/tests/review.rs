@@ -658,6 +658,10 @@ fn reactions_past_their_bound_either_way_refuse_the_part() {
     assert_eq!(read(&rxn.repeat(3)).unwrap_err().code(), "CS-IMP-0001");
     // One reaction and two instances: three together.
     assert_eq!(read(&with(2)).unwrap_err().code(), "CS-IMP-0001");
+    // One reaction holding three children that are not instances: only the count of a
+    // reaction's own children stops these, as the combined count sees instances alone.
+    let unknown = r#"<p223:rxn type="a"><p223:x/><p223:x/><p223:x/></p223:rxn>"#;
+    assert_eq!(read(unknown).unwrap_err().code(), "CS-IMP-0001");
 }
 
 fn review_at(deck: &str, limits: ReviewLimits) -> ImportedReview {
