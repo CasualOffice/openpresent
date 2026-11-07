@@ -402,6 +402,21 @@ impl PresentationPackage {
     }
 
     fn repair_capped(&mut self, aside: &BTreeSet<String>, cap: usize) -> Result<(), OoxmlError> {
+        // A read the host's budget stopped is not damage: a spent budget refuses, and the
+        // repair, bounded in bytes, reads with no stop, so a stop is never taken for a fault.
+        let cancel = self.package.cancel();
+        if cancel.as_ref().is_some_and(|stop| stop()) {
+            return Err(OoxmlError::Package(PackageError::Cancelled {
+                name: String::new(),
+            }));
+        }
+        self.package.set_cancel(None);
+        let result = self.repair_unstopped(aside, cap);
+        self.package.set_cancel(cancel);
+        result
+    }
+
+    fn repair_unstopped(&mut self, aside: &BTreeSet<String>, cap: usize) -> Result<(), OoxmlError> {
         let limits = self.limits;
         let mut findings = std::mem::take(&mut self.repairs);
         if !self.package.verify_entries() {
@@ -663,6 +678,9 @@ impl PresentationPackage {
         }
         let key = part_entry_key(&actual);
         let first = self.package.read_part_capped(&actual, cap);
+        if let Err(err @ PackageError::Cancelled { .. }) = first {
+            return Err(err.into());
+        }
         let good = match &first {
             Ok(bytes) => {
                 self.checked.contains(&key) || !part_needs_repair(bytes, &actual, &self.limits)
@@ -716,6 +734,12 @@ impl PresentationPackage {
             .ok_or_else(|| OoxmlError::MissingPart {
                 name: name.to_owned(),
             })
+    }
+
+    /// Set the host's time budget (`SEC-P10`) on every part read from here on, through any
+    /// repair. A read it stops is refused as `CS-PKG-0010`, never taken for damage.
+    pub fn set_cancel(&mut self, cancel: Option<casual_slide_package::Cancel>) {
+        self.package.set_cancel(cancel);
     }
 
     /// The file exactly as it arrived, damage included.

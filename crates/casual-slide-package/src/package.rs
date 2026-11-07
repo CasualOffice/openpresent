@@ -254,6 +254,12 @@ impl Package {
         self.cancel = cancel;
     }
 
+    /// The host's time budget, as [`Package::set_cancel`] set it, so a layer that replaces
+    /// this package, as a repair does, can carry it over.
+    pub fn cancel(&self) -> Option<Cancel> {
+        self.cancel.clone()
+    }
+
     /// The package's bytes exactly as they arrived.
     pub fn source_bytes(&self) -> &[u8] {
         &self.source
