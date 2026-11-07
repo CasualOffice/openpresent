@@ -278,9 +278,9 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1J-01 | Classic charts | In progress | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |
 | T1J-02 | Chart extensions and styles | In progress | P1 | `c14`, `c15`, `c16`, chart style and colour parts. BEH-26 | Retained with base chart |
 | T1J-03 | 2016+ charts | In progress | P1 | `cx:` with `AlternateContent` fallback, 8 layouts | Fallback kept with chart |
-| T1K-01 | SmartArt parts | In progress | P0 | Data, layout, style, colours and drawing as linked parts; layout never run on load; `SEC-C12` | 5 parts stay consistent |
-| T1K-02 | Equations | In progress | P1 | OMML, 326 rows; fallback retained | Fixed point |
-| T1K-03 | Ink | In progress | P2 | `contentPart`, InkML, actions; fallback retained | Fixed point |
+| T1K-01 | SmartArt parts | Done | P0 | Data, layout, style, colours and drawing as linked parts; layout never run on load; `SEC-C12` | 5 parts stay consistent |
+| T1K-02 | Equations | Done | P1 | OMML, 326 rows; fallback retained | Fixed point |
+| T1K-03 | Ink | Done | P2 | `contentPart`, InkML, actions; fallback retained | Fixed point |
 | T1L-01 | OLE and controls | Done | P1 | Retained with fallback image; never opened; `SEC-C07` | Bytes compared |
 | T1L-02 | VML | Done | P2 | Legacy drawing parts retained, and schema-checked in F4 (`F4-04`, `F4-06`) | Bytes compared |
 | T1L-03 | 3D models | Done | P2 | Retained with fallback until `D3-01`: `area-model3d`'s `model3d1.glb` and its fallback `image1.png` stay byte-identical through an unrelated edit (export `retained.rs` `an_unrelated_edit_leaves_every_retained_part_byte_identical`, seen red in `a35c0e7`; 6 of 6 pass, 2026-11-08). Changing the object through the model is refused until `D3-01` | Bytes compared |
