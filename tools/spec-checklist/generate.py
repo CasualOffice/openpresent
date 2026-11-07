@@ -62,7 +62,16 @@ AREAS = {
     "DESIGN": ("Designer metadata", "1M", "-", "-", "Retain"),
     "CUSTOM": ("Tags, customer data, custom XML, app data", "1M", "-", "-", "Retain"),
     "SIMPLE": ("Shared value types", "1A", "-", "-", "Edit"),
+    "MCE": ("Markup compatibility (ECMA-376 Part 3)", "1A", "-", "-", "Retain"),
 }
+
+# Part 3 ships no XSD, so there is nothing to read these from (SPEC-08). Their ids start
+# `mc:`, which is what tells the audit they are not the schemas' rows.
+HAND_WRITTEN = ROOT / "tools/spec-checklist/markup-compatibility.tsv"
+HAND_WRITTEN_PREFIX = "mc"
+HAND_WRITTEN_AREA = "MCE"
+HAND_WRITTEN_NOTE = ("Written by hand, since ECMA-376 Part 3 ships no XSD: `tools/spec-checklist/markup-compatibility.tsv`. "
+                     "Tied to `BEH-18` in [51](../51-SPEC-CHECKLIST-AND-FIDELITY.md). Built in `crates/casual-slide-ooxml/src/mce.rs`.")
 
 # Rules are (file glob name, regex on the type's name, area). First match wins.
 PML = [
@@ -288,7 +297,26 @@ def collect():
             raise SystemExit(f"no area rule for extension namespace {short}")
         rows += rows_for(ROOT / "schemas/ms-extensions" / fname, "x:" + short, EXT_AREA[short])
         sources.append((f"schemas/ms-extensions/{fname}", "x:" + short))
+    rows += hand_written_rows()
     return rows, sources, skipped
+
+
+def hand_written_rows(path=HAND_WRITTEN):
+    """The rows no schema gives. A row of the wrong shape, or an id seen twice, stops generation."""
+    rows = []
+    for line in path.read_text(encoding="utf8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        cols = line.split("\t")
+        if len(cols) != 6:
+            raise SystemExit(f"{path.name}: a row needs 6 tab-separated columns: {line[:60]}")
+        owner, kind, name, typ, use, res = cols
+        rid = f"{HAND_WRITTEN_PREFIX}:{owner}/{name}" if owner else f"{HAND_WRITTEN_PREFIX}:{name}"
+        rows.append({"id": rid, "area": HAND_WRITTEN_AREA, "owner": owner, "kind": kind, "name": name, "type": typ,
+                     "use": use, "default": "", "restriction": res})
+    if not rows:
+        raise SystemExit(f"{path.name}: no rows")
+    return rows
 
 
 def read_status(path):
@@ -330,7 +358,8 @@ def render(rows, sources, skipped, status):
     idx += ["", "## Sources", "", "| File | Namespace key |", "| --- | --- |"]
     idx += [f"| `{p}` | `{k}` |" for p, k in sources]
     idx += ["", "Excluded on purpose: these MS-ODRAWXML namespaces belong to Word and Excel parts: "
-            + ", ".join(f"`{s}`" for s in sorted(skipped)) + "."]
+            + ", ".join(f"`{s}`" for s in sorted(skipped)) + ".", "",
+            f"Not from a schema: [{HAND_WRITTEN_AREA}]({HAND_WRITTEN_AREA}.md). {HAND_WRITTEN_NOTE}"]
     out["README.md"] = "\n".join(idx) + "\n"
 
     for code, (title, tier, ren, edit, level) in AREAS.items():
@@ -338,6 +367,8 @@ def render(rows, sources, skipped, status):
         if not sub:
             continue
         lines = [f"# {code}: {title}", "", f"Generated. Tier {tier}; render {ren}; edit {edit}; level {level}. {len(sub)} rows.", ""]
+        if code == HAND_WRITTEN_AREA:
+            lines += [HAND_WRITTEN_NOTE, ""]
         owner = None
         for r in sub:
             key = (r["id"].split("/")[0] if r["owner"] else r["id"])

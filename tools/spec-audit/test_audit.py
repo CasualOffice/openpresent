@@ -2,6 +2,7 @@
 """Each gate seen failing on a seeded gap. Run: python3 tools/spec-audit/test_audit.py"""
 import contextlib
 import csv
+import importlib.util
 import io
 import pathlib
 import shutil
@@ -399,6 +400,69 @@ class Marks(unittest.TestCase):
                               "--fixtures", self.dir / "fixtures", "--check")
         self.assertEqual(code, 1)
         self.assertIn("a:CT_Point2D/@x: I=y, no fixture exercises it", out)
+
+
+class MarkupCompatibility(unittest.TestCase):
+    """SPEC-08: rows no schema gives, kept by the generator and held to the same bar."""
+
+    NAMES = ("mc:<AlternateContent>", "mc:AlternateContent/Choice", "mc:AlternateContent/Fallback", "mc:Choice/@Requires",
+             "mc:@Ignorable", "mc:@ProcessContent", "mc:@MustUnderstand")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+        self.copy = self.dir / "checklist.tsv"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def generator(self):
+        spec = importlib.util.spec_from_file_location("spec_generate", REPO / "tools/spec-checklist/generate.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_the_rows_named_by_the_tracker_are_in_the_checklist(self):
+        rows = {r["id"]: r for r in audit.read_checklist(CHECKLIST)}
+        for name in self.NAMES:
+            self.assertEqual(rows[name]["area"], "MCE", name)
+        self.assertIn("BEH-18", (REPO / "docs/spec/MCE.md").read_text(encoding="utf8"))
+
+    def test_the_generator_keeps_them_and_their_status(self):
+        generator = self.generator()
+        rows, sources, skipped = generator.collect()
+        self.assertTrue(set(self.NAMES) <= {r["id"] for r in rows})
+        files = generator.render(rows, sources, skipped, {"mc:@Ignorable": {"I": "y"}})
+        line = next(ln for ln in files["checklist.tsv"].splitlines() if ln.startswith("mc:@Ignorable\t"))
+        self.assertEqual(line.split("\t")[10], "y")
+        self.assertIn("mc:", files["MCE.md"] + "mc:")
+        self.assertIn("BEH-18", files["MCE.md"])
+
+    def test_a_row_of_the_wrong_shape_stops_generation(self):
+        generator = self.generator()
+        path = self.dir / "t.tsv"
+        path.write_text("one\ttwo\n", encoding="utf8")
+        with self.assertRaises(SystemExit):
+            generator.hand_written_rows(path)
+
+    def test_the_count_and_the_schema_model_do_not_call_them_strays(self):
+        self.assertEqual(count.compare(REPO, CHECKLIST)[2], [])
+
+    def test_a_false_mark_on_one_fails_check(self):
+        rows = {r["id"]: r for r in audit.read_checklist(CHECKLIST)}
+        unexercised = next(n for n in ("mc:@PreserveElements", "mc:@PreserveAttributes") if rows[n]["I"] == ".")
+        seed_checklist(self.copy, {unexercised: {"I": "y"}, "mc:@Ignorable": {"E": "y"}}, keep=True)
+        code, out = run_audit("--checklist", self.copy, "--check")
+        self.assertEqual(code, 1)
+        self.assertIn(f"FAIL {unexercised}: I=y", out)
+        self.assertIn("FAIL mc:@Ignorable: E=y, only I applies", out)
+
+    def test_hostile_decks_do_not_earn_a_fixture(self):
+        (self.dir / "fixtures/hostile").mkdir(parents=True)
+        with zipfile.ZipFile(self.dir / "fixtures/hostile/h.bin", "w") as z:
+            z.writestr("a.xml", '<r xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable=""/>')
+        cov = audit.scan_fixtures(self.dir / "fixtures", audit.Schema(REPO))
+        self.assertEqual(cov.hits["mc:@Ignorable"], 0)
 
 
 class FixtureGate(unittest.TestCase):

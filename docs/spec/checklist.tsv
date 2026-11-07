@@ -8729,3 +8729,12 @@ x:drawing/2022/imageformula:CT_ImageFormula/@formula	PIC	CT_ImageFormula	attribu
 x:drawing/2022/imageformula:<imageFormula>	PIC		root	<imageFormula>	CT_ImageFormula				.	.	.	.	.
 x:drawing/2015/06/chart:@formatcode2	CHART		rootattr	@formatcode2	ST_Xstring	optional			.	.	.	.	.
 x:drawing/2015/06/chart:<formatcode2>	CHART		root	<formatcode2>	ST_Xstring				.	.	.	.	.
+mc:<AlternateContent>	MCE		root	<AlternateContent>		optional		Part 3 9.1. Takes the first Choice whose Requires are understood, else Fallback. Both branches stay in the part	.	y	.	.	.
+mc:AlternateContent/Choice	MCE	AlternateContent	element	Choice		1..unbounded		The first that applies is taken. At least one, before any Fallback	.	y	.	.	.
+mc:AlternateContent/Fallback	MCE	AlternateContent	element	Fallback		0..1		Taken when no Choice applies. At most one, and last	.	y	.	.	.
+mc:Choice/@Requires	MCE	Choice	attribute	@Requires	prefix list	required		Every prefix must be declared, and must name a namespace this engine understands	.	y	.	.	.
+mc:@Ignorable	MCE		rootattr	@Ignorable	prefix list	optional		Namespaces a consumer not understanding them may skip. Scoped to the element and its descendants	.	y	.	.	.
+mc:@ProcessContent	MCE		rootattr	@ProcessContent	qname list	optional		Ignorable elements whose content is kept and processed. Must name an ignorable namespace	.	y	.	.	.
+mc:@MustUnderstand	MCE		rootattr	@MustUnderstand	prefix list	optional		A namespace not understood here stops processing the part, as CS-MCE-0001	.	y	.	.	.
+mc:@PreserveElements	MCE		rootattr	@PreserveElements	qname list	optional		Named by Part 3 for a consumer that resaves. Accepted; the part's bytes are kept anyway (ADR-013)	.	.	.	.	.
+mc:@PreserveAttributes	MCE		rootattr	@PreserveAttributes	qname list	optional		As PreserveElements	.	.	.	.	.

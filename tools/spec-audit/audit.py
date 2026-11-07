@@ -38,6 +38,10 @@ can check, and what it cannot check is left blank by --propose rather than assum
         it. A simple type needs a value row for each value, so only M can apply. extLst is
         retained, not read: code that names it only keeps it in order, so it never earns `y`.
 
+Rows starting `mc:` are hand-written (SPEC-08): Part 3 ships no XSD. They are held to the
+same bar, in the one column that applies: I means the resolver in casual-slide-ooxml's
+mce.rs names it, that crate's tests name it, and a fixture has it.
+
 Also runs count.py (SPEC-03), and fails if this tool's own reading of the schemas yields
 different row ids from the checklist. R and U name render and UI code outside these
 crates, so they get the fixture gate only and are listed as unaudited.
@@ -71,7 +75,8 @@ XS = "{http://www.w3.org/2001/XMLSchema}"
 MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 CRATES = {"I": "casual-slide-import", "E": "casual-slide-export", "M": "casual-slide-model"}
-TIERS = {"1A": ("DSIG", "PKG", "SIMPLE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE")}
+RESOLVER_CRATE = "casual-slide-ooxml"
+TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE")}
 LEAF_KINDS = ("element", "attribute", "root", "rootattr", "value")
 # Model fields too generic to say anything about which attribute they hold.
 GENERIC_FIELDS = frozenset("id name type val value uri ref kind data text index key".split())
@@ -865,6 +870,43 @@ class Evidence:
         return marks
 
 
+class HandWritten:
+    """The `mc:` rows, which name the resolver's literals, not a schema's."""
+
+    def __init__(self, all_rows, cov, crates_dir):
+        self.rows = [r for r in all_rows if r["id"].startswith(spec_count.HAND_WRITTEN_PREFIX)]
+        self.cov = cov
+        crate = crates_dir / RESOLVER_CRATE
+        self.literals = set()
+        for path in sorted((crate / "src").rglob("*.rs")):
+            toks = strip_test_items(lex(path.read_text(encoding="utf8", errors="replace")))
+            self.literals |= {v for k, v, _ in toks if k == "str"}
+        self.words = tested_words(crate)
+
+    def gap(self, row):
+        bare = row["name"].strip("<>@")
+        if bare not in self.literals:
+            return f"{RESOLVER_CRATE} does not read it"
+        if normal(bare) not in self.words:
+            return f"no test in {RESOLVER_CRATE} names it"
+        return None if self.cov.hits[row["id"]] else "no fixture exercises it"
+
+    def gates(self):
+        failures = []
+        for r in self.rows:
+            for column in ("M", "I", "E", "R", "U"):
+                if r.get(column) != "y":
+                    continue
+                reason = self.gap(r) if column == "I" else "only I applies to a hand-written row"
+                if reason:
+                    failures.append(f"{r['id']}: {column}=y, {reason}")
+        return failures
+
+    def propose(self, areas):
+        return {r["id"]: {"I": "y"} for r in self.rows
+                if r["area"] in areas and r.get("I") == "." and not self.gap(r)}
+
+
 def write_marks(checklist, marks):
     """Set status columns in place, changing nothing else in the file."""
     lines = checklist.read_text(encoding="utf8").split("\n")
@@ -1097,7 +1139,16 @@ class FixtureCoverage:
                             self.mark_simple(base, text)
                 elem.clear()
                 continue
+            for name in elem.attrib:
+                if name.startswith("{" + MC + "}"):
+                    self.mark(f"mc:@{name.rpartition('}')[2]}")
             if ns == MC and local in ("AlternateContent", "Choice", "Fallback"):
+                if local == "AlternateContent":
+                    self.mark("mc:<AlternateContent>")
+                else:
+                    self.mark(f"mc:AlternateContent/{local}")
+                    if local == "Choice" and "Requires" in elem.attrib:
+                        self.mark("mc:Choice/@Requires")
                 stack.append((stack[-1][0] if stack else None, True))
                 continue
             q = (ns, local)
@@ -1281,7 +1332,8 @@ def main(argv=None):
     keys = {r["id"]: spec_count.row_key(r["id"], ordered) for r in all_rows}
     in_list = {r["id"] for r in all_rows}
     problems = [f"schema model: {i}: from the schemas, no checklist row" for i in sorted(schema.ids - in_list)[:20]]
-    problems += [f"schema model: {i}: a checklist row, not from the schemas" for i in sorted(in_list - schema.ids)[:20]]
+    from_schemas = {i for i in in_list if not i.startswith(spec_count.HAND_WRITTEN_PREFIX)}
+    problems += [f"schema model: {i}: a checklist row, not from the schemas" for i in sorted(from_schemas - schema.ids)[:20]]
     rows = [r for r in all_rows if keys[r["id"]] is not None]
 
     scans, files = scan_crates(args.crates or args.root / "crates", schema)
@@ -1291,12 +1343,14 @@ def main(argv=None):
     problems += [f"count: {p}" for p in count_problems]
     crates_dir = args.crates or args.root / "crates"
     evidence = Evidence(rows, keys, tiers, cov, crates_dir)
+    hand_written = HandWritten(all_rows, cov, crates_dir)
     if args.propose:
         wanted = args.propose.split(",")
         if unknown := [t for t in wanted if t not in TIERS]:
             print(f"unknown tiers: {unknown}", file=sys.stderr)
             return 2
-        marks = evidence.propose({a for t in wanted for a in TIERS[t]})
+        areas = {a for t in wanted for a in TIERS[t]}
+        marks = {**evidence.propose(areas), **hand_written.propose(areas)}
         for rid in sorted(marks):
             print(f"{rid}\t" + " ".join(f"{c}={v}" for c, v in sorted(marks[rid].items())))
         print(f"{len(marks)} rows, {sum(map(len, marks.values()))} marks", file=sys.stderr)
@@ -1304,6 +1358,7 @@ def main(argv=None):
             write_marks(checklist, marks)
         return 0
     failures, warnings = gates(rows, evidence, cov)
+    failures += hand_written.gates()
     areas = summary_table(rows, tiers, cov)
     samples = {c: len(s.refs) for c, s in scans.items()}
     print_report(rows, areas, tiers, cov, files, problems, failures, warnings, samples)

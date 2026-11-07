@@ -178,6 +178,14 @@ def fixtures():
                  f'<mc:Fallback>{TITLE % "Fallback"}</mc:Fallback></mc:AlternateContent>')
     yield "generated/mce-alternate-content.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
         f'{DECL}<p:sld {NS} {mc_ns}><p:cSld p14:ignored="1"><p:spTree>{TREE}{alternate}</p:spTree></p:cSld></p:sld>')), "open"
+    # SPEC-08: ProcessContent unwrapping an ignorable element, and MustUnderstand of a namespace
+    # we know, which are in no real deck. Apart, since the SDK refuses a deck for the second.
+    mc_decl = 'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
+    yield "generated/mce-process-content.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
+        f'{DECL}<p:sld {NS} {mc_decl} xmlns:x14="urn:openslide:fixture:ignorable" mc:ProcessContent="x14:wrap" '
+        f'mc:Ignorable="x14"><p:cSld><p:spTree>{TREE}<x14:wrap>{TITLE % "Inside"}</x14:wrap></p:spTree></p:cSld></p:sld>')), "open"
+    yield "generated/mce-must-understand.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
+        f'{DECL}<p:sld {NS} {mc_decl} mc:MustUnderstand="p"><p:cSld><p:spTree>{TREE}</p:spTree></p:cSld></p:sld>')), "open"
     # STRICT-01: synthetic. The name says so, since no PowerPoint-saved Strict deck exists here yet.
     yield "generated/strict-synthetic.pptx", zipped(strict(deck(2))), "open"
 
