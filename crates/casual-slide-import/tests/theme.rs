@@ -517,14 +517,29 @@ fn bad_values_are_refused_and_reported() {
         (r#"<a:schemeClr val="ACCENT1"/>"#, "CS-CLR-0001"),
         (r#"<a:prstClr val="notAColor"/>"#, "CS-CLR-0001"),
         (r#"<a:sysClr val="notSystem"/>"#, "CS-CLR-0001"),
-        (r#"<a:srgbClr val="1" val="2"/>"#, "CS-CLR-0004"),
-        (r#"<a:srgbClr val=123456/>"#, "CS-CLR-0004"),
-        (r#"<a:srgbClr val="&bad;"/>"#, "CS-CLR-0004"),
         ("", "CS-CLR-0007"),
     ] {
         let (got, f) = color(inner);
         assert_eq!(got, None, "{inner}");
         assert_eq!(codes(&f), [code], "{inner}");
+    }
+    // Malformed attributes: the walker refuses the part (`XML-02`), and an element
+    // an edit made malformed is still reported, not read.
+    for start in [
+        r#"a:srgbClr val="1" val="2""#,
+        r#"a:srgbClr val=123456"#,
+        r#"a:srgbClr val="&bad;""#,
+    ] {
+        let source = format!("<a:h {A}><{start}/></a:h>");
+        let err = XmlTree::parse(source.as_bytes(), "t", &OoxmlLimits::default()).unwrap_err();
+        assert_eq!(err.code(), "CS-XML-0004", "{start}");
+        let mut tree = parse(&format!("<a:h {A}/>"));
+        let root = tree.root();
+        let bad = tree.new_element(start);
+        tree.insert_child(root, None, bad);
+        let mut f = Findings::default();
+        assert_eq!(read_color_choice(&tree, root, &mut f), None, "{start}");
+        assert_eq!(codes(&f), ["CS-CLR-0004"], "{start}");
     }
 }
 

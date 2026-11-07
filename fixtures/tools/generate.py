@@ -3,9 +3,12 @@
 
 Fixed timestamps and order, so a checksum changes only when a fixture does.
 
-Manifest columns: path, sha256, expectation. Expectation is `refuse:<code>`, or
-`open` plus any `<code>` findings the deck must produce, space-separated. The
-corpus test in crates/casual-slide-ooxml/tests/corpus.rs reads this file.
+Manifest columns: path, sha256, expectation, and optionally limits. Expectation is
+`refuse:<code>`, or `open` plus any `<code>` findings the deck must produce,
+space-separated. Limits, comma-separated `field=value` pairs of `OoxmlLimits`, are
+what the deck is opened under, where the default bound is too large for a fixture
+to cross at a sensible size; without them, the defaults. The corpus test in
+crates/casual-slide-ooxml/tests/corpus.rs reads this file.
 
     python3 fixtures/tools/generate.py          # write
     python3 fixtures/tools/generate.py --check  # fail if a file differs from the manifest
@@ -219,10 +222,43 @@ def fixtures():
         "unknown-rel-type": (zipped(deck(slide_rels=[("http://example.com/custom", "../media/none.png", "External")])), "open CS-FND-0001 CS-FND-0007"),
         "embedded-object": (zipped(deck(slide_rels=[("oleObject", "../embeddings/o.bin")], parts=[("ppt/embeddings/o.bin", b"x")], types_extra=[("/ppt/embeddings/o.bin", "application/vnd.openxmlformats-officedocument.oleObject")])), "open CS-FND-0010"),
         "vba-project": (vba_deck(), "open CS-FND-0008"),
+        # PKG-02: `É` and `é` are two parts. Only ASCII letters fold (ECMA-376 Part 2, 6.2.2.3).
+        "non-ascii-case-distinct-parts": (zipped(deck(slide_rels=[("image", "../media/\u00c9.png"), ("image", "../media/\u00e9.png")],
+                                                      parts=[("ppt/media/\u00c9.png", png), ("ppt/media/\u00e9.png", png)])), "open"),
     }
-    for name, (data, expect) in hostile.items():
-        yield f"hostile/{name}.bin", data, expect
+    hostile.update(xml_hostile())
+    for name, (data, expect, *limits) in hostile.items():
+        yield f"hostile/{name}.bin", data, expect, *limits
     yield from property_fixtures()
+
+
+def main_part(xml):
+    return zipped(replace(deck(), "ppt/presentation.xml", xml))
+
+
+def xml_hostile():
+    """XML-02, XML-03: what is not namespace-well-formed XML, refused by the walker, so
+    every reader agrees. SEC-016: one deck over each bound that had no test. A bound too
+    large to cross at a sensible size is lowered for its deck in the limits column."""
+    root = f"<p:presentation {NS}"
+    links = [("hyperlink", f"https://example.com/{i}", "External") for i in range(50)]
+    return {
+        "xml-repeated-attribute": (main_part(f'{root} a="1" a="2"/>'), "refuse:CS-XML-0004"),
+        "xml-repeated-expanded-attribute": (main_part(f'{root} xmlns:x="urn:x" xmlns:y="urn:x" x:a="1" y:a="2"/>'), "refuse:CS-XML-0004"),
+        "xml-attribute-without-value": (main_part(f"{root} hidden/>"), "refuse:CS-XML-0004"),
+        "xml-attributes-run-together": (main_part(f'{root}><p:sldSz cx="1"cy="2"/></p:presentation>'), "refuse:CS-XML-0004"),
+        "xml-undeclared-prefix": (main_part(f"{root}><q:x/></p:presentation>"), "refuse:CS-XML-0004"),
+        "xml-nul-in-name": (main_part(f"{root}><p:sld\0Sz/></p:presentation>"), "refuse:CS-XML-0004"),
+        "xml-text-outside-root": (main_part(f"{root}/>stray"), "refuse:CS-XML-0004"),
+        # Found by the xml_tree fuzz target: a second mark, which quick-xml drops, so the tree lost a byte.
+        "xml-second-byte-order-mark": (main_part("\ufeff\ufeff" + f"{root}/>"), "refuse:CS-XML-0004"),
+        "xml-too-many-attributes": (main_part(root + "".join(f' a{i}="1"' for i in range(1025)) + "/>"), "refuse:CS-XML-0003"),
+        "xml-too-many-elements": (main_part(f"{root}>" + "<a/>" * 2000 + "</p:presentation>"), "refuse:CS-XML-0001", "max_xml_elements=1000"),
+        "xml-part-over-size": (main_part(f"{root}><!-- " + "padding " * 1000 + "--></p:presentation>"), "refuse:CS-PKG-0009", "max_xml_part_bytes=4096"),
+        "rels-per-part": (zipped(deck(slide_rels=links)), "refuse:CS-OPC-0002", "max_part_relationships=40"),
+        "rels-total": (zipped(deck(slides=4, slide_rels=links[:5])), "refuse:CS-OPC-0002", "max_total_relationships=30"),
+        "content-types-flood": (zipped(deck(types_extra=[(f"/ppt/x{i}.xml", "application/xml") for i in range(40)])), "refuse:CS-OPC-0003", "max_content_types=30"),
+    }
 
 
 CORE_NS = ('xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
@@ -478,11 +514,12 @@ def main():
         check()
         return
     lines = ["path\tsha256\texpect\n"]
-    for rel, data, expect in fixtures():
+    for rel, data, expect, *limits in fixtures():
         path = ROOT / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
-        lines.append(f"{rel}\t{hashlib.sha256(data).hexdigest()}\t{expect}\n")
+        extra = "".join(f"\t{x}" for x in limits)
+        lines.append(f"{rel}\t{hashlib.sha256(data).hexdigest()}\t{expect}{extra}\n")
     # Decks written by other software are committed, never regenerated.
     for row in (ROOT / "producers/expect.tsv").read_text().splitlines():
         name, expect = row.split("\t")

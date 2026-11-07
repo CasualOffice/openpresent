@@ -620,14 +620,21 @@ fn a_missing_node_is_refused_and_absent_stays_absent() {
 
 #[test]
 fn a_malformed_colour_element_is_not_patched() {
+    // The walker refuses such a part (`XML-02`), so no parsed tree holds one.
     let source = format!(r#"<a:h {A}><a:srgbClr val="1" val="2"/></a:h>"#);
-    let mut tree = parse(&source);
+    let refused = XmlTree::parse(source.as_bytes(), "t", &OoxmlLimits::default());
+    assert_eq!(refused.unwrap_err().code(), "CS-XML-0004");
+    // One an edit made is still not patched.
+    let mut tree = parse(&format!("<a:h {A}/>"));
     let root = tree.root();
+    let bad = tree.new_element(r#"a:srgbClr val="1" val="2""#);
+    tree.insert_child(root, None, bad);
+    let before = text(&tree);
     assert_eq!(
         set_color(&mut tree, root, &Color::srgb(1, 1, 1)),
         Err(ExportError::MalformedNode("colour"))
     );
-    assert_eq!(text(&tree), source);
+    assert_eq!(text(&tree), before);
 }
 
 /// Mutated parts: an edit either refuses or leaves a part that still parses.

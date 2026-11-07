@@ -247,15 +247,18 @@ impl PresentationPackage {
             .to_owned();
 
         let content_type = content_types.resolve(&main_part).unwrap_or_default();
-        let kind = PresentationKind::from_content_type(content_type).ok_or_else(|| {
+        let kind = PresentationKind::from_content_type(content_type).ok_or(
             OoxmlError::NotAPresentation {
-                content_type: content_type.to_owned(),
-            }
-        })?;
+                part: main_part.clone(),
+            },
+        )?;
         let main = package.read_part_capped(&main_part, cap)?;
         walk(&main, &main_part, &limits, |e, depth| {
             if depth == 1 && e.local_name().as_ref() != b"presentation" {
-                return Err(wrong_root(&main_part, "presentation"));
+                return Err(wrong_root(
+                    &main_part,
+                    "the root element is not presentation",
+                ));
             }
             Ok(())
         })?;
@@ -325,19 +328,37 @@ impl PresentationPackage {
         self.package.entry_names()
     }
 
-    /// Read a part by any spelling equivalent to its name.
+    /// Read a part by any spelling equivalent to its name. Bounded by what the
+    /// part declares and by the package's budget. For a part to be parsed as XML,
+    /// use [`PresentationPackage::read_xml_part`], which refuses an oversized part
+    /// before decompressing any of it.
     pub fn read_part(&mut self, name: &str) -> Result<Vec<u8>, OoxmlError> {
         let actual = self.actual_name(name)?;
         Ok(self.package.read_part(&actual)?)
+    }
+
+    /// Read a part that is to be parsed as XML. A part declaring more than the
+    /// walker accepts (`max_xml_part_bytes`) is refused as `CS-PKG-0009` with
+    /// nothing decompressed, rather than read in full for the walker to refuse
+    /// (`PKG-04`).
+    pub fn read_xml_part(&mut self, name: &str) -> Result<Vec<u8>, OoxmlError> {
+        let actual = self.actual_name(name)?;
+        let cap = self.limits.max_xml_part_bytes as u64;
+        Ok(self.package.read_part_capped(&actual, cap)?)
+    }
+
+    /// Bytes charged to the package's read budget so far: each part read, once.
+    /// Opening charges only the structure it reads, never media.
+    pub fn consumed(&self) -> u64 {
+        self.package.consumed()
     }
 
     /// Read an XML part for use: its tree, keeping every branch and byte, and what
     /// markup compatibility says applies. Refuses a must-understand namespace that
     /// is not understood, in the part as read and not in a branch not taken.
     pub fn read_resolved(&mut self, name: &str) -> Result<(XmlTree, Compatibility), OoxmlError> {
+        let bytes = self.read_xml_part(name)?;
         let actual = self.actual_name(name)?;
-        let cap = self.limits.max_xml_part_bytes as u64;
-        let bytes = self.package.read_part_capped(&actual, cap)?;
         let tree = XmlTree::parse(&bytes, &actual, &self.limits)?;
         let compatibility = checked_compatibility(&tree, &actual)?;
         Ok((tree, compatibility))
@@ -366,9 +387,8 @@ impl PresentationPackage {
 fn checked_compatibility(tree: &XmlTree, part: &str) -> Result<Compatibility, OoxmlError> {
     let compatibility = resolve_compatibility(tree);
     match compatibility.must_understand.iter().next() {
-        Some(namespace) => Err(OoxmlError::MustUnderstand {
+        Some(_) => Err(OoxmlError::MustUnderstand {
             part: part.to_owned(),
-            namespace: namespace.clone(),
         }),
         None => Ok(compatibility),
     }

@@ -65,7 +65,8 @@ pub enum NonConformance {
     MalformedProcessContent,
     /// `ProcessContent` names a namespace not declared ignorable.
     ProcessContentNotIgnorable,
-    /// An element's prefix has no in-scope namespace.
+    /// An element's prefix has no in-scope namespace. [`XmlTree::parse`] refuses
+    /// such a part, so this is seen only in a tree an edit has made so.
     UndeclaredElementPrefix,
     /// An `AlternateContent` with no `Choice`.
     NoChoice,
@@ -877,7 +878,6 @@ mod tests {
                 "<a mc:ProcessContent=\"x:b\"/>",
                 N::ProcessContentNotIgnorable,
             ),
-            ("<nope:a/>", N::UndeclaredElementPrefix),
             (
                 "<x:a mc:Ignorable=\"x\" mc:ProcessContent=\"x:a\" xml:lang=\"en\"/>",
                 N::UnwrappedWithXmlAttribute,
@@ -886,12 +886,16 @@ mod tests {
             let c = resolve_compatibility(&tree(&doc(body)));
             assert!(c.nonconformances.contains(&want), "{body}: {c:?}");
         }
+        // An undeclared element prefix no longer reaches here: the walker refuses
+        // the part (`XML-03`).
+        let err = XmlTree::parse(doc("<nope:a/>").as_bytes(), "t", &OoxmlLimits::default());
+        assert_eq!(err.unwrap_err().code(), "CS-XML-0004");
     }
 
     #[test]
     fn an_extension_is_left_alone_but_an_xfrm_ext_is_ordinary() {
         let c = resolve_compatibility(&tree(&doc(
-            "<extLst><ext uri=\"{1}\"><mc:AlternateContent/><nope:b/><p14:c/></ext></extLst>",
+            "<extLst><ext uri=\"{1}\"><mc:AlternateContent/><z:b xmlns:z=\"urn:z\"/><p14:c/></ext></extLst>",
         )));
         assert_eq!(c.extensions.len(), 1);
         assert!(c.alternates.is_empty());

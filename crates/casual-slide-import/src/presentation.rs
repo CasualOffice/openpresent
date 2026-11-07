@@ -17,7 +17,9 @@ use casual_slide_model::presentation::{
     WebProperties,
 };
 use casual_slide_model::properties::DocumentProperties;
-use casual_slide_ooxml::{OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree};
+use casual_slide_ooxml::{
+    OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree, resolve_internal,
+};
 
 use crate::properties::{
     Elem, Findings, ImportError, ImportFindingKind, ImportLimits, Reader, import_app_properties,
@@ -1025,35 +1027,6 @@ pub enum PartLocation {
     Unusable,
 }
 
-/// The part a target resolves to from `source`: `None` when it climbs above the
-/// root. The same rule as the part graph's, which `casual-slide-ooxml` keeps private.
-pub fn resolve_target(source: &str, target: &str) -> Option<String> {
-    let target = target.split('#').next().unwrap_or_default();
-    let joined;
-    let path = if let Some(absolute) = target.strip_prefix('/') {
-        absolute
-    } else {
-        let dir = source.rfind('/').map_or("", |i| &source[..i]);
-        joined = if dir.is_empty() {
-            target.to_owned()
-        } else {
-            format!("{dir}/{target}")
-        };
-        &joined
-    };
-    let mut out: Vec<&str> = Vec::new();
-    for segment in path.split('/') {
-        match segment {
-            "" | "." => {}
-            ".." => {
-                out.pop()?;
-            }
-            other => out.push(other),
-        }
-    }
-    (!out.is_empty()).then(|| out.join("/"))
-}
-
 /// Find the part a role's relationship points at, reporting what is wrong with it.
 /// Nothing external is followed.
 pub fn locate_part(
@@ -1080,7 +1053,7 @@ pub fn locate_part(
     if rel.mode != TargetMode::Internal {
         return unusable(findings);
     }
-    let Some(target) = resolve_target(source, &rel.target) else {
+    let Some(target) = resolve_internal(source, &rel.target) else {
         return unusable(findings);
     };
     match package
@@ -1112,7 +1085,7 @@ fn read_optional<T>(
     let PartLocation::At(part) = locate_part(package, source, rel_types, findings) else {
         return Ok(None);
     };
-    let bytes = package.read_part(&part)?;
+    let bytes = package.read_xml_part(&part)?;
     let limits = *package.limits();
     let rels = package.relationships_of(&part).to_vec();
     let result = XmlTree::parse(&bytes, &part, &limits)
@@ -1181,7 +1154,7 @@ pub fn import_deck(
 ) -> Result<ImportedDeck, ImportError> {
     let mut findings = Findings::new(limits.max_findings);
     let main = package.main_part().to_owned();
-    let bytes = package.read_part(&main)?;
+    let bytes = package.read_xml_part(&main)?;
     let tree = XmlTree::parse(&bytes, &main, package.limits())?;
     let presentation = import_presentation(
         &tree,

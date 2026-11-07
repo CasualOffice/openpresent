@@ -31,7 +31,7 @@ impl ContentTypes {
                 return if name == b"Types" {
                     Ok(())
                 } else {
-                    Err(wrong_root(part, "Types"))
+                    Err(wrong_root(part, "the root element is not Types"))
                 };
             }
             let (map, key) = match name {
@@ -55,7 +55,7 @@ impl ContentTypes {
             if map.get(&key).is_some_and(|v| *v != value) {
                 return Err(OoxmlError::MalformedXml {
                     part: part.to_owned(),
-                    reason: format!("{key:?} declared with two types"),
+                    reason: "a part or extension declared with two types",
                 });
             }
             map.insert(key, value);

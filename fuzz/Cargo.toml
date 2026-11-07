@@ -60,3 +60,10 @@ path = "fuzz_targets/properties_presentation.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "xml_tree"
+path = "fuzz_targets/xml_tree.rs"
+test = false
+doc = false
+bench = false
