@@ -350,14 +350,22 @@ fn every_corpus_deck_writes_out_edited() {
 }
 
 /// Found by the hostile run: a `tableStyles` part over its bound stops every slide being read
-/// (`CS-TBL-0005`), where docs/29 asks that the styles be set aside and the deck open. Ignored
-/// until fixed, since it fails: `--ignored` runs it.
+/// (`CS-TBL-0005`), where docs/29 asks that the styles be set aside and the deck open. Now the
+/// list is left out of the model, kept in the package, and reported as unreadable.
 #[test]
-#[ignore = "finding P1X-01: a table style bound refuses the whole slide import"]
 fn a_table_style_bound_leaves_the_slides_readable() {
     let bytes = std::fs::read(fixtures().join("hostile/table-limit-styles.bin")).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
-    read_all(&mut pkg).unwrap();
+    let mut pkg = PresentationPackage::open(bytes.clone(), OoxmlLimits::default()).unwrap();
+    let (_, slides) = read_all(&mut pkg).unwrap();
+    assert!(slides.table_styles.is_none());
+    assert!(
+        slides
+            .findings
+            .iter()
+            .any(|f| f.kind.code() == "CS-IMF-0012" && f.part.contains("tableStyles")),
+        "the list set aside is not reported"
+    );
+    edit_every_way(&bytes).unwrap();
 }
 
 /// Found by the full damage corpus: 32 bytes flipped in slideLayout1's local header. The package

@@ -959,7 +959,8 @@ pub fn import_table_styles(
 }
 
 /// The deck's `tableStyles` part, followed from the main part. A part that is malformed
-/// or wrongly rooted is reported as `CS-IMF-0012` and left out; a bound refuses.
+/// or wrongly rooted, or over a bound, is reported as `CS-IMF-0012` and left out; under
+/// `strict`, a bound refuses.
 pub fn read_deck_table_styles(
     package: &mut PresentationPackage,
     limits: &SlideLimits,
@@ -991,6 +992,13 @@ pub fn read_deck_table_styles(
         Ok(list) if damaged && list.tbl_style.is_empty() => Ok(None),
         Ok(list) => Ok(Some(list)),
         Err(err) if is_part_fault(&err) => {
+            findings.note(K::UnreadablePart, &part, "", None);
+            Ok(None)
+        }
+        // A list over its bound is the list's fault, not the slides': it is left out of the
+        // model, kept in the package as it arrived, and reported, and the deck reads on
+        // (docs/29). Under `strict`, the bound refuses.
+        Err(SlideError::Table { .. }) if !package.is_strict() => {
             findings.note(K::UnreadablePart, &part, "", None);
             Ok(None)
         }
