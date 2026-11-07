@@ -46,6 +46,9 @@ def manifests_outside_crates(root):
     """Package names defined anywhere in the repository outside crates/."""
     names = {}
     for manifest in root.rglob("Cargo.toml"):
+        # A worktree under .claude holds a second copy of every crate.
+        if ".claude" in manifest.relative_to(root).parts:
+            continue
         rel = manifest.relative_to(root)
         if rel.parts[0] in {"crates", "target"} or "target" in rel.parts:
             continue

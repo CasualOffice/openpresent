@@ -16,7 +16,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | Phase | State | Note |
 | --- | --- | --- |
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
-| 0 Foundation | **Blocked** on `DEC-09` for CI | CI has never run; everything else proceeds |
+| 0 Foundation | **Open** | One criterion left before sign-off: all CI jobs green on `main`, including the new ones |
 | 1 Model, import, export | **Open under waiver W-1** | See the Phase 1 plan below |
 | 2 to 10 | Not opened | `SKEL-01` previews 2A and 2B during Phase 1 |
 
@@ -48,9 +48,9 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
   - [x] Package threats `SEC-P01`–`P07`, `P12`, `P13` have tests seen red. Evidence: `SEC-010`, `SEC-013`.
   - [x] Spec checklist generated, and fails on an unassigned type. Evidence: `SPEC-05`.
   - [ ] CI green on three platforms, with a seeded violation seen failing each job (`F-003`, `DEC-09`).
-  - [ ] Fixture corpus has provenance recorded, including real PowerPoint-written decks as input (`F-004`, `F-007`).
-  - [ ] `SPK-01` reported; ADR-004 and ADR-005 settled.
-  - [ ] `SPK-02` runs 5 decks end to end against LibreOffice; Microsoft's validator runs (`F-006`).
+  - [x] Fixture corpus has provenance recorded, including real PowerPoint-written decks as input. Evidence: `F-004`, `F-007`, 66 decks.
+  - [x] `SPK-01` reported; ADR-004 and ADR-005 settled. Evidence: [64](64-SPK-01-TEXT-COST.md).
+  - [x] `SPK-02` runs 5 decks end to end against LibreOffice; Microsoft's validator runs. Evidence: `SPK-02`, `F-006`.
   - [ ] Owner sign-off.
 
 ## Phase 1 — Model, import, export

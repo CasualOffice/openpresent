@@ -57,8 +57,7 @@ OpenPresent is designed around that problem:
 | Editor, slide show, co-editing, desktop app | ⬜ Phases 3 to 10 |
 
 The full plan, with how each phase opens and closes, is the [roadmap](docs/06-ROADMAP-AND-DELIVERY.md).
-Every task is in the [execution tracker](docs/14-EXECUTION-TRACKER.md). Fidelity has not yet been checked
-against PowerPoint itself; until then, nothing here claims to match it.
+Every task is in the [execution tracker](docs/14-EXECUTION-TRACKER.md). 66 real PowerPoint-written decks open and save with every XML part byte-identical, though so far only their presentation, properties and themes are modelled. PowerPoint itself has not yet checked our output; until then, nothing here claims to match it.
 
 ## Try it
 

@@ -42,8 +42,8 @@
 | --- | --- | --- | --- | --- | --- |
 | F-001 | Cargo workspace, toolchain 1.96.0 and MSRV matching OpenCalc | Done | P0 | [19](19-WORKSPACE-SCAFFOLD-DESIGN.md). MSRV 1.88.0 check passes locally and in CI | fmt, clippy `-D warnings`, doc and wasm32 check pass locally |
 | F-002 | Fork `-package` and `-text` with provenance | Done | P0 | Copied at `b23c67c` and renamed; `webapp/fonts/cjk` copied because `-text` tests read it. `-secrets` waits for its first consumer in Phase 9 | 12 and 40 tests pass. Disabling the traversal and expansion-ratio guards turned 4 package tests red; restored and green |
-| F-003 | CI matrix and repo gates | In progress | P0 | `.github/workflows/ci.yml`, `tools/check-repo.py`, pre-commit hook written. First run on PR #1, 2026-11-07 | Green on three platforms |
-| F-004 | Fixture corpus with checksums | In progress | P0 | 43 fixtures: generated, hostile, LibreOffice-written. No PowerPoint-written deck yet (`DEC-04`) | Manifest SHA-256 gate passes |
+| F-003 | CI matrix and repo gates | In progress | P0 | CI green on Linux, macOS and Windows at `dd195a5`. Seeded violations seen failing each job locally, on macOS ([15](15-CI-AND-RELEASE-GATES.md)); the new jobs (`ooxml-sdk`, `commit-messages`) await their first GitHub run | Green on `main` with all jobs |
+| F-004 | Fixture corpus with checksums | Done | P0 | 110 fixtures in the manifest, with provenance, including 12 real decks | Manifest SHA-256 gate |
 | F-005 | Fuzz targets for admission | Done | P1 | `bounded_package`, `presentation_package`, `xml_walker`; 505k, 968k and 5.4M runs, 46 s each, no crash. Short runs; longer campaigns belong in scheduled CI | No artifact |
 | ENV-01 | LibreOffice unusable here | Done | P2 | `/opt/homebrew/bin/soffice` points at `/Applications/LibreOffice.app`, which is gone, though the cask is still recorded. Earlier docs said `soffice` was available; that was wrong | Reinstalled 26.8.2.2; `soffice --version` runs |
 | SPEC-01 | Audit reports checklist coverage from code and fixtures | Done | P1 | `tools/spec-audit/audit.py`. Fixtures exercise 1822 of 8730 rows; code 0, since import and export are stubs on this base. Reports rather than fills status columns; reads source text, not behaviour, and owner detection is untested on a real importer | Planted `y` row seen failing by main session; in CI |
@@ -52,8 +52,8 @@
 | SPEC-04 | Enumerate extension parts and relationship types | Open | P1 | Not in [spec/parts.md](spec/parts.md) | Listed from MS-PPTX and MS-ODRAWXML |
 | SPEC-05 | Checklist generated | Done | P0 | 8730 rows from 77 schemas; an unassigned type fails generation | Staleness and unassigned-namespace failures both seen |
 | PKG-01 | Read budget was cumulative | Done | P2 | Each part charged once | Refused on first reread before the fix |
-| F-006 | Microsoft's Open XML validator in the fidelity tools | Open | P0 | Needs `dotnet`. Closest available stand-in for PowerPoint's strictness | Rejects a seeded invalid part; corpus exports pass |
-| F-007 | Real PowerPoint-written decks as input | Open | P0 | Find decks with clear reuse rights, record provenance. Unclear rights: test locally, never commit | At least 20 decks, Windows and Mac, open and round-trip |
+| F-006 | Microsoft's Open XML validator | Done | P0 | SDK 3.5.1 pinned, on Linux in CI. 31 decks: 25 clean, 6 only as recorded in `false-positives.tsv`. Installed `dotnet` by formula, since the cask needs `sudo` | Seeded invalid element rejected; not yet run on GitHub |
+| F-007 | Real PowerPoint-written decks | Done | P0 | 66 tested, 12 committed: 54 Windows, 11 Mac by `app.xml`, which can be false. All 66 open, import, save unedited and force-rewrite with 4,634 parts byte-identical. **Import reads only presentation, properties and theme parts, so slides are not yet shown to be understood.** None has Zoom or equations; the only Morph deck is local | [fixtures/real](../fixtures/real/README.md) |
 | UX-002 | Live-session measurements | Open | P1 | [50](50-POWERPOINT-UX-STUDY.md) §40 lists 21 measurements, and §42 the behaviours only a live session settles: marquee rule, group entry, undo depth, web default ribbon. Run with `PV-01`'s access, earlier if possible | Each recorded, and rules corrected |
 | PV-01 | PowerPoint verification | Open | P0 | Release gate from `DEC-04`: no repair prompt on exports (F5), visual comparison (F6), edits (F8). Microsoft publishes no repair-trigger list, and a schema-valid deck can still prompt, so also open the seeded `RR-*` fixtures. Run whenever access exists; earlier is cheaper | Before first stable release |
 | PPT-01 | Import legacy `.ppt` | Open | P2 | `DEC-08`. CFB and MS-PPT parsers with limits and fuzz targets | Phase 10 |
@@ -63,10 +63,10 @@
 | SEC-016 | Caps with no test | Done | P0 | Fixture per cap | Each of 7 caps removed in turn went red |
 | SEC-017 | Tests that did not test their claim | Done | P1 | Allocation and `consumed()` now tested through the real path; docs/07 corrected on `zip`'s role | Seen red under mutation |
 | FUZZ-01 | `XmlTree::parse` fuzz target | Done | P1 | `xml_tree`. First campaign found a dropped second BOM, fixed. 1.5M runs in 301 s clean, then 562k on final code | No artifact |
-| CI-01 | Gate that crates never depend on a server | Open | P2 | Stated in 19; OpenCalc has it, we do not | Seeded edge fails |
+| CI-01 | Gate that crates never depend on a server | Done | P2 | `check-crate-deps.py`. Fixed after merge: it read worktree copies of crates as outside `crates/` | Seeded edge fails |
 | SPEC-06 | Catch-all area rules removed | Done | P0 | Audit seeded `ZZ_Unassigned`, filed silently under PRES. The final rules now name their types | Seeded type fails generation; output unchanged |
 | FID-01 | Autonumber behaviour | Open | P1 | LibreOffice resave changes `arabicParenBoth` to `2)`, and Thai and Hebrew schemes to a bullet. Renders two paragraphs with `startAt=2` as `(b) (b)`; PowerPoint's behaviour unknown. Feeds BEH-11 | Fixture against a reference |
-| F4-02 | `buSzPct` form | Open | P1 | Vendored XSD rejects `100000` and takes `100%`. PowerPoint may write the numeric form (unverified), which would make F4 reject real decks | Checked on a real deck via `F-007` |
+| F4-02 | `buSzPct` form | Open | P0 | **Answered:** real decks write numeric `130000`, and none used `100%`. The SDK accepts numeric and refuses `100%`; our F4 does the opposite, so `area-text.pptx` cannot pass both. Fix F4: allow numeric in Transitional, as PowerPoint writes. Change the deck | Both validators agree on `area-text` |
 | FID-02 | Fixture coverage | Open | P1 | No decks for charts, SmartArt, math, ink, media, OLE, comments, VML, signatures or extension namespaces | Coverage per tier closes |
 | SPK-04 | Third painting option | Open | P2 | Engine-rasterized bitmaps not measured. **Decided:** `Path2D` proceeds; bitmaps tried only if `TXT-05` shows no-GPU clients need them | `TXT-05` |
 | TXT-03 | Verify Akasia against Aptos | Open | P0 | Self-reported OFL metric-compatible face, first released June 2026. If true, it removes the largest reflow risk. Needs metric comparison without bundling Aptos | Advance widths compared; licence read |
@@ -84,7 +84,7 @@
 | SEC-012 | Remaining threats in [07](07-SECURITY-THREAT-MODEL.md) | Open | P0 | One row per `SEC-*`, closed by the tier named there | Hostile fixture per threat |
 | ENT-000 | Requirements in [10](10-ENTERPRISE-REQUIREMENTS.md) | Open | P0 | Gate on each delivering phase | Per requirement |
 | SPK-01 | WASM text cost and painting | Done | P0 | [64](64-SPK-01-TEXT-COST.md), on an Apple M4 under load. Full text stack 313 KiB Brotli over a bare bundle; 2,000 characters lay out in under 1 ms warm; dense slide 8 to 13 ms on GPU. `Path2D` is correct, lighter than `fillText`. Windows, Firefox, Safari, low-end devices, a real deck: not measured | Main session viewed the side-by-side PNG |
-| SPK-02 | Fidelity oracle pipeline | Done | P0 | `tools/fidelity`, in a network-denied sandbox, refusing hostile decks. Whole-page SSIM misranks: a 0.06 pt shift scored worse than a lost shape, so regions and word positions decide. Linux path untested. PowerPoint references wait on `PV-01` | 10 comparisons over 8 decks; a seeded lost shape is named |
+| SPK-02 | Fidelity oracle pipeline | Done | P0 | `tools/fidelity`, sandboxed, refusing hostile decks. Linux path untested. PowerPoint references wait on `PV-01` | 10 comparisons over 8 decks; a seeded lost shape is named |
 | SPK-03 | Preset shape definition licensing | Done | P0 | Ecma's notice permits use in conformant implementations; vendored unmodified. Formal review is `DEC-07` | Recorded in [schemas/README](../schemas/README.md) |
 
 ## Phases 1 to 10
@@ -178,7 +178,16 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | XML-04 | `attr()` matches any namespace | Open | P1 | Used for `.rels` and content types. Same flaw as `XML-01` | Foreign attribute test |
 | SEC-018 | Marker test for import codes | Open | P1 | CS-IMP, CS-IMF and CS-CLR not covered by `no_document_text.rs` | Marker finds none |
 | DOC-009 | Confirm docs/20 wording on relationship ids | Open | P2 | Now permits them in messages, though file-supplied and unchecked as NCName. Tighten by checking the form | Check added |
-| GOV-01 | Gates, governance and release | Open | P1 | Port OpenCalc's self-test, doc-claims, doc-references, tracker-shape, fuzz-lock, host-seams and post-merge. Add SECURITY, CONTRIBUTING, CHANGELOG, NOTICE. docs/15 for test strategy and release | Phase 0 exit |
+| F4-03 | F4 against what Office actually writes | Open | P1 | Empty `c:ext` refused in 3 decks, `c:showDLblsOverMax` position, `c:showLeaderLines`. PowerPoint-written output should not fail F4 by default | Real decks pass or each failure is recorded |
+| T1J-04 | Signed chart axis ids | Open | P1 | Mac PowerPoint writes negative `c:axId` and `c:crossAx`. Importer must accept and keep them. Both validators reject it | `poi-bar-chart-mac` round-trips |
+| STRICT-02 | Genuine PowerPoint-saved Strict deck | Open | P1 | `sdk-strict-*` decks report PowerPoint 14 with numeric values and look converted by a tool (inferred) | One real Strict deck |
+| F-008 | `vt:array` bounds | Open | P2 | SDK and vendored XSD disagree on `lBound` and `lBounds`; export writes Ecma's form; no real deck uses it | Real deck, or `PV-01` |
+| SEC-019 | Geometry diagnostics keep file text | Open | P1 | `MAX_SUBJECT` keeps 64 bytes of file text, breaking docs/20's contract | Marker test |
+| SEC-020 | `max_path_bytes` has no test | Open | P2 | Missed by `SEC-016` | Fixture seen red |
+| DOC-010 | Register missing codes | Open | P1 | `CS-IMP`, `CS-IMF`, `CS-EXP` not in docs/20; `GeometryError` has no stable codes; `GEO-06` cited with no row | In docs/20 |
+| F-009 | Clear rights on a Morph deck, and find Zoom and equation decks | Open | P1 | The only Morph deck stays local; Zoom and equations have no deck | Committed decks |
+| GEO-06 | Geometry defect labels mismatch | Open | P2 | The generator labels its corrections `GEO-02` to `GEO-06`, which do not mean what this tracker's rows of those ids mean. Relabel in code to match `GEO-02` | One meaning per id |
+| GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
 | DGM-01 | SmartArt and equations are Edit | Done | P1 | **Decided**, clone goal. Needs a diagram layout engine and math layout, in 2J and 2K. Missing drawing part defined in docs/36 | Fixture |
@@ -192,7 +201,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | CORP-01 | Corpus targets | Open | P1 | Counts by producer, version, language, script and size | Phase 1 exit |
 | UXT-01 | User test and UX sweep | Open | P1 | Defined separately from F8; scripted sweep and reachability audit, as OpenCalc | Each editing phase |
 | LEG-01 | Legal scope widened | Open | P1 | `DEC-07` covers UI imitation, trademark, codec patents; third-party inventory beyond Rust | Before public release |
-| DOC-008 | Doc drift named by review | Open | P2 | Dead `docs/21` and `docs/15` citations; AGENTS state; 48 pending against 14 Done; mobile undecided | `check-doc-references` |
+| DOC-008 | Dead references | In progress | P2 | Docs 15 and 21 now exist. 14 dead references remain, listed in `tools/doc-references.known`; a new one fails the gate | Known list empty |
 | MOB-01 | Mobile and touch | Open | P2 | **Decided in scope** as a responsive shell after Phase 7, as OpenCalc's phone shell | Phase 10 |
 
 ## Phase 1 tasks

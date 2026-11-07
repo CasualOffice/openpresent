@@ -11,8 +11,4 @@ docs/14-EXECUTION-TRACKER.md	docs/65	DOC-008	planned operations doc (OPS-01), no
 docs/14-EXECUTION-TRACKER.md	docs/83	DOC-008	planned save and recovery doc (SAVE-01), not written and not reserved in docs/00
 docs/50-POWERPOINT-UX-STUDY.md	docs/91	DOC-008	OpenCalc's docs/91 in a table, not marked as OpenCalc's
 docs/50-POWERPOINT-UX-STUDY.md	docs/95	DOC-008	OpenCalc's docs/95, in places not marked as OpenCalc's
-crates/casual-slide-geometry/src/generated.rs	GEO-06	DOC-008	geometry cites GEO-06; docs/14 has GEO-01 to GEO-05 and no GEO-06
-crates/casual-slide-geometry/tests/presets.rs	GEO-06	DOC-008	as generated.rs
-crates/casual-slide-geometry/tests/schema_roundtrip.rs	GEO-06	DOC-008	as generated.rs
-tools/geometry-presets/generate.py	GEO-06	DOC-008	as generated.rs
 crates/casual-slide-package/src/lib.rs	docs/28-XLSX-PACKAGE-READER.md	DOC-008	OpenCalc's file name, kept when the crate was forked; ours is docs/28-PACKAGE-AND-PART-GRAPH.md
