@@ -772,6 +772,8 @@ impl TableReader<'_, '_> {
                 out.font = read_themeable_font(tree, el.id, self.color);
                 if child.local == "fontRef" {
                     self.finish_reference(&child)?;
+                } else {
+                    self.r.finish(&child);
                 }
             } else {
                 let read: Option<Color> = read_color(tree, child.id, self.color);

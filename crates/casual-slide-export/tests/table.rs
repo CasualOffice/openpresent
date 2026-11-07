@@ -604,6 +604,232 @@ fn a_merge_can_be_stated_on_cells_and_reads_back() {
     f4_validates(&edited);
 }
 
+/// A deck of the fixture's with this slide in it, validated. What F4 finds is the point.
+fn valid_in_a_deck(slide: Vec<u8>) {
+    let mut pkg = open(read_fixture(EVERY));
+    let mut edits = casual_slide_package::PartEdits::default();
+    edits.replace("ppt/slides/slide1.xml".to_owned(), slide);
+    f4_validates(&pkg.save_with(&edits).unwrap());
+}
+
+fn position(text: &str, what: &str) -> usize {
+    text.find(what)
+        .unwrap_or_else(|| panic!("{what} not in {text}"))
+}
+
+fn one_cell_slide(cell: &str) -> String {
+    let table = format!(
+        r#"<a:tbl><a:tblGrid><a:gridCol w="1"/></a:tblGrid><a:tr h="1">{cell}</a:tr></a:tbl>"#
+    );
+    two_frames(BARE_EVERY, BARE_INLINE).replacen(BARE_EVERY, &table, 1)
+}
+
+/// A new child goes in at its schema position among what is already there, and not at
+/// the end: `tcPr` holding later siblings, and a border's line holding later ones.
+#[test]
+fn a_new_child_goes_at_its_schema_position_among_siblings_already_there() {
+    let xml = one_cell_slide(
+        r#"<a:tc><a:tcPr><a:lnB w="1"><a:prstDash val="solid"/></a:lnB><a:headers/><a:extLst><a:ext uri="{00000000-0000-0000-0000-000000000009}"/></a:extLst></a:tcPr></a:tc>"#,
+    );
+    let mut wanted = read_part(xml.as_bytes());
+    let p = table_mut(&mut wanted, "Every Property").rows[0].cells[0]
+        .properties
+        .as_mut()
+        .unwrap();
+    p.fill = Some(red());
+    p.line_left = Some(Box::default());
+    p.cell3d = Some(casual_slide_model::table::Cell3D {
+        bevel: Some(Default::default()),
+        ..Default::default()
+    });
+    // Before the dash that is there.
+    p.line_bottom.as_mut().unwrap().fill = Some(Fill::None);
+    let bytes = patch_between(&xml, &wanted).unwrap();
+    let text = String::from_utf8(bytes.clone()).unwrap();
+    let order = [
+        "<a:lnL",
+        "<a:lnB",
+        "<a:noFill",
+        "<a:prstDash",
+        "<a:cell3D",
+        "<a:solidFill",
+        "<a:headers",
+        "<a:extLst",
+    ];
+    for pair in order.windows(2) {
+        assert!(
+            position(&text, pair[0]) < position(&text, pair[1]),
+            "{pair:?}: {text}"
+        );
+    }
+    assert_eq!(read_part(&bytes), wanted);
+    valid_in_a_deck(bytes);
+}
+
+/// With nothing in the model to go before, only the schema's order can place it: an
+/// `extLst` is in the tree and not in the description.
+#[test]
+fn a_new_child_goes_before_an_extension_only_the_tree_holds() {
+    const EXT: &str =
+        r#"<a:extLst><a:ext uri="{00000000-0000-0000-0000-000000000009}"/></a:extLst>"#;
+    let xml = one_cell_slide(&format!(
+        r#"<a:tc><a:tcPr><a:lnL w="1">{EXT}</a:lnL>{EXT}</a:tcPr></a:tc>"#
+    ));
+    let mut wanted = read_part(xml.as_bytes());
+    let p = table_mut(&mut wanted, "Every Property").rows[0].cells[0]
+        .properties
+        .as_mut()
+        .unwrap();
+    p.fill = Some(red());
+    p.line_left.as_mut().unwrap().fill = Some(Fill::None);
+    let bytes = patch_between(&xml, &wanted).unwrap();
+    let text = String::from_utf8(bytes.clone()).unwrap();
+    // Inside the line, and then inside the cell's properties.
+    let line_ext = position(&text, "<a:extLst");
+    assert!(position(&text, "<a:noFill") < line_ext, "{text}");
+    let after_line = position(&text, "</a:lnL>");
+    let fill = position(&text, "<a:solidFill");
+    assert!(after_line < fill, "{text}");
+    assert!(
+        fill < text[after_line..].find("<a:extLst").unwrap() + after_line,
+        "{text}"
+    );
+    valid_in_a_deck(bytes);
+}
+
+/// The same in a style: a part before an `extLst`, a `tcPr` before a cell's `extLst`.
+#[test]
+fn a_new_part_style_or_cell_child_goes_before_an_extension_already_there() {
+    const GUID: &str = "{1C8F3A2E-5B6D-4E7F-8A9B-0C1D2E3F4A5B}";
+    let xml = format!(
+        r#"<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{GUID}"><a:tblStyle styleId="{GUID}" styleName="s"><a:firstRow/><a:extLst><a:ext uri="{{00000000-0000-0000-0000-000000000009}}"/></a:extLst></a:tblStyle></a:tblStyleLst>"#
+    );
+    let read = |bytes: &[u8]| {
+        let tree = XmlTree::parse(bytes, "t.xml", &OoxmlLimits::default()).unwrap();
+        let limits = ImportLimits::default();
+        let mut f = Findings::new(limits.max_findings);
+        let mut c = ColorFindings::default();
+        import_table_styles(
+            &tree,
+            "t.xml",
+            &[],
+            &SlideLimits::default(),
+            &limits,
+            &mut f,
+            &mut c,
+        )
+        .unwrap()
+    };
+    let mut wanted = read(xml.as_bytes());
+    *wanted.styles[0].slot_mut(TablePartKind::WholeTable) = Some(Box::default());
+    *wanted.styles[0].slot_mut(TablePartKind::NorthWestCell) = Some(Box::default());
+    wanted.styles[0].background = Some(Default::default());
+    let mut tree = XmlTree::parse(xml.as_bytes(), "t.xml", &OoxmlLimits::default()).unwrap();
+    patch_table_styles(
+        &mut tree,
+        "t.xml",
+        false,
+        &[],
+        &wanted,
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+        &OoxmlLimits::default(),
+    )
+    .unwrap();
+    let text = String::from_utf8(tree.to_bytes()).unwrap();
+    for pair in [
+        "<a:tblBg",
+        "<a:wholeTbl",
+        "<a:firstRow",
+        "<a:nwCell",
+        "<a:extLst",
+    ]
+    .windows(2)
+    {
+        assert!(
+            position(&text, pair[0]) < position(&text, pair[1]),
+            "{pair:?}: {text}"
+        );
+    }
+
+    // A cell: `txBody` and `tcPr` before its `extLst`, in that order.
+    let xml = one_cell_slide(
+        r#"<a:tc><a:extLst><a:ext uri="{00000000-0000-0000-0000-000000000009}"/></a:extLst></a:tc>"#,
+    );
+    let source = read_part(
+        one_cell_slide(r#"<a:tc><a:txBody><a:bodyPr/><a:p/></a:txBody><a:tcPr/></a:tc>"#)
+            .as_bytes(),
+    );
+    let mut wanted = read_part(xml.as_bytes());
+    let from = source.shape_tree().unwrap().children[0]
+        .table
+        .as_ref()
+        .unwrap();
+    table_mut(&mut wanted, "Every Property").rows[0].cells[0] = from.rows[0].cells[0].clone();
+    let bytes = patch_between(&xml, &wanted).unwrap();
+    let text = String::from_utf8(bytes.clone()).unwrap();
+    for pair in ["<a:txBody", "<a:tcPr", "<a:extLst"].windows(2) {
+        assert!(
+            position(&text, pair[0]) < position(&text, pair[1]),
+            "{pair:?}: {text}"
+        );
+    }
+    valid_in_a_deck(bytes);
+}
+
+/// What the model could not see of a choice goes when the choice is stated: an empty
+/// `fill` beside a new `fillRef` would be found first, and the reader would not agree.
+#[test]
+fn a_stated_choice_replaces_what_the_model_could_not_see_of_it() {
+    const GUID: &str = "{1C8F3A2E-5B6D-4E7F-8A9B-0C1D2E3F4A5B}";
+    let xml = format!(
+        r#"<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{GUID}"><a:tblStyle styleId="{GUID}" styleName="s"><a:wholeTbl><a:tcTxStyle><a:font/></a:tcTxStyle><a:tcStyle><a:fill/></a:tcStyle></a:wholeTbl></a:tblStyle></a:tblStyleLst>"#
+    );
+    let read = |bytes: &[u8]| {
+        let tree = XmlTree::parse(bytes, "t.xml", &OoxmlLimits::default()).unwrap();
+        let limits = ImportLimits::default();
+        let mut f = Findings::new(limits.max_findings);
+        let mut c = ColorFindings::default();
+        import_table_styles(
+            &tree,
+            "t.xml",
+            &[],
+            &SlideLimits::default(),
+            &limits,
+            &mut f,
+            &mut c,
+        )
+        .unwrap()
+    };
+    let mut wanted = read(xml.as_bytes());
+    let part = wanted.styles[0]
+        .slot_mut(TablePartKind::WholeTable)
+        .as_mut()
+        .unwrap();
+    part.cell.as_mut().unwrap().fill = Some(casual_slide_model::table::TableStyleFill::Ref(
+        casual_slide_model::theme::StyleMatrixRef {
+            idx: Some(1),
+            color: None,
+        },
+    ));
+    let mut tree = XmlTree::parse(xml.as_bytes(), "t.xml", &OoxmlLimits::default()).unwrap();
+    patch_table_styles(
+        &mut tree,
+        "t.xml",
+        false,
+        &[],
+        &wanted,
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+        &OoxmlLimits::default(),
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let out = tree.to_bytes();
+    assert_eq!(read(&out), wanted);
+    let text = String::from_utf8(out).unwrap();
+    assert!(!text.contains("<a:fill/>"), "{text}");
+}
+
 /// Each is refused with nothing saved, and says why.
 #[test]
 fn what_this_tier_does_not_write_is_refused_with_nothing_saved() {
@@ -796,6 +1022,11 @@ fn every_deck_with_a_table_takes_a_cell_edit_and_stays_as_valid_as_it_was() {
             }
         }
         assert_eq!(f4_failures(&outcome.bytes), f4_failures(&source), "{path}");
+        // `tools/ooxml-sdk` runs apart from `cargo test`: this is what it runs over.
+        if let Some(dir) = std::env::var_os("TABLE_EDITED_DIR") {
+            let name = path.replace('/', "-");
+            std::fs::write(Path::new(&dir).join(name), &outcome.bytes).unwrap();
+        }
         edited_decks.push(path);
     }
     for real in [

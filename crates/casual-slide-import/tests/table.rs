@@ -675,6 +675,193 @@ fn spans_are_checked_against_what_is_left_of_the_table_at_that_cell() {
     assert_eq!(t.rows[0].cells[0].row_span, None);
 }
 
+/// Each rule of `MS-OI29500` 2.1.1424 d, broken alone.
+#[test]
+fn each_merge_rule_broken_alone_is_reported_under_its_own_code() {
+    let two_by_two = |rows: &str| {
+        format!(
+            r#"<a:tbl><a:tblGrid><a:gridCol w="1"/><a:gridCol w="1"/></a:tblGrid>{rows}</a:tbl>"#
+        )
+    };
+    let only = |rows: &str, expected: Option<TableFinding>| {
+        let (_, f) = read_table(&two_by_two(rows));
+        for finding in [
+            TableFinding::MergeOverlap,
+            TableFinding::MergeNoOrigin,
+            TableFinding::MergeSpans,
+        ] {
+            assert_eq!(
+                has_table(&f, finding),
+                expected == Some(finding),
+                "{rows}: {f:?}"
+            );
+        }
+    };
+    // As it should be.
+    only(
+        r#"<a:tr h="1"><a:tc gridSpan="2"/><a:tc hMerge="1"/></a:tr>"#,
+        None,
+    );
+    only(
+        r#"<a:tr h="1"><a:tc rowSpan="2"/><a:tc/></a:tr><a:tr h="1"><a:tc vMerge="1"/><a:tc/></a:tr>"#,
+        None,
+    );
+    // Covered from the left with no flag.
+    only(
+        r#"<a:tr h="1"><a:tc gridSpan="2"/><a:tc/></a:tr>"#,
+        Some(TableFinding::MergeOverlap),
+    );
+    // Covered from above with no flag.
+    only(
+        r#"<a:tr h="1"><a:tc rowSpan="2"/><a:tc/></a:tr><a:tr h="1"><a:tc/><a:tc/></a:tr>"#,
+        Some(TableFinding::MergeOverlap),
+    );
+    // A flag no merge explains.
+    only(
+        r#"<a:tr h="1"><a:tc hMerge="1"/><a:tc/></a:tr>"#,
+        Some(TableFinding::MergeNoOrigin),
+    );
+    only(
+        r#"<a:tr h="1"><a:tc vMerge="1"/><a:tc/></a:tr>"#,
+        Some(TableFinding::MergeNoOrigin),
+    );
+    // A covered cell in the first row that does not repeat its merge's rowSpan.
+    only(
+        r#"<a:tr h="1"><a:tc gridSpan="2" rowSpan="2"/><a:tc hMerge="1"/></a:tr><a:tr h="1"><a:tc gridSpan="2" vMerge="1"/><a:tc hMerge="1" vMerge="1"/></a:tr>"#,
+        Some(TableFinding::MergeSpans),
+    );
+}
+
+/// A silent drop fails here. Each element this tier owns takes an attribute and a child
+/// nothing knows, one element at a time, and the report must name each.
+#[test]
+fn nothing_this_tier_does_not_model_goes_unreported() {
+    let bytes = std::fs::read(fixtures().join(EVERY)).unwrap();
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let slide = String::from_utf8(pkg.read_part("ppt/slides/slide1.xml").unwrap()).unwrap();
+    let styles = String::from_utf8(pkg.read_part("ppt/tableStyles.xml").unwrap()).unwrap();
+
+    let report_of_slide = |xml: &str| {
+        let tree = XmlTree::parse(xml.as_bytes(), "s.xml", &OoxmlLimits::default()).unwrap();
+        let limits = ImportLimits::default();
+        let mut findings = Findings::new(limits.max_findings);
+        let mut color = ColorFindings::default();
+        import_slide_part(
+            &tree,
+            "s.xml",
+            &[],
+            SlideKind::Slide,
+            0,
+            &SlideLimits::default(),
+            &limits,
+            &mut findings,
+            &mut color,
+        )
+        .unwrap();
+        findings
+    };
+    let report_of_styles = |xml: &str| {
+        let tree = XmlTree::parse(xml.as_bytes(), "t.xml", &OoxmlLimits::default()).unwrap();
+        let limits = ImportLimits::default();
+        let mut findings = Findings::new(limits.max_findings);
+        let mut color = ColorFindings::default();
+        import_table_styles(
+            &tree,
+            "t.xml",
+            &[],
+            &SlideLimits::default(),
+            &limits,
+            &mut findings,
+            &mut color,
+        )
+        .unwrap();
+        findings
+    };
+    let attribute = |xml: &str, name: &str| {
+        let open = format!("<a:{name}");
+        let mut out = String::new();
+        let mut rest = xml;
+        let mut hit = false;
+        while let Some(at) = rest.find(&open) {
+            let after = at + open.len();
+            out.push_str(&rest[..after]);
+            let next = rest[after..].chars().next().unwrap();
+            if matches!(next, ' ' | '>' | '/') {
+                out.push_str(r#" zzUnknown="1""#);
+                hit = true;
+            }
+            rest = &rest[after..];
+        }
+        out.push_str(rest);
+        assert!(hit, "{name} is not in the fixture");
+        out
+    };
+    let child = |xml: &str, name: &str| {
+        let open = format!("<a:{name}>");
+        xml.contains(&open)
+            .then(|| xml.replace(&open, &format!("{open}<a:zzChild/>")))
+    };
+    let names_attribute = |f: &Findings, name: &str| {
+        f.iter().any(|x| {
+            x.kind == K::RetainedAttribute
+                && x.element == name
+                && x.attribute.as_deref() == Some("zzUnknown")
+        })
+    };
+    let names_child = |f: &Findings, name: &str| {
+        f.has(K::RetainedElement, "zzChild") || f.has(K::MalformedValue, name)
+    };
+
+    for name in [
+        "tbl",
+        "tblPr",
+        "tblGrid",
+        "gridCol",
+        "tr",
+        "tc",
+        "tcPr",
+        "cell3D",
+        "headers",
+        "header",
+        "tableStyleId",
+        "tableStyle",
+        "txBody",
+    ] {
+        let f = report_of_slide(&attribute(&slide, name));
+        assert!(names_attribute(&f, name), "{name}: attribute: {f:?}");
+        if let Some(xml) = child(&slide, name) {
+            let f = report_of_slide(&xml);
+            assert!(names_child(&f, name), "{name}: child: {f:?}");
+        }
+    }
+    for name in [
+        "tblStyle",
+        "tblBg",
+        "wholeTbl",
+        "band1H",
+        "nwCell",
+        "tcTxStyle",
+        "tcStyle",
+        "tcBdr",
+        "left",
+        "right",
+        "fill",
+        "fillRef",
+        "effect",
+        "effectRef",
+        "fontRef",
+        "lnRef",
+        "cell3D",
+    ] {
+        let f = report_of_styles(&attribute(&styles, name));
+        assert!(names_attribute(&f, name), "{name}: attribute: {f:?}");
+        if let Some(xml) = child(&styles, name) {
+            let f = report_of_styles(&xml);
+            assert!(names_child(&f, name), "{name}: child: {f:?}");
+        }
+    }
+}
+
 #[test]
 fn merges_of_a_hostile_model_cost_one_pass_and_never_index_out() {
     // In memory, with no reader to have left bad spans out.
