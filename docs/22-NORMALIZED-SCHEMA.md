@@ -137,7 +137,7 @@ Every patched part is read back before saving.
 
 **Model** (`casual-slide-model`, `diagram.rs`, `math.rs`, `ink.rs`, each with a generated `schema.rs`). SmartArt is the five linked parts of one diagram as typed values; its `dsp:drawing` is what will be drawn, and a layout definition is read as data and never run (`SEC-C12`). An equation is OMML as PowerPoint holds it, in `a14:m`, kept beside its fallback, neither drawn nor regenerated. Ink is the `p:contentPart`'s `inkml:ink` with its context and recorded actions; trace points stay as written. A part that cannot be read is set aside and stays in the package untouched. Bounds are `GraphicLimits` ([21](21-PARSER-LIMITS.md)).
 
-**Known and absent.** 2016 ink brush property values are read as text (`T1K-04`); `a:EG_TextBullet` is not named by the generated modules (`T1K-05`). The bounds have fixtures but were not seen failing with their guards removed (`SEC-021`), and the `graphics` fuzz target has not been run (`FUZZ-02`).
+**Known and absent.** 2016 ink brush property values are read as text (`T1K-04`); `a:EG_TextBullet` is not named by the generated modules (`T1K-05`). The bounds have fixtures but were not seen failing with their guards removed (`SEC-021`); the `graphics` fuzz target ran 60 s clean (`FUZZ-02`).
 
 **Status marks.** `DGM`, `MATH` and `INK` in `docs/spec/checklist.tsv` hold what `tools/spec-audit/audit.py`'s rule allows, by a run over this tier's decks: 1076 rows `y` in model, import and export, every `extLst` `r` where a fixture holds one, and the blanks with their reasons in `docs/spec/open-rows.tsv`.
 
