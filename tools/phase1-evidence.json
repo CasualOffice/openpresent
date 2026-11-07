@@ -5,25 +5,25 @@
    "open": 10000,
    "unedited_save": 100
   },
-  "commit": "04077dac2d20eb5354ae10a1336556633b574757",
-  "date": "2026-11-07T21:23Z",
+  "commit": "9f36310ccbe8500f790c832ce9ed74807a2b3959",
+  "date": "2026-11-07T23:12Z",
   "deck_sha256": "148bdf32a995ff4e5f906fd55126f3a8ea8b5ece1b04fc7aa719fc65bd4e4be9",
   "engine_uncommitted": false,
   "exit": 0,
   "load_after": [
-   5.7,
-   6.4,
-   8.3
+   3.9,
+   6.3,
+   7.1
   ],
   "load_before": [
-   5.7,
-   6.4,
-   8.3
+   3.4,
+   6.3,
+   7.1
   ],
   "machine": "Darwin arm64, 10 cores",
   "measured_ms": {
-   "edit": 2201,
-   "open": 498,
+   "edit": 1040,
+   "open": 267,
    "unedited_save": 0
   },
   "ok": true,
