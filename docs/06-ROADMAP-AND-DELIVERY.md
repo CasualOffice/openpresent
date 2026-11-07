@@ -129,6 +129,8 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 
 ## Phase 2 — Layout and render
 
+
+**Start from OpenCalc (owner instruction 42).** Every Phase 2 task opens by naming OpenCalc's solution it copies, with provenance (fonts and the font contract, text shaping and line breaking, the display list, the PNG and PDF backends, chart drawing, the fidelity harness), and OpenCalc's recorded mistakes and fixes in that area. A task that builds something OpenCalc already has must say why. A problem OpenCalc fixed must not come back here.
 - **Gives:** any deck renders headlessly to PNG and PDF, with fidelity measured, before a UI can hide problems.
 - **Opens:** Phase 1 closed and signed by the owner (instruction 20); this plan approved and `DEC-16` to `DEC-20` answered (instruction 41). ADR-004 and ADR-005 are settled.
 - **In:** tiers below; behaviours BEH-05 to 20. **Out:** UI, the Canvas2D painter, editing, animation playback, and the two layout engines named in `DEC-20`.

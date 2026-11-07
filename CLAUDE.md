@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 The working rules for this repository. [AGENTS.md](AGENTS.md) holds the full contract and applies to every agent.
-Sister repo `../opencalc` is the architecture reference: copy from it with provenance, and never modify it.
+Sister repo `../opencalc` is the architecture reference: copy from it with provenance, and never modify it. **Don't re-solve what OpenCalc has solved (owner instruction 42):** before building anything, find OpenCalc's solution and its recorded mistakes, start from that, and change only what slides need.
 
 ## Owner instructions come first
 

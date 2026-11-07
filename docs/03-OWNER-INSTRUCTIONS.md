@@ -50,6 +50,7 @@ by saying so.
 | 39 | 2026-11-08 | Every test runs as GitHub CI on merge to `main` and on pull requests, as OpenCalc does, including the Phase 1 exit runs | `.github/workflows`, [15](15-CI-AND-RELEASE-GATES.md) |
 | 40 | 2026-11-08 | When LibreOffice fails on a deck whose unedited input fails the same way, that is LibreOffice's problem, not ours, and does not hold the exports item back | `tools/phase1-exit.py`, `FID-04` |
 | 41 | 2026-11-08 | Phase 2 needs proper planning before it starts: scope, targets, decisions and an ETA, done deliberately and not rushed | [06](06-ROADMAP-AND-DELIVERY.md) |
+| 42 | 2026-11-08 | Don't reintroduce problems OpenCalc already solved. Each Phase 2 task starts from OpenCalc's working solution, copied with provenance, and changes only what slides need | [06](06-ROADMAP-AND-DELIVERY.md), [CLAUDE.md](../CLAUDE.md) |
 
 ## Boundaries set by the environment
 
