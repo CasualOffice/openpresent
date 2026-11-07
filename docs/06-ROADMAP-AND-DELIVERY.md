@@ -16,7 +16,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | Phase | State | Note |
 | --- | --- | --- |
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
-| 0 Foundation | **Open** | One criterion left before sign-off: all CI jobs green on `main`, including the new ones |
+| 0 Foundation | **Open** | All criteria met; awaiting owner sign-off |
 | 1 Model, import, export | **Open under waiver W-1** | See the Phase 1 plan below |
 | 2 to 10 | Not opened | **No rendering, painting or font work until Phase 1 closes** (owner instruction 20) |
 
@@ -47,7 +47,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 - **Closes when:**
   - [x] Package threats `SEC-P01`–`P07`, `P12`, `P13` have tests seen red. Evidence: `SEC-010`, `SEC-013`.
   - [x] Spec checklist generated, and fails on an unassigned type. Evidence: `SPEC-05`.
-  - [ ] CI green on three platforms, with a seeded violation seen failing each job (`F-003`, `DEC-09`).
+  - [x] CI green on three platforms: all 9 jobs at `ec7e3d8`. A seeded violation was seen failing each job, run locally on macOS ([15](15-CI-AND-RELEASE-GATES.md)), not on GitHub's runners.
   - [x] Fixture corpus has provenance recorded, including real PowerPoint-written decks as input. Evidence: `F-004`, `F-007`, 66 decks.
   - [x] `SPK-01` reported; ADR-004 and ADR-005 settled. Evidence: [64](64-SPK-01-TEXT-COST.md).
   - [x] `SPK-02` runs 5 decks end to end against LibreOffice; Microsoft's validator runs. Evidence: `SPK-02`, `F-006`.
