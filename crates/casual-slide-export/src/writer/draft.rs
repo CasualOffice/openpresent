@@ -15,7 +15,7 @@ use super::error::WriterError;
 use super::names::{Families, is_rels_part, key, next_rel_id, rels_part_for, target_for};
 use super::plan::WriterLimits;
 use super::preflight::{self, Preflight};
-use super::view::{Parts, View};
+use super::view::{Parts, SlideFacts, View};
 use super::zipcheck;
 use crate::properties::ExportError;
 
@@ -126,6 +126,8 @@ pub(crate) struct Changes {
     pub copied_shapes: Vec<CopiedShape>,
     /// A model patch rewrote the main part.
     pub model_edited_main: bool,
+    /// The slides as that patch left them, before anything else moved them.
+    pub(crate) deck_slides: Option<Vec<SlideFacts>>,
     /// New parts an operation authored, whose bytes may equal a removed part's.
     pub authored: BTreeSet<String>,
     /// Slides new in this save, by id.

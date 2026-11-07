@@ -154,6 +154,15 @@ pub(crate) struct SlideFacts {
     pub title: String,
 }
 
+/// Slides, hidden slides, and slides with notes.
+pub(crate) fn counts_of(slides: &[SlideFacts]) -> (usize, usize, usize) {
+    (
+        slides.len(),
+        slides.iter().filter(|s| s.hidden).count(),
+        slides.iter().filter(|s| s.has_notes).count(),
+    )
+}
+
 fn local_child(tree: &XmlTree, parent: ElementId, local: &str) -> Option<ElementId> {
     tree.child_elements(parent)
         .into_iter()
@@ -614,11 +623,7 @@ impl View {
 
     /// Slides, hidden slides, and slides with notes.
     pub(crate) fn counts(&self) -> (usize, usize, usize) {
-        (
-            self.slides.len(),
-            self.slides.iter().filter(|s| s.hidden).count(),
-            self.slides.iter().filter(|s| s.has_notes).count(),
-        )
+        counts_of(&self.slides)
     }
 
     /// The part a relationship of `source` lands on.
