@@ -309,8 +309,8 @@ impl Findings {
         }
     }
 
-    /// Note something. `element` and `attribute` may come from the file: see
-    /// [`reportable_name`].
+    /// Note something. `element` and `attribute` may come from the file, so a name the
+    /// schemas do not have is reported as [`UNKNOWN_NAME`].
     pub fn note(
         &mut self,
         kind: ImportFindingKind,
