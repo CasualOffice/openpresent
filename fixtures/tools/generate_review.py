@@ -612,7 +612,7 @@ def hostile():
     yield "hostile/comment-limit-authors.bin", zipped(replace(legacy_deck(), "ppt/commentAuthors.xml", f"{DECL}<p:cmAuthorLst {NS}>{authors}</p:cmAuthorLst>")), "open"
     replies = seeded(f'<p188:reply id="{GUID % 1}" authorId="{AUTHOR_1}" created="2024-01-01T00:00:00"/>', 100_001)
     yield "hostile/comment-limit-replies.bin", zipped(replace(modern_deck(), "ppt/comments/modernComment_100_0.xml",
-        f'{DECL}<p188:cmLst xmlns:p188="{P188}" xmlns:a="{A}"><p188:cm id="{GUID % 1}" authorId="{AUTHOR_1}" created="2024-01-01T00:00:00"><p188:unknownAnchor/><p188:replyLst>{replies}</p188:replyLst></p188:cm></p188:cmLst>')), "open CS-FND-0007"
+        f'{DECL}<p188:cmLst xmlns:p188="{P188}" xmlns:a="{A}"><p188:cm id="{GUID % 1}" authorId="{AUTHOR_1}" created="2024-01-01T00:00:00"><p188:unknownAnchor/><p188:replyLst>{replies}</p188:replyLst></p188:cm></p188:cmLst>')), "open"
     tags = seeded('<p:tag name="a" val="b"/>', 100_001)
     yield "hostile/tags-limit-tags.bin", zipped(replace(custom_deck(), "ppt/tags/tag1.xml", f"{DECL}<p:tagLst {NS}>{tags}</p:tagLst>")), "open CS-FND-0007"
     sects = seeded(f'<p14:section name="s" id="{SECTION_1}"><p14:sldIdLst/></p14:section>', 10_001)
@@ -622,13 +622,13 @@ def hostile():
         f'<p14:sectionLst xmlns:p14="{P14}"><p14:section name="s" id="{SECTION_1}"><p14:sldIdLst>{entries}</p14:sldIdLst></p14:section></p14:sectionLst>'), "open"
     instances = seeded(f'<p223:instance time="2024-01-01T00:00:00" authorId="{AUTHOR_1}"/>', 10_001)
     yield "hostile/comment-limit-reactions.bin", one_comment(
-        f'<p188:extLst><p:ext uri="{{00000000-0000-4000-8000-000000000001}}"><p223:reactions xmlns:p223="{P223}"><p223:rxn type="a">{instances}</p223:rxn></p223:reactions></p:ext></p188:extLst>'), "open CS-FND-0007"
+        f'<p188:extLst><p:ext uri="{{00000000-0000-4000-8000-000000000001}}"><p223:reactions xmlns:p223="{P223}"><p223:rxn type="a">{instances}</p223:rxn></p223:reactions></p:ext></p188:extLst>'), "open"
     events = seeded(f'<p228:event time="2024-01-01T00:00:00" id="{GUID % 1}"><p228:add/></p228:event>', 100_001)
     yield "hostile/comment-limit-task-events.bin", one_comment(
-        f'<p188:extLst><p:ext uri="{{00000000-0000-4000-8000-000000000002}}"><p228:taskDetails xmlns:p228="{P228}"><p228:history>{events}</p228:history></p228:taskDetails></p:ext></p188:extLst>'), "open CS-FND-0007"
+        f'<p188:extLst><p:ext uri="{{00000000-0000-4000-8000-000000000002}}"><p228:taskDetails xmlns:p228="{P228}"><p228:history>{events}</p228:history></p228:taskDetails></p:ext></p188:extLst>'), "open"
     monikers = seeded('<pc:docMk/>', 1_025)
     yield "hostile/comment-limit-monikers.bin", zipped(replace(modern_deck(), "ppt/comments/modernComment_100_0.xml",
-        f'{DECL}<p188:cmLst xmlns:p188="{P188}" {PC_NS}><p188:cm id="{GUID % 1}" authorId="{AUTHOR_1}" created="2024-01-01T00:00:00"><pc:sldMkLst>{monikers}</pc:sldMkLst></p188:cm></p188:cmLst>')), "open CS-FND-0007"
+        f'{DECL}<p188:cmLst xmlns:p188="{P188}" {PC_NS}><p188:cm id="{GUID % 1}" authorId="{AUTHOR_1}" created="2024-01-01T00:00:00"><pc:sldMkLst>{monikers}</pc:sldMkLst></p188:cm></p188:cmLst>')), "open"
     marks = seeded('<p:tags r:id="rId3"/>', 100_001)
     yield "hostile/marks-limit-part.bin", zipped(replace(deck(), "ppt/slides/slide1.xml",
         f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}</p:spTree><p:custDataLst>{marks}</p:custDataLst></p:cSld></p:sld>')), "open"
@@ -639,7 +639,7 @@ def hostile():
     yield "hostile/custom-limit-labels.bin", zipped(replace(custom_deck(), "docMetadata/LabelInfo.xml",
         f'{DECL}<clbl:labelList xmlns:clbl="{CLBL}">{labels}</clbl:labelList>')), "open CS-FND-0007"
     # Damage. Everything is reported and nothing refused, and no marker reaches a finding.
-    yield "hostile/comment-bad-values.bin", bad_comments(), "open CS-FND-0007"
+    yield "hostile/comment-bad-values.bin", bad_comments(), "open"
     yield "hostile/section-bad-values.bin", section_deck_with(
         f'<p14:sectionLst xmlns:p14="{P14}" {MARK}="{MARK}"><p14:section id="{MARK}" name="{MARK}" unknown="{MARK}"><p14:sldIdLst><p14:sldId id="{MARK}"/><p14:sldId id="999"/><p14:sldId id="256"/><p14:sldId id="256"/><p14:unknown/></p14:sldIdLst><p14:sldIdLst/></p14:section>'
         f'<p14:section name="{MARK}" id="{SECTION_1}"/><p14:section name="{MARK}" id="{SECTION_1}"/><p14:unknown>{MARK}</p14:unknown></p14:sectionLst>'), "open"
@@ -649,7 +649,7 @@ def hostile():
 def fixtures():
     inst = Instances()
     yield "generated/comments-legacy.pptx", zipped(legacy_deck()), "open"
-    yield "generated/comments-modern.pptx", zipped(modern_deck()), "open CS-FND-0007"
+    yield "generated/comments-modern.pptx", zipped(modern_deck()), "open"
     yield "generated/sections-zoom-labels.pptx", zipped(sections_deck()), "open"
     yield "generated/custom-tags-labels.pptx", zipped(custom_deck()), "open CS-FND-0007"
     yield "generated/review-every-change.pptx", zipped(review_deck(inst)), "open CS-FND-0007"

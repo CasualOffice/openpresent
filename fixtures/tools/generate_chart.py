@@ -628,8 +628,8 @@ def signed_axis_deck():
 def fixtures():
     yield "generated/chart-families.pptx", zipped(families_deck()), "open CS-FND-0010"
     yield "generated/chart-strict.pptx", zipped(strict_chart(families_deck())), "open CS-FND-0010"
-    yield "generated/chart-ex-layouts.pptx", zipped(chart_ex_deck()), "open CS-FND-0007 CS-FND-0010"
+    yield "generated/chart-ex-layouts.pptx", zipped(chart_ex_deck()), "open CS-FND-0010"
     yield "generated/chart-signed-axis.pptx", zipped(signed_axis_deck()), "open CS-FND-0010"
     for name, entries in every_row_decks():
-        yield name, zipped(entries), "open CS-FND-0007 CS-FND-0010"
+        yield name, zipped(entries), "open CS-FND-0010"
     yield from hostile()
