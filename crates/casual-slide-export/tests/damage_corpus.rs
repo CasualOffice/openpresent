@@ -541,7 +541,7 @@ fn run_one(bytes: &[u8]) -> Result<Outcome, String> {
         .collect();
     repaired.sort_unstable();
     repaired.dedup();
-    let kept = pkg
+    let mut kept: BTreeSet<String> = pkg
         .findings()
         .iter()
         .filter(|f| {
@@ -549,6 +549,17 @@ fn run_one(bytes: &[u8]) -> Result<Outcome, String> {
         })
         .map(|f| f.part.trim_start_matches('/').to_owned())
         .collect();
+    // Well-formed damage the reader can tell only as a wrong value or a missing required
+    // element, kept as it arrived and reported on its part (docs/29, "well-formed and merely
+    // wrong").
+    kept.extend(
+        imported
+            .findings
+            .iter()
+            .chain(slides.findings.iter())
+            .filter(|f| WRONG_AS_ARRIVED.contains(&f.kind.code()))
+            .map(|f| f.part.trim_start_matches('/').to_owned()),
+    );
     Ok(Outcome {
         refused: None,
         edited: Some(edited.bytes),
@@ -700,6 +711,11 @@ const KEPT_AS_ARRIVED: [&str; 9] = [
     "CS-REC-0307",
     "CS-REC-0308",
 ];
+
+/// Import codes that report a part holding a wrong value (`CS-IMF-0001`) or lacking a required
+/// element (`CS-IMF-0003`), kept as it arrived: well-formed damage the reader can see without
+/// a schema. F4 may fail in such a part, named by that output's own report.
+const WRONG_AS_ARRIVED: [&str; 2] = ["CS-IMF-0001", "CS-IMF-0003"];
 
 #[test]
 fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
@@ -860,5 +876,63 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
             shown.join("\n")
         );
     }
+    let _ = std::fs::remove_dir_all(&out);
+}
+
+/// Damage the full run found writing an output that F4 fails in a part not reported as kept as
+/// it arrived: each is one part of one real deck broken one way at one offset, as the corpus
+/// labels it (`part#how@at`).
+#[test]
+fn damage_the_full_run_found_writes_valid_output() {
+    let cases = [
+        (
+            "z21464709-souzou-ja",
+            "ppt/_rels/presentation.xml.rels",
+            5,
+            4,
+        ),
+        (
+            "gs-unstructured-fake-en",
+            "ppt/notesSlides/_rels/notesSlide1.xml.rels",
+            4,
+            3,
+        ),
+        ("sdk-animation", "docProps/app.xml", 8, 1063),
+        (
+            "sdk-strict-animclr",
+            "ppt/slideLayouts/slideLayout11.xml",
+            8,
+            2987,
+        ),
+    ];
+    let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("damage-found");
+    let _ = std::fs::remove_dir_all(&out);
+    std::fs::create_dir_all(&out).unwrap();
+    let mut kept = BTreeMap::new();
+    for (deck, part, how, at) in cases {
+        let source = std::fs::read(root().join(format!("fixtures/real/{deck}.pptx"))).unwrap();
+        let xml = package(&source).read_part(part).unwrap();
+        let bytes = with_edits(&source, |e| {
+            e.replace(part.to_owned(), break_xml(&xml, at, how));
+        });
+        let outcome = run_one(&bytes).unwrap_or_else(|why| panic!("{deck} {part}: {why}"));
+        let file = format!("{deck}.pptx");
+        assert!(
+            outcome.kept.contains(part),
+            "{deck}: {part} is not reported"
+        );
+        std::fs::write(out.join(&file), outcome.edited.unwrap()).unwrap();
+        // A `.rels` part is rebuilt, so it must pass. The other two are well-formed and
+        // merely wrong, kept as they arrived: F4 may fail in them, as reported.
+        if !part.ends_with(".rels") {
+            kept.insert(file, outcome.kept);
+        }
+    }
+    let failures: Vec<String> = f4_failures(&out)
+        .into_iter()
+        .filter(|f| !is_kept_as_arrived(f, &kept))
+        .map(|f| f.line)
+        .collect();
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
     let _ = std::fs::remove_dir_all(&out);
 }
