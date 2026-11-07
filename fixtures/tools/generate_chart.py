@@ -265,6 +265,11 @@ class Instance:
         if tag == "choice":
             branches = list(node)
             if many(node):
+                if len(branches) > 8:
+                    # The families: two to a part, in turn, so that a part stays small enough to
+                    # read once per node in tests.
+                    start = next_of(node)
+                    branches = [branches[(start * 2 + i) % len(branches)] for i in range(2)]
                 return "".join(self.particle(x, ch, owner) for ch in branches)
             start = next_of(node)
             for i in range(len(branches)):

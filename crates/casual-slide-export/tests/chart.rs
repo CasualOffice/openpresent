@@ -502,6 +502,7 @@ fn is_named_only(qualified: &str) -> bool {
     let (prefix, local) = qualified.split_once(':').unwrap_or(("", qualified));
     match prefix {
         "c" => local == "clrMapOvr",
+        "mc" => local == "Fallback",
         "cdr" | "cdr14" => matches!(
             local,
             "cNvPr" | "cNvSpPr" | "cNvCxnSpPr" | "cNvPicPr" | "cNvGraphicFramePr" | "cNvGrpSpPr"
@@ -534,23 +535,11 @@ fn every_chart_row_comes_out_and_goes_back_as_the_only_change() {
         .count();
     assert_eq!(rows, 1764, "the rows this tier owns");
     let mut checked = 0usize;
-    for (deck, parts) in [
-        (
-            CLASSIC,
-            vec![
-                "ppt/charts/chart1.xml",
-                "ppt/charts/chart2.xml",
-                "ppt/drawings/drawing1.xml",
-                "ppt/drawings/drawing2.xml",
-                "ppt/charts/style1.xml",
-                "ppt/charts/colors1.xml",
-            ],
-        ),
-        (EX, vec!["ppt/charts/chartEx1.xml", "ppt/charts/chartEx2.xml"]),
-    ] {
+    for deck in [CLASSIC, EX] {
         let mut pkg = open(read_fixture(deck));
         let mut seen = HashSet::new();
-        for part in parts {
+        let names: Vec<String> = imported(&mut pkg).charts.parts.into_iter().map(|p| p.part).collect();
+        for part in names.iter().map(String::as_str) {
             let bytes = pkg.read_part(part).unwrap();
             let whole = XmlTree::parse(&bytes, part, &OoxmlLimits::default()).unwrap();
             let full = read_part(&whole, part);

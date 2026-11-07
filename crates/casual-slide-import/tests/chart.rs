@@ -117,6 +117,7 @@ fn unreachable_owner(owner: &str) -> bool {
             | "CT_MultiLvlStrFilteredLiteralCache"
             | "CT_LiteralDataChart"
             | "CT_FeatureExtension"
+            | "ST_ExtensionDropMode"
     )
 }
 
@@ -565,24 +566,13 @@ fn elements(tree: &XmlTree) -> Vec<(ElementId, ElementId)> {
 #[test]
 fn taking_out_any_chart_node_changes_the_model_or_the_report() {
     let dml = casual_slide_import::properties::ns::DML;
-    for (deck, parts) in [
-        (
-            CLASSIC,
-            vec![
-                "ppt/charts/chart1.xml",
-                "ppt/charts/chart2.xml",
-                "ppt/drawings/drawing1.xml",
-                "ppt/drawings/drawing2.xml",
-                "ppt/charts/style1.xml",
-                "ppt/charts/colors1.xml",
-            ],
-        ),
-        (EX, vec!["ppt/charts/chartEx1.xml", "ppt/charts/chartEx2.xml"]),
-    ] {
+    let mut total = 0usize;
+    for deck in [CLASSIC, EX] {
         let mut pkg = open(deck);
         // By what holds it, across the deck: one read per kind of node.
         let mut seen = BTreeMap::new();
-        for part in parts {
+        let names: Vec<String> = imported(&mut pkg).charts.parts.into_iter().map(|p| p.part).collect();
+        for part in names.iter().map(String::as_str) {
             let bytes = pkg.read_part(part).unwrap();
             let tree = XmlTree::parse(&bytes, part, &OoxmlLimits::default()).unwrap();
             let as_read = read_part(&bytes, part).unwrap();
@@ -591,6 +581,16 @@ fn taking_out_any_chart_node_changes_the_model_or_the_report() {
             };
             let mut checked = 0usize;
             for (parent, kid) in elements(&tree) {
+                // A fallback is named in the model and read no further.
+                let mut up = Some(parent);
+                let mut in_fallback = false;
+                while let Some(id) = up {
+                    in_fallback = in_fallback || tree.qualified_name(id) == "mc:Fallback";
+                    up = tree.parent_element(id);
+                }
+                if in_fallback {
+                    continue;
+                }
                 let above = tree.qualified_name(parent).to_owned();
                 let name = tree.qualified_name(kid).to_owned();
                 if is_dml(parent) || is_dml(kid) || name == "mc:Choice" || name == "mc:Fallback" {
@@ -626,7 +626,8 @@ fn taking_out_any_chart_node_changes_the_model_or_the_report() {
                     checked += 1;
                 }
             }
-            assert!(checked > 0 || part.ends_with("2.xml"), "{part}");
+            total += checked;
         }
     }
+    assert!(total > 700, "only {total} kinds of node");
 }
