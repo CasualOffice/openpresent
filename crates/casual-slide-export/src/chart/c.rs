@@ -41,6 +41,7 @@ pub(crate) fn c_rel_id(v: &RelId, name: &'static str, space: Space) -> N {
 pub(crate) fn c_extension(v: &Extension, name: &'static str, space: Space) -> N {
     let mut n = N::new(space, name, &[]);
     n.attr("uri", v.uri.as_ref());
+    // spec-audit: c:CT_Extension/xsd:any
     for x in &v.items {
         n.push(super::ext_item(x));
     }

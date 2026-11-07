@@ -87,6 +87,7 @@ pub enum ExtItem {
     /// `c16ac:multiLvlStrLit`.
     C16acMultiLvlStrLit(Box<c::MultiLvlStrData>),
     /// `c16r2:formatcode2`.
+    // spec-audit: x:drawing/2015/06/chart:<formatcode2>
     C16r2Formatcode2(String),
     /// `c16r3:dataDisplayOptions16`.
     C16r3DataDisplayOptions16(Box<c16r3::DataDisplayOptions16>),

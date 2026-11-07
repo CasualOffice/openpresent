@@ -124,6 +124,7 @@ fn effect_node(effect: &TransitionEffect) -> Node {
             .lex("prst", t.prst.as_ref())
             .lex("invX", t.inv_x.as_ref())
             .lex("invY", t.inv_y.as_ref()),
+        // spec-audit: x:powerpoint/2015/09/main:<morph>
         E::Morph(t) => Node::new(Space::P159, "morph").lex("option", t.option.as_ref()),
     }
 }

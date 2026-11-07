@@ -69,6 +69,7 @@ impl Ctx<'_, '_> {
                 "tailEnd" => l.tail_end = Some(c.line_end(kid)?),
                 "extLst" => {
                     for item in c.extension_items(kid)? {
+                        // spec-audit: x:drawing/2018/sketchyshapes:<lineSketchStyleProps>
                         if item.is(ASK, "lineSketchStyleProps") && l.sketch.is_none() {
                             l.sketch = Some(c.sketch(&item)?);
                         } else {

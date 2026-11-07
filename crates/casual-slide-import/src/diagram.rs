@@ -593,6 +593,7 @@ pub(crate) fn read_color_item(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<Op
 }
 
 /// `a:CT_BackgroundFormatting`, `a:CT_WholeE2oFormatting`.
+// spec-audit: a:CT_WholeE2oFormatting/ln
 pub(crate) fn read_formatting(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<Formatting> {
     c.finish(el);
     let mut out = Formatting::default();

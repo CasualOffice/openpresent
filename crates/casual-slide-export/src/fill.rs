@@ -85,6 +85,7 @@ fn oembed(o: &OEmbed) -> Node {
 /// `a:CT_Blip`.
 // spec-audit: owner=blip
 pub(crate) fn blip(b: &Blip) -> Node {
+    // spec-audit: x:drawing/2010/main:<useLocalDpi>
     let local_dpi = b
         .use_local_dpi
         .map(|v| Node::new(Space::A14, "useLocalDpi").lex("val", Some(&v)));

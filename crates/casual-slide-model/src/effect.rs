@@ -345,7 +345,8 @@ impl ArtisticEffect {
     }
 }
 
-/// `a14:CT_PictureEffectBackgroundRemovalForegroundMark`, and its background twin.
+/// `a14:CT_PictureEffectBackgroundRemovalForegroundMark`, and its twin
+/// `a14:CT_PictureEffectBackgroundRemovalBackgroundMark`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct RemovalMark {
     /// `@x1`.
@@ -378,6 +379,77 @@ pub struct BackgroundRemoval {
 /// One choice of `a14:CT_PictureEffect`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PictureEffectKind {
+    // `effect` names the element; `transparency` and `parameter` hold its attributes.
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticBlur
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticCement
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticChalkSketch
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticCrisscrossEtching
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticCutout
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticFilmGrain
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticGlass
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticGlowDiffused
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticGlowEdges
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticLightScreen
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticLineDrawing
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticMarker
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticMosiaicBubbles
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPaintStrokes
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPaintBrush
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPastelsSmooth
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPencilGrayscale
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPencilSketch
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPhotocopy
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticPlasticWrap
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticTexturizer
+    // spec-audit: x:drawing/2010/main:CT_PictureEffect/artisticWatercolorSponge
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectBlur/@radius
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectCement/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectCement/@crackSpacing
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectChalkSketch/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectChalkSketch/@pressure
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectCrisscrossEtching/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectCrisscrossEtching/@pressure
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectCutout/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectCutout/@numberOfShades
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectFilmGrain/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectFilmGrain/@grainSize
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectGlass/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectGlass/@scaling
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowDiffused/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowDiffused/@intensity
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowEdges/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectGlowEdges/@smoothness
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectLightScreen/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectLightScreen/@gridSize
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectLineDrawing/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectLineDrawing/@pencilSize
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectMarker/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectMarker/@size
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectMosiaicBubbles/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectMosiaicBubbles/@pressure
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintBrush/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintBrush/@brushSize
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintStrokes/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPaintStrokes/@intensity
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPastelsSmooth/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPastelsSmooth/@scaling
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilGrayscale/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilGrayscale/@pencilSize
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilSketch/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPencilSketch/@pressure
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPhotocopy/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPhotocopy/@detail
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPlasticWrap/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectPlasticWrap/@smoothness
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectTexturizer/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectTexturizer/@scaling
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectWatercolorSponge/@trans
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectWatercolorSponge/@brushSize
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectBrightnessContrast/@bright
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectBrightnessContrast/@contrast
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectColorTemperature/@colorTemp
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectSaturation/@sat
+    // spec-audit: x:drawing/2010/main:CT_PictureEffectSharpenSoften/@amount
     /// One of the artistic effects.
     Artistic {
         /// Which.

@@ -285,6 +285,7 @@ pub(crate) fn alternate_content_part(v: &AlternateContentPart) -> N {
     let mut choice = N::new(MC, "Choice", &[]);
     choice.attr("Requires", v.requires.as_ref());
     if let Some(part) = &v.choice {
+        // spec-audit: x:drawing/2010/chartDrawing:<contentPart>
         choice.push(cdr14::cdr14_content_part(part, "contentPart", CDR14));
     }
     n.push(choice);

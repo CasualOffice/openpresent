@@ -862,6 +862,12 @@ fn patch_exts(
     Ok(())
 }
 
+// spec-audit: x:drawing/2010/main:<hiddenFill>
+// spec-audit: x:drawing/2010/main:<hiddenLine>
+// spec-audit: x:drawing/2010/main:<hiddenEffects>
+// spec-audit: x:drawing/2010/main:<hiddenScene3d>
+// spec-audit: x:drawing/2010/main:<hiddenSp3d>
+// spec-audit: x:drawing/2010/main:<shadowObscured>
 fn hidden_nodes(h: &HiddenProperties) -> Vec<Node> {
     let mut out = Vec::new();
     if let Some(fill) = &h.fill {

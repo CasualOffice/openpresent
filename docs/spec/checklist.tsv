@@ -3238,8 +3238,8 @@ c:CT_RelId/@r:id	CHART	CT_RelId	attribute	@r:id	id	required			y	y	y	.	.
 c:CT_Extension	CHART		type	CT_Extension					.	y	.	.	.
 c:CT_Extension/xsd:any	CHART	CT_Extension	any	xsd:any				lax	.	y	.	.	.
 c:CT_Extension/@uri	CHART	CT_Extension	attribute	@uri	token	optional			y	y	y	.	.
-c:CT_ExtensionList	CHART		type	CT_ExtensionList					y	y	y	.	.
-c:CT_ExtensionList/ext	CHART	CT_ExtensionList	element	ext	CT_Extension	0..unbounded			y	y	y	.	.
+c:CT_ExtensionList	CHART		type	CT_ExtensionList					.	.	.	.	.
+c:CT_ExtensionList/ext	CHART	CT_ExtensionList	element	ext	CT_Extension	0..unbounded			.	.	.	.	.
 c:CT_NumVal	CHART		type	CT_NumVal					y	y	y	.	.
 c:CT_NumVal/v	CHART	CT_NumVal	element	v	ST_Xstring				y	y	y	.	.
 c:CT_NumVal/@idx	CHART	CT_NumVal	attribute	@idx	unsignedInt	required			y	y	y	.	.
@@ -4185,9 +4185,9 @@ cdr:CT_RelSizeAnchor	CHART		type	CT_RelSizeAnchor					y	y	y	.	.
 cdr:CT_RelSizeAnchor/from	CHART	CT_RelSizeAnchor	element	from	CT_Marker				y	y	y	.	.
 cdr:CT_RelSizeAnchor/to	CHART	CT_RelSizeAnchor	element	to	CT_Marker				y	y	y	.	.
 cdr:CT_RelSizeAnchor/EG_ObjectChoices	CHART	CT_RelSizeAnchor	group	EG_ObjectChoices	EG_ObjectChoices				y	y	y	.	.
-cdr:CT_AbsSizeAnchor	CHART		type	CT_AbsSizeAnchor					y	y	y	.	.
+cdr:CT_AbsSizeAnchor	CHART		type	CT_AbsSizeAnchor					.	.	.	.	.
 cdr:CT_AbsSizeAnchor/from	CHART	CT_AbsSizeAnchor	element	from	CT_Marker				y	y	y	.	.
-cdr:CT_AbsSizeAnchor/ext	CHART	CT_AbsSizeAnchor	element	ext	CT_PositiveSize2D				y	y	y	.	.
+cdr:CT_AbsSizeAnchor/ext	CHART	CT_AbsSizeAnchor	element	ext	CT_PositiveSize2D				.	.	.	.	.
 cdr:CT_AbsSizeAnchor/EG_ObjectChoices	CHART	CT_AbsSizeAnchor	group	EG_ObjectChoices	EG_ObjectChoices				y	y	y	.	.
 cdr:EG_Anchor	CHART		type	EG_Anchor					.	y	y	.	.
 cdr:EG_Anchor/relSizeAnchor	CHART	EG_Anchor	element	relSizeAnchor	CT_RelSizeAnchor	choice			.	y	y	.	.
@@ -7796,8 +7796,8 @@ x:drawing/2014/chartex:CT_FeatureExtension/@drop	CHARTEX	CT_FeatureExtension	att
 x:drawing/2014/chartex:CT_Extension	CHARTEX		type	CT_Extension					.	y	.	.	.
 x:drawing/2014/chartex:CT_Extension/xsd:any	CHARTEX	CT_Extension	any	xsd:any				lax	.	y	.	.	.
 x:drawing/2014/chartex:CT_Extension/@uri	CHARTEX	CT_Extension	attribute	@uri	token	optional			y	y	y	.	.
-x:drawing/2014/chartex:CT_ExtensionList	CHARTEX		type	CT_ExtensionList					y	y	y	.	.
-x:drawing/2014/chartex:CT_ExtensionList/ext	CHARTEX	CT_ExtensionList	element	ext	CT_Extension	0..unbounded			y	y	y	.	.
+x:drawing/2014/chartex:CT_ExtensionList	CHARTEX		type	CT_ExtensionList					.	.	.	.	.
+x:drawing/2014/chartex:CT_ExtensionList/ext	CHARTEX	CT_ExtensionList	element	ext	CT_Extension	0..unbounded			.	.	.	.	.
 x:drawing/2014/chartex:ST_DoubleOrAutomatic	CHARTEX		simple	ST_DoubleOrAutomatic				base=string union=double	.	.	.	.	.
 x:drawing/2014/chartex:ST_DoubleOrAutomatic/=auto	CHARTEX	ST_DoubleOrAutomatic	value	=auto					.	.	.	.	.
 x:drawing/2014/chartex:CT_NumberFormat	CHARTEX		type	CT_NumberFormat					y	y	y	.	.
