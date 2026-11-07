@@ -15,6 +15,7 @@ casual-slide-import = { path = "../crates/casual-slide-import" }
 casual-slide-model = { path = "../crates/casual-slide-model" }
 casual-slide-ooxml = { path = "../crates/casual-slide-ooxml" }
 casual-slide-package = { path = "../crates/casual-slide-package" }
+casual-slide-style = { path = "../crates/casual-slide-style" }
 libfuzzer-sys = "0.4"
 
 [workspace]
@@ -57,6 +58,13 @@ bench = false
 [[bin]]
 name = "properties_presentation"
 path = "fuzz_targets/properties_presentation.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "slide_parts"
+path = "fuzz_targets/slide_parts.rs"
 test = false
 doc = false
 bench = false

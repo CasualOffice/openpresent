@@ -103,6 +103,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "casual-slide-style"
+version = "0.0.0"
+dependencies = [
+ "casual-slide-import",
+ "casual-slide-model",
+ "casual-slide-ooxml",
+]
+
+[[package]]
 name = "casual-slide-text"
 version = "0.0.0"
 dependencies = [

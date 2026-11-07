@@ -10,6 +10,7 @@ members = [
     "crates/casual-slide-import",
     "crates/casual-slide-export",
     "crates/casual-slide-geometry",
+    "crates/casual-slide-style",
 ]
 
 [workspace.package]

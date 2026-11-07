@@ -19,6 +19,8 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
  model, text, package, geometry: no internal dependencies
 ```
 
+`-style` exists from Tier 1D and depends on `-model` alone; its tests read fixtures through `-import` and `-ooxml` as dev-dependencies only, which the DAG allows because nothing ships them. `-layout` is its first product consumer (Phase 2).
+
 `server/*` depends on `crates/*`; nothing in `crates/` depends on a server. CI does not check this yet (`CI-01`).
 
 ## Crates
