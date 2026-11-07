@@ -76,6 +76,7 @@ MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 CRATES = {"I": "casual-slide-import", "E": "casual-slide-export", "M": "casual-slide-model"}
 RESOLVER_CRATE = "casual-slide-ooxml"
+GENERATED_SOURCES = ("schema_names.rs",)
 TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE")}
 LEAF_KINDS = ("element", "attribute", "root", "rootattr", "value")
 # Model fields too generic to say anything about which attribute they hold.
@@ -688,7 +689,8 @@ def scan_crates(crates_dir, schema):
     scans, files = {}, 0
     for column, name in CRATES.items():
         scan = Scan(schema.element_names)
-        paths = sorted((crates_dir / name / "src").rglob("*.rs"))
+        # A generated table of every name is not code that names one.
+        paths = sorted(p for p in (crates_dir / name / "src").rglob("*.rs") if p.name not in GENERATED_SOURCES)
         consts = find_consts(paths)
         for p in paths:
             scan.scan_file(p, str(p.relative_to(crates_dir)), consts)
