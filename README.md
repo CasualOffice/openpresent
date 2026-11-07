@@ -53,7 +53,8 @@ OpenPresent is designed around that problem:
 | Presentation part, view state, colour, themes | ✅ Tiers 1B and 1C closed |
 | Slides, masters, layouts, shape tree, inheritance | ✅ Tier 1D closed |
 | Fills, lines, effects, 3D, text | ✅ Tiers 1E and 1F closed |
-| Tables, pictures, media | 🟡 Built, tier open |
+| Tables | ✅ Tier 1G closed |
+| Pictures, media | 🟡 Built, tier open |
 | Animations and transitions | 🟡 Built, tier open |
 | Charts, SmartArt, equations, ink | 🟡 Built, tier open; limits not yet mutation-tested |
 | OLE, VML, 3D models: kept with their fallback | 🟡 Built, tier open |
@@ -61,7 +62,7 @@ OpenPresent is designed around that problem:
 | Rendering to PNG and PDF | ⬜ Phase 2 |
 | Editor, slide show, co-editing, desktop app | ⬜ Phases 3 to 10 |
 
-**Phase 1 tiers 1A, 1B, 1C, 1D, 1E and 1F are closed** (2026-11-08). Of 8,739 checklist rows, 7,843 are marked `y` or `r` in model, import and export; 469 more are `n/a` in a column that does not apply to them; the 427 others each carry a named reason in `docs/spec/open-rows.tsv` or are accounted for by their members, and `tools/spec-audit` checks every one. What each tier still lacks is in the [tracker](docs/14-EXECUTION-TRACKER.md) under "Tier gates".
+**Phase 1 tiers 1A, 1B, 1C, 1D, 1E, 1F and 1G are closed** (2026-11-08). Of 8,739 checklist rows, 7,843 are marked `y` or `r` in model, import and export; 469 more are `n/a` in a column that does not apply to them; the 427 others each carry a named reason in `docs/spec/open-rows.tsv` or are accounted for by their members, and `tools/spec-audit` checks every one. What each tier still lacks is in the [tracker](docs/14-EXECUTION-TRACKER.md) under "Tier gates".
 
 The full plan, with how each phase opens and closes, is the [roadmap](docs/06-ROADMAP-AND-DELIVERY.md).
 Every task is in the [execution tracker](docs/14-EXECUTION-TRACKER.md). 66 real PowerPoint-written decks open and save with every XML part byte-identical. PowerPoint itself has not yet checked our output; until then, nothing here claims to match it.
