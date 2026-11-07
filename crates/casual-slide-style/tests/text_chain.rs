@@ -88,6 +88,7 @@ fn part_holding(kind: SlideKind, part: u32, shape: ShapeNode) -> SlidePart {
         name: None,
         background: None,
         shape_tree: Some(root),
+        controls: Vec::new(),
     });
     p
 }

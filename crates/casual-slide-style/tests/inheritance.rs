@@ -89,6 +89,7 @@ fn part_with(
         name: None,
         background: None,
         shape_tree: Some(root),
+        controls: Vec::new(),
     });
     p
 }
