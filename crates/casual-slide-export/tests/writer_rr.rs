@@ -1893,7 +1893,13 @@ fn every_fixture_saves_its_good_deck_and_refuses_its_seed() {
             case.id,
             case.rule,
             case.base,
-            good_path.strip_prefix(&dir).unwrap().display(),
+            // The manifest is the same on every OS.
+            good_path
+                .strip_prefix(&dir)
+                .unwrap()
+                .display()
+                .to_string()
+                .replace('\\', "/"),
             seeded_note
         )
         .unwrap();
@@ -1902,7 +1908,11 @@ fn every_fixture_saves_its_good_deck_and_refuses_its_seed() {
     if write {
         std::fs::write(&manifest_path, &manifest).unwrap();
     } else {
-        assert_eq!(std::fs::read_to_string(&manifest_path).unwrap(), manifest);
+        // A Windows checkout may hold it with CRLF.
+        let held = std::fs::read_to_string(&manifest_path)
+            .unwrap()
+            .replace("\r\n", "\n");
+        assert_eq!(held, manifest);
     }
 }
 
