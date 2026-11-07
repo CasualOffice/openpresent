@@ -471,7 +471,7 @@ def property_fixtures():
     }
     for name, parts in limits.items():
         yield f"hostile/import-limit-{name}.bin", zipped(full_deck(**parts)), "open"
-    # Over the bound on findings: distinct unknown elements, a report that must not grow without end.
+    # Unknown elements in numbers, which must not become a report of that size: made-up names are one finding (SEC-018).
     flood = "".join(f"<z{i}/>" for i in range(10_100))
     yield "hostile/import-findings-flood.bin", zipped(full_deck(pres_doc(f"<p:extLst/>{flood}"))), "open"
     # Values that must be reported and left out, never coerced and never a panic.

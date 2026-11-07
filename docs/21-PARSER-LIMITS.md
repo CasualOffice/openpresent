@@ -94,7 +94,7 @@ deck does not import.
 | `max_variant_items` | `1_000_000` | Vector and array items across a part; a `vt:vector/@size` is never believed | CS-IMP-0001 | Tested; `import-limit-variant-items` |
 | `max_variant_depth` | `16` | Nesting of `vt:variant` and `vt:vector` | CS-IMP-0001 | Tested; `import-limit-variant-depth` |
 | `max_value_bytes` | `16 << 20` | Bytes in one attribute or text value | CS-IMP-0002 | Tested; `import-limit-value-bytes` |
-| `max_findings` | `10_000` | Distinct findings kept; one more says the list was cut | none: report capped | Tested; `import-findings-flood` |
+| `max_findings` | `10_000` | Distinct findings kept; one more says the list was cut | none: report capped | Tested with a tightened bound on `import-bad-values`. Made-up names are one finding since `SEC-018`, so `import-findings-flood` no longer nears it |
 
 Colour and theme import is the exception: it never refuses a part. What it cannot believe
 is left absent, reported, and kept as bytes.

@@ -639,9 +639,10 @@ fn unknown_children_are_reported() {
         got.findings
             .items
             .iter()
-            .any(|f| { f.kind == FindingKind::Unmodelled && f.element == "a:surprise" })
+            .any(|f| { f.kind == FindingKind::Unmodelled && f.element == "(unknown)" })
     );
-    assert!(got.findings.items.iter().any(|f| f.element == "u:other"));
+    assert!(!format!("{:?}", got.findings).contains("surprise"));
+    assert!(!format!("{:?}", got.findings).contains("other"));
 }
 
 #[test]

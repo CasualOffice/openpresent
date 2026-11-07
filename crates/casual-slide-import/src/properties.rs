@@ -19,6 +19,8 @@ use casual_slide_model::properties::{
 };
 use casual_slide_ooxml::{ElementId, OoxmlError, XmlTree};
 
+use crate::schema_names::NAMES;
+
 /// Namespace names. Transitional first, then Strict, where they differ.
 pub mod ns {
     /// `p:`
@@ -254,6 +256,29 @@ impl ImportFindingKind {
     }
 }
 
+/// What a report says for a name the schemas do not have.
+pub const UNKNOWN_NAME: &str = "(unknown)";
+
+/// A name as a report may repeat it. A part chooses its element, attribute and prefix
+/// names, so any of them can hold text, and an unknown name is an unknown name: the
+/// schemas' own, with a prefix from the conventional few, is all that is repeated
+/// (`SEC-018`). What the name says is in the part, which keeps it.
+pub(crate) fn reportable_name(name: &str) -> &str {
+    const PREFIXES: [&str; 12] = [
+        "a", "c", "cp", "dc", "dcterms", "dgm", "mc", "p", "pic", "r", "vt", "xsi",
+    ];
+    let (prefix, local) = match name.split_once(':') {
+        Some((prefix, local)) => (Some(prefix), local),
+        None => (None, name),
+    };
+    let known = prefix.is_none_or(|p| PREFIXES.contains(&p)) && NAMES.binary_search(&local).is_ok();
+    if known || name.is_empty() {
+        name
+    } else {
+        UNKNOWN_NAME
+    }
+}
+
 /// One entry in the import report. Structure only: never a value from the document.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ImportFinding {
@@ -261,9 +286,10 @@ pub struct ImportFinding {
     pub kind: ImportFindingKind,
     /// The part.
     pub part: String,
-    /// The element's local name, cut to 64 bytes.
+    /// The element's local name if the schemas have it, else [`UNKNOWN_NAME`].
     pub element: String,
-    /// The attribute, as written, cut to 64 bytes, if one is concerned.
+    /// The attribute, as written, if one is concerned and the schemas have it, else
+    /// [`UNKNOWN_NAME`].
     pub attribute: Option<String>,
 }
 
@@ -272,14 +298,6 @@ pub struct ImportFinding {
 pub struct Findings {
     items: BTreeSet<ImportFinding>,
     limit: usize,
-}
-
-fn clip(s: &str) -> String {
-    let mut end = s.len().min(64);
-    while !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    s[..end].to_owned()
 }
 
 impl Findings {
@@ -291,7 +309,8 @@ impl Findings {
         }
     }
 
-    /// Note something.
+    /// Note something. `element` and `attribute` may come from the file: see
+    /// [`reportable_name`].
     pub fn note(
         &mut self,
         kind: ImportFindingKind,
@@ -299,12 +318,25 @@ impl Findings {
         element: &str,
         attribute: Option<&str>,
     ) {
-        let finding = ImportFinding {
+        self.insert(ImportFinding {
             kind,
             part: part.to_owned(),
-            element: clip(element),
-            attribute: attribute.map(clip),
-        };
+            element: reportable_name(element).to_owned(),
+            attribute: attribute.map(|a| reportable_name(a).to_owned()),
+        });
+    }
+
+    /// Note something about a relationship role, by the name this crate gives it.
+    pub(crate) fn note_role(&mut self, kind: ImportFindingKind, part: &str, role: &str) {
+        self.insert(ImportFinding {
+            kind,
+            part: part.to_owned(),
+            element: role.to_owned(),
+            attribute: None,
+        });
+    }
+
+    fn insert(&mut self, finding: ImportFinding) {
         if self.items.len() < self.limit {
             self.items.insert(finding);
         } else if !self.items.contains(&finding) {

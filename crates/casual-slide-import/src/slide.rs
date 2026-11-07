@@ -574,11 +574,11 @@ impl Indexer<'_> {
             .filter(|r| rel_suffix(r) == Some(kind));
         let rel = found.next()?;
         if found.next().is_some() {
-            findings.note(K::DuplicateRelationship, source, kind, None);
+            findings.note_role(K::DuplicateRelationship, source, kind);
         }
         let target = self.target(source, rel);
         if target.is_none() {
-            findings.note(K::UnusableRelationship, source, kind, None);
+            findings.note_role(K::UnusableRelationship, source, kind);
         }
         Some(target)
     }
@@ -594,7 +594,7 @@ impl Indexer<'_> {
     ) -> Result<Option<u32>, SlideError> {
         let declared = self.package.content_types().resolve(part);
         if declared != Some(kind.content_type()) {
-            findings.note(K::WrongRelationship, source, kind.rel_type(), None);
+            findings.note_role(K::WrongRelationship, source, kind.rel_type());
             return Ok(None);
         }
         if let Some(&ordinal) = self.by_name.get(part) {
@@ -603,7 +603,7 @@ impl Indexer<'_> {
                 .entry(ordinal)
                 .is_some_and(|e| e.kind == kind);
             if !same {
-                findings.note(K::WrongRelationship, source, kind.rel_type(), None);
+                findings.note_role(K::WrongRelationship, source, kind.rel_type());
                 return Ok(None);
             }
             return Ok(Some(ordinal));
@@ -695,7 +695,7 @@ pub fn index_deck(
         let rel = by_id(id).filter(|r| rel_suffix(r) == Some(kind.rel_type()));
         let target = rel.and_then(|r| ix.target(&main, r));
         if target.is_none() {
-            findings.note(K::UnresolvedReference, &main, kind.rel_type(), None);
+            findings.note_role(K::UnresolvedReference, &main, kind.rel_type());
         }
         target
     };
@@ -725,7 +725,7 @@ pub fn index_deck(
                 Some(layout) => {
                     ix.add(SlideKind::Layout, &layout, &part, findings)?;
                 }
-                None => findings.note(K::UnusableRelationship, &part, "slideLayout", None),
+                None => findings.note_role(K::UnusableRelationship, &part, "slideLayout"),
             }
         }
     }
@@ -753,7 +753,7 @@ pub fn index_deck(
         let layout = match ix.add_related(&part, SlideKind::Layout, findings)? {
             Some(layout) => layout,
             None => {
-                findings.note(K::UnresolvedReference, &part, "slideLayout", None);
+                findings.note_role(K::UnresolvedReference, &part, "slideLayout");
                 None
             }
         };
@@ -785,7 +785,7 @@ pub fn index_deck(
         let master = match ix.add_related(&part, SlideKind::Master, findings)? {
             Some(master) => master,
             None => {
-                findings.note(K::UnresolvedReference, &part, "slideMaster", None);
+                findings.note_role(K::UnresolvedReference, &part, "slideMaster");
                 None
             }
         };

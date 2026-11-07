@@ -92,8 +92,23 @@ fn a_limit_tightened_by_the_host_applies() {
 
 #[test]
 fn the_report_is_bounded() {
+    // Ten thousand made-up names are one finding: no name of theirs reaches the report.
     let d = import("hostile/import-findings-flood.bin").unwrap();
-    assert!(d.findings.len() <= ImportLimits::default().max_findings + 1);
+    let flooded = d
+        .findings
+        .iter()
+        .filter(|f| f.kind == K::RetainedElement && f.element == "(unknown)")
+        .count();
+    assert_eq!(flooded, 1, "{:?}", d.findings);
+    assert!(d.findings.len() < 20, "{}", d.findings.len());
+
+    // Distinct findings past the bound: the list stops, and says so.
+    let limits = ImportLimits {
+        max_findings: 5,
+        ..ImportLimits::default()
+    };
+    let d = import_deck(&mut open("hostile/import-bad-values.bin"), &limits).unwrap();
+    assert!(d.findings.len() <= limits.max_findings + 1);
     assert!(d.findings.iter().any(|f| f.kind == K::FindingsTruncated));
 }
 
@@ -234,7 +249,7 @@ fn bad_values_in_properties_and_view_state_are_left_out_and_reported() {
     assert!(d.findings.has(K::MalformedValue, "date"));
     assert!(d.findings.has(K::MalformedValue, "blob"));
     assert!(d.findings.has(K::MalformedValue, "array"));
-    assert!(d.findings.has(K::RetainedElement, "wat"));
+    assert!(d.findings.has(K::RetainedElement, "(unknown)"), "`wat`");
 }
 
 /// A finding is structure. No value from the document is in the report.

@@ -582,7 +582,7 @@ fn bad_values_are_reported_and_left_out_never_coerced() {
         (K::MissingRequired, "stCxn", Some("idx")),
         (K::MissingRequired, "graphicData", Some("uri")),
         (K::MissingRequired, "contentPart", Some("r:id")),
-        (K::RetainedElement, "unknownNode", None),
+        (K::RetainedElement, "(unknown)", None),
     ] {
         let found = s
             .findings

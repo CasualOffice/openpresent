@@ -11,6 +11,8 @@ use casual_slide_model::color::{
 };
 use casual_slide_ooxml::{ElementId, XmlTree};
 
+use crate::properties::reportable_name;
+
 /// DrawingML, Transitional.
 pub const DML_TRANSITIONAL: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
 /// DrawingML, Strict.
@@ -69,8 +71,8 @@ impl FindingKind {
 pub struct Finding {
     /// What.
     pub kind: FindingKind,
-    /// The element's qualified name, truncated. Schema names only by intent, but
-    /// a hostile part chooses this, so it is bounded.
+    /// The element's qualified name if the schemas have it, else
+    /// [`UNKNOWN_NAME`](crate::properties::UNKNOWN_NAME). A hostile part chooses it.
     pub element: String,
     /// The attribute or child concerned, if any; from the schema, not the file.
     pub detail: &'static str,
@@ -94,7 +96,7 @@ impl Findings {
     pub fn push(&mut self, kind: FindingKind, tree: &XmlTree, at: ElementId, detail: &'static str) {
         self.total = self.total.saturating_add(1);
         if self.items.len() < MAX_FINDINGS {
-            let element = tree.qualified_name(at).chars().take(64).collect();
+            let element = reportable_name(tree.qualified_name(at)).to_owned();
             self.items.push(Finding {
                 kind,
                 element,

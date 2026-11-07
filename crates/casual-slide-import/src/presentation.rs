@@ -1045,10 +1045,10 @@ pub fn locate_part(
     };
     let name = rel_types[0].rsplit('/').next().unwrap_or_default();
     if found.next().is_some() {
-        findings.note(ImportFindingKind::DuplicateRelationship, source, name, None);
+        findings.note_role(ImportFindingKind::DuplicateRelationship, source, name);
     }
     let unusable = |findings: &mut Findings| {
-        findings.note(ImportFindingKind::UnusableRelationship, source, name, None);
+        findings.note_role(ImportFindingKind::UnusableRelationship, source, name);
         PartLocation::Unusable
     };
     if rel.mode != TargetMode::Internal {
