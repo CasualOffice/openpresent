@@ -42,6 +42,8 @@ The ribbon reads effective values through the same resolver, so "what the ribbon
 font is" and "what is drawn" cannot differ. Results are cached per object and invalidated
 by the op's changed-object set: a master edit invalidates its layouts and slides.
 
+**Theme objects that hold little.** `EffectReference` is `a:effect` in an effect list: `@ref` as a token as written, and nothing resolved. `ThemeManager` is the root of a `themeManager` part, which holds nothing, so it is a unit struct: what an import of that part finds beyond the empty root is reported. `ThemeOverride` is a `themeOverride` part's colour, font and format schemes, each absent if the file left it out.
+
 ## Identity
 
 Each object has a stable internal `ObjectId`, independent of the file's `spid`, which is
@@ -78,7 +80,7 @@ too. Ids are what ops and the wire carry.
 
 Every patched part is read back before saving.
 
-**Resolution** (`casual-slide-style`). The crate gives effective values with the level each came from: placeholder match, transform, colour map, background, header and footer flags, which master and layout shapes are drawn, the hidden flag, and which master text style applies. The rules and their evidence are in the crate's documentation. The slide-to-layout match by `idx` and the notes match by `type` are documented in `MS-OI29500` 2.1.1127. The layout-to-master match by type, then by class, is Inferred.
+**Resolution** (`casual-slide-style`). The crate gives effective values with the level each came from: placeholder match, transform, colour map, background, header and footer flags, which master and layout shapes are drawn, the hidden flag, and which master text style applies. The rules and their evidence are in the crate's documentation. The slide-to-layout match by `idx` and the notes match by `type` are documented in `MS-OI29500`, Part 1 Section 19.3.1.36. The layout-to-master match by type, then by class, is Inferred.
 
 ## Tier 1E: geometry, fills, lines, effects and 3D as built
 

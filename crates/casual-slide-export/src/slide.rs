@@ -209,6 +209,8 @@ impl Patch<'_, '_> {
         })
     }
 
+    // spec-audit: owner=sld,sldLayout,sldMaster,notes,notesMaster,handoutMaster
+
     fn part(&mut self, root: &Elem, before: &SlidePart, after: &SlidePart) -> Result<()> {
         if before.kind != after.kind || before.id != after.id {
             return Err(self.unsupported("a part's kind or identity"));
@@ -334,6 +336,8 @@ impl Patch<'_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=clrMapOvr
+
     fn color_map_override(
         &mut self,
         root: &Elem,
@@ -357,6 +361,8 @@ impl Patch<'_, '_> {
         self.w.changes += usize::from(changed);
         Ok(())
     }
+
+    // spec-audit: owner=sp,cxnSp,pic,graphicFrame,grpSp,contentPart
 
     fn node(&mut self, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
         if b == a {
@@ -406,6 +412,8 @@ impl Patch<'_, '_> {
         }
         Ok(())
     }
+
+    // spec-audit: owner=sp,cxnSp,pic,graphicFrame,grpSp,contentPart
 
     fn own(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
         if b.graphic_uri != a.graphic_uri {
@@ -487,6 +495,8 @@ impl Patch<'_, '_> {
         }
         Ok(())
     }
+
+    // spec-audit: owner=nvSpPr,nvCxnSpPr,nvPicPr,nvGraphicFramePr,nvGrpSpPr
 
     fn non_visual(&mut self, container: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
         if b.non_visual != a.non_visual {
@@ -578,6 +588,7 @@ impl Patch<'_, '_> {
         )?;
         Ok(())
     }
+    // spec-audit: owner=cNvPr
 
     fn drawing(&mut self, el: &Elem, b: &NonVisualDrawing, a: &NonVisualDrawing) -> Result<()> {
         if a.spid.is_none() || a.name.is_none() {
@@ -609,6 +620,8 @@ impl Patch<'_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=nvPr
+
     fn app(&mut self, el: &Elem, b: &AppNonVisual, a: &AppNonVisual) -> Result<()> {
         crate::media::patch_app_media(&mut self.w, el, b, a)?;
         self.w
@@ -629,6 +642,8 @@ impl Patch<'_, '_> {
         }
         Ok(())
     }
+
+    // spec-audit: owner=spPr,grpSpPr,graphicFrame
 
     fn transform(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
         if a.kind == NodeKind::GraphicFrame {
@@ -679,6 +694,7 @@ impl Patch<'_, '_> {
 }
 
 /// `a:CT_Connection`, a connector's end.
+// spec-audit: owner=stCxn,endCxn
 // spec-audit: owner=stCxn,endCxn
 fn patch_connection(
     w: &mut Writer<'_>,
@@ -732,6 +748,7 @@ pub(crate) fn sync_ordered<T: PartialEq>(
     patch(w, &el, before, wanted)
 }
 
+// spec-audit: owner=hf
 fn patch_header_footer(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -764,6 +781,7 @@ fn patch_header_footer(
     )
 }
 
+// spec-audit: owner=txStyles
 fn patch_text_styles(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -828,6 +846,7 @@ fn pic_locks(
     )
 }
 
+// spec-audit: owner=spLocks,grpSpLocks,cxnSpLocks,picLocks,graphicFrameLocks
 fn patch_locks(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -852,6 +871,7 @@ fn patch_locks(
     Ok(())
 }
 
+// spec-audit: owner=hlinkClick,hlinkHover
 pub(crate) fn patch_hyperlink(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -902,6 +922,7 @@ pub(crate) fn patch_hyperlink(
     Ok(())
 }
 
+// spec-audit: owner=ph
 fn patch_placeholder(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -925,6 +946,7 @@ fn patch_placeholder(
     )
 }
 
+// spec-audit: owner=off,chOff
 fn patch_point(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -935,6 +957,7 @@ fn patch_point(
     w.attr(el, "y", b.map(|b| &b.y), Some(&a.y))
 }
 
+// spec-audit: owner=ext,chExt
 fn patch_size(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -964,6 +987,7 @@ fn patch_size(
     w.attr(el, "cy", b.map(|b| &b.cy), Some(&a.cy))
 }
 
+// spec-audit: owner=xfrm
 fn patch_transform(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1066,6 +1090,7 @@ fn check_unique_ids(part: &SlidePart, before: &SlidePart, name: &str) -> Result<
 /// Patch one slide-like part's tree to say `after`. Returns the nodes changed;
 /// with 0, the tree is as it was. What was asked is read back before returning.
 #[allow(clippy::too_many_arguments)]
+// spec-audit: owner=sld,sldLayout,sldMaster,notes,notesMaster,handoutMaster
 pub fn patch_slide_part(
     tree: &mut XmlTree,
     part: &str,

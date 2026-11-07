@@ -261,6 +261,8 @@ def fixtures():
     yield from media_fixtures()
     from generate_shapes import fixtures as shape_fixtures  # imports this module, so not at the top
     yield from shape_fixtures()
+    from generate_close import fixtures as close_fixtures  # as above
+    yield from close_fixtures()
 
 
 def main_part(xml):

@@ -286,6 +286,7 @@ pub struct SlideId {
     /// `@id`.
     pub id: u32,
     /// `@r:id`.
+    // spec-audit: r:@id
     pub rel_id: String,
 }
 
@@ -354,6 +355,8 @@ pub struct CustomShow {
     /// `@id`.
     pub id: u32,
     /// `sldLst/sld/@r:id`, in show order.
+    // spec-audit: p:CT_SlideRelationshipList/sld
+    // spec-audit: p:CT_SlideRelationshipListEntry/@r:id
     pub slides: Vec<String>,
 }
 
@@ -456,12 +459,18 @@ pub struct Presentation {
     /// `@conformance`.
     pub conformance: Option<ConformanceClass>,
     /// `sldMasterIdLst`.
+    // spec-audit: p:CT_SlideMasterIdList/sldMasterId
     pub slide_masters: Option<Vec<SlideMasterId>>,
     /// `notesMasterIdLst/notesMasterId/@r:id`.
+    // spec-audit: p:CT_NotesMasterIdList/notesMasterId
+    // spec-audit: p:CT_NotesMasterIdListEntry/@r:id
     pub notes_masters: Option<Vec<String>>,
     /// `handoutMasterIdLst/handoutMasterId/@r:id`.
+    // spec-audit: p:CT_HandoutMasterIdList/handoutMasterId
+    // spec-audit: p:CT_HandoutMasterIdListEntry/@r:id
     pub handout_masters: Option<Vec<String>>,
     /// `sldIdLst`.
+    // spec-audit: p:CT_SlideIdList/sldId
     pub slides: Option<Vec<SlideId>>,
     /// `sldSz`.
     pub slide_size: Option<SlideSize>,
@@ -470,8 +479,10 @@ pub struct Presentation {
     /// `smartTags/@r:id`.
     pub smart_tags: Option<String>,
     /// `embeddedFontLst`.
+    // spec-audit: p:CT_EmbeddedFontList/embeddedFont
     pub embedded_fonts: Option<Vec<EmbeddedFont>>,
     /// `custShowLst`.
+    // spec-audit: p:CT_CustomShowList/custShow
     pub custom_shows: Option<Vec<CustomShow>>,
     /// `photoAlbum`.
     pub photo_album: Option<PhotoAlbum>,
@@ -688,6 +699,7 @@ pub struct CommonSlideViewProperties {
     /// `cViewPr`.
     pub common: Option<CommonViewProperties>,
     /// `guideLst`.
+    // spec-audit: p:CT_GuideList/guide
     pub guides: Option<Vec<Guide>>,
 }
 
@@ -706,6 +718,7 @@ pub struct OutlineViewProperties {
     /// `cViewPr`.
     pub common: Option<CommonViewProperties>,
     /// `sldLst`.
+    // spec-audit: p:CT_OutlineViewSlideList/sld
     pub slides: Option<Vec<OutlineSlide>>,
 }
 

@@ -761,6 +761,15 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// [`Self::finish`] for an element the schema gives no children: any it has are reported too.
+    pub fn finish_leaf(&mut self, el: &Elem) -> Result<(), ImportError> {
+        self.finish(el);
+        for child in self.children(el)? {
+            self.retained(&child);
+        }
+        Ok(())
+    }
+
     /// Report an element nothing here models.
     pub fn retained(&mut self, el: &Elem) {
         self.note(ImportFindingKind::RetainedElement, el, None);
@@ -818,6 +827,7 @@ fn first_time(
 }
 
 /// Read `coreProperties`.
+// spec-audit: owner=coreProperties
 pub fn import_core_properties(
     tree: &XmlTree,
     part: &str,
@@ -921,6 +931,7 @@ fn read_keywords(r: &mut Reader<'_>, el: &mut Elem) -> Result<Option<Keywords>, 
 }
 
 /// Read extended `Properties`.
+// spec-audit: owner=Properties
 pub fn import_app_properties(
     tree: &XmlTree,
     part: &str,
@@ -992,30 +1003,42 @@ pub fn import_app_properties(
     Ok(app)
 }
 
+// spec-audit: owner=DigSig
 fn read_dig_sig(r: &mut Reader<'_>, el: &Elem) -> Result<Option<String>, ImportError> {
+    let mut found = None;
     for child in r.children(el)? {
-        if child.is(ns::VT, "blob") {
-            return match read_variant(r, &child, 0)? {
-                Some(Variant::Blob(data)) => Ok(Some(data)),
-                _ => Ok(None),
-            };
+        if found.is_none() && child.is(ns::VT, "blob") {
+            found = Some(match read_variant(r, &child, 0)? {
+                Some(Variant::Blob(data)) => Some(data),
+                _ => None,
+            });
+        } else {
+            r.retained(&child);
         }
     }
-    r.note(ImportFindingKind::MissingRequired, el, None);
-    Ok(None)
+    if found.is_none() {
+        r.note(ImportFindingKind::MissingRequired, el, None);
+    }
+    Ok(found.flatten())
 }
 
+// spec-audit: owner=HeadingPairs,TitlesOfParts,HLinks
 fn read_vector_holder(r: &mut Reader<'_>, el: &Elem) -> Result<Option<VtVector>, ImportError> {
+    let mut found = None;
     for child in r.children(el)? {
-        if child.is(ns::VT, "vector") {
-            return match read_variant(r, &child, 0)? {
-                Some(Variant::Vector(v)) => Ok(Some(v)),
-                _ => Ok(None),
-            };
+        if found.is_none() && child.is(ns::VT, "vector") {
+            found = Some(match read_variant(r, &child, 0)? {
+                Some(Variant::Vector(v)) => Some(v),
+                _ => None,
+            });
+        } else {
+            r.retained(&child);
         }
     }
-    r.note(ImportFindingKind::MissingRequired, el, None);
-    Ok(None)
+    if found.is_none() {
+        r.note(ImportFindingKind::MissingRequired, el, None);
+    }
+    Ok(found.flatten())
 }
 
 fn is_base64(s: &str) -> bool {
@@ -1084,6 +1107,42 @@ pub fn variant_text_is_valid(v: &Variant) -> bool {
 
 /// One `vt:` value. A value that cannot be used is reported and is `None`, and a
 /// vector or array holding one is `None` whole, as half of one would misstate it.
+// spec-audit: owner=variant,vector,array,property
+// The elements of the `vt:` namespace, read in the match below.
+// spec-audit: vt:<variant>
+// spec-audit: vt:<vector>
+// spec-audit: vt:<array>
+// spec-audit: vt:<blob>
+// spec-audit: vt:<oblob>
+// spec-audit: vt:<empty>
+// spec-audit: vt:<null>
+// spec-audit: vt:<i1>
+// spec-audit: vt:<i2>
+// spec-audit: vt:<i4>
+// spec-audit: vt:<i8>
+// spec-audit: vt:<int>
+// spec-audit: vt:<ui1>
+// spec-audit: vt:<ui2>
+// spec-audit: vt:<ui4>
+// spec-audit: vt:<ui8>
+// spec-audit: vt:<uint>
+// spec-audit: vt:<r4>
+// spec-audit: vt:<r8>
+// spec-audit: vt:<decimal>
+// spec-audit: vt:<lpstr>
+// spec-audit: vt:<lpwstr>
+// spec-audit: vt:<bstr>
+// spec-audit: vt:<date>
+// spec-audit: vt:<filetime>
+// spec-audit: vt:<bool>
+// spec-audit: vt:<cy>
+// spec-audit: vt:<error>
+// spec-audit: vt:<stream>
+// spec-audit: vt:<ostream>
+// spec-audit: vt:<storage>
+// spec-audit: vt:<ostorage>
+// spec-audit: vt:<vstream>
+// spec-audit: vt:<clsid>
 pub fn read_variant(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -1115,8 +1174,14 @@ pub fn read_variant(
         }
         "vector" => read_vector(r, &mut el, depth)?,
         "array" => read_array(r, &mut el, depth)?,
-        "empty" => Some(Variant::Empty),
-        "null" => Some(Variant::Null),
+        "empty" => {
+            r.finish_leaf(&el)?;
+            Some(Variant::Empty)
+        }
+        "null" => {
+            r.finish_leaf(&el)?;
+            Some(Variant::Null)
+        }
         "i1" => typed!(I1, i8),
         "i2" => typed!(I2, i16),
         "i4" => typed!(I4, i32),
@@ -1180,6 +1245,7 @@ fn read_items(
     Ok(whole.then_some(items))
 }
 
+// spec-audit: owner=vector
 fn read_vector(
     r: &mut Reader<'_>,
     el: &mut Elem,
@@ -1200,6 +1266,7 @@ fn read_vector(
     })
 }
 
+// spec-audit: owner=array
 fn read_array(
     r: &mut Reader<'_>,
     el: &mut Elem,
@@ -1223,6 +1290,7 @@ fn read_array(
 }
 
 /// One `property` element, or `None` if it has no usable `fmtid` and `pid`.
+// spec-audit: owner=property
 pub fn read_custom_property(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -1268,6 +1336,7 @@ pub fn read_custom_property(
 }
 
 /// Read custom `Properties`.
+// spec-audit: owner=Properties
 pub fn import_custom_properties(
     tree: &XmlTree,
     part: &str,
