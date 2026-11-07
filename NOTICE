@@ -1,0 +1,156 @@
+OpenSlide (being renamed OpenPresent)
+Copyright 2026 the OpenSlide authors, CasualOffice
+
+Licensed under the Apache License, Version 2.0 (LICENSE). Parts of the code were
+copied from OpenCalc (https://github.com/CasualOffice/opencalc), also Apache-2.0 and
+under the same owner; each copied crate records the commit in its PROVENANCE.md.
+
+This repository also contains third-party material, listed below with its licence.
+Each item keeps its own licence; none of it is relicensed by the Apache License.
+This inventory is not legal advice, and a formal rights review of the schemas, the
+fonts and Microsoft's patent notice is outstanding (DEC-07 and LEG-01 in
+docs/14-EXECUTION-TRACKER.md). It blocks the first public release.
+
+===============================================================================
+1. Schemas and preset definitions from ECMA-376 (Ecma International)
+===============================================================================
+
+Files, unmodified, as downloaded 2026-11-07 (sources and archive SHA-256 in
+schemas/README.md):
+
+  schemas/ooxml/          ECMA-376 5th edition, Part 4 (2016), Transitional schemas
+  schemas/ooxml-strict/   ECMA-376 5th edition, Part 1 (2016), Strict schemas
+  schemas/geometry/       ECMA-376 5th edition, Part 1 (2016),
+                          presetShapeDefinitions.xml, presetTextWarpDefinitions.xml
+  schemas/opc/            ECMA-376 5th edition, Part 2 (2021), OPC schemas
+
+Generated from them, and therefore derived works under item (iv) below:
+crates/casual-slide-geometry (preset tables), docs/spec/checklist.tsv.
+
+The files themselves carry no notice. Ecma's default copyright notice, which applies
+to them and is retained here as its terms require, reads as follows (from
+https://ecma-international.org/policies/by-ipr/ecma-text-copyright-policy/,
+Version 3, approved December 2025, read 2026-11-07):
+
+  COPYRIGHT NOTICE
+
+  © Ecma International
+
+  By obtaining and/or copying this work, you (the licensee) agree that you have
+  read, understood, and will comply with the following terms and conditions.
+
+  This document may be copied, published and distributed to others, and certain
+  derivative works of it may be prepared, copied, published, and distributed, in
+  whole or in part, provided that the above copyright notice and this Copyright
+  License and Disclaimer are included on all such copies and derivative works. The
+  only derivative works that are permissible under this Copyright License and
+  Disclaimer are:
+
+  (i) works which incorporate all or portion of this document for the purpose of
+  providing commentary or explanation (such as an annotated version of the
+  document),
+
+  (ii) works which incorporate all or portion of this document for the purpose of
+  incorporating features that provide accessibility,
+
+  (iii) translations of this document into languages other than English and into
+  different formats and
+
+  (iv) works by making use of this specification in standard conformant products by
+  implementing (e.g. by copy and paste wholly or partly) the functionality therein.
+
+  However, the content of this document itself may not be modified in any way,
+  including by removing the copyright notice or references to Ecma International,
+  except as required to translate it into languages other than English or into a
+  different format.
+
+  The official version of an Ecma International document is the English language
+  version on the Ecma International website. In the event of discrepancies between
+  a translated version and the official version, the official version shall govern.
+
+  The limited permissions granted above are perpetual and will not be revoked by
+  Ecma International or its successors or assigns.
+
+  This document and the information contained herein is provided on an "AS IS"
+  basis and ECMA INTERNATIONAL DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION HEREIN
+  WILL NOT INFRINGE ANY OWNERSHIP RIGHTS OR ANY IMPLIED WARRANTIES OF
+  MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+The 2016 and 2021 editions were published under the notice in force at the time;
+Ecma states that the same principle applies to them. Known defects in these files
+are corrected in our generator, never in the files (GEO-01, GEO-02).
+
+===============================================================================
+2. Schemas from Microsoft Open Specifications
+===============================================================================
+
+  schemas/ms-extensions/  62 schemas from Appendix A of [MS-PPTX] and [MS-ODRAWXML],
+                          extracted from the documentation pages on 2026-11-07
+
+The Open Specifications notice on those pages permits distributing "with or without
+modification, any schemas" in an implementation. It also states that Microsoft has
+patents that might cover implementations, and points to its patent promises.
+That statement is the part of this inventory most in need of review (DEC-07).
+
+The XSD schemas in tools/f4/ (coreProperties.xsd, dublin-core/) are local stubs
+written for this project, not copies; see tools/f4/validate.py.
+
+===============================================================================
+3. Fonts
+===============================================================================
+
+Copied from OpenCalc at b23c67c (F-002). Fonts are embedded or served as asset
+bytes, unmodified except where stated, and never sold on their own.
+
+  crates/casual-slide-text/fonts/Roboto-*.ttf (4)
+      Roboto, Google. Apache-2.0 (see LICENSE).
+      https://github.com/googlefonts/roboto-2
+  crates/casual-slide-text/fonts/Caladea-*.ttf (4)
+      Caladea, Huerta Tipografia. Apache-2.0 (see LICENSE).
+      https://github.com/huertatipografica/Caladea
+  crates/casual-slide-text/fonts/Carlito-*.ttf (4)
+      Carlito, The Carlito Project Authors. SIL Open Font License 1.1, Reserved
+      Font Name "Carlito". Licence: crates/casual-slide-text/fonts/LICENSES/OFL-1.1-Carlito.txt
+      https://github.com/googlefonts/carlito, commit 3a810cab78ebd6e2e4eed42af9e8453c4f9b850a
+  crates/casual-slide-text/fonts/liberation/*.ttf (12)
+      Liberation Sans, Serif and Mono 2.1.5, Red Hat and Google. SIL Open Font
+      License 1.1, Reserved Font Names Liberation, Arimo, Tinos, Cousine.
+      Licence: crates/casual-slide-text/fonts/LICENSES/OFL-1.1-Liberation.txt
+      https://github.com/liberationfonts/liberation-fonts
+  webapp/fonts/cjk/ (1,602 WOFF2 slices, 12 variants)
+      Noto Sans CJK and Noto Serif CJK (JP, KR, SC, TC), Adobe and Google, as
+      published in google/fonts at commit 47d54ca1ebb14fd864695f1d39dc734f39017c33.
+      Instanced to static weights and cut into unicode-range slices by OpenCalc's
+      tools/fonts/build-cjk-slices.py (fontTools 4.60.2); source SHA-256 pins are in
+      webapp/fonts/cjk/manifest.json. SIL Open Font License 1.1.
+      Licences: webapp/fonts/cjk/OFL-Noto-Sans-CJK.txt, OFL-Noto-Serif-CJK.txt
+
+Subsetting and slicing are modifications under the OFL. They keep the original
+family names, which the OFL permits only where no Reserved Font Name applies;
+whether a sliced Noto face may keep its name is part of the DEC-07 review.
+
+===============================================================================
+4. Test fixtures written by other software
+===============================================================================
+
+  fixtures/generated/, fixtures/hostile/
+      Written by our own scripts (fixtures/tools/). No third-party content.
+  fixtures/producers/libreoffice-26.8-*.pptx
+      Our own content, saved by LibreOffice 26.8 (MPL-2.0 software; the output is
+      ours). No LibreOffice code is in this repository.
+  fixtures/real/
+      Real PowerPoint-written decks by third parties. Each file's URL, licence,
+      download date and SHA-256 are in fixtures/real/README.md, which is part of
+      this notice. Attribution required by any licence there is given there.
+  fuzz/seeds/
+      Copies of fixtures above.
+
+===============================================================================
+5. Rust dependencies
+===============================================================================
+
+Crates are fetched from crates.io under the licences allowed by deny.toml, which
+cargo-deny checks in CI. They are not vendored here, so they are not listed. A
+distributed binary must carry their notices; generating that list is part of
+LEG-01.

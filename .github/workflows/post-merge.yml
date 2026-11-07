@@ -1,0 +1,33 @@
+# The repository gates, on main, within a minute of a merge (GOV-01).
+#
+# Ported from OpenCalc's post-merge.yml at b23c67c, which exists because main went red
+# there with both parents green: two branches each added tracker rows, each passed, and
+# the merge kept both. Every gate runs on a commit somebody wrote; the merge commit is
+# written by GitHub, and nothing looked at it. ci.yml also runs on main, but behind the
+# full build; these gates need no build and answer in seconds.
+name: post-merge
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Every commit on main keeps its own run: each result is the record of whether main was
+# sound at that commit, and cancelling would discard it. The commit is in the group
+# name, so a queued run is not displaced by a newer one either.
+concurrency:
+  group: post-merge-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Every repository gate, against the tree that is now main
+        run: python3 tools/check-repo.py
+      - name: The gates' own seeded violations
+        run: python3 tools/check-gate-selftest.py
+      - run: python3 fixtures/tools/generate.py --check

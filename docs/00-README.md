@@ -33,3 +33,5 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [96-POWERPOINT-FIT-GAP](96-POWERPOINT-FIT-GAP.md) | Every PowerPoint feature (318) with a disposition, phase and reason | Live |
 | [36-EXPORT-AND-SAVE](36-EXPORT-AND-SAVE.md) | The writer: 118 invariants, each with a repair-risk fixture; save-as grid; fallback policy. Designed, not built | Draft for owner |
 | [64-SPK-01-TEXT-COST](64-SPK-01-TEXT-COST.md) | Measurements behind ADR-004 and ADR-005: bundle, layout, frame time, appearance | Measured |
+| [15-CI-AND-RELEASE-GATES](15-CI-AND-RELEASE-GATES.md) | Test levels, the CI job contract, repository gates, no-retry flake policy, gates per phase, tag-only releases with dry-run default | Live |
+| [21-PARSER-LIMITS](21-PARSER-LIMITS.md) | Every parser limit the code holds, its default, its code and whether a test proves it; checked against the code | Live |

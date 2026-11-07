@@ -25,13 +25,45 @@ jobs:
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
       - run: cargo check --target wasm32-unknown-unknown --workspace --locked
+      # Every repository gate (docs/15), then the gates' own seeded violations.
       - run: python3 tools/check-repo.py
+      - run: python3 tools/check-gate-selftest.py
       - run: python3 tools/spec-checklist/generate.py --check
       - run: python3 fixtures/tools/generate.py --check
       - run: python3 tools/spec-audit/count.py
       - run: python3 tools/spec-audit/audit.py --check
       - run: python3 tools/spec-audit/test_audit.py
       - run: python3 tools/fidelity/test_fidelity.py
+
+  # Conventional Commits over what this push or pull request adds (CLAUDE.md, Git).
+  commit-messages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - if: github.event_name == 'pull_request'
+        run: python3 tools/check-commits.py --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      # A new branch's `before` is all zeros; then only the pushed commit is checked.
+      - if: github.event_name == 'push'
+        run: |
+          before="${{ github.event.before }}"
+          if [ -z "${before//0/}" ]; then range="${{ github.sha }}~1..${{ github.sha }}"; else range="$before..${{ github.sha }}"; fi
+          python3 tools/check-commits.py --range "$range"
+
+  # F-006: Microsoft's Open XML SDK validator. Required on Linux, so a missing dotnet
+  # fails here instead of skipping; elsewhere the tool skips and says so.
+  ooxml-sdk:
+    runs-on: ubuntu-latest
+    env:
+      OOXML_SDK_REQUIRED: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - run: python3 tools/ooxml-sdk/validate.py --self-test
+      - run: python3 tools/ooxml-sdk/validate.py fixtures/generated fixtures/producers
 
   test:
     strategy:
@@ -62,6 +94,10 @@ jobs:
       - run: cargo install cargo-deny cargo-audit --locked
       - run: cargo deny check bans licenses sources
       - run: cargo audit --deny warnings
+      # fuzz/ is a separate workspace with its own lockfile, which the line above never
+      # reads. OpenCalc's DEP-15 found a vulnerable crate sitting there. From the root,
+      # so the same audit configuration applies.
+      - run: cargo audit --deny warnings --file fuzz/Cargo.lock
 
   fuzz-build:
     runs-on: ubuntu-latest

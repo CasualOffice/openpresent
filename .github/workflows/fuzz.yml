@@ -1,0 +1,57 @@
+# The scheduled fuzz campaign (GOV-01, F-005).
+#
+# fuzz-build in ci.yml proves the targets compile; the 46-second runs recorded in F-005
+# find what the seeds already know. This runs every target longer, weekly, against the
+# parsers that read untrusted decks. Bounded: an unbounded campaign in CI is a bill, not
+# a gate. Separate from ci.yml because a failure here can mean a new input was found,
+# not that the last change was wrong.
+#
+# Ported in shape from the fuzz-campaign job in OpenCalc's security.yml at b23c67c.
+name: fuzz
+
+on:
+  schedule:
+    # Mondays, early UTC, so a failure is seen on a working day.
+    - cron: "41 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz-campaign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install the nightly toolchain cargo-fuzz needs
+        run: |
+          rustup toolchain install nightly --profile minimal
+          cargo install cargo-fuzz --locked
+      # Every target the fuzz workspace defines, found rather than listed, so a new target
+      # is fuzzed from the week it lands. Seven minutes each.
+      - name: Fuzz every target
+        working-directory: fuzz
+        run: |
+          set -euo pipefail
+          targets="$(cargo +nightly fuzz list)"
+          test -n "$targets"
+          for target in $targets; do
+            echo "::group::$target"
+            mkdir -p "corpus/$target"
+            seeds=""
+            if [ -d seeds/presentation ]; then seeds="seeds/presentation"; fi
+            cargo +nightly fuzz run "$target" "corpus/$target" $seeds -- -max_total_time=420 -rss_limit_mb=4096
+            echo "::endgroup::"
+          done
+      # A crash is only useful if the input survives the runner.
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts/
+          retention-days: 30
