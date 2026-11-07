@@ -789,7 +789,17 @@ impl<'p> Draft<'p> {
     }
 
     /// Preflight, write, and check what was written. With nothing dirty, the input bytes.
-    pub fn emit(mut self) -> Result<WriterOutcome, WriterError> {
+    pub fn emit(self) -> Result<WriterOutcome, WriterError> {
+        self.emit_tampered(|_| {})
+    }
+
+    /// [`Draft::emit`], with the written bytes changed before they are checked. This is
+    /// the hook that proves the check after writing runs: nothing else can make a package
+    /// that passed preflight come out wrong. Anything meant for a user calls `emit`.
+    pub fn emit_tampered(
+        mut self,
+        tamper: impl FnOnce(&mut Vec<u8>),
+    ) -> Result<WriterOutcome, WriterError> {
         if !self.is_dirty()? {
             let bytes = self.package.save_unedited();
             let dispositions = self
@@ -844,6 +854,15 @@ impl<'p> Draft<'p> {
             .any(|f| f.kind == FindingKind::Signature);
         let new_slides = std::mem::take(&mut self.new_slides);
         let source = self.package.save_unedited();
+        // What only the ZIP can show arrived with the input, and goes in the report too.
+        report.extend(zipcheck::arrivals(&source).into_iter().map(|v| ReportEntry {
+            code: "CS-SAV-0021",
+            rule: v.rule,
+            part: v.part,
+            detail: v.detail,
+        }));
+        report.sort();
+        report.dedup();
 
         let mut edits = PartEdits::default();
         for name in &self.log.removed {
@@ -854,7 +873,8 @@ impl<'p> Draft<'p> {
         for (name, bytes) in &self.overlay {
             edits.replace(name.clone(), bytes.clone());
         }
-        let bytes = self.package.save_with(&edits)?;
+        let mut bytes = self.package.save_with(&edits)?;
+        tamper(&mut bytes);
         zipcheck::check_zip(&source, &bytes, &changed)?;
         // What was written must open, and say what was asked. The first reader of a new
         // file is this check, never the user.

@@ -379,11 +379,12 @@ fn cases() -> Vec<Case> {
     all.push(
         case("RR-PN-01", "INV-PN-01", THREE, vec![add_slide()])
             .seed("INV-PN-01", |d| {
-                d.set_part_bytes("ppt/custom/thing.", b"x".to_vec());
+                d.set_part_bytes("ppt/custom/a%2Fb.xml", VALID_XML.to_vec());
             })
             .seed("INV-PN-01", |d| {
-                d.set_part_bytes("ppt/custom/a%2Fb.xml", VALID_XML.to_vec());
-            }),
+                d.set_part_bytes("ppt/custom/thing.", b"x".to_vec());
+            })
+            .reported(),
     );
     all.push(
         case(
@@ -420,7 +421,8 @@ fn cases() -> Vec<Case> {
                 zip,
                 BTreeSet::new(),
             )
-        }),
+        })
+        .reported(),
     );
     all.push(
         case("RR-PN-04", "INV-PN-04", THREE, vec![add_slide()]).seed("INV-PN-04", |d| {
@@ -481,7 +483,8 @@ fn cases() -> Vec<Case> {
                 zip,
                 BTreeSet::new(),
             )
-        }),
+        })
+        .reported(),
     );
     all.push(
         case(
@@ -496,7 +499,8 @@ fn cases() -> Vec<Case> {
             let zip = stored_zip(&as_refs(&entries));
             let changed = ["ppt/slides/slide9.xml".to_owned()].into_iter().collect();
             (stored_zip(&as_refs(&stored_copy(input))), zip, changed)
-        }),
+        })
+        .reported(),
     );
     all.push(
         case("RR-PN-10", "INV-PN-10", THREE, vec![add_slide()]).bytes(
@@ -507,7 +511,8 @@ fn cases() -> Vec<Case> {
                 bytes[18] = bytes[18].wrapping_add(1);
                 (input.to_vec(), bytes, BTreeSet::new())
             },
-        ),
+        )
+        .reported(),
     );
     all.push(
         case("RR-PN-11", "INV-PN-11", THREE, vec![add_slide()]).bytes("INV-PN-11", |input, _| {
@@ -518,7 +523,8 @@ fn cases() -> Vec<Case> {
             let types = moved.remove(at);
             moved.push(types);
             (stored, stored_zip(&as_refs(&moved)), BTreeSet::new())
-        }),
+        })
+        .reported(),
     );
 
     // Relationship ids.
@@ -530,11 +536,12 @@ fn cases() -> Vec<Case> {
             vec![picture(PNG, "png", "image/png")],
         )
         .seed("INV-RI-01", |d| {
-            raw_rel(d, SLIDE1_RELS, "rId1", &format!("{T}/tags"), "../x.xml");
+            raw_rel(d, SLIDE1_RELS, "1a", &format!("{T}/hyperlink"), "#s");
         })
         .seed("INV-RI-01", |d| {
-            raw_rel(d, SLIDE1_RELS, "1a", &format!("{T}/hyperlink"), "#s");
-        }),
+            raw_rel(d, SLIDE1_RELS, "rId1", &format!("{T}/tags"), "../x.xml");
+        })
+        .reported(),
     );
     all.push(
         case(
@@ -1746,34 +1753,42 @@ fn write_seeded(source: &[u8], case: &Case, seed: Seed) -> Result<Vec<u8>, Strin
     pkg.save_with(&edits).map_err(|e| e.code().to_owned())
 }
 
-/// A deck no one is meant to be refused for opening: edit something unrelated.
-fn benign_save(seeded: &[u8], case: &Case) -> Option<String> {
+/// Seeded decks the strict reader refuses, each waiting on the recovering reader of
+/// `docs/29`, which is not the writer's. Any other refusal fails the test.
+const WAITS_FOR_RECOVERY: &[(&str, &str)] = &[("RR-PN-03", "REC-01")];
+
+/// Given as an input deck, a seeded file opens, saves after an unrelated edit, and reports
+/// the break where one package can show it (`docs/36`, `docs/29`). What became of it.
+fn benign_save(seeded: &[u8], case: &Case) -> String {
     let mut pkg = match PresentationPackage::open(seeded.to_vec(), OoxmlLimits::default()) {
         Ok(pkg) => pkg,
-        Err(err) => return Some(format!("open refused {}", err.code())),
+        Err(err) => {
+            let row = WAITS_FOR_RECOVERY.iter().find(|(id, _)| *id == case.id);
+            let (_, row) = row.unwrap_or_else(|| panic!("{}: open refused: {err}", case.id));
+            return format!("strict open refused {}; waits for {row}", err.code());
+        }
     };
     let outcome = SavePlan::new()
         .op(Op::AddCommentAuthor {
             name: "Editor".to_owned(),
             initials: "E".to_owned(),
         })
-        .save(&mut pkg);
-    match outcome {
-        Err(err) => panic!("{}: a seeded deck must still save: {err}", case.id),
-        Ok(outcome) => {
-            if case.arrives {
-                assert!(
-                    outcome
-                        .report
-                        .iter()
-                        .any(|e| e.code == "CS-SAV-0021" && e.rule == case.rule),
-                    "{}: as input the break is reported: {:?}",
-                    case.id,
-                    outcome.report
-                );
-            }
-            None
-        }
+        .save(&mut pkg)
+        .unwrap_or_else(|err| panic!("{}: a seeded deck must still save: {err}", case.id));
+    let reported = outcome
+        .report
+        .iter()
+        .any(|e| e.code == "CS-SAV-0021" && e.rule == case.rule);
+    assert!(
+        reported || !case.arrives,
+        "{}: as input the break is reported: {:?}",
+        case.id,
+        outcome.report
+    );
+    if reported {
+        String::from("opens, saves, reports")
+    } else {
+        String::from("opens and saves; one package does not show it")
     }
 }
 
@@ -1834,11 +1849,7 @@ fn every_fixture_saves_its_good_deck_and_refuses_its_seed() {
         if let Some((_, seed)) = case.seeds.first() {
             match write_seeded(&source, &case, *seed) {
                 Ok(bytes) => {
-                    if let Some(refused) = benign_save(&bytes, &case) {
-                        seeded_note = refused;
-                    } else {
-                        seeded_note = String::from("opens and saves");
-                    }
+                    seeded_note = benign_save(&bytes, &case);
                     seeded_file = Some(bytes);
                 }
                 Err(code) => seeded_note = format!("cannot be written: {code}"),
@@ -1854,10 +1865,7 @@ fn every_fixture_saves_its_good_deck_and_refuses_its_seed() {
                 "{}: {rule} not named by {err}",
                 case.id
             );
-            seeded_note = match PresentationPackage::open(output.clone(), OoxmlLimits::default()) {
-                Ok(_) => String::from("seeded in the ZIP; opens"),
-                Err(err) => format!("seeded in the ZIP; open refused {}", err.code()),
-            };
+            seeded_note = format!("seeded in the ZIP; {}", benign_save(&output, &case));
             seeded_file = Some(output);
         }
         assert!(
@@ -1914,6 +1922,35 @@ fn every_fixture_saves_its_good_deck_and_refuses_its_seed() {
             .replace("\r\n", "\n");
         assert_eq!(held, manifest);
     }
+}
+
+/// `emit` checks what it wrote. Preflight cannot see a wrong ZIP, and the reader that opens
+/// the result reads the central directory, so a local header that disagrees reaches the
+/// user unless `check_zip` runs.
+#[test]
+fn a_written_zip_with_disagreeing_headers_is_refused_by_emit() {
+    let source = std::fs::read(fixtures().join(THREE)).unwrap();
+    let mut pkg = open(&source);
+    let err = SavePlan::new()
+        .op(add_slide())
+        .stage(&mut pkg)
+        .unwrap()
+        .emit_tampered(|bytes| bytes[18] = bytes[18].wrapping_add(1))
+        .unwrap_err();
+    assert_eq!(err.code(), "CS-SAV-0020", "{err}");
+    assert!(err.names_rule("INV-PN-10"), "{err}");
+}
+
+/// A deck with two relationships of one id is `REC-02`'s to read. Until it can, the writer's
+/// own seed stays refused by preflight, and this says what the strict reader does.
+#[test]
+fn a_duplicate_relationship_id_waits_for_the_recovering_reader() {
+    let source = std::fs::read(fixtures().join(THREE)).unwrap();
+    let case = cases().into_iter().find(|c| c.id == "RR-RI-01").unwrap();
+    let (_, duplicate) = case.seeds[1];
+    let bytes = write_seeded(&source, &case, duplicate).unwrap();
+    let err = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap_err();
+    assert_eq!(err.code(), "CS-XML-0004", "{err}");
 }
 
 /// F4 on every good deck.

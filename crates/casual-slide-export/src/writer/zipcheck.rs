@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::draft::CONTENT_TYPES_PART;
 use super::error::WriterError;
 use super::names::key;
+use super::preflight::Violation;
 
 #[derive(Debug, Clone)]
 struct Record {
@@ -125,6 +126,55 @@ fn read_directory(bytes: &[u8]) -> Option<Vec<Record>> {
             .checked_add(comment_len)?;
     }
     Some(out)
+}
+
+/// What the input's ZIP already breaks, which a save reports and leaves alone: a deck must
+/// still open and save (`docs/29`), and F2 forbids correcting a part nobody edited. An
+/// archive this reader will not vouch for reports nothing here; the package has opened it.
+pub(crate) fn arrivals(input: &[u8]) -> Vec<Violation> {
+    let Some(records) = read_directory(input) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut note = |rule: &'static str, part: &str, detail: String| {
+        out.push(Violation {
+            rule,
+            part: part.to_owned(),
+            detail,
+        });
+    };
+    let files = || records.iter().filter(|r| !r.name.ends_with('/'));
+    for record in files().filter(|r| !r.name.is_ascii()) {
+        note(
+            "INV-PN-08",
+            &record.name,
+            "a raw non-ASCII item name, kept".to_owned(),
+        );
+    }
+    // Store is legal, and copied as it is: one line, since a whole deck may be stored.
+    let stored: Vec<&Record> = files().filter(|r| r.method != 8).collect();
+    if let Some(first) = stored.first() {
+        note(
+            "INV-PN-09",
+            &first.name,
+            format!("{} entries not deflated, copied as they are", stored.len()),
+        );
+    }
+    for record in files().filter(|r| !r.headers_agree) {
+        note(
+            "INV-PN-10",
+            &record.name,
+            "local and central headers differ; the copy written agrees".to_owned(),
+        );
+    }
+    if files().next().is_some_and(|r| r.name != CONTENT_TYPES_PART) {
+        note(
+            "INV-PN-11",
+            CONTENT_TYPES_PART,
+            "not the first entry, and left where it is".to_owned(),
+        );
+    }
+    out
 }
 
 /// Judge `output` against `input`: `changed` names the entries meant to differ, and
