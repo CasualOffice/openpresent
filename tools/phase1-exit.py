@@ -102,6 +102,16 @@ def when(record):
 DECK_SUFFIXES = {".pptx", ".ppsx", ".potx", ".pptm", ".ppsm", ".potm"}
 
 
+def libreoffice_own(failure):
+    """A LibreOffice failure that its unedited input shows too: `LibreOffice edited/x: crash 134,
+    unedited input crash`."""
+    if not failure.startswith("LibreOffice "):
+        return False
+    _, _, rest = failure.partition(": ")
+    ours, _, theirs = rest.partition(", unedited input ")
+    return bool(theirs) and ours.split()[0] == theirs.split()[0]
+
+
 def exports(args):
     """Every corpus deck written out edited, and the save-as grid, through F4, the SDK and LibreOffice."""
     record = evidence(args, "export")
@@ -112,14 +122,19 @@ def exports(args):
     saveas = sorted(p for p in (fixtures / "rr/sa").iterdir() if p.suffix != ".tsv")
     if record.get("inputs_sha256") != digest(decks + saveas):
         return False, f"the record is for other decks than fixtures/real, generated and rr/sa now hold; {when(record)}"
-    failures = record.get("failures", [])
-    met = record.get("ok") is True and not failures and record.get("written") == len(decks) \
+    # Owner instruction 40: LibreOffice failing on a deck whose unedited input fails the same way
+    # is LibreOffice's own fault, not ours, and does not hold this item back.
+    theirs = [f for f in record.get("failures", []) if libreoffice_own(f)]
+    failures = [f for f in record.get("failures", []) if f not in theirs]
+    met = not failures and record.get("written") == len(decks) \
         and record.get("libreoffice_checked") == len(decks) + sum(p.suffix in DECK_SUFFIXES for p in saveas)
     text = (f"{record.get('written')} decks written edited and {len(saveas)} save-as files; F4 and SDK on "
             f"{record.get('f4_and_sdk_checked')}, LibreOffice ({record.get('libreoffice_image')}) on "
             f"{record.get('libreoffice_checked')}: {record.get('libreoffice')}; {len(failures)} failures")
     if failures:
         text += ": " + "; ".join(failures[:4]) + ("; ..." if len(failures) > 4 else "")
+    if theirs:
+        text += f"; {len(theirs)} more are LibreOffice failing on the unedited input too (instruction 40)"
     return met, f"{text}; {when(record)}"
 
 

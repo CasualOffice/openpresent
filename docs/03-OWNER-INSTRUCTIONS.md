@@ -48,6 +48,7 @@ by saying so.
 | 37 | 2026-11-08 | Corrected by the owner the same day: no local CI scans; CI runs on GitHub. Workflows stay enabled, and sessions run only the named tests they need | [CLAUDE.md](../CLAUDE.md), [15](15-CI-AND-RELEASE-GATES.md) |
 | 38 | 2026-11-08 | No tests, scans or CI on the owner's machine at all. Everything runs on GitHub, including the Phase 1 exit runs | [CLAUDE.md](../CLAUDE.md), `.github/workflows` |
 | 39 | 2026-11-08 | Every test runs as GitHub CI on merge to `main` and on pull requests, as OpenCalc does, including the Phase 1 exit runs | `.github/workflows`, [15](15-CI-AND-RELEASE-GATES.md) |
+| 40 | 2026-11-08 | When LibreOffice fails on a deck whose unedited input fails the same way, that is LibreOffice's problem, not ours, and does not hold the exports item back | `tools/phase1-exit.py`, `FID-04` |
 
 ## Boundaries set by the environment
 
