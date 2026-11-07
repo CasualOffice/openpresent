@@ -246,10 +246,19 @@ def run_bounded(argv, timeout, cwd=None, env=None):
     return proc.returncode, out.decode("utf8", "replace"), err.decode("utf8", "replace")
 
 
-def soffice_version():
+def soffice_tool():
+    """The soffice path. Off unless asked for: on a desktop Mac, each crash here shows the owner
+    a dialog (owner instruction 23), so nothing starts LibreOffice by accident."""
+    if os.environ.get("OPENPRESENT_ALLOW_SOFFICE") != "1":
+        raise Refused("soffice is off; set OPENPRESENT_ALLOW_SOFFICE=1 to run it on purpose")
     tool = shutil.which("soffice")
     if not tool:
         raise Refused("soffice not found")
+    return tool
+
+
+def soffice_version():
+    tool = soffice_tool()
     with tempfile.TemporaryDirectory(prefix="fidelity-version-") as tmp:
         code, out, _ = run_bounded([tool, f"-env:UserInstallation={pathlib.Path(tmp).resolve().as_uri()}", "--headless", "--version"],
                                    60, cwd=tmp, env={"PATH": os.environ.get("PATH", ""), "HOME": tmp})
@@ -259,9 +268,7 @@ def soffice_version():
 
 def convert_to_pdf(deck, out_dir, allow_no_isolation=False):
     """LibreOffice in a throwaway profile. The deck is copied under a fixed name, so a name cannot be an option."""
-    tool = shutil.which("soffice")
-    if not tool:
-        raise Refused("soffice not found")
+    tool = soffice_tool()
     with tempfile.TemporaryDirectory(prefix="fidelity-soffice-") as raw:
         tmp = pathlib.Path(raw).resolve()
         profile = tmp / "profile" / "user"

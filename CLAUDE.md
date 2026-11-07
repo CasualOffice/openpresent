@@ -76,6 +76,8 @@ Industry-standard practice applies everywhere, with these specifics.
 
 **JavaScript** (`webapp/`): ES modules, no framework or bundler, as OpenCalc. `textContent` for document strings. Strict CSP. Every verb is a registered command.
 
+**Do not start LibreOffice** on this machine (owner instruction 23, `FID-04`). Tools refuse without `OPENPRESENT_ALLOW_SOFFICE=1`; do not set it.
+
 **Python** (`tools/`): standard library where possible; tools fail non-zero and name the problem. Parse untrusted XML only after refusing a DOCTYPE.
 
 **Git**
