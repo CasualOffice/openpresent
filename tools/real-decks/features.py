@@ -7,6 +7,10 @@ equations, comments, sections, 3D models, SVG, VBA, signatures, embedded fonts, 
 the `buSzPct` forms (F4-02). Also every extension URI and namespace seen, so constructs
 nobody listed still show.
 
+CORP-01 also reads the producer, from evidence in the package and not only app.xml, the
+PowerPoint version, the scripts its slide text uses (names and counts, never the text), and
+whether a Strict deck looks saved by PowerPoint or converted by a tool (STRICT-02).
+
 Decks are untrusted: entries are read in memory under bounds, never extracted, and a
 part with a DOCTYPE is not read. Presence is found by searching the text, which is
 enough to say a construct occurs and says nothing of whether it is well formed.
@@ -15,6 +19,7 @@ enough to say a construct occurs and says nothing of whether it is well formed.
 """
 
 import collections
+import html
 import json
 import re
 import sys
@@ -39,6 +44,70 @@ NS = {
     "p15": "http://schemas.microsoft.com/office/powerpoint/2012/main",
     "strict": "http://purl.oclc.org/ooxml/presentationml/main",
 }
+
+
+# Letters per script, by Unicode block. Each range is the block's letters, not its digits or
+# punctuation, so a stray symbol cannot make a deck look multi-script.
+SCRIPTS = (
+    ("Latin", 0x41, 0x5A), ("Latin", 0x61, 0x7A), ("Latin", 0xC0, 0x24F), ("Latin", 0x1E00, 0x1EFF),
+    ("Greek", 0x370, 0x3FF), ("Greek", 0x1F00, 0x1FFF), ("Cyrillic", 0x400, 0x52F),
+    ("Armenian", 0x531, 0x587), ("Hebrew", 0x5D0, 0x5EA), ("Arabic", 0x620, 0x6FF), ("Arabic", 0x750, 0x77F),
+    ("Devanagari", 0x900, 0x97F), ("Bengali", 0x980, 0x9FF), ("Tamil", 0xB80, 0xBFF), ("Thai", 0xE01, 0xE5B),
+    ("Hangul", 0x1100, 0x11FF), ("Hangul", 0xAC00, 0xD7A3), ("Kana", 0x3040, 0x30FF), ("Han", 0x3400, 0x4DBF),
+    ("Han", 0x4E00, 0x9FFF), ("Han", 0x20000, 0x2FFFF),
+)
+# A script counts if it holds this many letters: one foreign word in a deck is not a corpus
+# of that script, and a shaping or line-break defect needs running text to show.
+MIN_SCRIPT_LETTERS = 20
+VERSIONS = {"12": "2007", "14": "2010", "15": "2013", "16": "2016+"}
+
+
+def scripts_of(text):
+    """Letter count per script, most used first. Names and counts only."""
+    counts = collections.Counter()
+    for char, n in collections.Counter(text).items():
+        code = ord(char)
+        if code < 0x41:
+            continue
+        name = next((name for name, low, high in SCRIPTS if low <= code <= high), None)
+        if name:
+            counts[name] += n
+    return {k: v for k, v in counts.most_common() if v >= MIN_SCRIPT_LETTERS}
+
+
+def producer_of(application, alltext):
+    """Who wrote the package: `(producer, evidence)`.
+
+    app.xml alone cannot be believed: Keynote and Google Slides can name PowerPoint, and
+    a deck from another tool can too. So marks only those writers leave come first.
+    """
+    if "Google Shape;" in alltext:
+        return "Google Slides", "shape names Google writes"
+    if "Body Level One" in alltext and "Title Text" in alltext:
+        return "Keynote", "master placeholder text Keynote writes"
+    application = application or ""
+    if "Macintosh" in application:
+        return "PowerPoint Mac", "app.xml"
+    if re.fullmatch(r"Microsoft (Office )?PowerPoint", application):
+        return "PowerPoint Windows", "app.xml"
+    lowered = application.lower()
+    for mark, name in (("libreoffice", "LibreOffice"), ("openoffice", "OpenOffice"), ("wps", "WPS Office"),
+                       ("aspose", "Aspose"), ("python-pptx", "python-pptx"), ("canva", "Canva"),
+                       ("keynote", "Keynote"), ("google", "Google Slides")):
+        if mark in lowered:
+            return name, "app.xml"
+    return ("Other", "app.xml") if application else ("Unknown", "no application in app.xml")
+
+
+def strict_form(texts):
+    """`percent` if Strict namespaces carry Strict's `50%` values, `numeric` if they carry
+    Transitional's `50000`, which is what a converting tool leaves behind (STRICT-02)."""
+    sample = "\n".join(t for n, t in texts.items() if n.startswith(("ppt/theme/", "ppt/slideMasters/")))
+    numeric = len(re.findall(r'<a:(?:lumMod|lumOff|satMod|tint|shade|alpha) val="\d+"', sample))
+    percent = len(re.findall(r'<a:(?:lumMod|lumOff|satMod|tint|shade|alpha) val="[\d.]+%"', sample))
+    if numeric == 0 and percent == 0:
+        return "unknown"
+    return "percent" if numeric == 0 else "numeric"
 
 
 def text_of(archive, info):
@@ -78,6 +147,14 @@ def scan(path):
     out["platform"] = "Mac" if "Macintosh" in application else ("Windows" if "PowerPoint" in application else "?")
     alltext = "\n".join(texts.values())
     out["strict"] = NS["strict"] in texts.get("ppt/presentation.xml", "")
+    if out["strict"]:
+        out["strict_form"] = strict_form(texts)
+    out["application"] = application
+    out["version"] = VERSIONS.get(version.split(".")[0], "") if "PowerPoint" in application else ""
+    out["producer"], out["producer_evidence"] = producer_of(application, alltext)
+    runs = re.findall(r"<a:t(?:\s[^>]*)?>([^<]*)</a:t>",
+                      "\n".join(t for n, t in texts.items() if re.match(r"ppt/(slides|notesSlides)/[^/]+\.xml$", n)))
+    out["scripts"] = scripts_of(html.unescape("\n".join(runs)))
     slides = [n for n in names if re.match(r"ppt/slides/slide\d+\.xml$", n)]
     out["slides"] = len(slides)
     langs = collections.Counter(re.findall(r'\blang="([A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*)"', alltext))
