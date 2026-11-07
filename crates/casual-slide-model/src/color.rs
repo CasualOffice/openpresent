@@ -125,6 +125,7 @@ const XML_SPACE: &[char] = &[' ', '\t', '\r', '\n'];
 
 /// A value of `ST_Percentage` in thousandths of a percent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// spec-audit: a:CT_PositivePercentage/@val
 pub struct Percentage(pub i32);
 
 /// What was read from an `ST_Percentage`.
@@ -823,6 +824,9 @@ impl TransformKind {
 /// One transform. `value` is in the units of its kind's [`ValueDomain`], and 0
 /// for a kind with no value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// spec-audit: a:EG_ColorTransform/hue
+// spec-audit: a:EG_ColorTransform/sat
+// spec-audit: a:EG_ColorTransform/lum
 pub struct ColorTransform {
     /// Which transform.
     pub kind: TransformKind,
@@ -841,6 +845,9 @@ impl ColorTransform {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ColorValue {
     /// `scrgbClr`, linear; components may lie outside 0 to 100%.
+    // spec-audit: a:CT_ScRgbColor/@r
+    // spec-audit: a:CT_ScRgbColor/@g
+    // spec-audit: a:CT_ScRgbColor/@b
     ScRgb {
         /// Red.
         r: Percentage,
@@ -850,8 +857,12 @@ pub enum ColorValue {
         b: Percentage,
     },
     /// `srgbClr`.
+    // spec-audit: a:CT_SRgbColor/@val
     Srgb(Rgb),
     /// `hslClr`.
+    // spec-audit: a:CT_HslColor/@hue
+    // spec-audit: a:CT_HslColor/@sat
+    // spec-audit: a:CT_HslColor/@lum
     Hsl {
         /// Hue.
         hue: Angle,
@@ -861,6 +872,7 @@ pub enum ColorValue {
         lum: Percentage,
     },
     /// `sysClr`.
+    // spec-audit: a:CT_SystemColor/@val
     System {
         /// Which system colour.
         val: SystemColor,
@@ -868,8 +880,10 @@ pub enum ColorValue {
         last: Option<Rgb>,
     },
     /// `schemeClr`.
+    // spec-audit: a:CT_SchemeColor/@val
     Scheme(SchemeColor),
     /// `prstClr`.
+    // spec-audit: a:CT_PresetColor/@val
     Preset(PresetColor),
 }
 
@@ -1105,6 +1119,9 @@ enum Work {
     /// Linear light. May lie outside 0 to 1 until it leaves this space.
     Linear([f64; 3]),
     /// Degrees 0 to 360, then 0 to 1, over encoded sRGB.
+    // spec-audit: a:CT_HslColor/@hue
+    // spec-audit: a:CT_HslColor/@sat
+    // spec-audit: a:CT_HslColor/@lum
     Hsl { h: f64, s: f64, l: f64 },
 }
 

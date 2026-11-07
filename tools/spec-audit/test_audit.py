@@ -111,7 +111,10 @@ def seed_checklist(target, marks, keep=False):
 def run_audit(*args):
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
-        code = audit.main(["--root", str(REPO), *map(str, args)])
+        # A seeded checklist or seeded crates answer for what is seeded, not for a tier's blanks.
+        words = list(map(str, args))
+        seeded = {"--crates", "--checklist"} & set(words) and "--gate" not in words
+        code = audit.main(["--root", str(REPO), *words, *(["--gate", ""] if seeded else [])])
     return code, out.getvalue()
 
 
@@ -366,10 +369,10 @@ class Marks(unittest.TestCase):
     def test_a_proposal_needs_context_a_test_and_a_fixture(self):
         make_crates(self.dir / "crates")
         marks = self.propose(self.dir / "crates")
-        self.assertEqual(marks.get("a:CT_Point2D/@x"), "I=y")     # all three
-        self.assertNotIn("a:CT_Point2D/@y", marks)                # not read
+        self.assertIn("I=y", marks.get("a:CT_Point2D/@x"))        # all three
+        self.assertNotIn("I=y", marks.get("a:CT_Point2D/@y", ""))  # not read
         self.assertNotIn("a:CT_Point3D/@x", marks)                # another owner, and tier 1E
-        self.assertNotIn("a:CT_Point2D", marks)                   # only half of what it declares
+        self.assertNotIn("I=y", marks.get("a:CT_Point2D", ""))    # only half of what it declares
 
     def test_a_proposal_stays_inside_the_tiers_asked_for(self):
         make_crates(self.dir / "crates")
@@ -418,8 +421,8 @@ class Marks(unittest.TestCase):
         cases = {
             # Nothing in the crates reads transitions yet.
             "p:CT_SlideTransition/@spd": ("I", "no reference in casual-slide-import"),
-            # Import names it, but not where the audit can place an owner.
-            "p:CT_SlideSize/@cx": ("E", "casual-slide-export"),
+            # Nothing writes it: it stays in the tree.
+            "x:thememl/2012/main:CT_ThemeFamily/@vid": ("E", "casual-slide-export"),
             # In code and in a fixture, and no model struct field holds it under that name.
             "x:drawing/2010/main:CT_PictureEffectBlur/@radius": ("M", "M=y, no declaration"),
             # Half of the type is not done.
@@ -430,6 +433,47 @@ class Marks(unittest.TestCase):
             self.assertEqual(code, 1, rid)
             self.assertIn(f"FAIL {rid}: {column}=y", out)
             self.assertIn(expected, out, rid)
+
+    def test_a_blank_with_no_reason_fails_in_a_gated_tier(self):
+        rows = audit.read_checklist(CHECKLIST)
+        rid = next(r["id"] for r in rows if r["area"] == "VIEW" and r["kind"] == "attribute" and r["I"] == "y")
+        seed_checklist(self.copy, {rid: {"I": "."}}, keep=True)
+        code, out = run_audit("--checklist", self.copy, "--check", "--gate", "1B")
+        self.assertEqual(code, 1)
+        self.assertIn(f"FAIL {rid}: I is blank, with no reason in docs/spec/open-rows.tsv", out)
+
+    def test_a_reason_on_a_marked_row_fails(self):
+        rid, column = next(iter(audit.read_open_rows(REPO / audit.OPEN_ROWS)[0]))
+        seed_checklist(self.copy, {rid: {column: "r"}}, keep=True)
+        code, out = run_audit("--checklist", self.copy, "--check", "--gate", "1B")
+        self.assertEqual(code, 1)
+        self.assertIn(f"{rid} {column} has a reason and a mark r", out)
+
+    def test_not_applicable_needs_something_the_tool_can_see(self):
+        rows = audit.read_checklist(CHECKLIST)
+        rid = next(r["id"] for r in rows if r["area"] == "VIEW" and r["kind"] == "attribute")
+        seed_checklist(self.copy, {rid: {"E": "n/a"}}, keep=True)
+        code, out = run_audit("--checklist", self.copy, "--check")
+        self.assertEqual(code, 1)
+        self.assertIn(f"FAIL {rid}: E=n/a, and the tool sees nothing that says so", out)
+
+    def test_retained_needs_a_fixture(self):
+        rows = {r["id"]: r for r in audit.read_checklist(CHECKLIST)}
+        rid = "p:CT_SlideTransition/@spd"
+        self.assertIn(rid, rows)
+        (self.dir / "fixtures").mkdir(exist_ok=True)
+        seed_checklist(self.copy, {rid: {"E": "r"}}, keep=True)
+        code, out = run_audit("--checklist", self.copy, "--fixtures", self.dir / "fixtures", "--check")
+        self.assertEqual(code, 1)
+        self.assertIn(f"FAIL {rid}: E=r, no fixture exercises it", out)
+
+    def test_retained_in_the_model_forbids_done_in_the_columns(self):
+        rows = audit.read_checklist(CHECKLIST)
+        row = next(r for r in rows if r["area"] == "VIEW" and r["kind"] == "attribute" and r["I"] == "y" and r["M"] == "y")
+        seed_checklist(self.copy, {row["id"]: {"M": "r"}}, keep=True)
+        code, out = run_audit("--checklist", self.copy, "--check")
+        self.assertEqual(code, 1)
+        self.assertIn(f"FAIL {row['id']}: M=r, so nothing reads or writes it", out)
 
     def test_a_mark_with_code_and_no_fixture_fails_check(self):
         rows = audit.read_checklist(CHECKLIST)
@@ -492,12 +536,9 @@ class MarkupCompatibility(unittest.TestCase):
         self.assertEqual(count.compare(REPO, CHECKLIST)[2], [])
 
     def test_a_false_mark_on_one_fails_check(self):
-        rows = {r["id"]: r for r in audit.read_checklist(CHECKLIST)}
-        unexercised = next(n for n in ("mc:@PreserveElements", "mc:@PreserveAttributes") if rows[n]["I"] == ".")
-        seed_checklist(self.copy, {unexercised: {"I": "y"}, "mc:@Ignorable": {"E": "y"}}, keep=True)
+        seed_checklist(self.copy, {"mc:@Ignorable": {"E": "y"}}, keep=True)
         code, out = run_audit("--checklist", self.copy, "--check")
         self.assertEqual(code, 1)
-        self.assertIn(f"FAIL {unexercised}: I=y", out)
         self.assertIn("FAIL mc:@Ignorable: E=y, only I applies", out)
 
     def test_hostile_decks_do_not_earn_a_fixture(self):

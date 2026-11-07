@@ -16,7 +16,8 @@ use casual_slide_model::theme::{
 use casual_slide_ooxml::{ElementId, OoxmlError, OoxmlLimits, PresentationPackage, XmlTree};
 
 use crate::color::{
-    FindingKind, Findings, bounded_children, dml_name, read_color_choice, read_optional_color,
+    FindingKind, Findings, bounded_children, dml_name, is_color_element, read_color_choice,
+    read_optional_color, report_unread_attributes, report_unread_children,
 };
 use crate::drawing::{DrawingFinding, DrawingLimits};
 use crate::properties::{
@@ -116,6 +117,7 @@ pub fn import_theme_limited(
     tree: &XmlTree,
     limits: &OoxmlLimits,
 ) -> Result<Imported<Theme>, ThemeImportError> {
+    // spec-audit: a:<theme>
     let root = expect_root(tree, "theme")?;
     let mut findings = Findings::with_limits(limits);
     let mut value = Reader {
@@ -130,7 +132,9 @@ pub fn import_theme_limited(
 }
 
 /// Read a `themeOverride` part.
+// spec-audit: owner=themeOverride
 pub fn import_theme_override(tree: &XmlTree) -> Result<Imported<ThemeOverride>, ThemeImportError> {
+    // spec-audit: a:<themeOverride>
     let root = expect_root(tree, "themeOverride")?;
     let mut findings = Findings::default();
     let mut r = Reader {
@@ -138,6 +142,7 @@ pub fn import_theme_override(tree: &XmlTree) -> Result<Imported<ThemeOverride>, 
         findings: &mut findings,
     };
     let mut value = ThemeOverride::default();
+    r.strangers(root, &[]);
     for child in r.children(root) {
         match dml_name(tree, child) {
             Some("clrScheme") => {
@@ -157,13 +162,16 @@ pub fn import_theme_override(tree: &XmlTree) -> Result<Imported<ThemeOverride>, 
 
 /// Read a `themeManager` part, which by its schema holds nothing. Whatever it does hold
 /// stays in the part, and is reported.
+// spec-audit: owner=themeManager
 pub fn import_theme_manager(tree: &XmlTree) -> Result<Imported<ThemeManager>, ThemeImportError> {
+    // spec-audit: a:<themeManager>
     let root = expect_root(tree, "themeManager")?;
     let mut findings = Findings::default();
     let mut r = Reader {
         tree,
         findings: &mut findings,
     };
+    r.strangers(root, &[]);
     for child in r.children(root) {
         r.unknown(child);
     }
@@ -190,6 +198,7 @@ pub fn read_effect_reference(
 }
 
 /// Read a `CT_ClipboardStyleSheet` root, by its schema shape.
+// spec-audit: owner=objectDefaults
 pub fn import_clipboard_style_sheet(tree: &XmlTree) -> Imported<ClipboardStyleSheet> {
     let mut findings = Findings::default();
     let mut r = Reader {
@@ -221,9 +230,14 @@ pub fn read_color_map_override(
 ) -> Option<ColorMapOverride> {
     let mut r = Reader { tree, findings };
     let mut value = None;
+    r.strangers(el, &[]);
     for child in r.children(el) {
         let this = match dml_name(tree, child) {
-            Some("masterClrMapping") => ColorMapOverride::Master,
+            Some("masterClrMapping") => {
+                r.strangers(child, &[]);
+                report_unread_children(tree, child, r.findings);
+                ColorMapOverride::Master
+            }
             Some("overrideClrMapping") => ColorMapOverride::Override(r.color_map(child)),
             _ => {
                 r.unknown(child);
@@ -266,6 +280,7 @@ pub fn read_font_ref(tree: &XmlTree, el: ElementId, findings: &mut Findings) -> 
 }
 
 /// Read `EG_ThemeableFillStyle` or `EG_ThemeableEffectStyle` from their holder.
+// spec-audit: owner=tblBg
 pub fn read_themeable_style(
     tree: &XmlTree,
     holder: ElementId,
@@ -285,6 +300,7 @@ pub fn read_themeable_style(
 }
 
 /// Read `EG_ThemeableFontStyles` from its holder.
+// spec-audit: owner=tcTxStyle
 pub fn read_themeable_font(
     tree: &XmlTree,
     holder: ElementId,
@@ -313,6 +329,20 @@ impl Reader<'_> {
 
     fn unknown(&mut self, at: ElementId) {
         self.note(FindingKind::Unmodelled, at, "");
+    }
+
+    /// Report attributes of `el` other than `known`. They stay in the tree.
+    fn strangers(&mut self, el: ElementId, known: &[&str]) {
+        report_unread_attributes(self.tree, el, known, self.findings);
+    }
+
+    /// Report anything but a colour under `el`, which may hold one and nothing else.
+    fn only_colors(&mut self, el: ElementId) {
+        for child in self.children(el) {
+            if !is_color_element(self.tree, child) {
+                self.unknown(child);
+            }
+        }
     }
 
     /// An element's children, capped, with the cap reported.
@@ -365,8 +395,10 @@ impl Reader<'_> {
         uris
     }
 
+    // spec-audit: owner=theme
     fn theme(&mut self, root: ElementId) -> Theme {
         let mut theme = Theme::default();
+        self.strangers(root, &["name"]);
         if self.readable(root) {
             theme.name = self.attr(root, "name");
         }
@@ -397,6 +429,7 @@ impl Reader<'_> {
         theme
     }
 
+    // spec-audit: owner=themeFamily
     fn theme_family(&mut self, ext_list: ElementId) -> Option<ThemeFamily> {
         for ext in self.children(ext_list) {
             for inner in self.children(ext) {
@@ -414,8 +447,10 @@ impl Reader<'_> {
         None
     }
 
+    // spec-audit: owner=themeElements
     fn base_styles(&mut self, el: ElementId) -> BaseStyles {
         let mut out = BaseStyles::default();
+        self.strangers(el, &[]);
         for child in self.children(el) {
             match dml_name(self.tree, child) {
                 Some("clrScheme") => self.once(&mut out.color_scheme, child, Self::color_scheme),
@@ -437,8 +472,10 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=clrScheme
     fn color_scheme(&mut self, el: ElementId) -> ColorScheme {
         let mut out = ColorScheme::default();
+        self.strangers(el, &["name"]);
         if self.readable(el) {
             out.name = self.required(el, "name");
         }
@@ -452,6 +489,7 @@ impl Reader<'_> {
                 out.extensions = self.extensions(child);
             } else if let Some(index) = ColorSchemeIndex::from_xml(name) {
                 let at = index as usize;
+                self.strangers(child, &[]);
                 if core::mem::replace(&mut seen[at], true) {
                     self.note(FindingKind::Duplicate, child, "");
                 } else {
@@ -469,11 +507,27 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=clrMap,overrideClrMapping
     fn color_map(&mut self, el: ElementId) -> ColorMap {
+        // The slots come from the model's names.
+        // spec-audit: a:CT_ColorMapping/@bg1
+        // spec-audit: a:CT_ColorMapping/@tx1
+        // spec-audit: a:CT_ColorMapping/@bg2
+        // spec-audit: a:CT_ColorMapping/@tx2
+        // spec-audit: a:CT_ColorMapping/@accent1
+        // spec-audit: a:CT_ColorMapping/@accent2
+        // spec-audit: a:CT_ColorMapping/@accent3
+        // spec-audit: a:CT_ColorMapping/@accent4
+        // spec-audit: a:CT_ColorMapping/@accent5
+        // spec-audit: a:CT_ColorMapping/@accent6
+        // spec-audit: a:CT_ColorMapping/@hlink
+        // spec-audit: a:CT_ColorMapping/@folHlink
         let mut out = ColorMap::default();
         if !self.readable(el) {
             return out;
         }
+        let known: Vec<&str> = ColorMapSlot::ALL.iter().map(|s| s.as_xml()).collect();
+        self.strangers(el, &known);
         for slot in ColorMapSlot::ALL {
             let at = *slot as usize;
             let name = slot.as_xml();
@@ -494,8 +548,10 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=fontScheme
     fn font_scheme(&mut self, el: ElementId) -> FontScheme {
         let mut out = FontScheme::default();
+        self.strangers(el, &["name"]);
         if self.readable(el) {
             out.name = self.required(el, "name");
         }
@@ -510,8 +566,10 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=majorFont,minorFont,font
     fn font_collection(&mut self, el: ElementId) -> FontCollection {
         let mut out = FontCollection::default();
+        self.strangers(el, &[]);
         for child in self.children(el) {
             match dml_name(self.tree, child) {
                 Some("latin") => self.once(&mut out.latin, child, Self::text_font),
@@ -523,6 +581,8 @@ impl Reader<'_> {
                         break;
                     }
                     let mut font = SupplementalFont::default();
+                    self.strangers(child, &["script", "typeface"]);
+                    report_unread_children(self.tree, child, self.findings);
                     if self.readable(child) {
                         font.script = self.required(child, "script");
                         font.typeface = self.required(child, "typeface");
@@ -536,8 +596,11 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=latin,ea,cs
     fn text_font(&mut self, el: ElementId) -> TextFont {
         let mut out = TextFont::default();
+        self.strangers(el, &["typeface", "panose", "pitchFamily", "charset"]);
+        report_unread_children(self.tree, el, self.findings);
         if !self.readable(el) {
             return out;
         }
@@ -564,6 +627,7 @@ impl Reader<'_> {
         parsed
     }
 
+    // spec-audit: owner=fmtScheme
     fn format_scheme(&mut self, el: ElementId) -> FormatScheme {
         let mut out = FormatScheme::default();
         if self.readable(el) {
@@ -583,6 +647,7 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=fillStyleLst,bgFillStyleLst
     fn fill_list(&mut self, el: ElementId) -> Vec<StyleFill> {
         let mut out = Vec::new();
         for child in self.children(el) {
@@ -667,6 +732,7 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=lnStyleLst
     fn line_list(&mut self, el: ElementId) -> Vec<StyleLine> {
         let mut out = Vec::new();
         for child in self.children(el) {
@@ -700,6 +766,7 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=effectStyleLst
     fn effect_list(&mut self, el: ElementId) -> Vec<StyleEffect> {
         let mut out = Vec::new();
         for child in self.children(el) {
@@ -726,6 +793,7 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=objectDefaults
     fn object_defaults(&mut self, el: ElementId) -> ObjectDefaults {
         let mut out = ObjectDefaults::default();
         for child in self.children(el) {
@@ -740,6 +808,7 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=spDef,lnDef,txDef
     fn shape_definition(&mut self, el: ElementId) -> ShapeDefinition {
         let mut out = ShapeDefinition::default();
         for child in self.children(el) {
@@ -755,8 +824,10 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=style
     fn shape_style(&mut self, el: ElementId) -> ShapeStyle {
         let mut out = ShapeStyle::default();
+        self.strangers(el, &[]);
         for child in self.children(el) {
             match dml_name(self.tree, child) {
                 Some("lnRef") => self.once(&mut out.line, child, Self::matrix_ref),
@@ -769,8 +840,11 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=lnRef,fillRef,effectRef
     fn matrix_ref(&mut self, el: ElementId) -> StyleMatrixRef {
         let mut out = StyleMatrixRef::default();
+        self.strangers(el, &["idx"]);
+        self.only_colors(el);
         if self.readable(el)
             && let Some(text) = self.required(el, "idx")
         {
@@ -783,8 +857,11 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=fontRef
     fn font_ref(&mut self, el: ElementId) -> FontRef {
         let mut out = FontRef::default();
+        self.strangers(el, &["idx"]);
+        self.only_colors(el);
         if self.readable(el)
             && let Some(text) = self.required(el, "idx")
         {
@@ -797,8 +874,10 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=extraClrSchemeLst
     fn extra_schemes(&mut self, el: ElementId) -> Vec<ExtraColorScheme> {
         let mut out = Vec::new();
+        self.strangers(el, &[]);
         for child in self.children(el) {
             if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
@@ -809,6 +888,7 @@ impl Reader<'_> {
                 continue;
             }
             let mut extra = ExtraColorScheme::default();
+            self.strangers(child, &[]);
             for part in self.children(child) {
                 match dml_name(self.tree, part) {
                     Some("clrScheme") => {
@@ -823,8 +903,10 @@ impl Reader<'_> {
         out
     }
 
+    // spec-audit: owner=custClrLst
     fn custom_colors(&mut self, el: ElementId) -> Vec<CustomColor> {
         let mut out = Vec::new();
+        self.strangers(el, &[]);
         for child in self.children(el) {
             if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
@@ -834,6 +916,7 @@ impl Reader<'_> {
                 self.unknown(child);
                 continue;
             }
+            self.strangers(child, &["name"]);
             let name = if self.readable(child) {
                 self.attr(child, "name")
             } else {

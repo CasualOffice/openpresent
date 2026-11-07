@@ -12,21 +12,28 @@
 //! # Placeholder matching (BEH-01)
 //!
 //! - A slide placeholder inherits from the layout placeholder with the same `idx`.
-//!   Documented: `MS-OI29500` 2.1.1127, "PowerPoint defines a placeholder shape on
-//!   a slide to inherit from the slide layout placeholder with the same idx value".
-//!   An absent `idx` is 0, the schema default. `idx` 4294967295, which `MS-OI29500`
-//!   exempts from the uniqueness rule, matches nothing (Inferred: PowerPoint
+//!   Documented: [`MS-OI29500`, Part 1 Section 19.3.1.36, `ph`, note b][ph], "PowerPoint
+//!   defines a placeholder shape on a slide to inherit from the slide layout placeholder
+//!   with the same idx value".
+//!   An absent `idx` is 0, the schema default. `idx` 4294967295, which the same section's
+//!   note a exempts from the uniqueness rule, matches nothing (Inferred: PowerPoint
 //!   writes it on placeholders that have lost their layout counterpart).
 //! - A notes slide placeholder inherits from the notes master placeholder with the
 //!   same `type`. Documented: the same note.
 //! - A layout placeholder inherits from the master placeholder of the same type,
 //!   else of the same class: `ctrTitle` from `title`, and `subTitle`, `obj`,
 //!   `chart`, `tbl`, `clipArt`, `dgm`, `media` and `pic` from `body`. **Inferred**:
-//!   the standard and `MS-OI29500` are silent; this is how LibreOffice and
-//!   python-pptx resolve it, and how master placeholders are laid out (one per type).
+//!   the standard and `MS-OI29500` are silent. [python-pptx's analysis notes][pptx] tabulate
+//!   the same mapping from decks they examined: working notes, not a specification, and
+//!   nothing here has been seen in PowerPoint itself.
 //! - A slide placeholder's master counterpart is its layout counterpart's.
-//! - Connectors and groups are never placeholders (`MS-OI29500` 2.1.1126), so a
-//!   `ph` on one matches nothing.
+//! - Connectors and groups are never placeholders ([`MS-OI29500`, Part 1 Section 19.3.1.33,
+//!   `nvPr`][nvpr]: "PowerPoint does not allow the ph element"), so a `ph` on one matches
+//!   nothing.
+//!
+//! [ph]: https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/3ec954b2-37a6-41da-8973-04a592c91fb2
+//! [nvpr]: https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/df435a6d-5e4b-4d95-b0e2-73276d70cc5b
+//! [pptx]: https://python-pptx.readthedocs.io/en/latest/dev/analysis/placeholders/layout-placeholders.html
 //!
 //! # Inheritance by property family (BEH-02)
 //!

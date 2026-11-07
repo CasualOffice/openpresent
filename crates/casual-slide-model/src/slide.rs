@@ -235,6 +235,7 @@ pub struct SlidePart {
     /// `hf`: layouts and every master.
     pub header_footer: Option<HeaderFooter>,
     /// `sldLayoutIdLst`: masters.
+    // spec-audit: p:CT_SlideLayoutIdList/sldLayoutId
     pub layout_ids: Option<Vec<SlideLayoutId>>,
     /// `txStyles`: masters.
     pub text_styles: Option<MasterTextStyles>,

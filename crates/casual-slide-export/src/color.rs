@@ -134,6 +134,7 @@ impl AttrValue {
     }
 }
 
+// spec-audit: owner=scrgbClr,srgbClr,hslClr,sysClr,schemeClr,prstClr
 fn value_attributes(value: &ColorValue) -> Vec<(&'static str, Option<AttrValue>)> {
     use AttrValue::{Hex, Int, Percent, Token};
     match *value {
@@ -162,6 +163,7 @@ fn value_attributes(value: &ColorValue) -> Vec<(&'static str, Option<AttrValue>)
 ///
 /// Changing the colour's kind replaces the colour element, so whatever unknown
 /// attributes it had go with it: the edit named that node.
+// spec-audit: owner=scrgbClr,srgbClr,hslClr,sysClr,schemeClr,prstClr
 pub fn set_color(
     tree: &mut XmlTree,
     holder: ElementId,

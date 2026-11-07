@@ -61,6 +61,18 @@ impl ColorScheme {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ColorMap {
     /// By [`ColorMapSlot`].
+    // spec-audit: a:CT_ColorMapping/@bg1
+    // spec-audit: a:CT_ColorMapping/@tx1
+    // spec-audit: a:CT_ColorMapping/@bg2
+    // spec-audit: a:CT_ColorMapping/@tx2
+    // spec-audit: a:CT_ColorMapping/@accent1
+    // spec-audit: a:CT_ColorMapping/@accent2
+    // spec-audit: a:CT_ColorMapping/@accent3
+    // spec-audit: a:CT_ColorMapping/@accent4
+    // spec-audit: a:CT_ColorMapping/@accent5
+    // spec-audit: a:CT_ColorMapping/@accent6
+    // spec-audit: a:CT_ColorMapping/@hlink
+    // spec-audit: a:CT_ColorMapping/@folHlink
     pub slots: [Option<ColorSchemeIndex>; 12],
     /// `extLst`, by `uri`; the content stays in the part.
     pub extensions: Vec<String>,
@@ -266,6 +278,7 @@ pub struct BaseStyles {
 
 /// `CT_BaseStylesOverride`: a `themeOverride` part.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+// spec-audit: a:<themeOverride>
 pub struct ThemeOverride {
     /// `clrScheme`.
     pub color_scheme: Option<ColorScheme>,
@@ -315,6 +328,7 @@ pub struct EffectReference {
 
 /// `a:themeManager`, `CT_EmptyElement`: the root of a part that holds nothing.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+// spec-audit: a:<themeManager>
 pub struct ThemeManager;
 
 /// `EG_ThemeableFillStyle`, `EG_ThemeableEffectStyle`: a reference into the
@@ -405,8 +419,10 @@ pub struct Theme {
     /// `objectDefaults`.
     pub object_defaults: Option<ObjectDefaults>,
     /// `extraClrSchemeLst`.
+    // spec-audit: a:CT_ColorSchemeList/extraClrScheme
     pub extra_color_schemes: Option<Vec<ExtraColorScheme>>,
     /// `custClrLst`.
+    // spec-audit: a:CT_CustomColorList/custClr
     pub custom_colors: Option<Vec<CustomColor>>,
     /// `extLst`, by `uri`; the content stays in the part.
     pub extensions: Vec<String>,

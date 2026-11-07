@@ -1,0 +1,114 @@
+id	columns	tracker	reason
+p:CT_ApplicationNonVisualDrawingProps/ph	E	T1N-04	Placeholder can be edited in place; a save refuses to create one where none is
+p:CT_ShapeNonVisual/cNvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_ShapeNonVisual/cNvSpPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_ShapeNonVisual/nvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_Shape/nvSpPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_Shape/spPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_PictureNonVisual/cNvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GroupShapeNonVisual/cNvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GroupShapeNonVisual/cNvGrpSpPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GroupShapeNonVisual/nvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GroupShape/grpSpPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GroupShape/pic	E	T1N-04	Adding a shape to a tree is the writer's: a save refuses a new node
+p:EG_TopLevelSlide/clrMap	E	T1N-04	Patched in place; a master's required map is not created by a save
+p:CT_CommonSlideData/spTree	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_Slide/cSld	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_SlideLayoutIdList/sldLayoutId	E	T1N-04	Adding a layout is the writer's: a save refuses a new entry
+p:CT_NotesMaster/cSld	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_NotesSlide/cSld	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_SlideLayout/cSld	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_SlideMaster/cSld	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_SlideMaster/sldLayoutIdLst	E	T1N-04	Adding a layout is the writer's: a save refuses a new list
+p:CT_HandoutMaster/cSld	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_Picture/nvPicPr	E	T1N-04	Patched in place; a required structural node a save does not create
+a:CT_ContentPartLocking	MIE	T-1K	Only under ink content parts, whose elements the schemas here do not host; read with ink
+a:CT_ContentPartLocking/extLst	MIE	T-1K	Only under ink content parts, whose elements the schemas here do not host; read with ink
+a:CT_ContentPartLocking/AG_Locking	MIE	T-1K	Only under ink content parts, whose elements the schemas here do not host; read with ink
+st:ST_ColorType	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_OnOff1	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_OnOff1/=on	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_OnOff1/=off	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_String	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalse	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalse/=t	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalse/=f	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalse/=true	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalse/=false	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank/=t	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank/=f	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank/=true	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank/=false	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank/=	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank/=True	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TrueFalseBlank/=False	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_UnsignedDecimalNumber	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_TwipsMeasure	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_Xstring	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_XAlign	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_XAlign/=left	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_XAlign/=center	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_XAlign/=right	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_XAlign/=inside	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_XAlign/=outside	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_YAlign	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_YAlign/=inline	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_YAlign/=top	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_YAlign/=center	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_YAlign/=bottom	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_YAlign/=inside	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_YAlign/=outside	MIE	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+st:ST_PositiveUniversalMeasure	M	T-1L	Reached only through the VML and math schemas: read when those tiers open, and no deck of these tiers can hold it
+ct:<Types>	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+ct:<Types>	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:<Default>	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+ct:<Default>	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:<Override>	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+ct:<Override>	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:CT_Types/Default	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+ct:CT_Types/Default	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:CT_Types/Override	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+ct:CT_Types/Override	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:CT_Default/@Extension	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:CT_Default/@ContentType	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+ct:CT_Default/@ContentType	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:CT_Override/@ContentType	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+ct:CT_Override/@ContentType	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+ct:CT_Override/@PartName	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+rel:<Relationships>	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+rel:<Relationships>	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+rel:<Relationship>	I	CLOSE-02	Read by the part graph, whose byte-string matching the audit cannot place. Needs `spec-audit: owner=` in content_types.rs and rels.rs, which the recovery session now owns
+rel:<Relationship>	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+rel:CT_Relationships/Relationship	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+rel:ST_TargetMode/=External	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+rel:ST_TargetMode/=Internal	M	CLOSE-02	Held as maps and enums in the part graph with no field of this name. Needs `spec-audit` comments in crates the recovery session now owns
+vt:CT_Vector/@size	M	CLOSE-02	Recomputed from the items on every write, so the model holds none by design; a mismatch is reported
+r:@pict	MIE	T-1L	VML only
+r:@href	MIE	T-1L	VML only
+r:@embed	M	CLOSE-01	The field is in fill.rs, owned by CLOSE-01: `spec-audit: r:@embed` belongs there
+p:CT_ApplicationNonVisualDrawingProps/EG_Media	MIE	T-1H	Media in nvPr is read with media
+p:CT_Picture/blipFill	M	T-1H	Held by the picture work, not yet a field of the shape node
+a:CT_LineStyleList/ln	M	T1C-02	Format scheme internals, after 1E
+a:CT_EffectStyleList/effectStyle	M	T1C-02	Format scheme internals, after 1E
+a:CT_StyleMatrix/fillStyleLst	E	T1C-02	Format scheme internals are not written until T1C-02
+a:CT_StyleMatrix/lnStyleLst	E	T1C-02	Format scheme internals are not written until T1C-02
+a:CT_StyleMatrix/effectStyleLst	E	T1C-02	Format scheme internals are not written until T1C-02
+a:CT_StyleMatrix/bgFillStyleLst	E	T1C-02	Format scheme internals are not written until T1C-02
+a:CT_BaseStyles/fmtScheme	E	T1C-02	Format scheme internals are not written until T1C-02
+a:CT_DefaultShapeDefinition/spPr	E	T1C-02	Object defaults are not written until T1C-02
+a:CT_DefaultShapeDefinition/bodyPr	E	T1C-02	Object defaults are not written until T1C-02
+a:CT_DefaultShapeDefinition/lstStyle	E	T1C-02	Object defaults are not written until T1C-02
+a:CT_DefaultShapeDefinition/style	E	T1C-02	Object defaults are not written until T1C-02
+a:CT_ColorChangeEffect/clrFrom	E	CLOSE-01	Written by effect.rs, owned by CLOSE-01, whose tests name them
+a:CT_ColorChangeEffect/clrTo	E	CLOSE-01	Written by effect.rs, owned by CLOSE-01, whose tests name them
+a:CT_ColorChangeEffect/@useA	E	CLOSE-01	Written by effect.rs, owned by CLOSE-01, whose tests name them
+p:CT_ConnectorNonVisual/cNvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_ConnectorNonVisual/nvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_Connector/spPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_PictureNonVisual/nvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_Picture/spPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GraphicalObjectFrameNonVisual/cNvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GraphicalObjectFrameNonVisual/nvPr	E	T1N-04	Patched in place; a required structural node a save does not create
+a:CT_NonVisualDrawingProps/hlinkClick	E	CLOSE-02	A save asked to restore a removed hyperlink does not put it back, seen in checklist_rows.rs; not yet diagnosed
+a:CT_NonVisualDrawingProps/hlinkHover	E	CLOSE-02	A save asked to restore a removed hyperlink does not put it back, seen in checklist_rows.rs; not yet diagnosed

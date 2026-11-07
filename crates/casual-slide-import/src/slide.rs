@@ -250,6 +250,14 @@ pub fn import_slide_part_mapped(
 }
 
 #[allow(clippy::too_many_arguments)]
+// spec-audit: owner=sld,sldLayout,sldMaster,notes,notesMaster,handoutMaster
+// `kind.root()` names these: p:<sld> p:<sldLayout> p:<sldMaster> p:<notes> p:<notesMaster> p:<handoutMaster>
+// spec-audit: p:<sld>
+// spec-audit: p:<sldLayout>
+// spec-audit: p:<sldMaster>
+// spec-audit: p:<notes>
+// spec-audit: p:<notesMaster>
+// spec-audit: p:<handoutMaster>
 fn read_part(
     tree: &XmlTree,
     part: &str,
@@ -359,6 +367,7 @@ fn read_part(
     Ok(p)
 }
 
+// spec-audit: owner=cSld
 fn read_common(
     shapes: &mut ShapeReader<'_, '_, '_>,
     el: &Elem,
@@ -404,6 +413,7 @@ const FILLS: &[&str] = &[
     "grpFill",
 ];
 
+// spec-audit: owner=bg
 fn read_background(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -456,6 +466,7 @@ fn read_background(
 }
 
 /// `p:hf`.
+// spec-audit: owner=hf
 pub fn read_header_footer(r: &mut Reader<'_>, el: &Elem) -> Result<HeaderFooter, SlideError> {
     let mut el = el.clone();
     let hf = HeaderFooter {
@@ -469,6 +480,7 @@ pub fn read_header_footer(r: &mut Reader<'_>, el: &Elem) -> Result<HeaderFooter,
     Ok(hf)
 }
 
+// spec-audit: owner=sldLayoutIdLst
 fn read_layout_ids(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -530,6 +542,7 @@ fn read_layout_ids(
     Ok(out)
 }
 
+// spec-audit: owner=txStyles
 fn read_text_styles(
     r: &mut Reader<'_>,
     el: &Elem,
@@ -830,6 +843,16 @@ pub fn index_deck(
         if let Some(e) = ix.entry_mut(n) {
             e.master = master;
         }
+    }
+    // A master the presentation relates to but no list names is not read. It stays in the
+    // package, and the report says so.
+    if ix.structure.notes_master.is_none() && ix.follow(&main, "notesMaster", findings).is_some() {
+        findings.note_role(K::RetainedElement, &main, "notesMaster");
+    }
+    if ix.structure.handout_master.is_none()
+        && ix.follow(&main, "handoutMaster", findings).is_some()
+    {
+        findings.note_role(K::RetainedElement, &main, "handoutMaster");
     }
     // A master reached only from a layout has not had its theme found.
     for &master in &ix.structure.masters.clone() {
