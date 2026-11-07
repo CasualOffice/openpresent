@@ -79,6 +79,7 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 | SEC-E03 | Injection through third-party page content | Strict CSP with no inline script; Trusted Types; WASM served from the host's origin | Planned 3 |
 | SEC-E04 | Embed: clickjacking, host and frame confusion | `frame-ancestors` by policy; origin-checked `postMessage` | Planned 10 |
 | SEC-E05 | Prompt injection through deck text via MCP | Deck content is data, marked as untrusted in tool results | Planned 10 |
+| SEC-E06 | A plan built from a hostile deck: a slide with any number of parts hung off it, a duplicate that copies them all, an edit that corrupts the file | `WriterLimits`, `CS-SAV-0018`; preflight refuses a new violation, `CS-SAV-0012`; the written ZIP is read back before anyone sees it, `CS-SAV-0020`. `tests/writer.rs`, `fuzz/fuzz_targets/writer_plan.rs` | Tested |
 
 ## Service
 

@@ -92,6 +92,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "writer_plan"
+path = "fuzz_targets/writer_plan.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "drawing_properties"
 path = "fuzz_targets/drawing_properties.rs"
 test = false

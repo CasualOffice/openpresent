@@ -182,6 +182,10 @@ Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fi
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
 | `MAX_WRITE_DEPTH` | `16` | Nesting of a variant written back, in `casual-slide-export/src/properties.rs`; the model can hold what import refused only if built by hand | CS-EXP-0008 | Tested |
+| `max_plan_ops` | `4_096` | `WriterLimits`: operations in one save plan, in `casual-slide-export/src/writer/plan.rs` | CS-SAV-0018 | Tested |
+| `max_clone_parts` | `10_000` | `WriterLimits`: parts one deep clone may copy, since a hostile deck can hang any number off one slide | CS-SAV-0018 | Tested |
+| `max_clone_bytes` | `1 << 30` | `WriterLimits`: bytes one deep clone may copy, on top of the package budget | CS-SAV-0018 | Tested |
+| `max_media_bytes` | `1 << 30` | `WriterLimits`: bytes of one new media part | CS-SAV-0018 | Tested |
 
 ## Not yet bounded
 

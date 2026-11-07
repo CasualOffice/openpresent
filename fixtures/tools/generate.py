@@ -249,6 +249,8 @@ def fixtures():
     # Lazy loading is measured on this: opening it must not read 500 slides.
     yield "generated/five-hundred-slides.pptx", zipped(deck(500)), "open"
     yield from slide_hostile()
+    from generate_rr import fixtures as rr_fixtures  # imports this module, so not at the top
+    yield from rr_fixtures()
     yield "generated/drawing-every-element.pptx", zipped(drawing_deck()), "open CS-FND-0001"
     yield from drawing_hostile()
     from generate_text import fixtures as text_fixtures  # imports this module, so not at the top

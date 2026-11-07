@@ -922,9 +922,15 @@ fn parts_rebuilt_from_the_model_validate_against_the_schemas() {
     let wanted = model(&conforming);
 
     let stripped = edit(&conforming, |d| {
+        // A deck keeps its masters and its notes master through any save (INV-SP-06,
+        // INV-NM-05), so this strips everything else.
         let keep_required = d.presentation.notes_size;
+        let masters = d.presentation.slide_masters.take();
+        let notes_masters = d.presentation.notes_masters.take();
         d.presentation = Default::default();
         d.presentation.notes_size = keep_required;
+        d.presentation.slide_masters = masters;
+        d.presentation.notes_masters = notes_masters;
         d.presentation_properties = Some(Default::default());
         d.view_properties = Some(Default::default());
         d.properties.app = Some(Default::default());

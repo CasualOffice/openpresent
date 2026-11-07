@@ -4,7 +4,7 @@
 //! An unedited model produces no edit and returns the input bytes. Every patched
 //! part is read back and compared with what was asked before anything is saved.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 
 use casual_slide_import::presentation::{
     PartLocation, Rels, import_presentation, import_presentation_properties,
@@ -26,17 +26,19 @@ use casual_slide_model::presentation::{
 };
 use casual_slide_model::properties::Lexical;
 use casual_slide_ooxml::{
-    Conformance, FindingKind, OoxmlLimits, PresentationPackage, Relationship, XmlTree,
+    Conformance, OoxmlLimits, PresentationPackage, Relationship, TargetMode, XmlTree,
     part_names_equivalent,
 };
-use casual_slide_package::PartEdits;
 
 use crate::properties::{
     ExportError, Writer, patch_app_properties, patch_core_properties, patch_custom_properties,
     verify,
 };
+use crate::writer::{
+    SavePlan, WriterError, WriterLimits, next_rel_id, read_relationships, target_for,
+};
 
-const PRESENTATION_ORDER: &[&str] = &[
+pub(crate) const PRESENTATION_ORDER: &[&str] = &[
     "sldMasterIdLst",
     "notesMasterIdLst",
     "handoutMasterIdLst",
@@ -1360,10 +1362,8 @@ struct Save<'a> {
     limits: ImportLimits,
     xml_limits: OoxmlLimits,
     strict: bool,
-    edits: PartEdits,
-    changed: Vec<String>,
+    edits: BTreeMap<String, Vec<u8>>,
     rels: BTreeMap<String, XmlTree>,
-    new_rel_count: usize,
     content_types: Option<XmlTree>,
 }
 
@@ -1421,18 +1421,16 @@ impl Save<'_> {
                 )?,
             },
         };
-        let existing: HashSet<&str> = self
-            .package
-            .relationships_of(role.source)
-            .iter()
-            .map(|r| r.id.as_str())
-            .collect();
-        self.new_rel_count += 1;
-        let id = (self.new_rel_count..)
-            .map(|n| format!("rId{n}"))
-            .find(|c| !existing.contains(c.as_str()))
-            .unwrap_or_default();
-        self.new_rel_count += 1;
+        // INV-RI-03, INV-RI-07: one above the part's highest, in its siblings' form.
+        let existing = read_relationships(&tree);
+        let id = next_rel_id(existing.iter().map(|r| r.id.as_str()));
+        let internal = || existing.iter().filter(|r| r.mode == TargetMode::Internal);
+        let absolute = internal().next().is_some() && internal().all(|r| r.target.starts_with('/'));
+        let target = if absolute {
+            target_for(role.source, &role.new_part, true)
+        } else {
+            role.new_target.clone()
+        };
         let rel_type = role.rel_types[usize::from(self.strict && role.rel_types.len() > 1)];
         let root = Elem::root(&tree, &rels_name)?;
         {
@@ -1446,7 +1444,7 @@ impl Save<'_> {
             let new = w.new_child(&root, RELS_NS, "rel", "Relationship")?;
             w.attr(&new, "Id", None, Some(&id))?;
             w.attr(&new, "Type", None, Some(&rel_type.to_owned()))?;
-            w.attr(&new, "Target", None, Some(&role.new_target))?;
+            w.attr(&new, "Target", None, Some(&target))?;
             w.tree.insert_child(root.id, None, new.id);
         }
         self.rels.insert(rels_name, tree);
@@ -1465,19 +1463,35 @@ impl Save<'_> {
                 known_rels: None,
                 changes: 0,
             };
-            let new = w.new_child(&root, CONTENT_TYPES_NS, "ct", "Override")?;
-            w.attr(&new, "PartName", None, Some(&format!("/{}", role.new_part)))?;
-            w.attr(
-                &new,
-                "ContentType",
-                None,
-                Some(&role.content_type.to_owned()),
-            )?;
-            w.tree.insert_child(root.id, None, new.id);
+            // A phantom `Override` for this name would otherwise be declared twice
+            // (`INV-CT-02`): the generated Strict deck had one, and preflight saw it.
+            let part_name = format!("/{}", role.new_part);
+            let existing = w.tree.child_elements(root.id).into_iter().find(|&el| {
+                w.tree
+                    .plain_attribute(el, "PartName")
+                    .is_some_and(|n| n.eq_ignore_ascii_case(&part_name))
+            });
+            let content_type = role.content_type.to_owned();
+            match existing {
+                Some(el) => {
+                    let el = Elem::read(w.tree, el, &root.scope, CT_PART)?;
+                    w.attr(
+                        &el,
+                        "ContentType",
+                        Some(&String::new()),
+                        Some(&content_type),
+                    )?;
+                }
+                None => {
+                    let new = w.new_child(&root, CONTENT_TYPES_NS, "ct", "Override")?;
+                    w.attr(&new, "PartName", None, Some(&part_name))?;
+                    w.attr(&new, "ContentType", None, Some(&content_type))?;
+                    w.tree.insert_child(root.id, None, new.id);
+                }
+            }
         }
         self.content_types = Some(ct);
-        self.edits.replace(role.new_part.clone(), bytes);
-        self.changed.push(role.new_part.clone());
+        self.edits.insert(role.new_part.clone(), bytes);
         Ok(())
     }
 
@@ -1551,8 +1565,7 @@ impl Save<'_> {
             verify(&tree, &part, &self.xml_limits, wanted, |t| {
                 read(t, &part, &rels, &limits)
             })?;
-            self.edits.replace(part.clone(), tree.to_bytes());
-            self.changed.push(part);
+            self.edits.insert(part, tree.to_bytes());
         }
         Ok(())
     }
@@ -1570,17 +1583,32 @@ pub fn save_deck(
     after: &Deck,
     limits: &ImportLimits,
 ) -> Result<SaveOutcome, ExportError> {
+    let plan = SavePlan::new()
+        .with_limits(*limits, WriterLimits::default())
+        .deck(after);
+    let outcome = plan.save(package).map_err(|err| match err {
+        WriterError::Export(err) => err,
+        other => ExportError::Refused(Box::new(other)),
+    })?;
+    Ok(SaveOutcome {
+        bytes: outcome.bytes,
+        changed_parts: outcome.changed_parts,
+        signature_invalidated: outcome.signature_invalidated,
+    })
+}
+
+/// The parts that bring the package to `after`: presentation, properties, and the
+/// structural parts new ones touch. Nothing is written; [`SavePlan`] does that.
+pub(crate) fn deck_changes(
+    package: &mut PresentationPackage,
+    after: &Deck,
+    limits: &ImportLimits,
+) -> Result<Vec<(String, Vec<u8>)>, ExportError> {
     let xml_limits = *package.limits();
     let strict = package.conformance() == Conformance::Strict;
     let main = package.main_part().to_owned();
     let dir = main_dir(&main).to_owned();
-    let signed = package
-        .findings()
-        .iter()
-        .any(|f| f.kind == FindingKind::Signature);
-
-    let mut changed = Vec::new();
-    let mut edits = PartEdits::default();
+    let mut edits = BTreeMap::new();
     let main_rels = package.relationships_of(&main).to_vec();
     let main_bytes = package.read_xml_part(&main)?;
     let mut tree = XmlTree::parse(&main_bytes, &main, &xml_limits)?;
@@ -1597,8 +1625,7 @@ pub fn save_deck(
             let mut quiet = Findings::new(limits.max_findings);
             import_presentation(t, &main, &main_rels, limits, &mut quiet)
         })?;
-        edits.replace(main.clone(), tree.to_bytes());
-        changed.push(main.clone());
+        edits.insert(main.clone(), tree.to_bytes());
     }
 
     let (pml, core_skeleton, app_skeleton, custom_skeleton) = {
@@ -1632,9 +1659,7 @@ pub fn save_deck(
         xml_limits,
         strict,
         edits,
-        changed,
         rels: BTreeMap::new(),
-        new_rel_count: 0,
         content_types: None,
     };
 
@@ -1709,32 +1734,16 @@ pub fn save_deck(
     )?;
 
     let Save {
-        package,
         mut edits,
-        mut changed,
         rels,
         content_types,
         ..
     } = save;
     for (name, tree) in rels {
-        edits.replace(name.clone(), tree.to_bytes());
-        changed.push(name);
+        edits.insert(name, tree.to_bytes());
     }
     if let Some(tree) = content_types {
-        edits.replace("[Content_Types].xml", tree.to_bytes());
-        changed.push("[Content_Types].xml".to_owned());
+        edits.insert("[Content_Types].xml".to_owned(), tree.to_bytes());
     }
-    changed.sort();
-    if edits.is_empty() {
-        return Ok(SaveOutcome {
-            bytes: package.save_unedited(),
-            changed_parts: changed,
-            signature_invalidated: false,
-        });
-    }
-    Ok(SaveOutcome {
-        bytes: package.save_with(&edits)?,
-        changed_parts: changed,
-        signature_invalidated: signed,
-    })
+    Ok(edits.into_iter().collect())
 }
