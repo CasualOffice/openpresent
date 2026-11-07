@@ -44,7 +44,7 @@ reached its workflow and not its table.
 | `fuzz-build` | `ci.yml` | `cargo +nightly fuzz build` | Fuzz targets compile |
 | `gates` | `post-merge.yml` | `check-repo.py`, `check-gate-selftest.py`, fixture manifest, on every push to main | The merge commit itself, which no branch run saw |
 | `fuzz-campaign` | `fuzz.yml` | Every target from `cargo fuzz list`, seven minutes each, weekly and on demand; crashing inputs kept as an artifact | Parsers against new inputs |
-| `p1-budget-hostile` | `phase1-exit.yml` | `tools/phase1-evidence.py budget`, then `hostile`, on every push to main and on demand | `P1X-01`: the 500-slide budget; every hostile file opened and edited, or refused, with no crash or hang |
+| `p1-budget-hostile` | `phase1-exit.yml` | `tools/phase1-evidence.py budget`, then `hostile`; this workflow runs on every push to main, pull request and merge group, and on demand | `P1X-01`: the 500-slide budget; every hostile file opened and edited, or refused, with no crash or hang |
 | `p1-damage` | `phase1-exit.yml` | `tools/phase1-evidence.py damage`: the damage corpus with `DAMAGE_FULL=1 F4_REQUIRED=1` | `P1X-01`: every damaged deck opens or is refused by code, and what it writes passes F4 |
 | `p1-export` | `phase1-exit.yml` | `tools/phase1-evidence.py export` with `PHASE1_LO=host`: every corpus deck written edited, then F4, the SDK, and LibreOffice from apt, headless under `unshare --net` | `P1X-01`: exported decks valid and reopened by LibreOffice; the only place it runs (instructions 23, 33, 38) |
 | `p1-gates` | `phase1-exit.yml` | The gates in CLAUDE.md, exactly as listed, with F4 and the SDK required | `P1X-01`: the closing list's gates item |
