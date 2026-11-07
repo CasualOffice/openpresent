@@ -100,7 +100,7 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | T-1C | Colour and theme | In progress | P0 | Model, import and export built and merged; 236 workspace tests pass. Audit: code references 314 COLOR and 159 THEME rows partly. Remaining: `COLOR-01`, `COLOR-02`, `COLOR-03`, effect reference, format scheme internals, object defaults, `themeManager` | Per-tier gate in 06 |
 | T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged. All 12 committed real decks import through slide import. Open: `T1D-03`. Most spec rows still lack fixtures, so the tier gate is not met | Per-tier gate in 06 |
 | T-1E | Geometry, fills, lines, effects, 3D | In progress | P0 | Built and merged: 362 tests, 13 hostile decks, fuzz target, 12 real decks clean. No shape-level gradient or pattern in the real decks, only generated ones. Status marks need the audit to see `token_enum!` values (`STAT-01`) | Per-tier gate in 06 |
-| T-1F | Text model | Open | P0 | 317 rows | Per-tier gate |
+| T-1F | Text model | In progress | P0 | Built and merged: text bodies, all properties, 41 autonumber schemes, inheritance chain, fuzz target. Real decks are fixed points. Open: `T1F-04` | Per-tier gate in 06 |
 | T-1G | Tables | Open | P0 | 113 rows | Per-tier gate |
 | T-1H | Pictures and media | Open | P0 | 116 rows | Per-tier gate |
 | T-1I | Timing and transitions | Open | P0 | 522 rows | Per-tier gate |
@@ -191,6 +191,9 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | GEO-06 | Geometry defect labels mismatch | Open | P2 | The generator labels its corrections `GEO-02` to `GEO-06`, which do not mean what this tracker's rows of those ids mean. Relabel in code to match `GEO-02` | One meaning per id |
 | T1E-06 | Tier 1E leftovers | Open | P1 | `prstTxWarp` reader not called, `CT_FlatText`, `CT_Connection`, `DrawingLimits` not threaded through `SlideLimits`, colour findings lose `CS-CLR` on slide parts, older `2007/7/7` namespace reported not modelled | Per-tier gate |
 | DRAW-01 | `ST_PositiveCoordinate` wider than PowerPoint accepts | Open | P1 | MS-OI29500 2.1.1330: PowerPoint stops at 2147483647. We keep the schema's range, so a huge bevel could be written that it may reject | Writer refuses or clamps; test |
+| T1F-04 | Tier 1F leftovers | Open | P1 | Picture bullet with 1H; `bodyPr` `scene3d`, `sp3d`, `flatTx`; warp `avLst`; 5 bodies refused on full rewrite, assumed picture bullets, unchecked; `every_text_body_can_be_written_from_the_model` takes 75 s | Per-tier gate |
+| STYLE-01 | Inheritance gaps | Open | P0 | Theme object defaults (`txDef`, `lnDef`, `spDef`) and `p:style/fontRef` not in the chain, so text colour from a shape style resolves wrongly. MS-OI29500 2.1.1379, 1388, 1399 | BEH-02 table cases |
+| COLOR-04 | One rule for colour finding codes | Open | P2 | **Decided:** colour findings keep `CS-CLR` everywhere. Today 1E folds them to `CS-IMF` while `highlight` keeps `CS-CLR` | Same bad colour gives one code |
 | GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
@@ -226,14 +229,14 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1E-03 | Lines | Done | P0 | All properties; sketch extension `uri` Inferred | Enum values read from the checklist; edits change only named nodes |
 | T1E-04 | Effects | Done | P0 | Lists, DAGs, blip and `a14` picture effects; `imgProps` cannot be added | Enum values read from the checklist; edits change only named nodes |
 | T1E-05 | 3D properties | Done | P0 | `scene3d`, `sp3d`. `CT_FlatText` type only | Enum values read from the checklist; edits change only named nodes |
-| T1F-01 | Text structure | Open | P0 | `txBody`, `bodyPr`, `lstStyle`, paragraphs, runs, breaks, fields; `defaultTextStyle`, master text styles | Fixed point; BEH-02 resolver cases |
-| T1F-02 | Text properties | Open | P0 | Every run and paragraph property, spacing, tabs, bullets, 41 autonumber schemes, fonts, hyperlinks. BEH-28 | Every enum value |
-| T1F-03 | Autofit properties | Open | P0 | `normAutofit` scale stored as written; `spAutoFit`; recomputation is 2D6 | Stored values round-trip |
-| T1G-01 | Tables | Open | P0 | `tbl`, grid, rows, cells, merges, cell properties, text via 1F | Fixed point; merged-cell fixtures |
-| T1G-02 | Table styles | Open | P1 | `tableStyles.xml`, unknown style GUID reported (BEH-29) | Unknown GUID never crashes |
-| T1H-01 | Pictures | Open | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
-| T1H-02 | SVG with PNG fallback | Open | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
-| T1H-03 | Audio and video | Open | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
+| T1F-01 | Text structure | Done | P0 | `txBody`, `bodyPr`, `lstStyle`, paragraphs, runs, breaks, fields; `defaultTextStyle`, master text styles. Fills, lines and effects on runs go through 1E | Fixed point on real decks |
+| T1F-02 | Text properties | Done | P0 | Every run and paragraph property; fonts as the file states them, with no metrics | All enum values read from the checklist |
+| T1F-03 | Autofit properties | Done | P0 | Stored as written; recomputation is 2D6 | Stored values round-trip |
+| T1G-01 | Tables | In progress | P0 | `tbl`, grid, rows, cells, merges, cell properties, text via 1F | Fixed point; merged-cell fixtures |
+| T1G-02 | Table styles | In progress | P1 | `tableStyles.xml`, unknown style GUID reported (BEH-29) | Unknown GUID never crashes |
+| T1H-01 | Pictures | In progress | P0 | Blip references, crop, tile, stretch, recolour; `SEC-C01` | External blips not fetched |
+| T1H-02 | SVG with PNG fallback | In progress | P0 | `asvg` extension kept with its fallback; `SEC-C03` | Script-bearing SVG fixture is inert |
+| T1H-03 | Audio and video | In progress | P1 | Media references, trim, bookmarks, tracks, poster; embedded and linked | Linked media not fetched |
 | T1I-01 | Timing tree | Open | P0 | `p:timing`: all node types, behaviours, conditions, build lists; caps, `SEC-C10`. BEH-23 semantics are Phase 8 | Fixed point; depth caps |
 | T1I-02 | Transitions | Open | P0 | 21 base, 19 from 2010, `prstTrans`, Morph, in `mc:AlternateContent` | Both branches kept; fallback resolved |
 | T1J-01 | Classic charts | Open | P0 | `c:chartSpace`: 16 families, series, axes, data labels, caches; embedded workbook retained, never opened; `SEC-P09` | Fixed point on real decks |
