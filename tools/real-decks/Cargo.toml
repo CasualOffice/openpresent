@@ -10,7 +10,6 @@ edition = "2024"
 [dependencies]
 casual-slide-export = { path = "../../crates/casual-slide-export" }
 casual-slide-import = { path = "../../crates/casual-slide-import" }
-casual-slide-model = { path = "../../crates/casual-slide-model" }
 casual-slide-ooxml = { path = "../../crates/casual-slide-ooxml" }
 casual-slide-package = { path = "../../crates/casual-slide-package" }
 

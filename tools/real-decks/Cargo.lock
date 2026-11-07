@@ -62,7 +62,6 @@ version = "0.0.0"
 dependencies = [
  "casual-slide-export",
  "casual-slide-import",
- "casual-slide-model",
  "casual-slide-ooxml",
  "casual-slide-package",
 ]
