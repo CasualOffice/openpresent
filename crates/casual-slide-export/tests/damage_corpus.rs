@@ -616,6 +616,11 @@ fn failures_in(stdout: &str) -> Vec<String> {
     out
 }
 
+/// A checksum failed, and the part's bytes are kept and reported: owner instruction 34. An output
+/// holding such a part may fail F4, since a flipped byte can leave XML that still parses. Every
+/// other output must pass.
+const KEPT_AS_ARRIVED: &str = "CS-REC-0104";
+
 #[test]
 fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
     let full = std::env::var_os("DAMAGE_FULL").is_some();
@@ -676,6 +681,7 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
             .flat_map(|w| w.join().expect("a worker finished"))
             .collect()
     });
+    let mut kept_as_arrived = std::collections::BTreeSet::new();
     {
         for ((name, damaged), (outcome, took)) in all.iter().zip(results) {
             total += 1;
@@ -708,6 +714,9 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
                         ordinal += 1;
                         let file = format!("{name}--{ordinal:05}.pptx");
                         std::fs::write(out.join(&file), bytes).unwrap();
+                        if outcome.repaired.iter().any(|code| *code == KEPT_AS_ARRIVED) {
+                            kept_as_arrived.insert(file.clone());
+                        }
                         sources.insert(file, label);
                     }
                 }
@@ -746,11 +755,14 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
         eprintln!("xmllint or python3 not installed: F4 skipped");
         return;
     }
-    let failures = f4_failures(&out);
+    let (accepted, failures): (Vec<String>, Vec<String>) = f4_failures(&out)
+        .into_iter()
+        .partition(|line| kept_as_arrived.contains(line.split(':').next().unwrap_or_default()));
     println!(
-        "F4: {} outputs, {} failing lines",
+        "F4: {} outputs, {} failing lines, {} more in a part kept as it arrived",
         sources.len(),
-        failures.len()
+        failures.len(),
+        accepted.len()
     );
     if !failures.is_empty() {
         let shown: Vec<String> = failures

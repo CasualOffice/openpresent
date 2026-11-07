@@ -123,7 +123,7 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 - [ ] Every exported corpus deck passes schema validation and Microsoft's validator, and LibreOffice reopens it. The PowerPoint check is `PV-01`.
 - [ ] Corpus includes real decks from PowerPoint on Windows and Mac, Keynote and Google Slides, with provenance recorded.
 - [ ] A 500-slide deck opens within its budget, and a hostile corpus run shows no crash or hang.
-- [ ] The damage corpus opens, or is refused only under [29](29-RECOVERY.md)'s rules; an edit to a recovered deck writes a valid file.
+- [ ] The damage corpus opens, or is refused only under [29](29-RECOVERY.md)'s rules; an edit to a recovered deck writes a valid file, except a part kept as it arrived after a failed checksum, which is reported (owner instruction 34).
 - [ ] Owner sign-off.
 
 ## Phase 2 — Layout and render
