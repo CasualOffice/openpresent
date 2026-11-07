@@ -114,3 +114,4 @@ p:CT_Picture/blipFill	M	T-1H	The picture session holds it; no field of the shape
 r:@link	M	CLOSE-01	The field is in fill.rs, owned by CLOSE-01: `spec-audit: r:@link` belongs there
 p:CT_GraphicalObjectFrame/a:graphic	E	T1N-04	Patched in place; a required structural node a save does not create
 a:CT_GraphicalObject/graphicData	E	T1N-04	Patched in place; a required structural node a save does not create
+p:CT_GraphicalObjectFrame	E	T1N-04	Its `a:graphic` child is patched in place and a save does not create it, so the type cannot be marked for export

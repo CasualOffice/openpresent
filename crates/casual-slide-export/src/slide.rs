@@ -39,6 +39,7 @@ use crate::presentation::SaveOutcome;
 use crate::properties::{ExportError, Writer};
 use crate::text::{patch_list_style, patch_text_body};
 use crate::theme::{set_color_map_override, set_color_map_slot};
+use crate::timing::{new_dangling_target, patch_motion};
 use crate::writer::{SavePlan, WriterError, WriterLimits};
 
 /// Why a slide-like part could not be written. Nothing was saved.
@@ -67,6 +68,11 @@ pub enum SlideExportError {
         /// The part.
         part: String,
     },
+    /// An animation target or a build would name a `spid` no shape in the part holds.
+    UnknownTarget {
+        /// The part.
+        part: String,
+    },
     /// The part's ordinal is not in the deck's structure.
     NotInStructure {
         /// The ordinal.
@@ -84,6 +90,7 @@ impl SlideExportError {
             Self::StaleAlternate { .. } => "CS-SLE-0002",
             Self::DuplicateShapeId { .. } => "CS-SLE-0003",
             Self::NotInStructure { .. } => "CS-SLE-0004",
+            Self::UnknownTarget { .. } => "CS-SLE-0005",
         }
     }
 }
@@ -106,6 +113,12 @@ impl fmt::Display for SlideExportError {
             }
             Self::NotInStructure { ordinal } => {
                 write!(f, "[{code}] part {ordinal} is not in the deck")
+            }
+            Self::UnknownTarget { part } => {
+                write!(
+                    f,
+                    "[{code}] {part:?}: an animation would name a shape not in the part"
+                )
             }
         }
     }
@@ -1114,6 +1127,11 @@ pub fn patch_slide_part(
         return Ok(0);
     }
     check_unique_ids(after, &before, part)?;
+    if new_dangling_target(tree, &before, after) {
+        return Err(SlideExportError::UnknownTarget {
+            part: part.to_owned(),
+        });
+    }
     let mut patch = Patch {
         w: Writer {
             tree,
@@ -1125,6 +1143,14 @@ pub fn patch_slide_part(
         map: &map,
     };
     patch.part(&root, &before, after)?;
+    patch_motion(
+        &mut patch.w,
+        &root,
+        root_order(after.kind),
+        &before,
+        after,
+        &limits.timing,
+    )?;
     let changes = patch.w.changes;
     let again = XmlTree::parse(&tree.to_bytes(), part, xml_limits)?;
     let mut findings = Findings::new(import_limits.max_findings);

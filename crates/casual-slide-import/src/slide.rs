@@ -38,6 +38,7 @@ use crate::table::{
 };
 use crate::text::{TextCounts, TextReader};
 use crate::theme::{read_color_map, read_color_map_override, read_style_matrix_ref};
+use crate::timing::{MotionReader, TimingLimits, branch_index, check_references};
 
 const TRANSITIONAL_RELS: &str =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
@@ -61,6 +62,8 @@ pub struct SlideLimits {
     pub table: TableLimits,
     /// Bounds on one drawing property of a shape or a run. `CS-DRW-0001`.
     pub drawing: DrawingLimits,
+    /// Bounds on a part's timing and transition. `CS-TMG-0001`.
+    pub timing: TimingLimits,
 }
 
 impl Default for SlideLimits {
@@ -73,6 +76,7 @@ impl Default for SlideLimits {
             max_layout_ids: 10_000,
             table: TableLimits::default(),
             drawing: DrawingLimits::default(),
+            timing: TimingLimits::default(),
         }
     }
 }
@@ -194,6 +198,13 @@ impl From<OoxmlError> for SlideError {
 /// wrongly rooted part. A bound or a hostile shape never is.
 pub fn is_part_fault(err: &SlideError) -> bool {
     matches!(err, SlideError::Import(e) if is_optional_part_fault(e))
+}
+
+fn is_too_deep(err: &SlideError) -> bool {
+    matches!(
+        err,
+        SlideError::Import(ImportError::Ooxml(OoxmlError::TooDeep { .. }))
+    )
 }
 
 /// One slide-like part read, with what was noticed.
@@ -319,7 +330,18 @@ fn read_part(
     }
     r.finish(&root);
     let mut seen = HashSet::new();
+    let has_motion = matches!(
+        kind,
+        SlideKind::Slide | SlideKind::Layout | SlideKind::Master
+    );
+    let branches = branch_index(&compatibility.alternates);
     for el in r.children(&root)? {
+        if has_motion
+            && MotionReader::new(&mut *r, rels, &mut *color, limits.timing, &branches)
+                .root_child(&el, &mut p)
+        {
+            continue;
+        }
         if !el.in_namespace(ns::PML) {
             r.retained(&el);
             continue;
@@ -341,7 +363,7 @@ fn read_part(
             _ => false,
         };
         if !modelled {
-            // `transition`, `timing`, `extLst`: Tier 1I and 1M.
+            // `extLst`: Tier 1M.
             r.retained(&el);
             continue;
         }
@@ -388,6 +410,9 @@ fn read_part(
     }
     if p.common.is_none() {
         r.note(K::MissingRequired, &root, None);
+    }
+    if let Some(timing) = &mut p.timing {
+        check_references(r, timing);
     }
     Ok(p)
 }
@@ -1052,7 +1077,8 @@ pub fn import_slide_parts(
                 );
                 parts.push(Some(part.value));
             }
-            Err(err) if is_part_fault(&err) => {
+            // A part nested past the XML limit is that part's, however it got there.
+            Err(err) if is_part_fault(&err) || is_too_deep(&err) => {
                 findings.note(K::UnreadablePart, &entry.part, "", None);
                 parts.push(None);
             }

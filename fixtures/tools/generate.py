@@ -263,6 +263,8 @@ def fixtures():
     yield from shape_fixtures()
     from generate_close import fixtures as close_fixtures  # as above
     yield from close_fixtures()
+    from generate_timing import fixtures as timing_fixtures  # imports this module, so not at the top
+    yield from timing_fixtures()
 
 
 def main_part(xml):

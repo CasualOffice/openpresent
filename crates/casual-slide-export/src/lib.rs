@@ -14,4 +14,6 @@ pub mod slide;
 pub mod table;
 pub mod text;
 pub mod theme;
+mod timing;
+mod transition;
 pub mod writer;

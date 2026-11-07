@@ -19,6 +19,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use casual_slide_import::drawing::{A14, ASK};
 use casual_slide_import::media::{AIF, ASVG, P14, P173, WOE};
 use casual_slide_import::properties::{Elem, ns};
+use casual_slide_import::timing::MC;
+use casual_slide_import::transition::{P15, P159};
 use casual_slide_model::color::{Angle, Color, ColorValue, Percentage, format_percentage};
 use casual_slide_model::drawing::{HiddenProperties, ShapeProperties};
 use casual_slide_model::fill::{Blip, Fill};
@@ -45,9 +47,12 @@ pub(crate) enum Space {
     Aif,
     P14,
     P173,
+    Mc,
+    P15,
+    P159,
 }
 
-const SPACES: [Space; 9] = [
+const SPACES: [Space; 12] = [
     Space::Dml,
     Space::Pml,
     Space::A14,
@@ -57,6 +62,9 @@ const SPACES: [Space; 9] = [
     Space::Aif,
     Space::P14,
     Space::P173,
+    Space::Mc,
+    Space::P15,
+    Space::P159,
 ];
 
 impl Space {
@@ -71,6 +79,9 @@ impl Space {
             Self::Aif => AIF,
             Self::P14 => P14,
             Self::P173 => P173,
+            Self::Mc => MC,
+            Self::P15 => P15,
+            Self::P159 => P159,
         }
     }
 
@@ -85,6 +96,9 @@ impl Space {
             Self::Aif => "aif",
             Self::P14 => "p14",
             Self::P173 => "p173",
+            Self::Mc => "mc",
+            Self::P15 => "p15",
+            Self::P159 => "p159",
         }
     }
 }
@@ -98,6 +112,8 @@ enum Value {
     Percent(i32),
     /// A relationship id: the attribute is in the relationships namespace.
     Rel(String),
+    /// An attribute in `p14`, under whatever prefix the part uses.
+    P14(String),
     /// `ST_PositiveCoordinate`, which PowerPoint stops short of the schema's maximum of.
     PositiveCoordinate(i64),
     /// A dash stop, which PowerPoint wants above zero.
@@ -196,6 +212,14 @@ impl Node {
     pub fn rel(mut self, name: &'static str, value: Option<&String>) -> Self {
         if let Some(value) = value {
             self.attrs.push((name, Value::Rel(value.clone())));
+        }
+        self
+    }
+
+    /// An attribute in the 2010 namespace.
+    pub fn p14(mut self, name: &'static str, value: Option<&String>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::P14(value.clone())));
         }
         self
     }
@@ -395,7 +419,10 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
         "lineSketchStyleProps" => &["custGeom", "prstGeom", "type", "seed", "extLst"],
         // Any number of effects, in any order, then `extLst`.
         "blip" => return Some(usize::from(local == "extLst")),
-        _ => crate::table::order_in(parent)?,
+        _ => match crate::table::order_in(parent) {
+            Some(order) => order,
+            None => return crate::timing::rank(parent, local),
+        },
     };
     order.iter().position(|o| *o == local)
 }
@@ -468,6 +495,13 @@ fn write_attr(w: &mut Writer<'_>, el: &Elem, name: &str, value: &Value) -> Resul
             };
             (name.to_owned(), text)
         }
+        Value::P14(text) => {
+            let written = match el.name_of_ns(P14, name) {
+                Some(written) => written.to_owned(),
+                None => format!("{}:{name}", w.declared_prefix(el, P14, "p14")?),
+            };
+            (written, text.clone())
+        }
         Value::Rel(id) => {
             if !id.is_empty()
                 && w.known_rels
@@ -507,6 +541,7 @@ pub(crate) fn patch(
         if after.value(name).is_none() {
             let written = match value {
                 Value::Rel(_) => el.name_of_ns(ns::REL, name).map(str::to_owned),
+                Value::P14(_) => el.name_of_ns(P14, name).map(str::to_owned),
                 _ => Some((*name).to_owned()),
             };
             if let Some(written) = written {

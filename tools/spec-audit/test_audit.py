@@ -300,6 +300,7 @@ fn f() { let invalid_end_chars = 1; let vert_bar_state = 2; }
     def test_a_doc_comment_declares_only_for_the_owner_it_names(self):
         model = audit.ModelDeclarations.__new__(audit.ModelDeclarations)
         model.enums, model.structs, model.documented = {}, {}, set()
+        model.noted = set()
         model.read_docs(
             "/// `a:CT_Thing`.\npub struct Thing {\n    /// `@wide` and `child/@deep`.\n    pub a: u8,\n}\n"
             "pub enum Choice {\n    /// `glow`.\n    Glow {\n        /// `@rad`.\n        radius: u8,\n    },\n}\n"
@@ -419,10 +420,10 @@ class Marks(unittest.TestCase):
 
     def test_a_false_mark_on_the_real_checklist_fails_check(self):
         cases = {
-            # Nothing in the crates reads transitions yet.
-            "p:CT_SlideTransition/@spd": ("I", "no reference in casual-slide-import"),
             # Nothing writes it: it stays in the tree.
             "x:thememl/2012/main:CT_ThemeFamily/@vid": ("E", "casual-slide-export"),
+            # Nothing in the crates reads charts yet.
+            "c:CT_NumFmt/@formatCode": ("I", "no reference in casual-slide-import"),
             # In code and in a fixture, and no model struct field holds it under that name.
             "x:drawing/2010/main:CT_PictureEffectBlur/@radius": ("M", "M=y, no declaration"),
             # Half of the type is not done.
