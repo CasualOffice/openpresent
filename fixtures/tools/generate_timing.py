@@ -292,8 +292,6 @@ def hostile():
     Codes are in crates/casual-slide-import/tests/timing.rs."""
     deep = '<p:par><p:cTn><p:childTnLst>' * 32 + '</p:childTnLst></p:cTn></p:par>' * 32
     yield "hostile/timing-limit-depth.bin", with_tail(root_of(deep)), "open"
-    too_deep_xml = '<p:par><p:cTn><p:childTnLst>' * 100 + '</p:childTnLst></p:cTn></p:par>' * 100
-    yield "hostile/timing-beyond-xml-depth.bin", with_tail(root_of(too_deep_xml)), "open"
     empty_set = '<p:set/>'
     yield "hostile/timing-limit-nodes.bin", with_tail(root_of(seeded(empty_set, 100_000))), "open"
     cond = '<p:cond/>'

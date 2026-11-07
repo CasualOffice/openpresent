@@ -709,7 +709,25 @@ fn a_value_too_long_to_read_leaves_timing_and_transition_unread_not_the_deck() {
 /// of it). The deck opens without it.
 #[test]
 fn timing_past_the_xml_depth_loses_that_slide_at_worst_and_not_the_deck() {
-    let deck = load("hostile/timing-beyond-xml-depth.bin");
+    // Every fixture parses under the default limits (`every_xml_part_round_trips`), so this
+    // lowers the XML limit under the fixture that goes deepest.
+    let xml = OoxmlLimits {
+        max_xml_depth: 40,
+        ..OoxmlLimits::default()
+    };
+    let mut pkg =
+        PresentationPackage::open(fixture("hostile/timing-limit-depth.bin"), xml).unwrap();
+    let presentation = import_deck(&mut pkg, &ImportLimits::default())
+        .unwrap()
+        .deck
+        .presentation;
+    let deck = import_slide_parts(
+        &mut pkg,
+        &presentation,
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
     assert!(deck.parts.get(deck.parts.structure.slides[0]).is_none());
     assert!(deck.findings.iter().any(|f| f.kind == K::UnreadablePart));
 }

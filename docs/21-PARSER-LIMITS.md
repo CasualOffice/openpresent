@@ -194,7 +194,7 @@ Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fi
 | `max_templates` | `64` | `tmpl` in one `tmplLst`. Between the schema's 9 and this, they are kept | CS-TMG-0001 | Tested; `hostile/timing-limit-templates.bin` |
 | `max_branches` | `64` | Branches in one `mc:AlternateContent` holding timing or a transition | CS-TMG-0001 | Tested; `hostile/timing-limit-branches.bin` |
 
-Each fixture is seen to read with its bound raised by one (`raising_each_limit_by_one_reads_what_it_refused`). `hostile/timing-long-value.bin` is `CS-TMG-0002` under a lowered `max_value_bytes`. Past `max_xml_depth`, `hostile/timing-beyond-xml-depth.bin` fails in the XML reader before this one sees it: that slide is left out and reported as `CS-IMF-0012`, the deck opens, and `REC-03` and `REC-04` will read more of it. Nothing here evaluates a path or a formula, runs a command, or plays anything. Infinite repeats and a timeline's time budget are Phase 8's (`SEC-C10`).
+Each fixture is seen to read with its bound raised by one (`raising_each_limit_by_one_reads_what_it_refused`). `hostile/timing-long-value.bin` is `CS-TMG-0002` under a lowered `max_value_bytes`. Past `max_xml_depth` a part fails in the XML reader before this one sees it, shown with that limit lowered: that slide is left out and reported as `CS-IMF-0012`, the deck opens, and `REC-03` and `REC-04` will read more of it. Nothing here evaluates a path or a formula, runs a command, or plays anything. Infinite repeats and a timeline's time budget are Phase 8's (`SEC-C10`).
 
 ## Export
 
