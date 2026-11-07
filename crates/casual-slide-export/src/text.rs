@@ -182,6 +182,23 @@ fn percent_attr(
     w.attr(el, name, Some(&String::new()), Some(&text))
 }
 
+/// `buSzPct/@val`. The schema has only the `N%` form, in Transitional too, whatever
+/// else a file may hold; a value with no written form yet is spelled that way.
+fn bullet_percent(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    before: Option<&Written<Percentage>>,
+    after: &Written<Percentage>,
+) -> Result {
+    if before == Some(after) {
+        return Ok(());
+    }
+    let text = after
+        .written()
+        .map_or_else(|| after.value().to_percent_form(), str::to_owned);
+    w.attr(el, "val", Some(&String::new()), Some(&text))
+}
+
 /// `a:CT_TextBody`, under whichever element holds it.
 pub(crate) fn patch_text_body(
     w: &mut Writer<'_>,
@@ -568,7 +585,7 @@ fn patch_bullet_size(
                 Some(BulletSize::Percent(old)) => Some(old),
                 _ => None,
             };
-            percent_attr(w, &holder, "val", old, Some(value))
+            bullet_percent(w, &holder, old, value)
         }
         Some(BulletSize::Points(value)) => {
             let holder = swap_choice(w, el, GROUP, PARAGRAPH_PROPERTIES_ORDER, "buSzPts")?;
