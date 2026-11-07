@@ -276,6 +276,9 @@ pub(crate) fn extension_items(r: &mut Reader<'_>, el: &Elem) -> Result<Vec<Elem>
             r.retained(&ext);
             continue;
         }
+        let mut holder = ext.clone();
+        holder.take("uri");
+        r.finish(&holder);
         let held = r.children(&ext)?;
         if held.is_empty() {
             r.retained(&ext);
@@ -350,6 +353,7 @@ fn read_legacy_comment(r: &mut Reader<'_>, el: &Elem) -> Result<Comment, ImportE
             }
             "text" => {
                 if first(r, &mut seen, "text", &child) {
+                    r.finish(&child);
                     out.text = r.text(&child)?;
                 }
             }
@@ -709,6 +713,7 @@ fn read_monikers(
     el: &Elem,
     limits: &ReviewLimits,
 ) -> Result<Vec<Moniker>, ImportError> {
+    r.finish(el);
     let mut out = Vec::new();
     for child in r.bounded_children(el, limits.max_monikers, "monikers")? {
         let attributes = r

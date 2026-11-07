@@ -998,6 +998,81 @@ fn nothing_of_a_section_list_or_a_mark_can_go_unnoticed() {
     );
 }
 
+/// An attribute nobody has heard of, on every element of every part, changes the model or the
+/// report. Taking away what is there cannot show this: a reader that never says what is left
+/// over passes that, as the mutation of `read_cm_author` showed.
+#[test]
+fn an_unknown_attribute_on_any_element_is_noticed() {
+    let cases: [(&str, &str, PartReader); 8] = [
+        (
+            "generated/comments-legacy.pptx",
+            "ppt/commentAuthors.xml",
+            read_cm_authors,
+        ),
+        (
+            "generated/comments-legacy.pptx",
+            "ppt/comments/comment1.xml",
+            read_comments,
+        ),
+        (
+            "generated/comments-modern.pptx",
+            "ppt/authors.xml",
+            read_authors,
+        ),
+        (
+            "generated/comments-modern.pptx",
+            "ppt/comments/modernComment_100_0.xml",
+            read_threaded,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "ppt/tags/tag1.xml",
+            read_tags,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "customXml/itemProps1.xml",
+            read_store,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "customXml/item2.xml",
+            read_library,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "docMetadata/LabelInfo.xml",
+            read_labels,
+        ),
+    ];
+    let mut silent = Vec::new();
+    for (deck, part, read) in cases {
+        let xml = part_of(deck, part);
+        let whole = XmlTree::parse(&xml, "p", &OoxmlLimits::default()).unwrap();
+        let as_read = read(&whole).unwrap();
+        let mut stack = vec![whole.root()];
+        while let Some(el) = stack.pop() {
+            stack.extend(whole.child_elements(el));
+            let mut marked = whole.clone();
+            assert!(marked.set_attribute(el, "madeUp", "QzMarkerQz"));
+            let again = XmlTree::parse(&marked.to_bytes(), "p", &OoxmlLimits::default()).unwrap();
+            let got = read(&again).unwrap();
+            if got == as_read {
+                silent.push(format!("{part}: <{}>", whole.qualified_name(el)));
+            }
+            assert!(!got.1.iter().any(|l| l.contains("QzMarkerQz")), "{part}");
+        }
+    }
+    silent.sort();
+    silent.dedup();
+    assert!(
+        silent.is_empty(),
+        "{} read past:\n{}",
+        silent.len(),
+        silent.join("\n")
+    );
+}
+
 /// The check itself: something this reader has never heard of is noticed. A retained child
 /// taken away changes the report, which is what would miss a real drop.
 #[test]
