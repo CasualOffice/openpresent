@@ -438,7 +438,9 @@ impl Patch<'_, '_> {
         let kids = parent.children(self.w.tree, self.w.part)?;
         let mine = order_of.rank(local);
         if let (Some(prev), Some(mine)) = (prev, mine)
-            && order_of.rank(&prev.local).is_some_and(|theirs| theirs > mine)
+            && order_of
+                .rank(&prev.local)
+                .is_some_and(|theirs| theirs > mine)
         {
             let at = kids.iter().position(|k| k.id == prev.id);
             return Ok(at.and_then(|at| kids.get(at + 1)).map(|k| k.id));
@@ -533,7 +535,11 @@ impl Patch<'_, '_> {
         // schema's order is not rebuilt by an edit elsewhere.
         let order: Vec<usize> = paired.iter().flatten().copied().collect();
         if order.windows(2).any(|w| matches!(w, [x, y] if x > y)) {
-            for kid in element_of.iter().flatten().filter_map(|i| tree_kids.get(*i)) {
+            for kid in element_of
+                .iter()
+                .flatten()
+                .filter_map(|i| tree_kids.get(*i))
+            {
                 self.w.tree.remove_child(el.id, kid.id);
                 self.w.changes += 1;
             }

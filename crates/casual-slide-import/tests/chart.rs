@@ -140,7 +140,10 @@ fn every_chart_row_in_the_checklist_is_held_and_read() {
         for finding in slides.findings.iter() {
             let code = finding.kind.code();
             let unread = matches!(finding.kind, K::RetainedAttribute);
-            assert!(!unread || finding.attribute.as_deref() == Some("mc:Ignorable"), "{deck}: {code} {finding:?}");
+            assert!(
+                !unread || finding.attribute.as_deref() == Some("mc:Ignorable"),
+                "{deck}: {code} {finding:?}"
+            );
             assert!(
                 !matches!(
                     finding.kind,
@@ -150,7 +153,11 @@ fn every_chart_row_in_the_checklist_is_held_and_read() {
             );
             if finding.kind == K::RetainedElement && finding.part.contains("chart") {
                 let foreign = RETAINED_DML.contains(&finding.element.as_str());
-                assert!(foreign, "{deck}: {} {} not read", finding.part, finding.element);
+                assert!(
+                    foreign,
+                    "{deck}: {} {} not read",
+                    finding.part, finding.element
+                );
             }
         }
     }
@@ -245,7 +252,10 @@ fn the_sixteen_families_read_with_their_series_axes_and_caches() {
         assert_eq!(style.requires.as_deref(), Some("c14"));
         assert_eq!(style.choice.as_ref().unwrap().val, Some(102));
         assert_eq!(style.fallback.as_ref().unwrap().val, Some(2));
-        assert!(space.style.is_none(), "the one inside the branch is not a second");
+        assert!(
+            space.style.is_none(),
+            "the one inside the branch is not a second"
+        );
         assert!(space.sp_pr.as_ref().unwrap().fill.is_some());
         assert!(space.tx_pr.is_some());
     }
@@ -277,9 +287,17 @@ fn a_frame_names_its_chart_and_a_series_keeps_its_unique_id() {
     let slides = imported(&mut pkg);
     let tree = slides.parts.parts.iter().flatten().find_map(|part| {
         let tree = part.shape_tree()?;
-        tree.children.iter().any(|n| n.chart.is_some()).then_some(tree)
+        tree.children
+            .iter()
+            .any(|n| n.chart.is_some())
+            .then_some(tree)
     });
-    let frame = tree.unwrap().children.iter().find(|n| n.chart.is_some()).unwrap();
+    let frame = tree
+        .unwrap()
+        .children
+        .iter()
+        .find(|n| n.chart.is_some())
+        .unwrap();
     let chart = frame.chart.as_ref().unwrap();
     assert!(!chart.extended);
     assert_eq!(chart.rel_id.as_deref(), Some("rId2"));
@@ -327,7 +345,9 @@ fn a_negative_axis_id_is_kept_and_reported() {
     let mut pkg = open("generated/chart-signed-axis.pptx");
     let slides = imported(&mut pkg);
     let at = slides.charts.get("ppt/charts/chart1.xml").unwrap();
-    let family = bar(chart_of(read_chart(&at.status)).unwrap()).unwrap().clone();
+    let family = bar(chart_of(read_chart(&at.status)).unwrap())
+        .unwrap()
+        .clone();
     assert_eq!(family.ax_id[0].val, Some(-1_884_094_432));
     assert_eq!(family.ax_id[1].val, Some(-2_096_236_376));
     let signed = K::Chart(ChartFinding::SignedAxisId);
@@ -346,7 +366,10 @@ fn an_axis_id_outside_32_bits_is_left_out_and_reported() {
     let family = bar(chart_of(&model).unwrap()).unwrap().clone();
     let got: Vec<Option<i64>> = family.ax_id.iter().map(|a| a.val).collect();
     assert_eq!(got, [None, None, Some(4_294_967_295)]);
-    assert!(report.iter().any(|f| f.starts_with("CS-IMF-0002 axId")), "{report:?}");
+    assert!(
+        report.iter().any(|f| f.starts_with("CS-IMF-0002 axId")),
+        "{report:?}"
+    );
 }
 
 #[test]
@@ -354,17 +377,37 @@ fn a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens() {
     for (name, part, bound) in [
         ("series", "ppt/charts/chart1.xml", ChartBound::Series),
         ("points", "ppt/charts/chart1.xml", ChartBound::Points),
-        ("data-points", "ppt/charts/chart1.xml", ChartBound::DataPoints),
-        ("data-labels", "ppt/charts/chart1.xml", ChartBound::DataLabels),
+        (
+            "data-points",
+            "ppt/charts/chart1.xml",
+            ChartBound::DataPoints,
+        ),
+        (
+            "data-labels",
+            "ppt/charts/chart1.xml",
+            ChartBound::DataLabels,
+        ),
         ("levels", "ppt/charts/chart1.xml", ChartBound::Levels),
-        ("extensions", "ppt/charts/chart1.xml", ChartBound::Extensions),
+        (
+            "extensions",
+            "ppt/charts/chart1.xml",
+            ChartBound::Extensions,
+        ),
         ("anchors", "ppt/drawings/drawing1.xml", ChartBound::Anchors),
-        ("group-depth", "ppt/drawings/drawing1.xml", ChartBound::GroupDepth),
+        (
+            "group-depth",
+            "ppt/drawings/drawing1.xml",
+            ChartBound::GroupDepth,
+        ),
     ] {
-        let bytes = std::fs::read(fixtures().join(format!("hostile/chart-limit-{name}.bin"))).unwrap();
+        let bytes =
+            std::fs::read(fixtures().join(format!("hostile/chart-limit-{name}.bin"))).unwrap();
         let mut pkg = open_bytes(bytes.clone());
         let slides = imported(&mut pkg);
-        let at = slides.charts.get(part).unwrap_or_else(|| panic!("{name}: no {part}"));
+        let at = slides
+            .charts
+            .get(part)
+            .unwrap_or_else(|| panic!("{name}: no {part}"));
         assert_eq!(
             at.status,
             ChartStatus::SetAside { code: bound.code() },
@@ -402,7 +445,14 @@ fn more_chart_parts_than_the_bound_are_set_aside_and_the_rest_read() {
     let aside = charts
         .parts
         .iter()
-        .filter(|p| matches!(p.status, ChartStatus::SetAside { code: "CS-CHT-0001" }))
+        .filter(|p| {
+            matches!(
+                p.status,
+                ChartStatus::SetAside {
+                    code: "CS-CHT-0001"
+                }
+            )
+        })
         .count();
     assert_eq!(aside, 13);
 }
@@ -418,7 +468,11 @@ fn damage_is_read_as_far_as_it_goes_reported_and_holds_no_document_text() {
     let cache = family.ser[0].val.as_ref().unwrap();
     let cache = cache.num_ref.as_ref().unwrap().num_cache.as_ref().unwrap();
     assert_eq!(cache.pt.len(), 4, "every point kept");
-    assert_eq!(cache.pt[2].v.as_deref(), Some("QzMarkerQz"), "as written: a cache is text");
+    assert_eq!(
+        cache.pt[2].v.as_deref(),
+        Some("QzMarkerQz"),
+        "as written: a cache is text"
+    );
     let codes: HashSet<&str> = slides.findings.iter().map(|f| f.kind.code()).collect();
     for code in [
         "CS-IMF-0001",
@@ -445,11 +499,19 @@ fn a_chart_with_the_wrong_root_or_not_xml_is_set_aside_and_the_deck_opens() {
     let mut pkg = open("hostile/chart-wrong-root.bin");
     let slides = imported(&mut pkg);
     let at = slides.charts.get("ppt/charts/chart1.xml").unwrap();
-    assert_eq!(at.status, ChartStatus::SetAside { code: "CS-IMP-0003" });
+    assert_eq!(
+        at.status,
+        ChartStatus::SetAside {
+            code: "CS-IMP-0003"
+        }
+    );
 
     let mut pkg = open(FAMILIES);
     let mut edits = casual_slide_package::PartEdits::default();
-    edits.replace("ppt/charts/chart3.xml".to_owned(), b"<c:chartSpace".to_vec());
+    edits.replace(
+        "ppt/charts/chart3.xml".to_owned(),
+        b"<c:chartSpace".to_vec(),
+    );
     let bytes = pkg.save_with(&edits).unwrap();
     let mut pkg = open_bytes(bytes.clone());
     let slides = imported(&mut pkg);
@@ -471,7 +533,10 @@ fn an_embedded_workbook_is_recorded_and_never_read() {
     let consumed = |workbook: &[u8]| {
         let mut pkg = open(FAMILIES);
         let mut edits = casual_slide_package::PartEdits::default();
-        edits.replace("ppt/embeddings/Workbook1.xlsx".to_owned(), workbook.to_vec());
+        edits.replace(
+            "ppt/embeddings/Workbook1.xlsx".to_owned(),
+            workbook.to_vec(),
+        );
         let bytes = pkg.save_with(&edits).unwrap();
         let mut pkg = open_bytes(bytes);
         let before = pkg.consumed();
@@ -487,7 +552,10 @@ fn an_embedded_workbook_is_recorded_and_never_read() {
             &mut color,
         );
         assert_eq!(charts.workbooks.len(), 16);
-        let first = charts.workbooks.iter().find(|w| w.chart.ends_with("chart1.xml"));
+        let first = charts
+            .workbooks
+            .iter()
+            .find(|w| w.chart.ends_with("chart1.xml"));
         assert_eq!(
             first.unwrap().part.as_deref(),
             Some("ppt/embeddings/Workbook1.xlsx")
@@ -503,7 +571,10 @@ fn an_embedded_workbook_is_recorded_and_never_read() {
 
 #[test]
 fn a_workbook_nothing_could_read_leaves_the_chart_read() {
-    let (charts, _) = charts_with("hostile/chart-workbook-corrupt.bin", &ChartLimits::default());
+    let (charts, _) = charts_with(
+        "hostile/chart-workbook-corrupt.bin",
+        &ChartLimits::default(),
+    );
     assert!(matches!(charts.parts[0].status, ChartStatus::Read(_)));
     assert_eq!(charts.workbooks.len(), 1);
 }
@@ -525,7 +596,10 @@ fn chart_style_and_colors_read_with_their_chart() {
     assert!(!colors.colors.is_empty());
     let shapes = slides.charts.get("ppt/drawings/drawing1.xml").unwrap();
     assert_eq!(shapes.owner, "ppt/charts/chart1.xml");
-    assert!(matches!(read_chart(&shapes.status), ChartPart::UserShapes(_)));
+    assert!(matches!(
+        read_chart(&shapes.status),
+        ChartPart::UserShapes(_)
+    ));
 }
 
 #[test]
@@ -571,13 +645,19 @@ fn taking_out_any_chart_node_changes_the_model_or_the_report() {
         let mut pkg = open(deck);
         // By what holds it, across the deck: one read per kind of node.
         let mut seen = BTreeMap::new();
-        let names: Vec<String> = imported(&mut pkg).charts.parts.into_iter().map(|p| p.part).collect();
+        let names: Vec<String> = imported(&mut pkg)
+            .charts
+            .parts
+            .into_iter()
+            .map(|p| p.part)
+            .collect();
         for part in names.iter().map(String::as_str) {
             let bytes = pkg.read_part(part).unwrap();
             let tree = XmlTree::parse(&bytes, part, &OoxmlLimits::default()).unwrap();
             let as_read = read_part(&bytes, part).unwrap();
             let is_dml = |id: ElementId| {
-                tree.namespace(id).is_some_and(|n| dml.contains(&n.as_str()))
+                tree.namespace(id)
+                    .is_some_and(|n| dml.contains(&n.as_str()))
             };
             let mut checked = 0usize;
             for (parent, kid) in elements(&tree) {
@@ -598,19 +678,29 @@ fn taking_out_any_chart_node_changes_the_model_or_the_report() {
                 }
                 // What the model only names is read no further: its own removal is noticed.
                 let local = tree.local_name(parent);
-                if RETAINED_DML.contains(&local) && local != "extLst" && local != "ext" && local != "style" {
+                if RETAINED_DML.contains(&local)
+                    && local != "extLst"
+                    && local != "ext"
+                    && local != "style"
+                {
                     continue;
                 }
                 if seen.insert((above.clone(), name.clone()), ()).is_none() {
                     let mut gone = tree.clone();
                     gone.remove_child(parent, kid);
                     let after = read_part(&gone.to_bytes(), part);
-                    assert_ne!(after.as_ref(), Some(&as_read), "{part}: {above}/{name} went unnoticed");
+                    assert_ne!(
+                        after.as_ref(),
+                        Some(&as_read),
+                        "{part}: {above}/{name} went unnoticed"
+                    );
                     checked += 1;
                 }
                 for (attr, _) in tree.attributes(kid, part).unwrap() {
                     let kid_local = tree.local_name(kid);
-                    let named = RETAINED_DML.contains(&kid_local) && kid_local != "ext" && kid_local != "style"
+                    let named = RETAINED_DML.contains(&kid_local)
+                        && kid_local != "ext"
+                        && kid_local != "style"
                         || name == "cdr:ext";
                     if attr.starts_with("xmlns") || attr == "mc:Ignorable" || named {
                         continue;
@@ -622,7 +712,11 @@ fn taking_out_any_chart_node_changes_the_model_or_the_report() {
                     let mut gone = tree.clone();
                     gone.remove_attribute(kid, &attr);
                     let after = read_part(&gone.to_bytes(), part);
-                    assert_ne!(after.as_ref(), Some(&as_read), "{part}: {name}@{attr} went unnoticed");
+                    assert_ne!(
+                        after.as_ref(),
+                        Some(&as_read),
+                        "{part}: {name}@{attr} went unnoticed"
+                    );
                     checked += 1;
                 }
             }

@@ -364,7 +364,10 @@ fn a_negative_axis_id_edited_stays_signed_and_the_other_stays_as_written() {
     )
     .unwrap();
     let new = String::from_utf8(parts_of(&saved.bytes)[part].clone()).unwrap();
-    assert!(new.contains(r#"<c:gapWidth val="120"/><c:axId val="-1884094432"/>"#), "{new}");
+    assert!(
+        new.contains(r#"<c:gapWidth val="120"/><c:axId val="-1884094432"/>"#),
+        "{new}"
+    );
     assert_eq!(f4_failures(&saved.bytes), None);
     keep_for_validator("edit-signed-axis", &saved.bytes);
 }
@@ -463,8 +466,14 @@ fn every_chart_part_written_from_nothing_reads_back_as_its_model() {
             let source = XmlTree::parse(&bytes, &chart.part, &OoxmlLimits::default()).unwrap();
             let mut tree = empty_root(&source, &chart.part);
             rewrite_from_model(&mut tree, &chart.part, &[], model).unwrap();
-            let again = XmlTree::parse(&tree.to_bytes(), &chart.part, &OoxmlLimits::default()).unwrap();
-            assert_eq!(&read_part(&again, &chart.part), model, "{deck:?} {}", chart.part);
+            let again =
+                XmlTree::parse(&tree.to_bytes(), &chart.part, &OoxmlLimits::default()).unwrap();
+            assert_eq!(
+                &read_part(&again, &chart.part),
+                model,
+                "{deck:?} {}",
+                chart.part
+            );
             count += 1;
         }
     }
@@ -515,17 +524,29 @@ fn is_named_only(qualified: &str) -> bool {
         "mc" => local == "Fallback",
         "cdr" | "cdr14" => matches!(
             local,
-            "cNvPr" | "cNvSpPr" | "cNvCxnSpPr" | "cNvPicPr" | "cNvGraphicFramePr" | "cNvGrpSpPr"
-                | "cNvContentPartPr" | "style" | "blipFill" | "xfrm" | "grpSpPr" | "ext" | "extLst"
+            "cNvPr"
+                | "cNvSpPr"
+                | "cNvCxnSpPr"
+                | "cNvPicPr"
+                | "cNvGraphicFramePr"
+                | "cNvGrpSpPr"
+                | "cNvContentPartPr"
+                | "style"
+                | "blipFill"
+                | "xfrm"
+                | "grpSpPr"
+                | "ext"
+                | "extLst"
         ),
         "cs" => matches!(local, "defRPr" | "bodyPr" | "extLst"),
-        "cx" => matches!(local, "maxColor" | "minColor" | "midColor"),
+        "cx" => matches!(local, "clrMapOvr" | "maxColor" | "minColor" | "midColor"),
         _ => false,
     }
 }
 
 fn is_dml(tree: &XmlTree, id: ElementId) -> bool {
-    tree.namespace(id).is_some_and(|n| ns::DML.contains(&n.as_str()))
+    tree.namespace(id)
+        .is_some_and(|n| ns::DML.contains(&n.as_str()))
 }
 
 /// Every kind of chart node, in a part holding each once: take it out of the tree, and the model
@@ -548,7 +569,12 @@ fn every_chart_row_comes_out_and_goes_back_as_the_only_change() {
     for deck in [CLASSIC, EX] {
         let mut pkg = open(read_fixture(deck));
         let mut seen = HashSet::new();
-        let names: Vec<String> = imported(&mut pkg).charts.parts.into_iter().map(|p| p.part).collect();
+        let names: Vec<String> = imported(&mut pkg)
+            .charts
+            .parts
+            .into_iter()
+            .map(|p| p.part)
+            .collect();
         for part in names.iter().map(String::as_str) {
             let bytes = pkg.read_part(part).unwrap();
             let whole = XmlTree::parse(&bytes, part, &OoxmlLimits::default()).unwrap();
@@ -565,12 +591,20 @@ fn every_chart_row_comes_out_and_goes_back_as_the_only_change() {
                     if parent_dml || attr.starts_with("xmlns") || attr == "mc:Ignorable" {
                         continue;
                     }
-                    if parent_name.starts_with("mc:") || !seen.insert((parent_name.clone(), attr.clone())) {
+                    if parent_name.starts_with("mc:")
+                        || !seen.insert((parent_name.clone(), attr.clone()))
+                    {
                         continue;
                     }
                     let mut without = whole.clone();
                     without.remove_attribute(parent, &attr);
-                    checked += check_both_ways(&whole, &without, &full, part, &format!("{parent_name}@{attr}"));
+                    checked += check_both_ways(
+                        &whole,
+                        &without,
+                        &full,
+                        part,
+                        &format!("{parent_name}@{attr}"),
+                    );
                 }
                 for kid in whole.child_elements(parent) {
                     stack.push(kid);
@@ -585,7 +619,13 @@ fn every_chart_row_comes_out_and_goes_back_as_the_only_change() {
                     }
                     let mut without = whole.clone();
                     without.remove_child(parent, kid);
-                    checked += check_both_ways(&whole, &without, &full, part, &format!("{parent_name}/{name}"));
+                    checked += check_both_ways(
+                        &whole,
+                        &without,
+                        &full,
+                        part,
+                        &format!("{parent_name}/{name}"),
+                    );
                 }
             }
         }
@@ -593,7 +633,13 @@ fn every_chart_row_comes_out_and_goes_back_as_the_only_change() {
     assert!(checked > 700, "only {checked} nodes taken out and put back");
 }
 
-fn check_both_ways(whole: &XmlTree, without: &XmlTree, full: &ChartPart, part: &str, what: &str) -> usize {
+fn check_both_ways(
+    whole: &XmlTree,
+    without: &XmlTree,
+    full: &ChartPart,
+    part: &str,
+    what: &str,
+) -> usize {
     // A tree that no longer reads as a chart at all, such as a wholly emptied root, says nothing.
     let parsed = XmlTree::parse(&without.to_bytes(), part, &OoxmlLimits::default()).unwrap();
     let less = read_part(&parsed, part);
@@ -603,13 +649,21 @@ fn check_both_ways(whole: &XmlTree, without: &XmlTree, full: &ChartPart, part: &
     // Out: from the whole part to the model without it.
     let mut tree = whole.clone();
     patch(&mut tree, part, &less).unwrap_or_else(|e| panic!("{part}: {what}: out: {e}"));
-    assert_eq!(canon(&tree, part), canon(without, part), "{part}: {what}: out");
+    assert_eq!(
+        canon(&tree, part),
+        canon(without, part),
+        "{part}: {what}: out"
+    );
     // Back: from the part without it to the whole model.
     let mut tree = parsed;
     match patch(&mut tree, part, full) {
         Ok(_) => {
             let back = XmlTree::parse(&tree.to_bytes(), part, &OoxmlLimits::default()).unwrap();
-            assert_eq!(canon(&back, part), canon(whole, part), "{part}: {what}: back");
+            assert_eq!(
+                canon(&back, part),
+                canon(whole, part),
+                "{part}: {what}: back"
+            );
         }
         // What holds a `Retained` cannot be made again, which is what that type says.
         Err(ExportError::UnsupportedEdit { .. }) => {}
@@ -623,15 +677,51 @@ fn check_both_ways(whole: &XmlTree, without: &XmlTree, full: &ChartPart, part: &
 #[test]
 fn every_extension_root_reads_as_itself() {
     const ROOTS: &[&str] = &[
-        "pivotOptions", "invertSolidFillFmt", "style", "pivotSource", "numFmt", "spPr", "layout",
-        "fullRef", "levelRef", "formulaRef", "filteredSeriesTitle", "filteredCategoryTitle",
-        "filteredAreaSeries", "filteredBarSeries", "filteredBubbleSeries", "filteredLineSeries",
-        "filteredPieSeries", "filteredRadarSeries", "filteredScatterSeries",
-        "filteredSurfaceSeries", "datalabelsRange", "categoryFilterExceptions", "dlblFieldTable",
-        "xForSave", "showDataLabelsRange", "tx", "showLeaderLines", "leaderLines", "autoCat",
-        "datapointuniqueidmap", "explosion", "invertIfNegative", "bubble3D", "marker", "dLbl",
-        "pivotOptions16", "multiLvlStrLit", "dataDisplayOptions16", "formatcode2", "contentPart",
-        "chartSpace", "userShapes", "chart", "chartStyle", "colorStyle",
+        "pivotOptions",
+        "invertSolidFillFmt",
+        "style",
+        "pivotSource",
+        "numFmt",
+        "spPr",
+        "layout",
+        "fullRef",
+        "levelRef",
+        "formulaRef",
+        "filteredSeriesTitle",
+        "filteredCategoryTitle",
+        "filteredAreaSeries",
+        "filteredBarSeries",
+        "filteredBubbleSeries",
+        "filteredLineSeries",
+        "filteredPieSeries",
+        "filteredRadarSeries",
+        "filteredScatterSeries",
+        "filteredSurfaceSeries",
+        "datalabelsRange",
+        "categoryFilterExceptions",
+        "dlblFieldTable",
+        "xForSave",
+        "showDataLabelsRange",
+        "tx",
+        "showLeaderLines",
+        "leaderLines",
+        "autoCat",
+        "datapointuniqueidmap",
+        "explosion",
+        "invertIfNegative",
+        "bubble3D",
+        "marker",
+        "dLbl",
+        "pivotOptions16",
+        "multiLvlStrLit",
+        "dataDisplayOptions16",
+        "formatcode2",
+        "contentPart",
+        "chartSpace",
+        "userShapes",
+        "chart",
+        "chartStyle",
+        "colorStyle",
     ];
     let mut pkg = open(read_fixture(CLASSIC));
     let slides = imported(&mut pkg);
@@ -641,7 +731,12 @@ fn every_extension_root_reads_as_itself() {
     let drawing = String::from_utf8(drawing).unwrap();
     for root in ROOTS {
         let tag = format!(":{root}");
-        assert!(text.contains(&tag) || drawing.contains(&tag) || ["chartStyle", "colorStyle"].contains(root), "{root}");
+        assert!(
+            text.contains(&tag)
+                || drawing.contains(&tag)
+                || ["chartStyle", "colorStyle"].contains(root),
+            "{root}"
+        );
     }
     let ChartPart::Chart(space) = model_of(&slides, "ppt/charts/chart1.xml") else {
         panic!("a chart")
@@ -720,8 +815,14 @@ fn a_value_the_reader_would_not_believe_is_refused_with_nothing_saved() {
     assert_eq!(err.code(), "CS-EXP-0007");
 
     let mut model = model_of(&slides, part);
-    first_bar(&mut model).ser[0].val.as_mut().unwrap().num_ref.as_mut().unwrap().f =
-        Some("a\u{1}b".to_owned());
+    first_bar(&mut model).ser[0]
+        .val
+        .as_mut()
+        .unwrap()
+        .num_ref
+        .as_mut()
+        .unwrap()
+        .f = Some("a\u{1}b".to_owned());
     let err = save_chart_parts(
         &mut pkg,
         &[(part.to_owned(), model)],
