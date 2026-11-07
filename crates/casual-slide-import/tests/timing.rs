@@ -1027,6 +1027,65 @@ fn nothing_in_timing_or_a_transition_can_go_without_the_model_or_the_report_chan
     );
 }
 
+/// The other way round: what a file adds that the model has no place for. An element and an
+/// attribute nothing knows, put in every element of timing and of a transition in turn, must
+/// reach the report. The colours inside `clrVal`, `from` and `to` are the colour reader's.
+#[test]
+fn something_unknown_anywhere_in_timing_or_a_transition_is_reported() {
+    let mut silent = Vec::new();
+    let mut tried = HashSet::new();
+    for (deck, part) in [
+        ("generated/timing-every-node.pptx", PART),
+        ("generated/transition-every-effect.pptx", "ppt/slides/slide62.xml"),
+        ("generated/transition-every-effect.pptx", PART),
+    ] {
+        let xml = part_of(deck, part);
+        let whole = XmlTree::parse(&xml, PART, &OoxmlLimits::default()).unwrap();
+        let as_read = read(&xml).unwrap();
+        let mut stack: Vec<ElementId> = whole
+            .child_elements(whole.root())
+            .into_iter()
+            .filter(|id| {
+                matches!(
+                    local(whole.qualified_name(*id)),
+                    "transition" | "timing" | "AlternateContent"
+                )
+            })
+            .collect();
+        let mut held = Vec::new();
+        while let Some(id) = stack.pop() {
+            let name = local(whole.qualified_name(id));
+            let qualified = whole.qualified_name(id);
+            if name == "extLst" || (qualified.starts_with("a:") && !matches!(name, "dgm" | "chart" | "bldDgm" | "bldChart")) {
+                continue;
+            }
+            held.push(id);
+            stack.extend(whole.child_elements(id));
+        }
+        for id in held {
+            let name = whole.qualified_name(id).to_owned();
+            if !tried.insert(name.clone()) {
+                continue;
+            }
+            let mut with_child = whole.clone();
+            let new = with_child.new_element("p:madeUp");
+            with_child.insert_child(id, None, new);
+            if read(&with_child.to_bytes()).as_ref() == Some(&as_read) {
+                silent.push(format!("a child in <{name}>"));
+            }
+            if name != "mc:Choice" && name != "mc:Fallback" && name != "mc:AlternateContent" {
+                let mut with_attr = whole.clone();
+                assert!(with_attr.set_attribute(id, "madeUp", "1"));
+                if read(&with_attr.to_bytes()).as_ref() == Some(&as_read) {
+                    silent.push(format!("an attribute on <{name}>"));
+                }
+            }
+        }
+    }
+    assert!(tried.len() >= 80, "{}", tried.len());
+    assert!(silent.is_empty(), "{} read past:\n{}", silent.len(), silent.join("\n"));
+}
+
 /// The check itself: a timing element nothing knows is noticed, and so is its going.
 #[test]
 fn the_silent_drop_check_sees_a_real_drop() {

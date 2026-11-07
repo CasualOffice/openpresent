@@ -193,13 +193,16 @@ fn every_timing_and_transition_can_be_written_from_the_model() {
     let limits = SlideLimits::default();
     let import_limits = ImportLimits::default();
     let mut written = 0;
+    let rewritten = Path::new(env!("CARGO_TARGET_TMPDIR")).join("sdk-timing-rewritten");
+    let _ = std::fs::remove_dir_all(&rewritten);
+    std::fs::create_dir_all(&rewritten).unwrap();
     for path in all_decks() {
         if path.contains("five-hundred") {
             continue;
         }
         let source = read_fixture(&path);
         let original = model(&source);
-        let mut rewritten = 0;
+        let mut count = 0;
         let mut edited = open(source.clone());
         let strict = edited.conformance() == Conformance::Strict;
         let mut replaced = Vec::new();
@@ -235,20 +238,34 @@ fn every_timing_and_transition_can_be_written_from_the_model() {
             assert!(!stripped.contains("<p:transition"), "{path} {name}");
             patched(&mut tree, part).unwrap_or_else(|e| panic!("{path} {name}: {e}"));
             replaced.push((name, tree.to_bytes()));
-            rewritten += 1;
+            count += 1;
         }
-        written += rewritten;
-        if rewritten == 0 {
+        written += count;
+        if count == 0 {
             continue;
         }
         let out = rewritten_deck(&source, &replaced);
         assert_eq!(model(&out), original, "{path}: read back different");
+        let file = Path::new(&path).file_name().unwrap();
+        std::fs::write(rewritten.join(file), &out).unwrap();
         if !path.starts_with("real/sdk-strict") {
             let (before, after) = (f4_failures(&source), f4_failures(&out));
             assert_eq!(after, before, "{path}: F4");
         }
     }
     assert!(written >= 80, "{written}");
+    // Microsoft's validator on all of it at once, each deck under its own name, so what is
+    // recorded of a deck (owner instruction 25) applies. Skipped only without `dotnet`.
+    if Command::new("dotnet").arg("--version").output().is_ok() {
+        let out = Command::new("python3")
+            .arg("-I")
+            .arg(repo().join("tools/ooxml-sdk/validate.py"))
+            .arg(&rewritten)
+            .output()
+            .unwrap();
+        let text = String::from_utf8_lossy(&out.stdout);
+        assert!(out.status.success(), "{text}");
+    }
 }
 
 /// A deck with these parts replaced, every other entry as it was.

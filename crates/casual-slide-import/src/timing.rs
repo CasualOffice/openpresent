@@ -21,7 +21,7 @@ use casual_slide_model::slide::SlidePart;
 use casual_slide_model::timing::*;
 use casual_slide_ooxml::{AlternateResolution, Branch, ElementId, Relationship, XmlTree};
 
-use crate::color::{Findings as ColorFindings, read_color_choice};
+use crate::color::{Findings as ColorFindings, is_color_element, read_color_choice};
 use crate::properties::{Elem, ImportError, ImportFindingKind as K, Reader, ns};
 use crate::transition::P14;
 
@@ -967,9 +967,7 @@ impl<'a, 'r> MotionReader<'a, 'r> {
                     |_: &casual_slide_model::properties::Float32| true,
                 )?),
                 "strVal" => AnimVariant::Str(self.r.required(&mut t, "val", |_: &String| true)?),
-                "clrVal" => {
-                    AnimVariant::Color(read_color_choice(self.r.tree, child.id, self.color))
-                }
+                "clrVal" => AnimVariant::Color(self.color_in(&child)?),
                 _ => {
                     self.r.retained(&child);
                     continue;
@@ -982,6 +980,18 @@ impl<'a, 'r> MotionReader<'a, 'r> {
             once!(self, &child, value, read);
         }
         Ok(value.unwrap_or(AnimVariant::Empty))
+    }
+
+    /// `a:CT_Color`, under whichever element holds it. The colour's own reader reports on
+    /// the colour; what is beside it is reported here.
+    fn color_in(&mut self, el: &Elem) -> Read<Option<casual_slide_model::color::Color>> {
+        self.r.finish(el);
+        for child in self.r.children(el)? {
+            if !is_color_element(self.r.tree, child.id) {
+                self.r.retained(&child);
+            }
+        }
+        Ok(read_color_choice(self.r.tree, el.id, self.color))
     }
 
     /// `p:CT_TLAnimateBehavior`.
@@ -1067,24 +1077,8 @@ impl<'a, 'r> MotionReader<'a, 'r> {
             match child.local.as_str() {
                 "cBhvr" => once!(self, &child, anim.behavior, self.behavior(&child, depth)?),
                 "by" => once!(self, &child, anim.by, self.by_color(&child)?),
-                "from" => {
-                    self.r.finish(&child);
-                    once!(
-                        self,
-                        &child,
-                        anim.from,
-                        read_color_choice(self.r.tree, child.id, self.color)
-                    );
-                }
-                "to" => {
-                    self.r.finish(&child);
-                    once!(
-                        self,
-                        &child,
-                        anim.to,
-                        read_color_choice(self.r.tree, child.id, self.color)
-                    );
-                }
+                "from" => once!(self, &child, anim.from, self.color_in(&child)?),
+                "to" => once!(self, &child, anim.to, self.color_in(&child)?),
                 _ => self.r.retained(&child),
             }
         }
