@@ -469,3 +469,30 @@ fn a_central_name_that_disagrees_with_its_local_header_still_saves() {
     let edited = edit_title(&mut pkg, &d);
     PresentationPackage::open_strict(edited, OoxmlLimits::default()).unwrap();
 }
+
+/// `REC-07`: a deck whose only package relationship to its main part has a spoofed type opens
+/// by finding the main part by name (`CS-REC-0203`). An edit writes the repaired package, so
+/// the output must state the main part with the real relationship type, or no consumer that
+/// follows relationships, Microsoft's validator among them, can find it.
+#[test]
+fn an_edited_deck_found_by_name_states_its_main_part() {
+    let bytes = read("hostile/spoofed-office-document-type.bin");
+    let mut pkg = open(bytes);
+    let (model, _) = read_all(&mut pkg);
+    let edited = edit_title(&mut pkg, &model);
+    let rels = String::from_utf8(part_of(&edited, "_rels/.rels")).unwrap();
+    assert!(
+        rels.contains(
+            "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\""
+        ),
+        "{rels}"
+    );
+    // One relationship to the main part, not the spoofed one beside it: a part reached by two
+    // types is a package Microsoft's validator refuses.
+    assert_eq!(
+        rels.matches("Target=\"ppt/presentation.xml\"").count(),
+        1,
+        "{rels}"
+    );
+    assert!(!rels.contains("example.com/evil"), "{rels}");
+}

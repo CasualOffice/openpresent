@@ -1272,8 +1272,23 @@ impl Work<'_> {
         self.link_index.remove("");
         let spelled = self.rel_type("officeDocument");
         let mut list = self.rels.remove("").unwrap_or_default();
-        list.retain(|r| rel_kind(&r.rel_type) != Some("officeDocument"));
-        let id = next_rel_id(&list);
+        // A relationship of another type to the main part, such as a spoofed
+        // `.../evil/officeDocument`, is what this one replaces, under its id: kept beside it,
+        // the main part would be reached by two types, which a consumer may refuse (`REC-07`).
+        let main_key = entry_key(main);
+        let to_main = |r: &Relationship| {
+            r.mode == TargetMode::Internal
+                && resolve_internal("", &r.target).is_some_and(|t| entry_key(&t) == main_key)
+        };
+        let reused = list
+            .iter()
+            .find(|r| to_main(r) && rel_kind(&r.rel_type).is_none())
+            .map(|r| r.id.clone());
+        list.retain(|r| {
+            rel_kind(&r.rel_type) != Some("officeDocument")
+                && !(to_main(r) && rel_kind(&r.rel_type).is_none())
+        });
+        let id = reused.unwrap_or_else(|| next_rel_id(&list));
         list.push(Relationship {
             id,
             rel_type: spelled,
