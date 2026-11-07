@@ -295,6 +295,13 @@ pub(crate) fn alternate_content_part(v: &AlternateContentPart) -> N {
 }
 
 /// A part's root, as the model says it should be.
+// spec-audit: c:<chartSpace>
+// spec-audit: c:<userShapes>
+// spec-audit: c:<chart>
+// spec-audit: x:drawing/2014/chartex:<chartSpace>
+// spec-audit: x:drawing/2014/chartex:<chart>
+// spec-audit: x:drawing/2012/chartStyle:<chartStyle>
+// spec-audit: x:drawing/2012/chartStyle:<colorStyle>
 fn root_node(part: &ChartPart) -> N {
     match part {
         ChartPart::Chart(v) => c::c_chart_space(v, "chartSpace", C),

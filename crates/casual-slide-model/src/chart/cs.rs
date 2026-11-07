@@ -46,7 +46,7 @@ token_enum!(
 );
 
 token_enum!(
-    /// `cs:ST_MarkerStyle`.
+    /// `cs:` chart style marker styles.
     MarkerStyleValue {
         Circle = "circle",
         Dash = "dash",

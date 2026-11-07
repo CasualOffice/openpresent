@@ -141,7 +141,9 @@ def simple_node_value(x, node, variant):
     if restriction is not None:
         values = [e.get("value") for e in restriction.findall(XS + "enumeration")]
         if values:
-            return values[variant % len(values)]
+            at = NEXT_VALUE.get(id(node), variant)
+            NEXT_VALUE[id(node)] = at + 1
+            return values[at % len(values)]
         bounds = {c.tag.replace(XS, ""): c.get("value") for c in restriction}
         base = restriction.get("base")
         if "pattern" in bounds:
@@ -171,6 +173,11 @@ def simple_node_value(x, node, variant):
     if has_percent and variant % 2:
         return chosen[0] + "%"
     return chosen[variant % len(chosen)]
+
+
+# Where each enumeration has reached, for one deck's walk: a value at a branch only some
+# variants take would otherwise be missed. Same order, same bytes, each run.
+NEXT_VALUE = {}
 
 
 class Instance:
@@ -234,7 +241,6 @@ class Instance:
             base = x.q(sc.find(XS + "extension").get("base"))
             text = simple_value(x, *base, self.variant) or "x"
             return f'<{tag} {attrs}>{text}</{tag}>'
-        self.alternate_object = tname in ("CT_RelSizeAnchor", "CT_AbsSizeAnchor") and self.variant == 0
         body = "".join(self.particle(x, ch, tname) for ch in node if ch.tag != XS + "attribute")
         return f'<{tag}{" " + attrs if attrs else ""}>{body}</{tag}>'
 
@@ -257,8 +263,7 @@ class Instance:
                 return (f'<a:{COLORS[self.variant % len(COLORS)]}/>' if name == "EG_ColorChoice"
                         else '<a:lumMod val="50000"/>')
             other = BY_URI[uri]
-            if name == "EG_ObjectChoices" and getattr(self, "alternate_object", False):
-                self.alternate_object = False
+            if name == "EG_ObjectChoices" and owner in ("CT_RelSizeAnchor", "CT_AbsSizeAnchor") and self.variant == 0:
                 return content_part_alternate()  # This anchor's one object.
             return "".join(self.particle(other, ch, owner) for ch in other.groups[name])
         if tag == "element":
@@ -285,6 +290,9 @@ class Instance:
 
     def extension_list(self, x, owner):
         """Extension items at the root alone: a list everywhere would hold them all, everywhere."""
+        if x.prefix == "cx" and self.root_exts:
+            uri = "{C3380CC4-5D6E-409C-BE32-E72D297353CC}"
+            return f'<cx:extLst><cx:ext uri="{uri}"><c16:uniqueId val="{{00000000-0000-4000-8000-000000000000}}"/></cx:ext></cx:extLst>'
         if owner != "CT_ChartSpace" or x.prefix != "c" or not self.root_exts:
             return f"<{x.prefix}:extLst/>"
         items = []
@@ -501,6 +509,7 @@ def chart_ex_deck():
 def every_row_decks():
     """A deck per kind of root, with a part per value of the longest enumeration."""
     longest = {"c": 16, "cx": 13, "cs": 10}
+    NEXT_VALUE.clear()
     c_charts = []
     extra_parts, extra_types = [], []
     for v in range(longest["c"]):
@@ -564,7 +573,7 @@ def hostile():
            f'<c:chart unknown="{mark}"><c:autoTitleDeleted/><c:plotArea>'
            f'<c:barChart><c:barDir val="{mark}"/><c:ser><c:idx val="99999999999"/><c:idx val="0"/><c:order/><c:val><c:numRef><c:f><c:bad/></c:f>'
            f'<c:numCache><c:ptCount val="1"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="9"><c:v>{mark}</c:v></c:pt><c:pt/></c:numCache></c:numRef></c:val></c:ser>'
-           f'<c:ser><c:idx val="0"/></c:ser><c:gapWidth val="99999"/><c:overlap val="{mark}"/><c:axId val="9"/><c:axId val="{mark}"/><c:axId val="99999999999"/></c:barChart>'
+           f'<c:ser><c:idx val="0"/></c:ser><c:ser><c:idx val="0"/></c:ser><c:gapWidth val="99999"/><c:overlap val="{mark}"/><c:axId val="9"/><c:axId val="{mark}"/><c:axId val="99999999999"/></c:barChart>'
            f'<c:catAx><c:axId val="-5"/><c:crossAx val="8"/><c:axPos val="{mark}"/></c:catAx><c:unknown/></c:plotArea></c:chart>'
            f'<c:externalData r:id="rIdNone"/><c:userShapes/></c:chartSpace>')
     yield "hostile/chart-bad-structure.bin", one_chart(bad), "open"

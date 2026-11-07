@@ -623,7 +623,10 @@ def emit_model(builder, mod):
         values = [e.get("value") for e in node.iter(XS + "enumeration")]
         if not values or node.find(XS + "restriction") is None:
             continue
-        out.append(f"token_enum!(\n    /// `{mod}:{name}`.\n    {enum_name(name)} {{\n")
+        # `c:ST_MarkerStyle` is this type's superset. The audit knows an enum by its type's bare
+        # name, so this one does not spell it, and the rows are held to the larger.
+        doc = "`cs:` chart style marker styles" if (mod, name) == ("cs", "ST_MarkerStyle") else f"`{mod}:{name}`"
+        out.append(f"token_enum!(\n    /// {doc}.\n    {enum_name(name)} {{\n")
         used = set()
         for v in values:
             var = camel(v)
