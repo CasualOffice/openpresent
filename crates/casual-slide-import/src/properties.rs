@@ -295,6 +295,8 @@ pub enum ImportFindingKind {
     Drawing(crate::drawing::DrawingFinding),
     /// What the colour reader noticed in a shape's properties, under its own codes.
     Color(crate::color::FindingKind),
+    /// What the timing reader noticed, under its own codes.
+    Timing(crate::timing::TimingFinding),
 }
 
 impl ImportFindingKind {
@@ -318,6 +320,7 @@ impl ImportFindingKind {
             Self::FindingsTruncated => "CS-IMF-0015",
             Self::Drawing(finding) => finding.code(),
             Self::Color(finding) => finding.code(),
+            Self::Timing(finding) => finding.code(),
         }
     }
 }

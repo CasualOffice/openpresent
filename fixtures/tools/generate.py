@@ -257,6 +257,8 @@ def fixtures():
     yield from text_fixtures()
     from generate_shapes import fixtures as shape_fixtures  # imports this module, so not at the top
     yield from shape_fixtures()
+    from generate_timing import fixtures as timing_fixtures  # imports this module, so not at the top
+    yield from timing_fixtures()
 
 
 def main_part(xml):

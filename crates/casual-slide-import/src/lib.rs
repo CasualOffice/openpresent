@@ -15,3 +15,5 @@ pub mod shape;
 pub mod slide;
 pub mod text;
 pub mod theme;
+pub mod timing;
+pub mod transition;

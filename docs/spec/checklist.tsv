@@ -1,464 +1,464 @@
 id	area	owner	kind	name	type	use	default	restriction	M	I	E	R	U
-p:ST_TransitionSideDirectionType	TRANS		simple	ST_TransitionSideDirectionType				base=token	.	.	.	.	.
-p:ST_TransitionSideDirectionType/=l	TRANS	ST_TransitionSideDirectionType	value	=l					.	.	.	.	.
-p:ST_TransitionSideDirectionType/=u	TRANS	ST_TransitionSideDirectionType	value	=u					.	.	.	.	.
-p:ST_TransitionSideDirectionType/=r	TRANS	ST_TransitionSideDirectionType	value	=r					.	.	.	.	.
-p:ST_TransitionSideDirectionType/=d	TRANS	ST_TransitionSideDirectionType	value	=d					.	.	.	.	.
-p:ST_TransitionCornerDirectionType	TRANS		simple	ST_TransitionCornerDirectionType				base=token	.	.	.	.	.
-p:ST_TransitionCornerDirectionType/=lu	TRANS	ST_TransitionCornerDirectionType	value	=lu					.	.	.	.	.
-p:ST_TransitionCornerDirectionType/=ru	TRANS	ST_TransitionCornerDirectionType	value	=ru					.	.	.	.	.
-p:ST_TransitionCornerDirectionType/=ld	TRANS	ST_TransitionCornerDirectionType	value	=ld					.	.	.	.	.
-p:ST_TransitionCornerDirectionType/=rd	TRANS	ST_TransitionCornerDirectionType	value	=rd					.	.	.	.	.
-p:ST_TransitionInOutDirectionType	TRANS		simple	ST_TransitionInOutDirectionType				base=token	.	.	.	.	.
-p:ST_TransitionInOutDirectionType/=out	TRANS	ST_TransitionInOutDirectionType	value	=out					.	.	.	.	.
-p:ST_TransitionInOutDirectionType/=in	TRANS	ST_TransitionInOutDirectionType	value	=in					.	.	.	.	.
-p:CT_SideDirectionTransition	TRANS		type	CT_SideDirectionTransition					.	.	.	.	.
-p:CT_SideDirectionTransition/@dir	TRANS	CT_SideDirectionTransition	attribute	@dir	ST_TransitionSideDirectionType	optional	l		.	.	.	.	.
-p:CT_CornerDirectionTransition	TRANS		type	CT_CornerDirectionTransition					.	.	.	.	.
-p:CT_CornerDirectionTransition/@dir	TRANS	CT_CornerDirectionTransition	attribute	@dir	ST_TransitionCornerDirectionType	optional	lu		.	.	.	.	.
+p:ST_TransitionSideDirectionType	TRANS		simple	ST_TransitionSideDirectionType				base=token	y	.	.	.	.
+p:ST_TransitionSideDirectionType/=l	TRANS	ST_TransitionSideDirectionType	value	=l					y	y	y	.	.
+p:ST_TransitionSideDirectionType/=u	TRANS	ST_TransitionSideDirectionType	value	=u					y	y	y	.	.
+p:ST_TransitionSideDirectionType/=r	TRANS	ST_TransitionSideDirectionType	value	=r					y	y	y	.	.
+p:ST_TransitionSideDirectionType/=d	TRANS	ST_TransitionSideDirectionType	value	=d					y	y	y	.	.
+p:ST_TransitionCornerDirectionType	TRANS		simple	ST_TransitionCornerDirectionType				base=token	y	.	.	.	.
+p:ST_TransitionCornerDirectionType/=lu	TRANS	ST_TransitionCornerDirectionType	value	=lu					y	y	y	.	.
+p:ST_TransitionCornerDirectionType/=ru	TRANS	ST_TransitionCornerDirectionType	value	=ru					y	y	y	.	.
+p:ST_TransitionCornerDirectionType/=ld	TRANS	ST_TransitionCornerDirectionType	value	=ld					y	y	y	.	.
+p:ST_TransitionCornerDirectionType/=rd	TRANS	ST_TransitionCornerDirectionType	value	=rd					y	y	y	.	.
+p:ST_TransitionInOutDirectionType	TRANS		simple	ST_TransitionInOutDirectionType				base=token	y	.	.	.	.
+p:ST_TransitionInOutDirectionType/=out	TRANS	ST_TransitionInOutDirectionType	value	=out					y	y	y	.	.
+p:ST_TransitionInOutDirectionType/=in	TRANS	ST_TransitionInOutDirectionType	value	=in					y	y	y	.	.
+p:CT_SideDirectionTransition	TRANS		type	CT_SideDirectionTransition					y	y	y	.	.
+p:CT_SideDirectionTransition/@dir	TRANS	CT_SideDirectionTransition	attribute	@dir	ST_TransitionSideDirectionType	optional	l		y	y	y	.	.
+p:CT_CornerDirectionTransition	TRANS		type	CT_CornerDirectionTransition					y	y	y	.	.
+p:CT_CornerDirectionTransition/@dir	TRANS	CT_CornerDirectionTransition	attribute	@dir	ST_TransitionCornerDirectionType	optional	lu		y	y	y	.	.
 p:ST_TransitionEightDirectionType	TRANS		simple	ST_TransitionEightDirectionType				union=ST_TransitionSideDirectionType ST_TransitionCornerDirectionType	.	.	.	.	.
-p:CT_EightDirectionTransition	TRANS		type	CT_EightDirectionTransition					.	.	.	.	.
-p:CT_EightDirectionTransition/@dir	TRANS	CT_EightDirectionTransition	attribute	@dir	ST_TransitionEightDirectionType	optional	l		.	.	.	.	.
-p:CT_OrientationTransition	TRANS		type	CT_OrientationTransition					.	.	.	.	.
-p:CT_OrientationTransition/@dir	TRANS	CT_OrientationTransition	attribute	@dir	ST_Direction	optional	horz		.	.	.	.	.
-p:CT_InOutTransition	TRANS		type	CT_InOutTransition					.	.	.	.	.
-p:CT_InOutTransition/@dir	TRANS	CT_InOutTransition	attribute	@dir	ST_TransitionInOutDirectionType	optional	out		.	.	.	.	.
-p:CT_OptionalBlackTransition	TRANS		type	CT_OptionalBlackTransition					.	.	.	.	.
-p:CT_OptionalBlackTransition/@thruBlk	TRANS	CT_OptionalBlackTransition	attribute	@thruBlk	boolean	optional	false		.	.	.	.	.
-p:CT_SplitTransition	TRANS		type	CT_SplitTransition					.	.	.	.	.
-p:CT_SplitTransition/@orient	TRANS	CT_SplitTransition	attribute	@orient	ST_Direction	optional	horz		.	.	.	.	.
-p:CT_SplitTransition/@dir	TRANS	CT_SplitTransition	attribute	@dir	ST_TransitionInOutDirectionType	optional	out		.	.	.	.	.
-p:CT_WheelTransition	TRANS		type	CT_WheelTransition					.	.	.	.	.
-p:CT_WheelTransition/@spokes	TRANS	CT_WheelTransition	attribute	@spokes	unsignedInt	optional	4		.	.	.	.	.
-p:CT_TransitionStartSoundAction	TRANS		type	CT_TransitionStartSoundAction					.	.	.	.	.
-p:CT_TransitionStartSoundAction/snd	TRANS	CT_TransitionStartSoundAction	element	snd	CT_EmbeddedWAVAudioFile				.	.	.	.	.
-p:CT_TransitionStartSoundAction/@loop	TRANS	CT_TransitionStartSoundAction	attribute	@loop	boolean	optional	false		.	.	.	.	.
-p:CT_TransitionSoundAction	TRANS		type	CT_TransitionSoundAction					.	.	.	.	.
-p:CT_TransitionSoundAction/stSnd	TRANS	CT_TransitionSoundAction	element	stSnd	CT_TransitionStartSoundAction	choice			.	.	.	.	.
-p:CT_TransitionSoundAction/endSnd	TRANS	CT_TransitionSoundAction	element	endSnd	CT_Empty	choice			.	.	.	.	.
-p:ST_TransitionSpeed	TRANS		simple	ST_TransitionSpeed				base=token	.	.	.	.	.
-p:ST_TransitionSpeed/=slow	TRANS	ST_TransitionSpeed	value	=slow					.	.	.	.	.
-p:ST_TransitionSpeed/=med	TRANS	ST_TransitionSpeed	value	=med					.	.	.	.	.
-p:ST_TransitionSpeed/=fast	TRANS	ST_TransitionSpeed	value	=fast					.	.	.	.	.
+p:CT_EightDirectionTransition	TRANS		type	CT_EightDirectionTransition					y	y	y	.	.
+p:CT_EightDirectionTransition/@dir	TRANS	CT_EightDirectionTransition	attribute	@dir	ST_TransitionEightDirectionType	optional	l		y	y	y	.	.
+p:CT_OrientationTransition	TRANS		type	CT_OrientationTransition					y	y	y	.	.
+p:CT_OrientationTransition/@dir	TRANS	CT_OrientationTransition	attribute	@dir	ST_Direction	optional	horz		y	y	y	.	.
+p:CT_InOutTransition	TRANS		type	CT_InOutTransition					y	y	y	.	.
+p:CT_InOutTransition/@dir	TRANS	CT_InOutTransition	attribute	@dir	ST_TransitionInOutDirectionType	optional	out		y	y	y	.	.
+p:CT_OptionalBlackTransition	TRANS		type	CT_OptionalBlackTransition					y	y	y	.	.
+p:CT_OptionalBlackTransition/@thruBlk	TRANS	CT_OptionalBlackTransition	attribute	@thruBlk	boolean	optional	false		y	y	y	.	.
+p:CT_SplitTransition	TRANS		type	CT_SplitTransition					y	y	y	.	.
+p:CT_SplitTransition/@orient	TRANS	CT_SplitTransition	attribute	@orient	ST_Direction	optional	horz		y	y	y	.	.
+p:CT_SplitTransition/@dir	TRANS	CT_SplitTransition	attribute	@dir	ST_TransitionInOutDirectionType	optional	out		y	y	y	.	.
+p:CT_WheelTransition	TRANS		type	CT_WheelTransition					y	y	y	.	.
+p:CT_WheelTransition/@spokes	TRANS	CT_WheelTransition	attribute	@spokes	unsignedInt	optional	4		y	y	y	.	.
+p:CT_TransitionStartSoundAction	TRANS		type	CT_TransitionStartSoundAction					y	y	y	.	.
+p:CT_TransitionStartSoundAction/snd	TRANS	CT_TransitionStartSoundAction	element	snd	CT_EmbeddedWAVAudioFile				y	y	y	.	.
+p:CT_TransitionStartSoundAction/@loop	TRANS	CT_TransitionStartSoundAction	attribute	@loop	boolean	optional	false		y	y	y	.	.
+p:CT_TransitionSoundAction	TRANS		type	CT_TransitionSoundAction					y	y	y	.	.
+p:CT_TransitionSoundAction/stSnd	TRANS	CT_TransitionSoundAction	element	stSnd	CT_TransitionStartSoundAction	choice			y	y	y	.	.
+p:CT_TransitionSoundAction/endSnd	TRANS	CT_TransitionSoundAction	element	endSnd	CT_Empty	choice			y	y	y	.	.
+p:ST_TransitionSpeed	TRANS		simple	ST_TransitionSpeed				base=token	y	.	.	.	.
+p:ST_TransitionSpeed/=slow	TRANS	ST_TransitionSpeed	value	=slow					y	y	y	.	.
+p:ST_TransitionSpeed/=med	TRANS	ST_TransitionSpeed	value	=med					y	y	y	.	.
+p:ST_TransitionSpeed/=fast	TRANS	ST_TransitionSpeed	value	=fast					y	y	y	.	.
 p:CT_SlideTransition	TRANS		type	CT_SlideTransition					.	.	.	.	.
-p:CT_SlideTransition/blinds	TRANS	CT_SlideTransition	element	blinds	CT_OrientationTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/checker	TRANS	CT_SlideTransition	element	checker	CT_OrientationTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/circle	TRANS	CT_SlideTransition	element	circle	CT_Empty	choice			.	.	.	.	.
-p:CT_SlideTransition/dissolve	TRANS	CT_SlideTransition	element	dissolve	CT_Empty	choice			.	.	.	.	.
-p:CT_SlideTransition/comb	TRANS	CT_SlideTransition	element	comb	CT_OrientationTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/cover	TRANS	CT_SlideTransition	element	cover	CT_EightDirectionTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/cut	TRANS	CT_SlideTransition	element	cut	CT_OptionalBlackTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/diamond	TRANS	CT_SlideTransition	element	diamond	CT_Empty	choice			.	.	.	.	.
-p:CT_SlideTransition/fade	TRANS	CT_SlideTransition	element	fade	CT_OptionalBlackTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/newsflash	TRANS	CT_SlideTransition	element	newsflash	CT_Empty	choice			.	.	.	.	.
-p:CT_SlideTransition/plus	TRANS	CT_SlideTransition	element	plus	CT_Empty	choice			.	.	.	.	.
-p:CT_SlideTransition/pull	TRANS	CT_SlideTransition	element	pull	CT_EightDirectionTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/push	TRANS	CT_SlideTransition	element	push	CT_SideDirectionTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/random	TRANS	CT_SlideTransition	element	random	CT_Empty	choice			.	.	.	.	.
-p:CT_SlideTransition/randomBar	TRANS	CT_SlideTransition	element	randomBar	CT_OrientationTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/split	TRANS	CT_SlideTransition	element	split	CT_SplitTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/strips	TRANS	CT_SlideTransition	element	strips	CT_CornerDirectionTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/wedge	TRANS	CT_SlideTransition	element	wedge	CT_Empty	choice			.	.	.	.	.
-p:CT_SlideTransition/wheel	TRANS	CT_SlideTransition	element	wheel	CT_WheelTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/wipe	TRANS	CT_SlideTransition	element	wipe	CT_SideDirectionTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/zoom	TRANS	CT_SlideTransition	element	zoom	CT_InOutTransition	choice			.	.	.	.	.
-p:CT_SlideTransition/sndAc	TRANS	CT_SlideTransition	element	sndAc	CT_TransitionSoundAction	0..1			.	.	.	.	.
-p:CT_SlideTransition/extLst	TRANS	CT_SlideTransition	element	extLst	CT_ExtensionListModify	0..1			.	.	.	.	.
-p:CT_SlideTransition/@spd	TRANS	CT_SlideTransition	attribute	@spd	ST_TransitionSpeed	optional	fast		.	.	.	.	.
-p:CT_SlideTransition/@advClick	TRANS	CT_SlideTransition	attribute	@advClick	boolean	optional	true		.	.	.	.	.
-p:CT_SlideTransition/@advTm	TRANS	CT_SlideTransition	attribute	@advTm	unsignedInt	optional			.	.	.	.	.
-p:ST_TLTimeIndefinite	TIMING		simple	ST_TLTimeIndefinite				base=token	.	.	.	.	.
-p:ST_TLTimeIndefinite/=indefinite	TIMING	ST_TLTimeIndefinite	value	=indefinite					.	.	.	.	.
+p:CT_SlideTransition/blinds	TRANS	CT_SlideTransition	element	blinds	CT_OrientationTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/checker	TRANS	CT_SlideTransition	element	checker	CT_OrientationTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/circle	TRANS	CT_SlideTransition	element	circle	CT_Empty	choice			y	y	y	.	.
+p:CT_SlideTransition/dissolve	TRANS	CT_SlideTransition	element	dissolve	CT_Empty	choice			y	y	y	.	.
+p:CT_SlideTransition/comb	TRANS	CT_SlideTransition	element	comb	CT_OrientationTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/cover	TRANS	CT_SlideTransition	element	cover	CT_EightDirectionTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/cut	TRANS	CT_SlideTransition	element	cut	CT_OptionalBlackTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/diamond	TRANS	CT_SlideTransition	element	diamond	CT_Empty	choice			y	y	y	.	.
+p:CT_SlideTransition/fade	TRANS	CT_SlideTransition	element	fade	CT_OptionalBlackTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/newsflash	TRANS	CT_SlideTransition	element	newsflash	CT_Empty	choice			y	y	y	.	.
+p:CT_SlideTransition/plus	TRANS	CT_SlideTransition	element	plus	CT_Empty	choice			y	y	y	.	.
+p:CT_SlideTransition/pull	TRANS	CT_SlideTransition	element	pull	CT_EightDirectionTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/push	TRANS	CT_SlideTransition	element	push	CT_SideDirectionTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/random	TRANS	CT_SlideTransition	element	random	CT_Empty	choice			y	y	y	.	.
+p:CT_SlideTransition/randomBar	TRANS	CT_SlideTransition	element	randomBar	CT_OrientationTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/split	TRANS	CT_SlideTransition	element	split	CT_SplitTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/strips	TRANS	CT_SlideTransition	element	strips	CT_CornerDirectionTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/wedge	TRANS	CT_SlideTransition	element	wedge	CT_Empty	choice			y	y	y	.	.
+p:CT_SlideTransition/wheel	TRANS	CT_SlideTransition	element	wheel	CT_WheelTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/wipe	TRANS	CT_SlideTransition	element	wipe	CT_SideDirectionTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/zoom	TRANS	CT_SlideTransition	element	zoom	CT_InOutTransition	choice			y	y	y	.	.
+p:CT_SlideTransition/sndAc	TRANS	CT_SlideTransition	element	sndAc	CT_TransitionSoundAction	0..1			y	y	y	.	.
+p:CT_SlideTransition/extLst	TRANS	CT_SlideTransition	element	extLst	CT_ExtensionListModify	0..1			r	r	r	.	.
+p:CT_SlideTransition/@spd	TRANS	CT_SlideTransition	attribute	@spd	ST_TransitionSpeed	optional	fast		y	y	y	.	.
+p:CT_SlideTransition/@advClick	TRANS	CT_SlideTransition	attribute	@advClick	boolean	optional	true		y	y	y	.	.
+p:CT_SlideTransition/@advTm	TRANS	CT_SlideTransition	attribute	@advTm	unsignedInt	optional			y	y	y	.	.
+p:ST_TLTimeIndefinite	TIMING		simple	ST_TLTimeIndefinite				base=token	y	.	.	.	.
+p:ST_TLTimeIndefinite/=indefinite	TIMING	ST_TLTimeIndefinite	value	=indefinite					y	.	.	.	.
 p:ST_TLTime	TIMING		simple	ST_TLTime				union=unsignedInt ST_TLTimeIndefinite	.	.	.	.	.
 p:ST_TLTimeNodeID	TIMING		simple	ST_TLTimeNodeID				base=unsignedInt	.	.	.	.	.
-p:CT_TLIterateIntervalTime	TIMING		type	CT_TLIterateIntervalTime					.	.	.	.	.
-p:CT_TLIterateIntervalTime/@val	TIMING	CT_TLIterateIntervalTime	attribute	@val	ST_TLTime	required			.	.	.	.	.
-p:CT_TLIterateIntervalPercentage	TIMING		type	CT_TLIterateIntervalPercentage					.	.	.	.	.
-p:CT_TLIterateIntervalPercentage/@val	TIMING	CT_TLIterateIntervalPercentage	attribute	@val	ST_PositivePercentage	required			.	.	.	.	.
-p:ST_IterateType	TIMING		simple	ST_IterateType				base=token	.	.	.	.	.
-p:ST_IterateType/=el	TIMING	ST_IterateType	value	=el					.	.	.	.	.
-p:ST_IterateType/=wd	TIMING	ST_IterateType	value	=wd					.	.	.	.	.
-p:ST_IterateType/=lt	TIMING	ST_IterateType	value	=lt					.	.	.	.	.
-p:CT_TLIterateData	TIMING		type	CT_TLIterateData					.	.	.	.	.
-p:CT_TLIterateData/tmAbs	TIMING	CT_TLIterateData	element	tmAbs	CT_TLIterateIntervalTime	choice			.	.	.	.	.
-p:CT_TLIterateData/tmPct	TIMING	CT_TLIterateData	element	tmPct	CT_TLIterateIntervalPercentage	choice			.	.	.	.	.
-p:CT_TLIterateData/@type	TIMING	CT_TLIterateData	attribute	@type	ST_IterateType	optional	el		.	.	.	.	.
-p:CT_TLIterateData/@backwards	TIMING	CT_TLIterateData	attribute	@backwards	boolean	optional	false		.	.	.	.	.
-p:CT_TLSubShapeId	TIMING		type	CT_TLSubShapeId					.	.	.	.	.
-p:CT_TLSubShapeId/@spid	TIMING	CT_TLSubShapeId	attribute	@spid	ST_ShapeID	required			.	.	.	.	.
-p:CT_TLTextTargetElement	TIMING		type	CT_TLTextTargetElement					.	.	.	.	.
-p:CT_TLTextTargetElement/charRg	TIMING	CT_TLTextTargetElement	element	charRg	CT_IndexRange	choice			.	.	.	.	.
-p:CT_TLTextTargetElement/pRg	TIMING	CT_TLTextTargetElement	element	pRg	CT_IndexRange	choice			.	.	.	.	.
-p:ST_TLChartSubelementType	TIMING		simple	ST_TLChartSubelementType				base=token	.	.	.	.	.
-p:ST_TLChartSubelementType/=gridLegend	TIMING	ST_TLChartSubelementType	value	=gridLegend					.	.	.	.	.
-p:ST_TLChartSubelementType/=series	TIMING	ST_TLChartSubelementType	value	=series					.	.	.	.	.
-p:ST_TLChartSubelementType/=category	TIMING	ST_TLChartSubelementType	value	=category					.	.	.	.	.
-p:ST_TLChartSubelementType/=ptInSeries	TIMING	ST_TLChartSubelementType	value	=ptInSeries					.	.	.	.	.
-p:ST_TLChartSubelementType/=ptInCategory	TIMING	ST_TLChartSubelementType	value	=ptInCategory					.	.	.	.	.
-p:CT_TLOleChartTargetElement	TIMING		type	CT_TLOleChartTargetElement					.	.	.	.	.
-p:CT_TLOleChartTargetElement/@type	TIMING	CT_TLOleChartTargetElement	attribute	@type	ST_TLChartSubelementType	required			.	.	.	.	.
-p:CT_TLOleChartTargetElement/@lvl	TIMING	CT_TLOleChartTargetElement	attribute	@lvl	unsignedInt	optional	0		.	.	.	.	.
-p:CT_TLShapeTargetElement	TIMING		type	CT_TLShapeTargetElement					.	.	.	.	.
-p:CT_TLShapeTargetElement/bg	TIMING	CT_TLShapeTargetElement	element	bg	CT_Empty	choice			.	.	.	.	.
-p:CT_TLShapeTargetElement/subSp	TIMING	CT_TLShapeTargetElement	element	subSp	CT_TLSubShapeId	choice			.	.	.	.	.
-p:CT_TLShapeTargetElement/oleChartEl	TIMING	CT_TLShapeTargetElement	element	oleChartEl	CT_TLOleChartTargetElement	choice			.	.	.	.	.
-p:CT_TLShapeTargetElement/txEl	TIMING	CT_TLShapeTargetElement	element	txEl	CT_TLTextTargetElement	choice			.	.	.	.	.
-p:CT_TLShapeTargetElement/graphicEl	TIMING	CT_TLShapeTargetElement	element	graphicEl	CT_AnimationElementChoice	choice			.	.	.	.	.
-p:CT_TLShapeTargetElement/@spid	TIMING	CT_TLShapeTargetElement	attribute	@spid	ST_DrawingElementId	required			.	.	.	.	.
-p:CT_TLTimeTargetElement	TIMING		type	CT_TLTimeTargetElement					.	.	.	.	.
-p:CT_TLTimeTargetElement/sldTgt	TIMING	CT_TLTimeTargetElement	element	sldTgt	CT_Empty	choice			.	.	.	.	.
-p:CT_TLTimeTargetElement/sndTgt	TIMING	CT_TLTimeTargetElement	element	sndTgt	CT_EmbeddedWAVAudioFile	choice			.	.	.	.	.
-p:CT_TLTimeTargetElement/spTgt	TIMING	CT_TLTimeTargetElement	element	spTgt	CT_TLShapeTargetElement	choice			.	.	.	.	.
-p:CT_TLTimeTargetElement/inkTgt	TIMING	CT_TLTimeTargetElement	element	inkTgt	CT_TLSubShapeId	choice			.	.	.	.	.
-p:CT_TLTriggerTimeNodeID	TIMING		type	CT_TLTriggerTimeNodeID					.	.	.	.	.
-p:CT_TLTriggerTimeNodeID/@val	TIMING	CT_TLTriggerTimeNodeID	attribute	@val	ST_TLTimeNodeID	required			.	.	.	.	.
-p:ST_TLTriggerRuntimeNode	TIMING		simple	ST_TLTriggerRuntimeNode				base=token	.	.	.	.	.
-p:ST_TLTriggerRuntimeNode/=first	TIMING	ST_TLTriggerRuntimeNode	value	=first					.	.	.	.	.
-p:ST_TLTriggerRuntimeNode/=last	TIMING	ST_TLTriggerRuntimeNode	value	=last					.	.	.	.	.
-p:ST_TLTriggerRuntimeNode/=all	TIMING	ST_TLTriggerRuntimeNode	value	=all					.	.	.	.	.
-p:CT_TLTriggerRuntimeNode	TIMING		type	CT_TLTriggerRuntimeNode					.	.	.	.	.
-p:CT_TLTriggerRuntimeNode/@val	TIMING	CT_TLTriggerRuntimeNode	attribute	@val	ST_TLTriggerRuntimeNode	required			.	.	.	.	.
-p:ST_TLTriggerEvent	TIMING		simple	ST_TLTriggerEvent				base=token	.	.	.	.	.
-p:ST_TLTriggerEvent/=onBegin	TIMING	ST_TLTriggerEvent	value	=onBegin					.	.	.	.	.
-p:ST_TLTriggerEvent/=onEnd	TIMING	ST_TLTriggerEvent	value	=onEnd					.	.	.	.	.
-p:ST_TLTriggerEvent/=begin	TIMING	ST_TLTriggerEvent	value	=begin					.	.	.	.	.
-p:ST_TLTriggerEvent/=end	TIMING	ST_TLTriggerEvent	value	=end					.	.	.	.	.
-p:ST_TLTriggerEvent/=onClick	TIMING	ST_TLTriggerEvent	value	=onClick					.	.	.	.	.
-p:ST_TLTriggerEvent/=onDblClick	TIMING	ST_TLTriggerEvent	value	=onDblClick					.	.	.	.	.
-p:ST_TLTriggerEvent/=onMouseOver	TIMING	ST_TLTriggerEvent	value	=onMouseOver					.	.	.	.	.
-p:ST_TLTriggerEvent/=onMouseOut	TIMING	ST_TLTriggerEvent	value	=onMouseOut					.	.	.	.	.
-p:ST_TLTriggerEvent/=onNext	TIMING	ST_TLTriggerEvent	value	=onNext					.	.	.	.	.
-p:ST_TLTriggerEvent/=onPrev	TIMING	ST_TLTriggerEvent	value	=onPrev					.	.	.	.	.
-p:ST_TLTriggerEvent/=onStopAudio	TIMING	ST_TLTriggerEvent	value	=onStopAudio					.	.	.	.	.
-p:CT_TLTimeCondition	TIMING		type	CT_TLTimeCondition					.	.	.	.	.
-p:CT_TLTimeCondition/tgtEl	TIMING	CT_TLTimeCondition	element	tgtEl	CT_TLTimeTargetElement	choice			.	.	.	.	.
-p:CT_TLTimeCondition/tn	TIMING	CT_TLTimeCondition	element	tn	CT_TLTriggerTimeNodeID	choice			.	.	.	.	.
-p:CT_TLTimeCondition/rtn	TIMING	CT_TLTimeCondition	element	rtn	CT_TLTriggerRuntimeNode	choice			.	.	.	.	.
-p:CT_TLTimeCondition/@evt	TIMING	CT_TLTimeCondition	attribute	@evt	ST_TLTriggerEvent	optional			.	.	.	.	.
-p:CT_TLTimeCondition/@delay	TIMING	CT_TLTimeCondition	attribute	@delay	ST_TLTime	optional			.	.	.	.	.
-p:CT_TLTimeConditionList	TIMING		type	CT_TLTimeConditionList					.	.	.	.	.
-p:CT_TLTimeConditionList/cond	TIMING	CT_TLTimeConditionList	element	cond	CT_TLTimeCondition	1..unbounded			.	.	.	.	.
-p:CT_TimeNodeList	TIMING		type	CT_TimeNodeList					.	.	.	.	.
-p:CT_TimeNodeList/par	TIMING	CT_TimeNodeList	element	par	CT_TLTimeNodeParallel	choice			.	.	.	.	.
-p:CT_TimeNodeList/seq	TIMING	CT_TimeNodeList	element	seq	CT_TLTimeNodeSequence	choice			.	.	.	.	.
-p:CT_TimeNodeList/excl	TIMING	CT_TimeNodeList	element	excl	CT_TLTimeNodeExclusive	choice			.	.	.	.	.
-p:CT_TimeNodeList/anim	TIMING	CT_TimeNodeList	element	anim	CT_TLAnimateBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/animClr	TIMING	CT_TimeNodeList	element	animClr	CT_TLAnimateColorBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/animEffect	TIMING	CT_TimeNodeList	element	animEffect	CT_TLAnimateEffectBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/animMotion	TIMING	CT_TimeNodeList	element	animMotion	CT_TLAnimateMotionBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/animRot	TIMING	CT_TimeNodeList	element	animRot	CT_TLAnimateRotationBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/animScale	TIMING	CT_TimeNodeList	element	animScale	CT_TLAnimateScaleBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/cmd	TIMING	CT_TimeNodeList	element	cmd	CT_TLCommandBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/set	TIMING	CT_TimeNodeList	element	set	CT_TLSetBehavior	choice			.	.	.	.	.
-p:CT_TimeNodeList/audio	TIMING	CT_TimeNodeList	element	audio	CT_TLMediaNodeAudio	choice			.	.	.	.	.
-p:CT_TimeNodeList/video	TIMING	CT_TimeNodeList	element	video	CT_TLMediaNodeVideo	choice			.	.	.	.	.
-p:ST_TLTimeNodePresetClassType	TIMING		simple	ST_TLTimeNodePresetClassType				base=token	.	.	.	.	.
-p:ST_TLTimeNodePresetClassType/=entr	TIMING	ST_TLTimeNodePresetClassType	value	=entr					.	.	.	.	.
-p:ST_TLTimeNodePresetClassType/=exit	TIMING	ST_TLTimeNodePresetClassType	value	=exit					.	.	.	.	.
-p:ST_TLTimeNodePresetClassType/=emph	TIMING	ST_TLTimeNodePresetClassType	value	=emph					.	.	.	.	.
-p:ST_TLTimeNodePresetClassType/=path	TIMING	ST_TLTimeNodePresetClassType	value	=path					.	.	.	.	.
-p:ST_TLTimeNodePresetClassType/=verb	TIMING	ST_TLTimeNodePresetClassType	value	=verb					.	.	.	.	.
-p:ST_TLTimeNodePresetClassType/=mediacall	TIMING	ST_TLTimeNodePresetClassType	value	=mediacall					.	.	.	.	.
-p:ST_TLTimeNodeRestartType	TIMING		simple	ST_TLTimeNodeRestartType				base=token	.	.	.	.	.
-p:ST_TLTimeNodeRestartType/=always	TIMING	ST_TLTimeNodeRestartType	value	=always					.	.	.	.	.
-p:ST_TLTimeNodeRestartType/=whenNotActive	TIMING	ST_TLTimeNodeRestartType	value	=whenNotActive					.	.	.	.	.
-p:ST_TLTimeNodeRestartType/=never	TIMING	ST_TLTimeNodeRestartType	value	=never					.	.	.	.	.
-p:ST_TLTimeNodeFillType	TIMING		simple	ST_TLTimeNodeFillType				base=token	.	.	.	.	.
-p:ST_TLTimeNodeFillType/=remove	TIMING	ST_TLTimeNodeFillType	value	=remove					.	.	.	.	.
-p:ST_TLTimeNodeFillType/=freeze	TIMING	ST_TLTimeNodeFillType	value	=freeze					.	.	.	.	.
-p:ST_TLTimeNodeFillType/=hold	TIMING	ST_TLTimeNodeFillType	value	=hold					.	.	.	.	.
-p:ST_TLTimeNodeFillType/=transition	TIMING	ST_TLTimeNodeFillType	value	=transition					.	.	.	.	.
-p:ST_TLTimeNodeSyncType	TIMING		simple	ST_TLTimeNodeSyncType				base=token	.	.	.	.	.
-p:ST_TLTimeNodeSyncType/=canSlip	TIMING	ST_TLTimeNodeSyncType	value	=canSlip					.	.	.	.	.
-p:ST_TLTimeNodeSyncType/=locked	TIMING	ST_TLTimeNodeSyncType	value	=locked					.	.	.	.	.
-p:ST_TLTimeNodeMasterRelation	TIMING		simple	ST_TLTimeNodeMasterRelation				base=token	.	.	.	.	.
-p:ST_TLTimeNodeMasterRelation/=sameClick	TIMING	ST_TLTimeNodeMasterRelation	value	=sameClick					.	.	.	.	.
-p:ST_TLTimeNodeMasterRelation/=lastClick	TIMING	ST_TLTimeNodeMasterRelation	value	=lastClick					.	.	.	.	.
-p:ST_TLTimeNodeMasterRelation/=nextClick	TIMING	ST_TLTimeNodeMasterRelation	value	=nextClick					.	.	.	.	.
-p:ST_TLTimeNodeType	TIMING		simple	ST_TLTimeNodeType				base=token	.	.	.	.	.
-p:ST_TLTimeNodeType/=clickEffect	TIMING	ST_TLTimeNodeType	value	=clickEffect					.	.	.	.	.
-p:ST_TLTimeNodeType/=withEffect	TIMING	ST_TLTimeNodeType	value	=withEffect					.	.	.	.	.
-p:ST_TLTimeNodeType/=afterEffect	TIMING	ST_TLTimeNodeType	value	=afterEffect					.	.	.	.	.
-p:ST_TLTimeNodeType/=mainSeq	TIMING	ST_TLTimeNodeType	value	=mainSeq					.	.	.	.	.
-p:ST_TLTimeNodeType/=interactiveSeq	TIMING	ST_TLTimeNodeType	value	=interactiveSeq					.	.	.	.	.
-p:ST_TLTimeNodeType/=clickPar	TIMING	ST_TLTimeNodeType	value	=clickPar					.	.	.	.	.
-p:ST_TLTimeNodeType/=withGroup	TIMING	ST_TLTimeNodeType	value	=withGroup					.	.	.	.	.
-p:ST_TLTimeNodeType/=afterGroup	TIMING	ST_TLTimeNodeType	value	=afterGroup					.	.	.	.	.
-p:ST_TLTimeNodeType/=tmRoot	TIMING	ST_TLTimeNodeType	value	=tmRoot					.	.	.	.	.
-p:CT_TLCommonTimeNodeData	TIMING		type	CT_TLCommonTimeNodeData					.	.	.	.	.
-p:CT_TLCommonTimeNodeData/stCondLst	TIMING	CT_TLCommonTimeNodeData	element	stCondLst	CT_TLTimeConditionList	0..1			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/endCondLst	TIMING	CT_TLCommonTimeNodeData	element	endCondLst	CT_TLTimeConditionList	0..1			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/endSync	TIMING	CT_TLCommonTimeNodeData	element	endSync	CT_TLTimeCondition	0..1			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/iterate	TIMING	CT_TLCommonTimeNodeData	element	iterate	CT_TLIterateData	0..1			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/childTnLst	TIMING	CT_TLCommonTimeNodeData	element	childTnLst	CT_TimeNodeList	0..1			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/subTnLst	TIMING	CT_TLCommonTimeNodeData	element	subTnLst	CT_TimeNodeList	0..1			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@id	TIMING	CT_TLCommonTimeNodeData	attribute	@id	ST_TLTimeNodeID	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@presetID	TIMING	CT_TLCommonTimeNodeData	attribute	@presetID	int	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@presetClass	TIMING	CT_TLCommonTimeNodeData	attribute	@presetClass	ST_TLTimeNodePresetClassType	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@presetSubtype	TIMING	CT_TLCommonTimeNodeData	attribute	@presetSubtype	int	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@dur	TIMING	CT_TLCommonTimeNodeData	attribute	@dur	ST_TLTime	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@repeatCount	TIMING	CT_TLCommonTimeNodeData	attribute	@repeatCount	ST_TLTime	optional	1000		.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@repeatDur	TIMING	CT_TLCommonTimeNodeData	attribute	@repeatDur	ST_TLTime	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@spd	TIMING	CT_TLCommonTimeNodeData	attribute	@spd	ST_Percentage	optional	100%		.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@accel	TIMING	CT_TLCommonTimeNodeData	attribute	@accel	ST_PositiveFixedPercentage	optional	0%		.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@decel	TIMING	CT_TLCommonTimeNodeData	attribute	@decel	ST_PositiveFixedPercentage	optional	0%		.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@autoRev	TIMING	CT_TLCommonTimeNodeData	attribute	@autoRev	boolean	optional	false		.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@restart	TIMING	CT_TLCommonTimeNodeData	attribute	@restart	ST_TLTimeNodeRestartType	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@fill	TIMING	CT_TLCommonTimeNodeData	attribute	@fill	ST_TLTimeNodeFillType	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@syncBehavior	TIMING	CT_TLCommonTimeNodeData	attribute	@syncBehavior	ST_TLTimeNodeSyncType	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@tmFilter	TIMING	CT_TLCommonTimeNodeData	attribute	@tmFilter	string	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@evtFilter	TIMING	CT_TLCommonTimeNodeData	attribute	@evtFilter	string	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@display	TIMING	CT_TLCommonTimeNodeData	attribute	@display	boolean	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@masterRel	TIMING	CT_TLCommonTimeNodeData	attribute	@masterRel	ST_TLTimeNodeMasterRelation	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@bldLvl	TIMING	CT_TLCommonTimeNodeData	attribute	@bldLvl	int	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@grpId	TIMING	CT_TLCommonTimeNodeData	attribute	@grpId	unsignedInt	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@afterEffect	TIMING	CT_TLCommonTimeNodeData	attribute	@afterEffect	boolean	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@nodeType	TIMING	CT_TLCommonTimeNodeData	attribute	@nodeType	ST_TLTimeNodeType	optional			.	.	.	.	.
-p:CT_TLCommonTimeNodeData/@nodePh	TIMING	CT_TLCommonTimeNodeData	attribute	@nodePh	boolean	optional			.	.	.	.	.
-p:CT_TLTimeNodeParallel	TIMING		type	CT_TLTimeNodeParallel					.	.	.	.	.
-p:CT_TLTimeNodeParallel/cTn	TIMING	CT_TLTimeNodeParallel	element	cTn	CT_TLCommonTimeNodeData				.	.	.	.	.
-p:ST_TLNextActionType	TIMING		simple	ST_TLNextActionType				base=token	.	.	.	.	.
-p:ST_TLNextActionType/=none	TIMING	ST_TLNextActionType	value	=none					.	.	.	.	.
-p:ST_TLNextActionType/=seek	TIMING	ST_TLNextActionType	value	=seek					.	.	.	.	.
-p:ST_TLPreviousActionType	TIMING		simple	ST_TLPreviousActionType				base=token	.	.	.	.	.
-p:ST_TLPreviousActionType/=none	TIMING	ST_TLPreviousActionType	value	=none					.	.	.	.	.
-p:ST_TLPreviousActionType/=skipTimed	TIMING	ST_TLPreviousActionType	value	=skipTimed					.	.	.	.	.
-p:CT_TLTimeNodeSequence	TIMING		type	CT_TLTimeNodeSequence					.	.	.	.	.
-p:CT_TLTimeNodeSequence/cTn	TIMING	CT_TLTimeNodeSequence	element	cTn	CT_TLCommonTimeNodeData				.	.	.	.	.
-p:CT_TLTimeNodeSequence/prevCondLst	TIMING	CT_TLTimeNodeSequence	element	prevCondLst	CT_TLTimeConditionList	0..1			.	.	.	.	.
-p:CT_TLTimeNodeSequence/nextCondLst	TIMING	CT_TLTimeNodeSequence	element	nextCondLst	CT_TLTimeConditionList	0..1			.	.	.	.	.
-p:CT_TLTimeNodeSequence/@concurrent	TIMING	CT_TLTimeNodeSequence	attribute	@concurrent	boolean	optional			.	.	.	.	.
-p:CT_TLTimeNodeSequence/@prevAc	TIMING	CT_TLTimeNodeSequence	attribute	@prevAc	ST_TLPreviousActionType	optional			.	.	.	.	.
-p:CT_TLTimeNodeSequence/@nextAc	TIMING	CT_TLTimeNodeSequence	attribute	@nextAc	ST_TLNextActionType	optional			.	.	.	.	.
-p:CT_TLTimeNodeExclusive	TIMING		type	CT_TLTimeNodeExclusive					.	.	.	.	.
-p:CT_TLTimeNodeExclusive/cTn	TIMING	CT_TLTimeNodeExclusive	element	cTn	CT_TLCommonTimeNodeData				.	.	.	.	.
-p:CT_TLBehaviorAttributeNameList	TIMING		type	CT_TLBehaviorAttributeNameList					.	.	.	.	.
-p:CT_TLBehaviorAttributeNameList/attrName	TIMING	CT_TLBehaviorAttributeNameList	element	attrName	string	1..unbounded			.	.	.	.	.
-p:ST_TLBehaviorAdditiveType	TIMING		simple	ST_TLBehaviorAdditiveType				base=token	.	.	.	.	.
-p:ST_TLBehaviorAdditiveType/=base	TIMING	ST_TLBehaviorAdditiveType	value	=base					.	.	.	.	.
-p:ST_TLBehaviorAdditiveType/=sum	TIMING	ST_TLBehaviorAdditiveType	value	=sum					.	.	.	.	.
-p:ST_TLBehaviorAdditiveType/=repl	TIMING	ST_TLBehaviorAdditiveType	value	=repl					.	.	.	.	.
-p:ST_TLBehaviorAdditiveType/=mult	TIMING	ST_TLBehaviorAdditiveType	value	=mult					.	.	.	.	.
-p:ST_TLBehaviorAdditiveType/=none	TIMING	ST_TLBehaviorAdditiveType	value	=none					.	.	.	.	.
-p:ST_TLBehaviorAccumulateType	TIMING		simple	ST_TLBehaviorAccumulateType				base=token	.	.	.	.	.
-p:ST_TLBehaviorAccumulateType/=none	TIMING	ST_TLBehaviorAccumulateType	value	=none					.	.	.	.	.
-p:ST_TLBehaviorAccumulateType/=always	TIMING	ST_TLBehaviorAccumulateType	value	=always					.	.	.	.	.
-p:ST_TLBehaviorTransformType	TIMING		simple	ST_TLBehaviorTransformType				base=token	.	.	.	.	.
-p:ST_TLBehaviorTransformType/=pt	TIMING	ST_TLBehaviorTransformType	value	=pt					.	.	.	.	.
-p:ST_TLBehaviorTransformType/=img	TIMING	ST_TLBehaviorTransformType	value	=img					.	.	.	.	.
-p:ST_TLBehaviorOverrideType	TIMING		simple	ST_TLBehaviorOverrideType				base=token	.	.	.	.	.
-p:ST_TLBehaviorOverrideType/=normal	TIMING	ST_TLBehaviorOverrideType	value	=normal					.	.	.	.	.
-p:ST_TLBehaviorOverrideType/=childStyle	TIMING	ST_TLBehaviorOverrideType	value	=childStyle					.	.	.	.	.
-p:CT_TLCommonBehaviorData	TIMING		type	CT_TLCommonBehaviorData					.	.	.	.	.
-p:CT_TLCommonBehaviorData/cTn	TIMING	CT_TLCommonBehaviorData	element	cTn	CT_TLCommonTimeNodeData				.	.	.	.	.
-p:CT_TLCommonBehaviorData/tgtEl	TIMING	CT_TLCommonBehaviorData	element	tgtEl	CT_TLTimeTargetElement				.	.	.	.	.
-p:CT_TLCommonBehaviorData/attrNameLst	TIMING	CT_TLCommonBehaviorData	element	attrNameLst	CT_TLBehaviorAttributeNameList	0..1			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@additive	TIMING	CT_TLCommonBehaviorData	attribute	@additive	ST_TLBehaviorAdditiveType	optional			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@accumulate	TIMING	CT_TLCommonBehaviorData	attribute	@accumulate	ST_TLBehaviorAccumulateType	optional			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@xfrmType	TIMING	CT_TLCommonBehaviorData	attribute	@xfrmType	ST_TLBehaviorTransformType	optional			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@from	TIMING	CT_TLCommonBehaviorData	attribute	@from	string	optional			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@to	TIMING	CT_TLCommonBehaviorData	attribute	@to	string	optional			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@by	TIMING	CT_TLCommonBehaviorData	attribute	@by	string	optional			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@rctx	TIMING	CT_TLCommonBehaviorData	attribute	@rctx	string	optional			.	.	.	.	.
-p:CT_TLCommonBehaviorData/@override	TIMING	CT_TLCommonBehaviorData	attribute	@override	ST_TLBehaviorOverrideType	optional			.	.	.	.	.
-p:CT_TLAnimVariantBooleanVal	TIMING		type	CT_TLAnimVariantBooleanVal					.	.	.	.	.
-p:CT_TLAnimVariantBooleanVal/@val	TIMING	CT_TLAnimVariantBooleanVal	attribute	@val	boolean	required			.	.	.	.	.
-p:CT_TLAnimVariantIntegerVal	TIMING		type	CT_TLAnimVariantIntegerVal					.	.	.	.	.
-p:CT_TLAnimVariantIntegerVal/@val	TIMING	CT_TLAnimVariantIntegerVal	attribute	@val	int	required			.	.	.	.	.
-p:CT_TLAnimVariantFloatVal	TIMING		type	CT_TLAnimVariantFloatVal					.	.	.	.	.
-p:CT_TLAnimVariantFloatVal/@val	TIMING	CT_TLAnimVariantFloatVal	attribute	@val	float	required			.	.	.	.	.
-p:CT_TLAnimVariantStringVal	TIMING		type	CT_TLAnimVariantStringVal					.	.	.	.	.
-p:CT_TLAnimVariantStringVal/@val	TIMING	CT_TLAnimVariantStringVal	attribute	@val	string	required			.	.	.	.	.
-p:CT_TLAnimVariant	TIMING		type	CT_TLAnimVariant					.	.	.	.	.
-p:CT_TLAnimVariant/boolVal	TIMING	CT_TLAnimVariant	element	boolVal	CT_TLAnimVariantBooleanVal	choice			.	.	.	.	.
-p:CT_TLAnimVariant/intVal	TIMING	CT_TLAnimVariant	element	intVal	CT_TLAnimVariantIntegerVal	choice			.	.	.	.	.
-p:CT_TLAnimVariant/fltVal	TIMING	CT_TLAnimVariant	element	fltVal	CT_TLAnimVariantFloatVal	choice			.	.	.	.	.
-p:CT_TLAnimVariant/strVal	TIMING	CT_TLAnimVariant	element	strVal	CT_TLAnimVariantStringVal	choice			.	.	.	.	.
-p:CT_TLAnimVariant/clrVal	TIMING	CT_TLAnimVariant	element	clrVal	CT_Color	choice			.	.	.	.	.
+p:CT_TLIterateIntervalTime	TIMING		type	CT_TLIterateIntervalTime					y	y	y	.	.
+p:CT_TLIterateIntervalTime/@val	TIMING	CT_TLIterateIntervalTime	attribute	@val	ST_TLTime	required			y	y	y	.	.
+p:CT_TLIterateIntervalPercentage	TIMING		type	CT_TLIterateIntervalPercentage					y	y	y	.	.
+p:CT_TLIterateIntervalPercentage/@val	TIMING	CT_TLIterateIntervalPercentage	attribute	@val	ST_PositivePercentage	required			y	y	y	.	.
+p:ST_IterateType	TIMING		simple	ST_IterateType				base=token	y	.	.	.	.
+p:ST_IterateType/=el	TIMING	ST_IterateType	value	=el					y	y	y	.	.
+p:ST_IterateType/=wd	TIMING	ST_IterateType	value	=wd					y	y	y	.	.
+p:ST_IterateType/=lt	TIMING	ST_IterateType	value	=lt					y	y	y	.	.
+p:CT_TLIterateData	TIMING		type	CT_TLIterateData					y	y	y	.	.
+p:CT_TLIterateData/tmAbs	TIMING	CT_TLIterateData	element	tmAbs	CT_TLIterateIntervalTime	choice			y	y	y	.	.
+p:CT_TLIterateData/tmPct	TIMING	CT_TLIterateData	element	tmPct	CT_TLIterateIntervalPercentage	choice			y	y	y	.	.
+p:CT_TLIterateData/@type	TIMING	CT_TLIterateData	attribute	@type	ST_IterateType	optional	el		y	y	y	.	.
+p:CT_TLIterateData/@backwards	TIMING	CT_TLIterateData	attribute	@backwards	boolean	optional	false		y	y	y	.	.
+p:CT_TLSubShapeId	TIMING		type	CT_TLSubShapeId					y	y	y	.	.
+p:CT_TLSubShapeId/@spid	TIMING	CT_TLSubShapeId	attribute	@spid	ST_ShapeID	required			y	y	y	.	.
+p:CT_TLTextTargetElement	TIMING		type	CT_TLTextTargetElement					y	y	y	.	.
+p:CT_TLTextTargetElement/charRg	TIMING	CT_TLTextTargetElement	element	charRg	CT_IndexRange	choice			y	y	y	.	.
+p:CT_TLTextTargetElement/pRg	TIMING	CT_TLTextTargetElement	element	pRg	CT_IndexRange	choice			y	y	y	.	.
+p:ST_TLChartSubelementType	TIMING		simple	ST_TLChartSubelementType				base=token	y	.	.	.	.
+p:ST_TLChartSubelementType/=gridLegend	TIMING	ST_TLChartSubelementType	value	=gridLegend					y	y	y	.	.
+p:ST_TLChartSubelementType/=series	TIMING	ST_TLChartSubelementType	value	=series					y	y	y	.	.
+p:ST_TLChartSubelementType/=category	TIMING	ST_TLChartSubelementType	value	=category					y	y	y	.	.
+p:ST_TLChartSubelementType/=ptInSeries	TIMING	ST_TLChartSubelementType	value	=ptInSeries					y	y	y	.	.
+p:ST_TLChartSubelementType/=ptInCategory	TIMING	ST_TLChartSubelementType	value	=ptInCategory					y	y	y	.	.
+p:CT_TLOleChartTargetElement	TIMING		type	CT_TLOleChartTargetElement					y	y	y	.	.
+p:CT_TLOleChartTargetElement/@type	TIMING	CT_TLOleChartTargetElement	attribute	@type	ST_TLChartSubelementType	required			y	y	y	.	.
+p:CT_TLOleChartTargetElement/@lvl	TIMING	CT_TLOleChartTargetElement	attribute	@lvl	unsignedInt	optional	0		y	y	y	.	.
+p:CT_TLShapeTargetElement	TIMING		type	CT_TLShapeTargetElement					y	y	y	.	.
+p:CT_TLShapeTargetElement/bg	TIMING	CT_TLShapeTargetElement	element	bg	CT_Empty	choice			y	y	y	.	.
+p:CT_TLShapeTargetElement/subSp	TIMING	CT_TLShapeTargetElement	element	subSp	CT_TLSubShapeId	choice			y	y	y	.	.
+p:CT_TLShapeTargetElement/oleChartEl	TIMING	CT_TLShapeTargetElement	element	oleChartEl	CT_TLOleChartTargetElement	choice			y	y	y	.	.
+p:CT_TLShapeTargetElement/txEl	TIMING	CT_TLShapeTargetElement	element	txEl	CT_TLTextTargetElement	choice			y	y	y	.	.
+p:CT_TLShapeTargetElement/graphicEl	TIMING	CT_TLShapeTargetElement	element	graphicEl	CT_AnimationElementChoice	choice			y	y	y	.	.
+p:CT_TLShapeTargetElement/@spid	TIMING	CT_TLShapeTargetElement	attribute	@spid	ST_DrawingElementId	required			y	y	y	.	.
+p:CT_TLTimeTargetElement	TIMING		type	CT_TLTimeTargetElement					y	y	y	.	.
+p:CT_TLTimeTargetElement/sldTgt	TIMING	CT_TLTimeTargetElement	element	sldTgt	CT_Empty	choice			y	y	y	.	.
+p:CT_TLTimeTargetElement/sndTgt	TIMING	CT_TLTimeTargetElement	element	sndTgt	CT_EmbeddedWAVAudioFile	choice			y	y	y	.	.
+p:CT_TLTimeTargetElement/spTgt	TIMING	CT_TLTimeTargetElement	element	spTgt	CT_TLShapeTargetElement	choice			y	y	y	.	.
+p:CT_TLTimeTargetElement/inkTgt	TIMING	CT_TLTimeTargetElement	element	inkTgt	CT_TLSubShapeId	choice			y	y	y	.	.
+p:CT_TLTriggerTimeNodeID	TIMING		type	CT_TLTriggerTimeNodeID					y	y	y	.	.
+p:CT_TLTriggerTimeNodeID/@val	TIMING	CT_TLTriggerTimeNodeID	attribute	@val	ST_TLTimeNodeID	required			y	y	y	.	.
+p:ST_TLTriggerRuntimeNode	TIMING		simple	ST_TLTriggerRuntimeNode				base=token	y	.	.	.	.
+p:ST_TLTriggerRuntimeNode/=first	TIMING	ST_TLTriggerRuntimeNode	value	=first					y	y	y	.	.
+p:ST_TLTriggerRuntimeNode/=last	TIMING	ST_TLTriggerRuntimeNode	value	=last					y	y	y	.	.
+p:ST_TLTriggerRuntimeNode/=all	TIMING	ST_TLTriggerRuntimeNode	value	=all					y	y	y	.	.
+p:CT_TLTriggerRuntimeNode	TIMING		type	CT_TLTriggerRuntimeNode					y	y	y	.	.
+p:CT_TLTriggerRuntimeNode/@val	TIMING	CT_TLTriggerRuntimeNode	attribute	@val	ST_TLTriggerRuntimeNode	required			y	y	y	.	.
+p:ST_TLTriggerEvent	TIMING		simple	ST_TLTriggerEvent				base=token	y	.	.	.	.
+p:ST_TLTriggerEvent/=onBegin	TIMING	ST_TLTriggerEvent	value	=onBegin					y	y	y	.	.
+p:ST_TLTriggerEvent/=onEnd	TIMING	ST_TLTriggerEvent	value	=onEnd					y	y	y	.	.
+p:ST_TLTriggerEvent/=begin	TIMING	ST_TLTriggerEvent	value	=begin					y	y	y	.	.
+p:ST_TLTriggerEvent/=end	TIMING	ST_TLTriggerEvent	value	=end					y	y	y	.	.
+p:ST_TLTriggerEvent/=onClick	TIMING	ST_TLTriggerEvent	value	=onClick					y	y	y	.	.
+p:ST_TLTriggerEvent/=onDblClick	TIMING	ST_TLTriggerEvent	value	=onDblClick					y	y	y	.	.
+p:ST_TLTriggerEvent/=onMouseOver	TIMING	ST_TLTriggerEvent	value	=onMouseOver					y	y	y	.	.
+p:ST_TLTriggerEvent/=onMouseOut	TIMING	ST_TLTriggerEvent	value	=onMouseOut					y	y	y	.	.
+p:ST_TLTriggerEvent/=onNext	TIMING	ST_TLTriggerEvent	value	=onNext					y	y	y	.	.
+p:ST_TLTriggerEvent/=onPrev	TIMING	ST_TLTriggerEvent	value	=onPrev					y	y	y	.	.
+p:ST_TLTriggerEvent/=onStopAudio	TIMING	ST_TLTriggerEvent	value	=onStopAudio					y	y	y	.	.
+p:CT_TLTimeCondition	TIMING		type	CT_TLTimeCondition					y	y	y	.	.
+p:CT_TLTimeCondition/tgtEl	TIMING	CT_TLTimeCondition	element	tgtEl	CT_TLTimeTargetElement	choice			y	y	y	.	.
+p:CT_TLTimeCondition/tn	TIMING	CT_TLTimeCondition	element	tn	CT_TLTriggerTimeNodeID	choice			y	y	y	.	.
+p:CT_TLTimeCondition/rtn	TIMING	CT_TLTimeCondition	element	rtn	CT_TLTriggerRuntimeNode	choice			y	y	y	.	.
+p:CT_TLTimeCondition/@evt	TIMING	CT_TLTimeCondition	attribute	@evt	ST_TLTriggerEvent	optional			y	y	y	.	.
+p:CT_TLTimeCondition/@delay	TIMING	CT_TLTimeCondition	attribute	@delay	ST_TLTime	optional			y	y	y	.	.
+p:CT_TLTimeConditionList	TIMING		type	CT_TLTimeConditionList					y	y	y	.	.
+p:CT_TLTimeConditionList/cond	TIMING	CT_TLTimeConditionList	element	cond	CT_TLTimeCondition	1..unbounded			y	y	y	.	.
+p:CT_TimeNodeList	TIMING		type	CT_TimeNodeList					y	y	y	.	.
+p:CT_TimeNodeList/par	TIMING	CT_TimeNodeList	element	par	CT_TLTimeNodeParallel	choice			y	y	y	.	.
+p:CT_TimeNodeList/seq	TIMING	CT_TimeNodeList	element	seq	CT_TLTimeNodeSequence	choice			y	y	y	.	.
+p:CT_TimeNodeList/excl	TIMING	CT_TimeNodeList	element	excl	CT_TLTimeNodeExclusive	choice			y	y	y	.	.
+p:CT_TimeNodeList/anim	TIMING	CT_TimeNodeList	element	anim	CT_TLAnimateBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/animClr	TIMING	CT_TimeNodeList	element	animClr	CT_TLAnimateColorBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/animEffect	TIMING	CT_TimeNodeList	element	animEffect	CT_TLAnimateEffectBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/animMotion	TIMING	CT_TimeNodeList	element	animMotion	CT_TLAnimateMotionBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/animRot	TIMING	CT_TimeNodeList	element	animRot	CT_TLAnimateRotationBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/animScale	TIMING	CT_TimeNodeList	element	animScale	CT_TLAnimateScaleBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/cmd	TIMING	CT_TimeNodeList	element	cmd	CT_TLCommandBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/set	TIMING	CT_TimeNodeList	element	set	CT_TLSetBehavior	choice			y	y	y	.	.
+p:CT_TimeNodeList/audio	TIMING	CT_TimeNodeList	element	audio	CT_TLMediaNodeAudio	choice			y	y	y	.	.
+p:CT_TimeNodeList/video	TIMING	CT_TimeNodeList	element	video	CT_TLMediaNodeVideo	choice			y	y	y	.	.
+p:ST_TLTimeNodePresetClassType	TIMING		simple	ST_TLTimeNodePresetClassType				base=token	y	.	.	.	.
+p:ST_TLTimeNodePresetClassType/=entr	TIMING	ST_TLTimeNodePresetClassType	value	=entr					y	y	y	.	.
+p:ST_TLTimeNodePresetClassType/=exit	TIMING	ST_TLTimeNodePresetClassType	value	=exit					y	y	y	.	.
+p:ST_TLTimeNodePresetClassType/=emph	TIMING	ST_TLTimeNodePresetClassType	value	=emph					y	y	y	.	.
+p:ST_TLTimeNodePresetClassType/=path	TIMING	ST_TLTimeNodePresetClassType	value	=path					y	y	y	.	.
+p:ST_TLTimeNodePresetClassType/=verb	TIMING	ST_TLTimeNodePresetClassType	value	=verb					y	y	y	.	.
+p:ST_TLTimeNodePresetClassType/=mediacall	TIMING	ST_TLTimeNodePresetClassType	value	=mediacall					y	y	y	.	.
+p:ST_TLTimeNodeRestartType	TIMING		simple	ST_TLTimeNodeRestartType				base=token	y	.	.	.	.
+p:ST_TLTimeNodeRestartType/=always	TIMING	ST_TLTimeNodeRestartType	value	=always					y	y	y	.	.
+p:ST_TLTimeNodeRestartType/=whenNotActive	TIMING	ST_TLTimeNodeRestartType	value	=whenNotActive					y	y	y	.	.
+p:ST_TLTimeNodeRestartType/=never	TIMING	ST_TLTimeNodeRestartType	value	=never					y	y	y	.	.
+p:ST_TLTimeNodeFillType	TIMING		simple	ST_TLTimeNodeFillType				base=token	y	.	.	.	.
+p:ST_TLTimeNodeFillType/=remove	TIMING	ST_TLTimeNodeFillType	value	=remove					y	y	y	.	.
+p:ST_TLTimeNodeFillType/=freeze	TIMING	ST_TLTimeNodeFillType	value	=freeze					y	y	y	.	.
+p:ST_TLTimeNodeFillType/=hold	TIMING	ST_TLTimeNodeFillType	value	=hold					y	y	y	.	.
+p:ST_TLTimeNodeFillType/=transition	TIMING	ST_TLTimeNodeFillType	value	=transition					y	y	y	.	.
+p:ST_TLTimeNodeSyncType	TIMING		simple	ST_TLTimeNodeSyncType				base=token	y	.	.	.	.
+p:ST_TLTimeNodeSyncType/=canSlip	TIMING	ST_TLTimeNodeSyncType	value	=canSlip					y	y	y	.	.
+p:ST_TLTimeNodeSyncType/=locked	TIMING	ST_TLTimeNodeSyncType	value	=locked					y	y	y	.	.
+p:ST_TLTimeNodeMasterRelation	TIMING		simple	ST_TLTimeNodeMasterRelation				base=token	y	.	.	.	.
+p:ST_TLTimeNodeMasterRelation/=sameClick	TIMING	ST_TLTimeNodeMasterRelation	value	=sameClick					y	y	y	.	.
+p:ST_TLTimeNodeMasterRelation/=lastClick	TIMING	ST_TLTimeNodeMasterRelation	value	=lastClick					y	y	y	.	.
+p:ST_TLTimeNodeMasterRelation/=nextClick	TIMING	ST_TLTimeNodeMasterRelation	value	=nextClick					y	y	y	.	.
+p:ST_TLTimeNodeType	TIMING		simple	ST_TLTimeNodeType				base=token	y	.	.	.	.
+p:ST_TLTimeNodeType/=clickEffect	TIMING	ST_TLTimeNodeType	value	=clickEffect					y	y	y	.	.
+p:ST_TLTimeNodeType/=withEffect	TIMING	ST_TLTimeNodeType	value	=withEffect					y	y	y	.	.
+p:ST_TLTimeNodeType/=afterEffect	TIMING	ST_TLTimeNodeType	value	=afterEffect					y	y	y	.	.
+p:ST_TLTimeNodeType/=mainSeq	TIMING	ST_TLTimeNodeType	value	=mainSeq					y	y	y	.	.
+p:ST_TLTimeNodeType/=interactiveSeq	TIMING	ST_TLTimeNodeType	value	=interactiveSeq					y	y	y	.	.
+p:ST_TLTimeNodeType/=clickPar	TIMING	ST_TLTimeNodeType	value	=clickPar					y	y	y	.	.
+p:ST_TLTimeNodeType/=withGroup	TIMING	ST_TLTimeNodeType	value	=withGroup					y	y	y	.	.
+p:ST_TLTimeNodeType/=afterGroup	TIMING	ST_TLTimeNodeType	value	=afterGroup					y	y	y	.	.
+p:ST_TLTimeNodeType/=tmRoot	TIMING	ST_TLTimeNodeType	value	=tmRoot					y	y	y	.	.
+p:CT_TLCommonTimeNodeData	TIMING		type	CT_TLCommonTimeNodeData					y	y	y	.	.
+p:CT_TLCommonTimeNodeData/stCondLst	TIMING	CT_TLCommonTimeNodeData	element	stCondLst	CT_TLTimeConditionList	0..1			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/endCondLst	TIMING	CT_TLCommonTimeNodeData	element	endCondLst	CT_TLTimeConditionList	0..1			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/endSync	TIMING	CT_TLCommonTimeNodeData	element	endSync	CT_TLTimeCondition	0..1			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/iterate	TIMING	CT_TLCommonTimeNodeData	element	iterate	CT_TLIterateData	0..1			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/childTnLst	TIMING	CT_TLCommonTimeNodeData	element	childTnLst	CT_TimeNodeList	0..1			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/subTnLst	TIMING	CT_TLCommonTimeNodeData	element	subTnLst	CT_TimeNodeList	0..1			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@id	TIMING	CT_TLCommonTimeNodeData	attribute	@id	ST_TLTimeNodeID	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@presetID	TIMING	CT_TLCommonTimeNodeData	attribute	@presetID	int	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@presetClass	TIMING	CT_TLCommonTimeNodeData	attribute	@presetClass	ST_TLTimeNodePresetClassType	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@presetSubtype	TIMING	CT_TLCommonTimeNodeData	attribute	@presetSubtype	int	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@dur	TIMING	CT_TLCommonTimeNodeData	attribute	@dur	ST_TLTime	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@repeatCount	TIMING	CT_TLCommonTimeNodeData	attribute	@repeatCount	ST_TLTime	optional	1000		y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@repeatDur	TIMING	CT_TLCommonTimeNodeData	attribute	@repeatDur	ST_TLTime	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@spd	TIMING	CT_TLCommonTimeNodeData	attribute	@spd	ST_Percentage	optional	100%		y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@accel	TIMING	CT_TLCommonTimeNodeData	attribute	@accel	ST_PositiveFixedPercentage	optional	0%		y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@decel	TIMING	CT_TLCommonTimeNodeData	attribute	@decel	ST_PositiveFixedPercentage	optional	0%		y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@autoRev	TIMING	CT_TLCommonTimeNodeData	attribute	@autoRev	boolean	optional	false		y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@restart	TIMING	CT_TLCommonTimeNodeData	attribute	@restart	ST_TLTimeNodeRestartType	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@fill	TIMING	CT_TLCommonTimeNodeData	attribute	@fill	ST_TLTimeNodeFillType	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@syncBehavior	TIMING	CT_TLCommonTimeNodeData	attribute	@syncBehavior	ST_TLTimeNodeSyncType	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@tmFilter	TIMING	CT_TLCommonTimeNodeData	attribute	@tmFilter	string	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@evtFilter	TIMING	CT_TLCommonTimeNodeData	attribute	@evtFilter	string	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@display	TIMING	CT_TLCommonTimeNodeData	attribute	@display	boolean	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@masterRel	TIMING	CT_TLCommonTimeNodeData	attribute	@masterRel	ST_TLTimeNodeMasterRelation	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@bldLvl	TIMING	CT_TLCommonTimeNodeData	attribute	@bldLvl	int	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@grpId	TIMING	CT_TLCommonTimeNodeData	attribute	@grpId	unsignedInt	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@afterEffect	TIMING	CT_TLCommonTimeNodeData	attribute	@afterEffect	boolean	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@nodeType	TIMING	CT_TLCommonTimeNodeData	attribute	@nodeType	ST_TLTimeNodeType	optional			y	y	y	.	.
+p:CT_TLCommonTimeNodeData/@nodePh	TIMING	CT_TLCommonTimeNodeData	attribute	@nodePh	boolean	optional			y	y	y	.	.
+p:CT_TLTimeNodeParallel	TIMING		type	CT_TLTimeNodeParallel					y	y	y	.	.
+p:CT_TLTimeNodeParallel/cTn	TIMING	CT_TLTimeNodeParallel	element	cTn	CT_TLCommonTimeNodeData				y	y	y	.	.
+p:ST_TLNextActionType	TIMING		simple	ST_TLNextActionType				base=token	y	.	.	.	.
+p:ST_TLNextActionType/=none	TIMING	ST_TLNextActionType	value	=none					y	y	y	.	.
+p:ST_TLNextActionType/=seek	TIMING	ST_TLNextActionType	value	=seek					y	y	y	.	.
+p:ST_TLPreviousActionType	TIMING		simple	ST_TLPreviousActionType				base=token	y	.	.	.	.
+p:ST_TLPreviousActionType/=none	TIMING	ST_TLPreviousActionType	value	=none					y	y	y	.	.
+p:ST_TLPreviousActionType/=skipTimed	TIMING	ST_TLPreviousActionType	value	=skipTimed					y	y	y	.	.
+p:CT_TLTimeNodeSequence	TIMING		type	CT_TLTimeNodeSequence					y	y	y	.	.
+p:CT_TLTimeNodeSequence/cTn	TIMING	CT_TLTimeNodeSequence	element	cTn	CT_TLCommonTimeNodeData				y	y	y	.	.
+p:CT_TLTimeNodeSequence/prevCondLst	TIMING	CT_TLTimeNodeSequence	element	prevCondLst	CT_TLTimeConditionList	0..1			y	y	y	.	.
+p:CT_TLTimeNodeSequence/nextCondLst	TIMING	CT_TLTimeNodeSequence	element	nextCondLst	CT_TLTimeConditionList	0..1			y	y	y	.	.
+p:CT_TLTimeNodeSequence/@concurrent	TIMING	CT_TLTimeNodeSequence	attribute	@concurrent	boolean	optional			y	y	y	.	.
+p:CT_TLTimeNodeSequence/@prevAc	TIMING	CT_TLTimeNodeSequence	attribute	@prevAc	ST_TLPreviousActionType	optional			y	y	y	.	.
+p:CT_TLTimeNodeSequence/@nextAc	TIMING	CT_TLTimeNodeSequence	attribute	@nextAc	ST_TLNextActionType	optional			y	y	y	.	.
+p:CT_TLTimeNodeExclusive	TIMING		type	CT_TLTimeNodeExclusive					y	y	y	.	.
+p:CT_TLTimeNodeExclusive/cTn	TIMING	CT_TLTimeNodeExclusive	element	cTn	CT_TLCommonTimeNodeData				y	y	y	.	.
+p:CT_TLBehaviorAttributeNameList	TIMING		type	CT_TLBehaviorAttributeNameList					y	y	y	.	.
+p:CT_TLBehaviorAttributeNameList/attrName	TIMING	CT_TLBehaviorAttributeNameList	element	attrName	string	1..unbounded			y	y	y	.	.
+p:ST_TLBehaviorAdditiveType	TIMING		simple	ST_TLBehaviorAdditiveType				base=token	y	.	.	.	.
+p:ST_TLBehaviorAdditiveType/=base	TIMING	ST_TLBehaviorAdditiveType	value	=base					y	y	y	.	.
+p:ST_TLBehaviorAdditiveType/=sum	TIMING	ST_TLBehaviorAdditiveType	value	=sum					y	y	y	.	.
+p:ST_TLBehaviorAdditiveType/=repl	TIMING	ST_TLBehaviorAdditiveType	value	=repl					y	y	y	.	.
+p:ST_TLBehaviorAdditiveType/=mult	TIMING	ST_TLBehaviorAdditiveType	value	=mult					y	y	y	.	.
+p:ST_TLBehaviorAdditiveType/=none	TIMING	ST_TLBehaviorAdditiveType	value	=none					y	y	y	.	.
+p:ST_TLBehaviorAccumulateType	TIMING		simple	ST_TLBehaviorAccumulateType				base=token	y	.	.	.	.
+p:ST_TLBehaviorAccumulateType/=none	TIMING	ST_TLBehaviorAccumulateType	value	=none					y	y	y	.	.
+p:ST_TLBehaviorAccumulateType/=always	TIMING	ST_TLBehaviorAccumulateType	value	=always					y	y	y	.	.
+p:ST_TLBehaviorTransformType	TIMING		simple	ST_TLBehaviorTransformType				base=token	y	.	.	.	.
+p:ST_TLBehaviorTransformType/=pt	TIMING	ST_TLBehaviorTransformType	value	=pt					y	y	y	.	.
+p:ST_TLBehaviorTransformType/=img	TIMING	ST_TLBehaviorTransformType	value	=img					y	y	y	.	.
+p:ST_TLBehaviorOverrideType	TIMING		simple	ST_TLBehaviorOverrideType				base=token	y	.	.	.	.
+p:ST_TLBehaviorOverrideType/=normal	TIMING	ST_TLBehaviorOverrideType	value	=normal					y	y	y	.	.
+p:ST_TLBehaviorOverrideType/=childStyle	TIMING	ST_TLBehaviorOverrideType	value	=childStyle					y	y	y	.	.
+p:CT_TLCommonBehaviorData	TIMING		type	CT_TLCommonBehaviorData					y	y	y	.	.
+p:CT_TLCommonBehaviorData/cTn	TIMING	CT_TLCommonBehaviorData	element	cTn	CT_TLCommonTimeNodeData				y	y	y	.	.
+p:CT_TLCommonBehaviorData/tgtEl	TIMING	CT_TLCommonBehaviorData	element	tgtEl	CT_TLTimeTargetElement				y	y	y	.	.
+p:CT_TLCommonBehaviorData/attrNameLst	TIMING	CT_TLCommonBehaviorData	element	attrNameLst	CT_TLBehaviorAttributeNameList	0..1			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@additive	TIMING	CT_TLCommonBehaviorData	attribute	@additive	ST_TLBehaviorAdditiveType	optional			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@accumulate	TIMING	CT_TLCommonBehaviorData	attribute	@accumulate	ST_TLBehaviorAccumulateType	optional			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@xfrmType	TIMING	CT_TLCommonBehaviorData	attribute	@xfrmType	ST_TLBehaviorTransformType	optional			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@from	TIMING	CT_TLCommonBehaviorData	attribute	@from	string	optional			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@to	TIMING	CT_TLCommonBehaviorData	attribute	@to	string	optional			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@by	TIMING	CT_TLCommonBehaviorData	attribute	@by	string	optional			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@rctx	TIMING	CT_TLCommonBehaviorData	attribute	@rctx	string	optional			y	y	y	.	.
+p:CT_TLCommonBehaviorData/@override	TIMING	CT_TLCommonBehaviorData	attribute	@override	ST_TLBehaviorOverrideType	optional			y	y	y	.	.
+p:CT_TLAnimVariantBooleanVal	TIMING		type	CT_TLAnimVariantBooleanVal					y	y	y	.	.
+p:CT_TLAnimVariantBooleanVal/@val	TIMING	CT_TLAnimVariantBooleanVal	attribute	@val	boolean	required			y	y	y	.	.
+p:CT_TLAnimVariantIntegerVal	TIMING		type	CT_TLAnimVariantIntegerVal					y	y	y	.	.
+p:CT_TLAnimVariantIntegerVal/@val	TIMING	CT_TLAnimVariantIntegerVal	attribute	@val	int	required			y	y	y	.	.
+p:CT_TLAnimVariantFloatVal	TIMING		type	CT_TLAnimVariantFloatVal					y	y	y	.	.
+p:CT_TLAnimVariantFloatVal/@val	TIMING	CT_TLAnimVariantFloatVal	attribute	@val	float	required			y	y	y	.	.
+p:CT_TLAnimVariantStringVal	TIMING		type	CT_TLAnimVariantStringVal					y	y	y	.	.
+p:CT_TLAnimVariantStringVal/@val	TIMING	CT_TLAnimVariantStringVal	attribute	@val	string	required			y	y	y	.	.
+p:CT_TLAnimVariant	TIMING		type	CT_TLAnimVariant					y	y	y	.	.
+p:CT_TLAnimVariant/boolVal	TIMING	CT_TLAnimVariant	element	boolVal	CT_TLAnimVariantBooleanVal	choice			y	y	y	.	.
+p:CT_TLAnimVariant/intVal	TIMING	CT_TLAnimVariant	element	intVal	CT_TLAnimVariantIntegerVal	choice			y	y	y	.	.
+p:CT_TLAnimVariant/fltVal	TIMING	CT_TLAnimVariant	element	fltVal	CT_TLAnimVariantFloatVal	choice			y	y	y	.	.
+p:CT_TLAnimVariant/strVal	TIMING	CT_TLAnimVariant	element	strVal	CT_TLAnimVariantStringVal	choice			y	y	y	.	.
+p:CT_TLAnimVariant/clrVal	TIMING	CT_TLAnimVariant	element	clrVal	CT_Color	choice			y	y	y	.	.
 p:ST_TLTimeAnimateValueTime	TIMING		simple	ST_TLTimeAnimateValueTime				union=ST_PositiveFixedPercentage ST_TLTimeIndefinite	.	.	.	.	.
-p:CT_TLTimeAnimateValue	TIMING		type	CT_TLTimeAnimateValue					.	.	.	.	.
-p:CT_TLTimeAnimateValue/val	TIMING	CT_TLTimeAnimateValue	element	val	CT_TLAnimVariant	0..1			.	.	.	.	.
-p:CT_TLTimeAnimateValue/@tm	TIMING	CT_TLTimeAnimateValue	attribute	@tm	ST_TLTimeAnimateValueTime	optional	indefinite		.	.	.	.	.
-p:CT_TLTimeAnimateValue/@fmla	TIMING	CT_TLTimeAnimateValue	attribute	@fmla	string	optional			.	.	.	.	.
-p:CT_TLTimeAnimateValueList	TIMING		type	CT_TLTimeAnimateValueList					.	.	.	.	.
-p:CT_TLTimeAnimateValueList/tav	TIMING	CT_TLTimeAnimateValueList	element	tav	CT_TLTimeAnimateValue	0..unbounded			.	.	.	.	.
-p:ST_TLAnimateBehaviorCalcMode	TIMING		simple	ST_TLAnimateBehaviorCalcMode				base=token	.	.	.	.	.
-p:ST_TLAnimateBehaviorCalcMode/=discrete	TIMING	ST_TLAnimateBehaviorCalcMode	value	=discrete					.	.	.	.	.
-p:ST_TLAnimateBehaviorCalcMode/=lin	TIMING	ST_TLAnimateBehaviorCalcMode	value	=lin					.	.	.	.	.
-p:ST_TLAnimateBehaviorCalcMode/=fmla	TIMING	ST_TLAnimateBehaviorCalcMode	value	=fmla					.	.	.	.	.
-p:ST_TLAnimateBehaviorValueType	TIMING		simple	ST_TLAnimateBehaviorValueType				base=token	.	.	.	.	.
-p:ST_TLAnimateBehaviorValueType/=str	TIMING	ST_TLAnimateBehaviorValueType	value	=str					.	.	.	.	.
-p:ST_TLAnimateBehaviorValueType/=num	TIMING	ST_TLAnimateBehaviorValueType	value	=num					.	.	.	.	.
-p:ST_TLAnimateBehaviorValueType/=clr	TIMING	ST_TLAnimateBehaviorValueType	value	=clr					.	.	.	.	.
-p:CT_TLAnimateBehavior	TIMING		type	CT_TLAnimateBehavior					.	.	.	.	.
-p:CT_TLAnimateBehavior/cBhvr	TIMING	CT_TLAnimateBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLAnimateBehavior/tavLst	TIMING	CT_TLAnimateBehavior	element	tavLst	CT_TLTimeAnimateValueList	0..1			.	.	.	.	.
-p:CT_TLAnimateBehavior/@by	TIMING	CT_TLAnimateBehavior	attribute	@by	string	optional			.	.	.	.	.
-p:CT_TLAnimateBehavior/@from	TIMING	CT_TLAnimateBehavior	attribute	@from	string	optional			.	.	.	.	.
-p:CT_TLAnimateBehavior/@to	TIMING	CT_TLAnimateBehavior	attribute	@to	string	optional			.	.	.	.	.
-p:CT_TLAnimateBehavior/@calcmode	TIMING	CT_TLAnimateBehavior	attribute	@calcmode	ST_TLAnimateBehaviorCalcMode	optional			.	.	.	.	.
-p:CT_TLAnimateBehavior/@valueType	TIMING	CT_TLAnimateBehavior	attribute	@valueType	ST_TLAnimateBehaviorValueType	optional			.	.	.	.	.
-p:CT_TLByRgbColorTransform	TIMING		type	CT_TLByRgbColorTransform					.	.	.	.	.
-p:CT_TLByRgbColorTransform/@r	TIMING	CT_TLByRgbColorTransform	attribute	@r	ST_FixedPercentage	required			.	.	.	.	.
-p:CT_TLByRgbColorTransform/@g	TIMING	CT_TLByRgbColorTransform	attribute	@g	ST_FixedPercentage	required			.	.	.	.	.
-p:CT_TLByRgbColorTransform/@b	TIMING	CT_TLByRgbColorTransform	attribute	@b	ST_FixedPercentage	required			.	.	.	.	.
-p:CT_TLByHslColorTransform	TIMING		type	CT_TLByHslColorTransform					.	.	.	.	.
-p:CT_TLByHslColorTransform/@h	TIMING	CT_TLByHslColorTransform	attribute	@h	ST_Angle	required			.	.	.	.	.
-p:CT_TLByHslColorTransform/@s	TIMING	CT_TLByHslColorTransform	attribute	@s	ST_FixedPercentage	required			.	.	.	.	.
-p:CT_TLByHslColorTransform/@l	TIMING	CT_TLByHslColorTransform	attribute	@l	ST_FixedPercentage	required			.	.	.	.	.
-p:CT_TLByAnimateColorTransform	TIMING		type	CT_TLByAnimateColorTransform					.	.	.	.	.
-p:CT_TLByAnimateColorTransform/rgb	TIMING	CT_TLByAnimateColorTransform	element	rgb	CT_TLByRgbColorTransform	choice			.	.	.	.	.
-p:CT_TLByAnimateColorTransform/hsl	TIMING	CT_TLByAnimateColorTransform	element	hsl	CT_TLByHslColorTransform	choice			.	.	.	.	.
-p:ST_TLAnimateColorSpace	TIMING		simple	ST_TLAnimateColorSpace				base=token	.	.	.	.	.
-p:ST_TLAnimateColorSpace/=rgb	TIMING	ST_TLAnimateColorSpace	value	=rgb					.	.	.	.	.
-p:ST_TLAnimateColorSpace/=hsl	TIMING	ST_TLAnimateColorSpace	value	=hsl					.	.	.	.	.
-p:ST_TLAnimateColorDirection	TIMING		simple	ST_TLAnimateColorDirection				base=token	.	.	.	.	.
-p:ST_TLAnimateColorDirection/=cw	TIMING	ST_TLAnimateColorDirection	value	=cw					.	.	.	.	.
-p:ST_TLAnimateColorDirection/=ccw	TIMING	ST_TLAnimateColorDirection	value	=ccw					.	.	.	.	.
-p:CT_TLAnimateColorBehavior	TIMING		type	CT_TLAnimateColorBehavior					.	.	.	.	.
-p:CT_TLAnimateColorBehavior/cBhvr	TIMING	CT_TLAnimateColorBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLAnimateColorBehavior/by	TIMING	CT_TLAnimateColorBehavior	element	by	CT_TLByAnimateColorTransform	0..1			.	.	.	.	.
-p:CT_TLAnimateColorBehavior/from	TIMING	CT_TLAnimateColorBehavior	element	from	CT_Color	0..1			.	.	.	.	.
-p:CT_TLAnimateColorBehavior/to	TIMING	CT_TLAnimateColorBehavior	element	to	CT_Color	0..1			.	.	.	.	.
-p:CT_TLAnimateColorBehavior/@clrSpc	TIMING	CT_TLAnimateColorBehavior	attribute	@clrSpc	ST_TLAnimateColorSpace	optional			.	.	.	.	.
-p:CT_TLAnimateColorBehavior/@dir	TIMING	CT_TLAnimateColorBehavior	attribute	@dir	ST_TLAnimateColorDirection	optional			.	.	.	.	.
-p:ST_TLAnimateEffectTransition	TRANS		simple	ST_TLAnimateEffectTransition				base=token	.	.	.	.	.
-p:ST_TLAnimateEffectTransition/=in	TRANS	ST_TLAnimateEffectTransition	value	=in					.	.	.	.	.
-p:ST_TLAnimateEffectTransition/=out	TRANS	ST_TLAnimateEffectTransition	value	=out					.	.	.	.	.
-p:ST_TLAnimateEffectTransition/=none	TRANS	ST_TLAnimateEffectTransition	value	=none					.	.	.	.	.
-p:CT_TLAnimateEffectBehavior	TIMING		type	CT_TLAnimateEffectBehavior					.	.	.	.	.
-p:CT_TLAnimateEffectBehavior/cBhvr	TIMING	CT_TLAnimateEffectBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLAnimateEffectBehavior/progress	TIMING	CT_TLAnimateEffectBehavior	element	progress	CT_TLAnimVariant	0..1			.	.	.	.	.
-p:CT_TLAnimateEffectBehavior/@transition	TIMING	CT_TLAnimateEffectBehavior	attribute	@transition	ST_TLAnimateEffectTransition	optional	in		.	.	.	.	.
-p:CT_TLAnimateEffectBehavior/@filter	TIMING	CT_TLAnimateEffectBehavior	attribute	@filter	string	optional			.	.	.	.	.
-p:CT_TLAnimateEffectBehavior/@prLst	TIMING	CT_TLAnimateEffectBehavior	attribute	@prLst	string	optional			.	.	.	.	.
-p:ST_TLAnimateMotionBehaviorOrigin	TIMING		simple	ST_TLAnimateMotionBehaviorOrigin				base=token	.	.	.	.	.
-p:ST_TLAnimateMotionBehaviorOrigin/=parent	TIMING	ST_TLAnimateMotionBehaviorOrigin	value	=parent					.	.	.	.	.
-p:ST_TLAnimateMotionBehaviorOrigin/=layout	TIMING	ST_TLAnimateMotionBehaviorOrigin	value	=layout					.	.	.	.	.
-p:ST_TLAnimateMotionPathEditMode	TIMING		simple	ST_TLAnimateMotionPathEditMode				base=token	.	.	.	.	.
-p:ST_TLAnimateMotionPathEditMode/=relative	TIMING	ST_TLAnimateMotionPathEditMode	value	=relative					.	.	.	.	.
-p:ST_TLAnimateMotionPathEditMode/=fixed	TIMING	ST_TLAnimateMotionPathEditMode	value	=fixed					.	.	.	.	.
-p:CT_TLPoint	TIMING		type	CT_TLPoint					.	.	.	.	.
-p:CT_TLPoint/@x	TIMING	CT_TLPoint	attribute	@x	ST_Percentage	required			.	.	.	.	.
-p:CT_TLPoint/@y	TIMING	CT_TLPoint	attribute	@y	ST_Percentage	required			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior	TIMING		type	CT_TLAnimateMotionBehavior					.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/cBhvr	TIMING	CT_TLAnimateMotionBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/by	TIMING	CT_TLAnimateMotionBehavior	element	by	CT_TLPoint	0..1			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/from	TIMING	CT_TLAnimateMotionBehavior	element	from	CT_TLPoint	0..1			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/to	TIMING	CT_TLAnimateMotionBehavior	element	to	CT_TLPoint	0..1			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/rCtr	TIMING	CT_TLAnimateMotionBehavior	element	rCtr	CT_TLPoint	0..1			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/@origin	TIMING	CT_TLAnimateMotionBehavior	attribute	@origin	ST_TLAnimateMotionBehaviorOrigin	optional			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/@path	TIMING	CT_TLAnimateMotionBehavior	attribute	@path	string	optional			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/@pathEditMode	TIMING	CT_TLAnimateMotionBehavior	attribute	@pathEditMode	ST_TLAnimateMotionPathEditMode	optional			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/@rAng	TIMING	CT_TLAnimateMotionBehavior	attribute	@rAng	ST_Angle	optional			.	.	.	.	.
-p:CT_TLAnimateMotionBehavior/@ptsTypes	TIMING	CT_TLAnimateMotionBehavior	attribute	@ptsTypes	string	optional			.	.	.	.	.
-p:CT_TLAnimateRotationBehavior	TIMING		type	CT_TLAnimateRotationBehavior					.	.	.	.	.
-p:CT_TLAnimateRotationBehavior/cBhvr	TIMING	CT_TLAnimateRotationBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLAnimateRotationBehavior/@by	TIMING	CT_TLAnimateRotationBehavior	attribute	@by	ST_Angle	optional			.	.	.	.	.
-p:CT_TLAnimateRotationBehavior/@from	TIMING	CT_TLAnimateRotationBehavior	attribute	@from	ST_Angle	optional			.	.	.	.	.
-p:CT_TLAnimateRotationBehavior/@to	TIMING	CT_TLAnimateRotationBehavior	attribute	@to	ST_Angle	optional			.	.	.	.	.
-p:CT_TLAnimateScaleBehavior	TIMING		type	CT_TLAnimateScaleBehavior					.	.	.	.	.
-p:CT_TLAnimateScaleBehavior/cBhvr	TIMING	CT_TLAnimateScaleBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLAnimateScaleBehavior/by	TIMING	CT_TLAnimateScaleBehavior	element	by	CT_TLPoint	0..1			.	.	.	.	.
-p:CT_TLAnimateScaleBehavior/from	TIMING	CT_TLAnimateScaleBehavior	element	from	CT_TLPoint	0..1			.	.	.	.	.
-p:CT_TLAnimateScaleBehavior/to	TIMING	CT_TLAnimateScaleBehavior	element	to	CT_TLPoint	0..1			.	.	.	.	.
-p:CT_TLAnimateScaleBehavior/@zoomContents	TIMING	CT_TLAnimateScaleBehavior	attribute	@zoomContents	boolean	optional			.	.	.	.	.
-p:ST_TLCommandType	TIMING		simple	ST_TLCommandType				base=token	.	.	.	.	.
-p:ST_TLCommandType/=evt	TIMING	ST_TLCommandType	value	=evt					.	.	.	.	.
-p:ST_TLCommandType/=call	TIMING	ST_TLCommandType	value	=call					.	.	.	.	.
-p:ST_TLCommandType/=verb	TIMING	ST_TLCommandType	value	=verb					.	.	.	.	.
-p:CT_TLCommandBehavior	TIMING		type	CT_TLCommandBehavior					.	.	.	.	.
-p:CT_TLCommandBehavior/cBhvr	TIMING	CT_TLCommandBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLCommandBehavior/@type	TIMING	CT_TLCommandBehavior	attribute	@type	ST_TLCommandType	optional			.	.	.	.	.
-p:CT_TLCommandBehavior/@cmd	TIMING	CT_TLCommandBehavior	attribute	@cmd	string	optional			.	.	.	.	.
-p:CT_TLSetBehavior	TIMING		type	CT_TLSetBehavior					.	.	.	.	.
-p:CT_TLSetBehavior/cBhvr	TIMING	CT_TLSetBehavior	element	cBhvr	CT_TLCommonBehaviorData				.	.	.	.	.
-p:CT_TLSetBehavior/to	TIMING	CT_TLSetBehavior	element	to	CT_TLAnimVariant	0..1			.	.	.	.	.
-p:CT_TLCommonMediaNodeData	TIMING		type	CT_TLCommonMediaNodeData					.	.	.	.	.
-p:CT_TLCommonMediaNodeData/cTn	TIMING	CT_TLCommonMediaNodeData	element	cTn	CT_TLCommonTimeNodeData				.	.	.	.	.
-p:CT_TLCommonMediaNodeData/tgtEl	TIMING	CT_TLCommonMediaNodeData	element	tgtEl	CT_TLTimeTargetElement				.	.	.	.	.
-p:CT_TLCommonMediaNodeData/@vol	TIMING	CT_TLCommonMediaNodeData	attribute	@vol	ST_PositiveFixedPercentage	optional	50%		.	.	.	.	.
-p:CT_TLCommonMediaNodeData/@mute	TIMING	CT_TLCommonMediaNodeData	attribute	@mute	boolean	optional	false		.	.	.	.	.
-p:CT_TLCommonMediaNodeData/@numSld	TIMING	CT_TLCommonMediaNodeData	attribute	@numSld	unsignedInt	optional	1		.	.	.	.	.
-p:CT_TLCommonMediaNodeData/@showWhenStopped	TIMING	CT_TLCommonMediaNodeData	attribute	@showWhenStopped	boolean	optional	true		.	.	.	.	.
-p:CT_TLMediaNodeAudio	TIMING		type	CT_TLMediaNodeAudio					.	.	.	.	.
-p:CT_TLMediaNodeAudio/cMediaNode	TIMING	CT_TLMediaNodeAudio	element	cMediaNode	CT_TLCommonMediaNodeData				.	.	.	.	.
-p:CT_TLMediaNodeAudio/@isNarration	TIMING	CT_TLMediaNodeAudio	attribute	@isNarration	boolean	optional	false		.	.	.	.	.
-p:CT_TLMediaNodeVideo	TIMING		type	CT_TLMediaNodeVideo					.	.	.	.	.
-p:CT_TLMediaNodeVideo/cMediaNode	TIMING	CT_TLMediaNodeVideo	element	cMediaNode	CT_TLCommonMediaNodeData				.	.	.	.	.
-p:CT_TLMediaNodeVideo/@fullScrn	TIMING	CT_TLMediaNodeVideo	attribute	@fullScrn	boolean	optional	false		.	.	.	.	.
-p:AG_TLBuild	TIMING		type	AG_TLBuild					.	.	.	.	.
-p:AG_TLBuild/@spid	TIMING	AG_TLBuild	attribute	@spid	ST_DrawingElementId	required			.	.	.	.	.
-p:AG_TLBuild/@grpId	TIMING	AG_TLBuild	attribute	@grpId	unsignedInt	required			.	.	.	.	.
-p:AG_TLBuild/@uiExpand	TIMING	AG_TLBuild	attribute	@uiExpand	boolean	optional	false		.	.	.	.	.
-p:CT_TLTemplate	TIMING		type	CT_TLTemplate					.	.	.	.	.
-p:CT_TLTemplate/tnLst	TIMING	CT_TLTemplate	element	tnLst	CT_TimeNodeList				.	.	.	.	.
-p:CT_TLTemplate/@lvl	TIMING	CT_TLTemplate	attribute	@lvl	unsignedInt	optional	0		.	.	.	.	.
-p:CT_TLTemplateList	TIMING		type	CT_TLTemplateList					.	.	.	.	.
-p:CT_TLTemplateList/tmpl	TIMING	CT_TLTemplateList	element	tmpl	CT_TLTemplate	0..9			.	.	.	.	.
-p:ST_TLParaBuildType	TIMING		simple	ST_TLParaBuildType				base=token	.	.	.	.	.
-p:ST_TLParaBuildType/=allAtOnce	TIMING	ST_TLParaBuildType	value	=allAtOnce					.	.	.	.	.
-p:ST_TLParaBuildType/=p	TIMING	ST_TLParaBuildType	value	=p					.	.	.	.	.
-p:ST_TLParaBuildType/=cust	TIMING	ST_TLParaBuildType	value	=cust					.	.	.	.	.
-p:ST_TLParaBuildType/=whole	TIMING	ST_TLParaBuildType	value	=whole					.	.	.	.	.
-p:CT_TLBuildParagraph	TIMING		type	CT_TLBuildParagraph					.	.	.	.	.
-p:CT_TLBuildParagraph/tmplLst	TIMING	CT_TLBuildParagraph	element	tmplLst	CT_TLTemplateList	0..1			.	.	.	.	.
-p:CT_TLBuildParagraph/AG_TLBuild	TIMING	CT_TLBuildParagraph	attrgroup	AG_TLBuild	AG_TLBuild				.	.	.	.	.
-p:CT_TLBuildParagraph/@build	TIMING	CT_TLBuildParagraph	attribute	@build	ST_TLParaBuildType	optional	whole		.	.	.	.	.
-p:CT_TLBuildParagraph/@bldLvl	TIMING	CT_TLBuildParagraph	attribute	@bldLvl	unsignedInt	optional	1		.	.	.	.	.
-p:CT_TLBuildParagraph/@animBg	TIMING	CT_TLBuildParagraph	attribute	@animBg	boolean	optional	false		.	.	.	.	.
-p:CT_TLBuildParagraph/@autoUpdateAnimBg	TIMING	CT_TLBuildParagraph	attribute	@autoUpdateAnimBg	boolean	optional	true		.	.	.	.	.
-p:CT_TLBuildParagraph/@rev	TIMING	CT_TLBuildParagraph	attribute	@rev	boolean	optional	false		.	.	.	.	.
-p:CT_TLBuildParagraph/@advAuto	TIMING	CT_TLBuildParagraph	attribute	@advAuto	ST_TLTime	optional	indefinite		.	.	.	.	.
-p:ST_TLDiagramBuildType	TIMING		simple	ST_TLDiagramBuildType				base=token	.	.	.	.	.
-p:ST_TLDiagramBuildType/=whole	TIMING	ST_TLDiagramBuildType	value	=whole					.	.	.	.	.
-p:ST_TLDiagramBuildType/=depthByNode	TIMING	ST_TLDiagramBuildType	value	=depthByNode					.	.	.	.	.
-p:ST_TLDiagramBuildType/=depthByBranch	TIMING	ST_TLDiagramBuildType	value	=depthByBranch					.	.	.	.	.
-p:ST_TLDiagramBuildType/=breadthByNode	TIMING	ST_TLDiagramBuildType	value	=breadthByNode					.	.	.	.	.
-p:ST_TLDiagramBuildType/=breadthByLvl	TIMING	ST_TLDiagramBuildType	value	=breadthByLvl					.	.	.	.	.
-p:ST_TLDiagramBuildType/=cw	TIMING	ST_TLDiagramBuildType	value	=cw					.	.	.	.	.
-p:ST_TLDiagramBuildType/=cwIn	TIMING	ST_TLDiagramBuildType	value	=cwIn					.	.	.	.	.
-p:ST_TLDiagramBuildType/=cwOut	TIMING	ST_TLDiagramBuildType	value	=cwOut					.	.	.	.	.
-p:ST_TLDiagramBuildType/=ccw	TIMING	ST_TLDiagramBuildType	value	=ccw					.	.	.	.	.
-p:ST_TLDiagramBuildType/=ccwIn	TIMING	ST_TLDiagramBuildType	value	=ccwIn					.	.	.	.	.
-p:ST_TLDiagramBuildType/=ccwOut	TIMING	ST_TLDiagramBuildType	value	=ccwOut					.	.	.	.	.
-p:ST_TLDiagramBuildType/=inByRing	TIMING	ST_TLDiagramBuildType	value	=inByRing					.	.	.	.	.
-p:ST_TLDiagramBuildType/=outByRing	TIMING	ST_TLDiagramBuildType	value	=outByRing					.	.	.	.	.
-p:ST_TLDiagramBuildType/=up	TIMING	ST_TLDiagramBuildType	value	=up					.	.	.	.	.
-p:ST_TLDiagramBuildType/=down	TIMING	ST_TLDiagramBuildType	value	=down					.	.	.	.	.
-p:ST_TLDiagramBuildType/=allAtOnce	TIMING	ST_TLDiagramBuildType	value	=allAtOnce					.	.	.	.	.
-p:ST_TLDiagramBuildType/=cust	TIMING	ST_TLDiagramBuildType	value	=cust					.	.	.	.	.
-p:CT_TLBuildDiagram	TIMING		type	CT_TLBuildDiagram					.	.	.	.	.
-p:CT_TLBuildDiagram/AG_TLBuild	TIMING	CT_TLBuildDiagram	attrgroup	AG_TLBuild	AG_TLBuild				.	.	.	.	.
-p:CT_TLBuildDiagram/@bld	TIMING	CT_TLBuildDiagram	attribute	@bld	ST_TLDiagramBuildType	optional	whole		.	.	.	.	.
-p:ST_TLOleChartBuildType	TIMING		simple	ST_TLOleChartBuildType				base=token	.	.	.	.	.
-p:ST_TLOleChartBuildType/=allAtOnce	TIMING	ST_TLOleChartBuildType	value	=allAtOnce					.	.	.	.	.
-p:ST_TLOleChartBuildType/=series	TIMING	ST_TLOleChartBuildType	value	=series					.	.	.	.	.
-p:ST_TLOleChartBuildType/=category	TIMING	ST_TLOleChartBuildType	value	=category					.	.	.	.	.
-p:ST_TLOleChartBuildType/=seriesEl	TIMING	ST_TLOleChartBuildType	value	=seriesEl					.	.	.	.	.
-p:ST_TLOleChartBuildType/=categoryEl	TIMING	ST_TLOleChartBuildType	value	=categoryEl					.	.	.	.	.
-p:CT_TLOleBuildChart	TIMING		type	CT_TLOleBuildChart					.	.	.	.	.
-p:CT_TLOleBuildChart/AG_TLBuild	TIMING	CT_TLOleBuildChart	attrgroup	AG_TLBuild	AG_TLBuild				.	.	.	.	.
-p:CT_TLOleBuildChart/@bld	TIMING	CT_TLOleBuildChart	attribute	@bld	ST_TLOleChartBuildType	optional	allAtOnce		.	.	.	.	.
-p:CT_TLOleBuildChart/@animBg	TIMING	CT_TLOleBuildChart	attribute	@animBg	boolean	optional	true		.	.	.	.	.
-p:CT_TLGraphicalObjectBuild	TIMING		type	CT_TLGraphicalObjectBuild					.	.	.	.	.
-p:CT_TLGraphicalObjectBuild/bldAsOne	TIMING	CT_TLGraphicalObjectBuild	element	bldAsOne	CT_Empty	choice			.	.	.	.	.
-p:CT_TLGraphicalObjectBuild/bldSub	TIMING	CT_TLGraphicalObjectBuild	element	bldSub	CT_AnimationGraphicalObjectBuildProperties	choice			.	.	.	.	.
-p:CT_TLGraphicalObjectBuild/AG_TLBuild	TIMING	CT_TLGraphicalObjectBuild	attrgroup	AG_TLBuild	AG_TLBuild				.	.	.	.	.
-p:CT_BuildList	TIMING		type	CT_BuildList					.	.	.	.	.
-p:CT_BuildList/bldP	TIMING	CT_BuildList	element	bldP	CT_TLBuildParagraph	choice			.	.	.	.	.
-p:CT_BuildList/bldDgm	TIMING	CT_BuildList	element	bldDgm	CT_TLBuildDiagram	choice			.	.	.	.	.
-p:CT_BuildList/bldOleChart	TIMING	CT_BuildList	element	bldOleChart	CT_TLOleBuildChart	choice			.	.	.	.	.
-p:CT_BuildList/bldGraphic	TIMING	CT_BuildList	element	bldGraphic	CT_TLGraphicalObjectBuild	choice			.	.	.	.	.
+p:CT_TLTimeAnimateValue	TIMING		type	CT_TLTimeAnimateValue					y	y	y	.	.
+p:CT_TLTimeAnimateValue/val	TIMING	CT_TLTimeAnimateValue	element	val	CT_TLAnimVariant	0..1			y	y	y	.	.
+p:CT_TLTimeAnimateValue/@tm	TIMING	CT_TLTimeAnimateValue	attribute	@tm	ST_TLTimeAnimateValueTime	optional	indefinite		y	y	y	.	.
+p:CT_TLTimeAnimateValue/@fmla	TIMING	CT_TLTimeAnimateValue	attribute	@fmla	string	optional			y	y	y	.	.
+p:CT_TLTimeAnimateValueList	TIMING		type	CT_TLTimeAnimateValueList					y	y	y	.	.
+p:CT_TLTimeAnimateValueList/tav	TIMING	CT_TLTimeAnimateValueList	element	tav	CT_TLTimeAnimateValue	0..unbounded			y	y	y	.	.
+p:ST_TLAnimateBehaviorCalcMode	TIMING		simple	ST_TLAnimateBehaviorCalcMode				base=token	y	.	.	.	.
+p:ST_TLAnimateBehaviorCalcMode/=discrete	TIMING	ST_TLAnimateBehaviorCalcMode	value	=discrete					y	y	y	.	.
+p:ST_TLAnimateBehaviorCalcMode/=lin	TIMING	ST_TLAnimateBehaviorCalcMode	value	=lin					y	y	y	.	.
+p:ST_TLAnimateBehaviorCalcMode/=fmla	TIMING	ST_TLAnimateBehaviorCalcMode	value	=fmla					y	y	y	.	.
+p:ST_TLAnimateBehaviorValueType	TIMING		simple	ST_TLAnimateBehaviorValueType				base=token	y	.	.	.	.
+p:ST_TLAnimateBehaviorValueType/=str	TIMING	ST_TLAnimateBehaviorValueType	value	=str					y	y	y	.	.
+p:ST_TLAnimateBehaviorValueType/=num	TIMING	ST_TLAnimateBehaviorValueType	value	=num					y	y	y	.	.
+p:ST_TLAnimateBehaviorValueType/=clr	TIMING	ST_TLAnimateBehaviorValueType	value	=clr					y	y	y	.	.
+p:CT_TLAnimateBehavior	TIMING		type	CT_TLAnimateBehavior					y	y	y	.	.
+p:CT_TLAnimateBehavior/cBhvr	TIMING	CT_TLAnimateBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLAnimateBehavior/tavLst	TIMING	CT_TLAnimateBehavior	element	tavLst	CT_TLTimeAnimateValueList	0..1			y	y	y	.	.
+p:CT_TLAnimateBehavior/@by	TIMING	CT_TLAnimateBehavior	attribute	@by	string	optional			y	y	y	.	.
+p:CT_TLAnimateBehavior/@from	TIMING	CT_TLAnimateBehavior	attribute	@from	string	optional			y	y	y	.	.
+p:CT_TLAnimateBehavior/@to	TIMING	CT_TLAnimateBehavior	attribute	@to	string	optional			y	y	y	.	.
+p:CT_TLAnimateBehavior/@calcmode	TIMING	CT_TLAnimateBehavior	attribute	@calcmode	ST_TLAnimateBehaviorCalcMode	optional			y	y	y	.	.
+p:CT_TLAnimateBehavior/@valueType	TIMING	CT_TLAnimateBehavior	attribute	@valueType	ST_TLAnimateBehaviorValueType	optional			y	y	y	.	.
+p:CT_TLByRgbColorTransform	TIMING		type	CT_TLByRgbColorTransform					y	y	y	.	.
+p:CT_TLByRgbColorTransform/@r	TIMING	CT_TLByRgbColorTransform	attribute	@r	ST_FixedPercentage	required			y	y	y	.	.
+p:CT_TLByRgbColorTransform/@g	TIMING	CT_TLByRgbColorTransform	attribute	@g	ST_FixedPercentage	required			y	y	y	.	.
+p:CT_TLByRgbColorTransform/@b	TIMING	CT_TLByRgbColorTransform	attribute	@b	ST_FixedPercentage	required			y	y	y	.	.
+p:CT_TLByHslColorTransform	TIMING		type	CT_TLByHslColorTransform					y	y	y	.	.
+p:CT_TLByHslColorTransform/@h	TIMING	CT_TLByHslColorTransform	attribute	@h	ST_Angle	required			y	y	y	.	.
+p:CT_TLByHslColorTransform/@s	TIMING	CT_TLByHslColorTransform	attribute	@s	ST_FixedPercentage	required			y	y	y	.	.
+p:CT_TLByHslColorTransform/@l	TIMING	CT_TLByHslColorTransform	attribute	@l	ST_FixedPercentage	required			y	y	y	.	.
+p:CT_TLByAnimateColorTransform	TIMING		type	CT_TLByAnimateColorTransform					y	y	y	.	.
+p:CT_TLByAnimateColorTransform/rgb	TIMING	CT_TLByAnimateColorTransform	element	rgb	CT_TLByRgbColorTransform	choice			y	y	y	.	.
+p:CT_TLByAnimateColorTransform/hsl	TIMING	CT_TLByAnimateColorTransform	element	hsl	CT_TLByHslColorTransform	choice			y	y	y	.	.
+p:ST_TLAnimateColorSpace	TIMING		simple	ST_TLAnimateColorSpace				base=token	y	.	.	.	.
+p:ST_TLAnimateColorSpace/=rgb	TIMING	ST_TLAnimateColorSpace	value	=rgb					y	y	y	.	.
+p:ST_TLAnimateColorSpace/=hsl	TIMING	ST_TLAnimateColorSpace	value	=hsl					y	y	y	.	.
+p:ST_TLAnimateColorDirection	TIMING		simple	ST_TLAnimateColorDirection				base=token	y	.	.	.	.
+p:ST_TLAnimateColorDirection/=cw	TIMING	ST_TLAnimateColorDirection	value	=cw					y	y	y	.	.
+p:ST_TLAnimateColorDirection/=ccw	TIMING	ST_TLAnimateColorDirection	value	=ccw					y	y	y	.	.
+p:CT_TLAnimateColorBehavior	TIMING		type	CT_TLAnimateColorBehavior					y	y	y	.	.
+p:CT_TLAnimateColorBehavior/cBhvr	TIMING	CT_TLAnimateColorBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLAnimateColorBehavior/by	TIMING	CT_TLAnimateColorBehavior	element	by	CT_TLByAnimateColorTransform	0..1			y	y	y	.	.
+p:CT_TLAnimateColorBehavior/from	TIMING	CT_TLAnimateColorBehavior	element	from	CT_Color	0..1			y	y	y	.	.
+p:CT_TLAnimateColorBehavior/to	TIMING	CT_TLAnimateColorBehavior	element	to	CT_Color	0..1			y	y	y	.	.
+p:CT_TLAnimateColorBehavior/@clrSpc	TIMING	CT_TLAnimateColorBehavior	attribute	@clrSpc	ST_TLAnimateColorSpace	optional			y	y	y	.	.
+p:CT_TLAnimateColorBehavior/@dir	TIMING	CT_TLAnimateColorBehavior	attribute	@dir	ST_TLAnimateColorDirection	optional			y	y	y	.	.
+p:ST_TLAnimateEffectTransition	TRANS		simple	ST_TLAnimateEffectTransition				base=token	y	.	.	.	.
+p:ST_TLAnimateEffectTransition/=in	TRANS	ST_TLAnimateEffectTransition	value	=in					y	y	y	.	.
+p:ST_TLAnimateEffectTransition/=out	TRANS	ST_TLAnimateEffectTransition	value	=out					y	y	y	.	.
+p:ST_TLAnimateEffectTransition/=none	TRANS	ST_TLAnimateEffectTransition	value	=none					y	y	y	.	.
+p:CT_TLAnimateEffectBehavior	TIMING		type	CT_TLAnimateEffectBehavior					y	y	y	.	.
+p:CT_TLAnimateEffectBehavior/cBhvr	TIMING	CT_TLAnimateEffectBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLAnimateEffectBehavior/progress	TIMING	CT_TLAnimateEffectBehavior	element	progress	CT_TLAnimVariant	0..1			y	y	y	.	.
+p:CT_TLAnimateEffectBehavior/@transition	TIMING	CT_TLAnimateEffectBehavior	attribute	@transition	ST_TLAnimateEffectTransition	optional	in		y	y	y	.	.
+p:CT_TLAnimateEffectBehavior/@filter	TIMING	CT_TLAnimateEffectBehavior	attribute	@filter	string	optional			y	y	y	.	.
+p:CT_TLAnimateEffectBehavior/@prLst	TIMING	CT_TLAnimateEffectBehavior	attribute	@prLst	string	optional			y	y	y	.	.
+p:ST_TLAnimateMotionBehaviorOrigin	TIMING		simple	ST_TLAnimateMotionBehaviorOrigin				base=token	y	.	.	.	.
+p:ST_TLAnimateMotionBehaviorOrigin/=parent	TIMING	ST_TLAnimateMotionBehaviorOrigin	value	=parent					y	y	y	.	.
+p:ST_TLAnimateMotionBehaviorOrigin/=layout	TIMING	ST_TLAnimateMotionBehaviorOrigin	value	=layout					y	y	y	.	.
+p:ST_TLAnimateMotionPathEditMode	TIMING		simple	ST_TLAnimateMotionPathEditMode				base=token	y	.	.	.	.
+p:ST_TLAnimateMotionPathEditMode/=relative	TIMING	ST_TLAnimateMotionPathEditMode	value	=relative					y	y	y	.	.
+p:ST_TLAnimateMotionPathEditMode/=fixed	TIMING	ST_TLAnimateMotionPathEditMode	value	=fixed					y	y	y	.	.
+p:CT_TLPoint	TIMING		type	CT_TLPoint					y	y	y	.	.
+p:CT_TLPoint/@x	TIMING	CT_TLPoint	attribute	@x	ST_Percentage	required			y	y	y	.	.
+p:CT_TLPoint/@y	TIMING	CT_TLPoint	attribute	@y	ST_Percentage	required			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior	TIMING		type	CT_TLAnimateMotionBehavior					y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/cBhvr	TIMING	CT_TLAnimateMotionBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/by	TIMING	CT_TLAnimateMotionBehavior	element	by	CT_TLPoint	0..1			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/from	TIMING	CT_TLAnimateMotionBehavior	element	from	CT_TLPoint	0..1			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/to	TIMING	CT_TLAnimateMotionBehavior	element	to	CT_TLPoint	0..1			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/rCtr	TIMING	CT_TLAnimateMotionBehavior	element	rCtr	CT_TLPoint	0..1			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/@origin	TIMING	CT_TLAnimateMotionBehavior	attribute	@origin	ST_TLAnimateMotionBehaviorOrigin	optional			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/@path	TIMING	CT_TLAnimateMotionBehavior	attribute	@path	string	optional			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/@pathEditMode	TIMING	CT_TLAnimateMotionBehavior	attribute	@pathEditMode	ST_TLAnimateMotionPathEditMode	optional			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/@rAng	TIMING	CT_TLAnimateMotionBehavior	attribute	@rAng	ST_Angle	optional			y	y	y	.	.
+p:CT_TLAnimateMotionBehavior/@ptsTypes	TIMING	CT_TLAnimateMotionBehavior	attribute	@ptsTypes	string	optional			y	y	y	.	.
+p:CT_TLAnimateRotationBehavior	TIMING		type	CT_TLAnimateRotationBehavior					y	y	y	.	.
+p:CT_TLAnimateRotationBehavior/cBhvr	TIMING	CT_TLAnimateRotationBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLAnimateRotationBehavior/@by	TIMING	CT_TLAnimateRotationBehavior	attribute	@by	ST_Angle	optional			y	y	y	.	.
+p:CT_TLAnimateRotationBehavior/@from	TIMING	CT_TLAnimateRotationBehavior	attribute	@from	ST_Angle	optional			y	y	y	.	.
+p:CT_TLAnimateRotationBehavior/@to	TIMING	CT_TLAnimateRotationBehavior	attribute	@to	ST_Angle	optional			y	y	y	.	.
+p:CT_TLAnimateScaleBehavior	TIMING		type	CT_TLAnimateScaleBehavior					y	y	y	.	.
+p:CT_TLAnimateScaleBehavior/cBhvr	TIMING	CT_TLAnimateScaleBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLAnimateScaleBehavior/by	TIMING	CT_TLAnimateScaleBehavior	element	by	CT_TLPoint	0..1			y	y	y	.	.
+p:CT_TLAnimateScaleBehavior/from	TIMING	CT_TLAnimateScaleBehavior	element	from	CT_TLPoint	0..1			y	y	y	.	.
+p:CT_TLAnimateScaleBehavior/to	TIMING	CT_TLAnimateScaleBehavior	element	to	CT_TLPoint	0..1			y	y	y	.	.
+p:CT_TLAnimateScaleBehavior/@zoomContents	TIMING	CT_TLAnimateScaleBehavior	attribute	@zoomContents	boolean	optional			y	y	y	.	.
+p:ST_TLCommandType	TIMING		simple	ST_TLCommandType				base=token	y	.	.	.	.
+p:ST_TLCommandType/=evt	TIMING	ST_TLCommandType	value	=evt					y	y	y	.	.
+p:ST_TLCommandType/=call	TIMING	ST_TLCommandType	value	=call					y	y	y	.	.
+p:ST_TLCommandType/=verb	TIMING	ST_TLCommandType	value	=verb					y	y	y	.	.
+p:CT_TLCommandBehavior	TIMING		type	CT_TLCommandBehavior					y	y	y	.	.
+p:CT_TLCommandBehavior/cBhvr	TIMING	CT_TLCommandBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLCommandBehavior/@type	TIMING	CT_TLCommandBehavior	attribute	@type	ST_TLCommandType	optional			y	y	y	.	.
+p:CT_TLCommandBehavior/@cmd	TIMING	CT_TLCommandBehavior	attribute	@cmd	string	optional			y	y	y	.	.
+p:CT_TLSetBehavior	TIMING		type	CT_TLSetBehavior					y	y	y	.	.
+p:CT_TLSetBehavior/cBhvr	TIMING	CT_TLSetBehavior	element	cBhvr	CT_TLCommonBehaviorData				y	y	y	.	.
+p:CT_TLSetBehavior/to	TIMING	CT_TLSetBehavior	element	to	CT_TLAnimVariant	0..1			y	y	y	.	.
+p:CT_TLCommonMediaNodeData	TIMING		type	CT_TLCommonMediaNodeData					y	y	y	.	.
+p:CT_TLCommonMediaNodeData/cTn	TIMING	CT_TLCommonMediaNodeData	element	cTn	CT_TLCommonTimeNodeData				y	y	y	.	.
+p:CT_TLCommonMediaNodeData/tgtEl	TIMING	CT_TLCommonMediaNodeData	element	tgtEl	CT_TLTimeTargetElement				y	y	y	.	.
+p:CT_TLCommonMediaNodeData/@vol	TIMING	CT_TLCommonMediaNodeData	attribute	@vol	ST_PositiveFixedPercentage	optional	50%		y	y	y	.	.
+p:CT_TLCommonMediaNodeData/@mute	TIMING	CT_TLCommonMediaNodeData	attribute	@mute	boolean	optional	false		y	y	y	.	.
+p:CT_TLCommonMediaNodeData/@numSld	TIMING	CT_TLCommonMediaNodeData	attribute	@numSld	unsignedInt	optional	1		y	y	y	.	.
+p:CT_TLCommonMediaNodeData/@showWhenStopped	TIMING	CT_TLCommonMediaNodeData	attribute	@showWhenStopped	boolean	optional	true		y	y	y	.	.
+p:CT_TLMediaNodeAudio	TIMING		type	CT_TLMediaNodeAudio					y	y	y	.	.
+p:CT_TLMediaNodeAudio/cMediaNode	TIMING	CT_TLMediaNodeAudio	element	cMediaNode	CT_TLCommonMediaNodeData				y	y	y	.	.
+p:CT_TLMediaNodeAudio/@isNarration	TIMING	CT_TLMediaNodeAudio	attribute	@isNarration	boolean	optional	false		y	y	y	.	.
+p:CT_TLMediaNodeVideo	TIMING		type	CT_TLMediaNodeVideo					y	y	y	.	.
+p:CT_TLMediaNodeVideo/cMediaNode	TIMING	CT_TLMediaNodeVideo	element	cMediaNode	CT_TLCommonMediaNodeData				y	y	y	.	.
+p:CT_TLMediaNodeVideo/@fullScrn	TIMING	CT_TLMediaNodeVideo	attribute	@fullScrn	boolean	optional	false		y	y	y	.	.
+p:AG_TLBuild	TIMING		type	AG_TLBuild					y	y	y	.	.
+p:AG_TLBuild/@spid	TIMING	AG_TLBuild	attribute	@spid	ST_DrawingElementId	required			y	y	y	.	.
+p:AG_TLBuild/@grpId	TIMING	AG_TLBuild	attribute	@grpId	unsignedInt	required			y	y	y	.	.
+p:AG_TLBuild/@uiExpand	TIMING	AG_TLBuild	attribute	@uiExpand	boolean	optional	false		y	y	y	.	.
+p:CT_TLTemplate	TIMING		type	CT_TLTemplate					y	y	y	.	.
+p:CT_TLTemplate/tnLst	TIMING	CT_TLTemplate	element	tnLst	CT_TimeNodeList				y	y	y	.	.
+p:CT_TLTemplate/@lvl	TIMING	CT_TLTemplate	attribute	@lvl	unsignedInt	optional	0		y	y	y	.	.
+p:CT_TLTemplateList	TIMING		type	CT_TLTemplateList					y	y	y	.	.
+p:CT_TLTemplateList/tmpl	TIMING	CT_TLTemplateList	element	tmpl	CT_TLTemplate	0..9			y	y	y	.	.
+p:ST_TLParaBuildType	TIMING		simple	ST_TLParaBuildType				base=token	y	.	.	.	.
+p:ST_TLParaBuildType/=allAtOnce	TIMING	ST_TLParaBuildType	value	=allAtOnce					y	y	y	.	.
+p:ST_TLParaBuildType/=p	TIMING	ST_TLParaBuildType	value	=p					y	y	y	.	.
+p:ST_TLParaBuildType/=cust	TIMING	ST_TLParaBuildType	value	=cust					y	y	y	.	.
+p:ST_TLParaBuildType/=whole	TIMING	ST_TLParaBuildType	value	=whole					y	y	y	.	.
+p:CT_TLBuildParagraph	TIMING		type	CT_TLBuildParagraph					y	y	y	.	.
+p:CT_TLBuildParagraph/tmplLst	TIMING	CT_TLBuildParagraph	element	tmplLst	CT_TLTemplateList	0..1			y	y	y	.	.
+p:CT_TLBuildParagraph/AG_TLBuild	TIMING	CT_TLBuildParagraph	attrgroup	AG_TLBuild	AG_TLBuild				y	y	y	.	.
+p:CT_TLBuildParagraph/@build	TIMING	CT_TLBuildParagraph	attribute	@build	ST_TLParaBuildType	optional	whole		y	y	y	.	.
+p:CT_TLBuildParagraph/@bldLvl	TIMING	CT_TLBuildParagraph	attribute	@bldLvl	unsignedInt	optional	1		y	y	y	.	.
+p:CT_TLBuildParagraph/@animBg	TIMING	CT_TLBuildParagraph	attribute	@animBg	boolean	optional	false		y	y	y	.	.
+p:CT_TLBuildParagraph/@autoUpdateAnimBg	TIMING	CT_TLBuildParagraph	attribute	@autoUpdateAnimBg	boolean	optional	true		y	y	y	.	.
+p:CT_TLBuildParagraph/@rev	TIMING	CT_TLBuildParagraph	attribute	@rev	boolean	optional	false		y	y	y	.	.
+p:CT_TLBuildParagraph/@advAuto	TIMING	CT_TLBuildParagraph	attribute	@advAuto	ST_TLTime	optional	indefinite		y	y	y	.	.
+p:ST_TLDiagramBuildType	TIMING		simple	ST_TLDiagramBuildType				base=token	y	.	.	.	.
+p:ST_TLDiagramBuildType/=whole	TIMING	ST_TLDiagramBuildType	value	=whole					y	y	y	.	.
+p:ST_TLDiagramBuildType/=depthByNode	TIMING	ST_TLDiagramBuildType	value	=depthByNode					y	y	y	.	.
+p:ST_TLDiagramBuildType/=depthByBranch	TIMING	ST_TLDiagramBuildType	value	=depthByBranch					y	y	y	.	.
+p:ST_TLDiagramBuildType/=breadthByNode	TIMING	ST_TLDiagramBuildType	value	=breadthByNode					y	y	y	.	.
+p:ST_TLDiagramBuildType/=breadthByLvl	TIMING	ST_TLDiagramBuildType	value	=breadthByLvl					y	y	y	.	.
+p:ST_TLDiagramBuildType/=cw	TIMING	ST_TLDiagramBuildType	value	=cw					y	y	y	.	.
+p:ST_TLDiagramBuildType/=cwIn	TIMING	ST_TLDiagramBuildType	value	=cwIn					y	y	y	.	.
+p:ST_TLDiagramBuildType/=cwOut	TIMING	ST_TLDiagramBuildType	value	=cwOut					y	y	y	.	.
+p:ST_TLDiagramBuildType/=ccw	TIMING	ST_TLDiagramBuildType	value	=ccw					y	y	y	.	.
+p:ST_TLDiagramBuildType/=ccwIn	TIMING	ST_TLDiagramBuildType	value	=ccwIn					y	y	y	.	.
+p:ST_TLDiagramBuildType/=ccwOut	TIMING	ST_TLDiagramBuildType	value	=ccwOut					y	y	y	.	.
+p:ST_TLDiagramBuildType/=inByRing	TIMING	ST_TLDiagramBuildType	value	=inByRing					y	y	y	.	.
+p:ST_TLDiagramBuildType/=outByRing	TIMING	ST_TLDiagramBuildType	value	=outByRing					y	y	y	.	.
+p:ST_TLDiagramBuildType/=up	TIMING	ST_TLDiagramBuildType	value	=up					y	y	y	.	.
+p:ST_TLDiagramBuildType/=down	TIMING	ST_TLDiagramBuildType	value	=down					y	y	y	.	.
+p:ST_TLDiagramBuildType/=allAtOnce	TIMING	ST_TLDiagramBuildType	value	=allAtOnce					y	y	y	.	.
+p:ST_TLDiagramBuildType/=cust	TIMING	ST_TLDiagramBuildType	value	=cust					y	y	y	.	.
+p:CT_TLBuildDiagram	TIMING		type	CT_TLBuildDiagram					y	y	y	.	.
+p:CT_TLBuildDiagram/AG_TLBuild	TIMING	CT_TLBuildDiagram	attrgroup	AG_TLBuild	AG_TLBuild				y	y	y	.	.
+p:CT_TLBuildDiagram/@bld	TIMING	CT_TLBuildDiagram	attribute	@bld	ST_TLDiagramBuildType	optional	whole		y	y	y	.	.
+p:ST_TLOleChartBuildType	TIMING		simple	ST_TLOleChartBuildType				base=token	y	.	.	.	.
+p:ST_TLOleChartBuildType/=allAtOnce	TIMING	ST_TLOleChartBuildType	value	=allAtOnce					y	y	y	.	.
+p:ST_TLOleChartBuildType/=series	TIMING	ST_TLOleChartBuildType	value	=series					y	y	y	.	.
+p:ST_TLOleChartBuildType/=category	TIMING	ST_TLOleChartBuildType	value	=category					y	y	y	.	.
+p:ST_TLOleChartBuildType/=seriesEl	TIMING	ST_TLOleChartBuildType	value	=seriesEl					y	y	y	.	.
+p:ST_TLOleChartBuildType/=categoryEl	TIMING	ST_TLOleChartBuildType	value	=categoryEl					y	y	y	.	.
+p:CT_TLOleBuildChart	TIMING		type	CT_TLOleBuildChart					y	y	y	.	.
+p:CT_TLOleBuildChart/AG_TLBuild	TIMING	CT_TLOleBuildChart	attrgroup	AG_TLBuild	AG_TLBuild				y	y	y	.	.
+p:CT_TLOleBuildChart/@bld	TIMING	CT_TLOleBuildChart	attribute	@bld	ST_TLOleChartBuildType	optional	allAtOnce		y	y	y	.	.
+p:CT_TLOleBuildChart/@animBg	TIMING	CT_TLOleBuildChart	attribute	@animBg	boolean	optional	true		y	y	y	.	.
+p:CT_TLGraphicalObjectBuild	TIMING		type	CT_TLGraphicalObjectBuild					y	y	y	.	.
+p:CT_TLGraphicalObjectBuild/bldAsOne	TIMING	CT_TLGraphicalObjectBuild	element	bldAsOne	CT_Empty	choice			y	y	y	.	.
+p:CT_TLGraphicalObjectBuild/bldSub	TIMING	CT_TLGraphicalObjectBuild	element	bldSub	CT_AnimationGraphicalObjectBuildProperties	choice			y	y	y	.	.
+p:CT_TLGraphicalObjectBuild/AG_TLBuild	TIMING	CT_TLGraphicalObjectBuild	attrgroup	AG_TLBuild	AG_TLBuild				y	y	y	.	.
+p:CT_BuildList	TIMING		type	CT_BuildList					y	y	y	.	.
+p:CT_BuildList/bldP	TIMING	CT_BuildList	element	bldP	CT_TLBuildParagraph	choice			y	y	y	.	.
+p:CT_BuildList/bldDgm	TIMING	CT_BuildList	element	bldDgm	CT_TLBuildDiagram	choice			y	y	y	.	.
+p:CT_BuildList/bldOleChart	TIMING	CT_BuildList	element	bldOleChart	CT_TLOleBuildChart	choice			y	y	y	.	.
+p:CT_BuildList/bldGraphic	TIMING	CT_BuildList	element	bldGraphic	CT_TLGraphicalObjectBuild	choice			y	y	y	.	.
 p:CT_SlideTiming	TIMING		type	CT_SlideTiming					.	.	.	.	.
-p:CT_SlideTiming/tnLst	TIMING	CT_SlideTiming	element	tnLst	CT_TimeNodeList	0..1			.	.	.	.	.
-p:CT_SlideTiming/bldLst	TIMING	CT_SlideTiming	element	bldLst	CT_BuildList	0..1			.	.	.	.	.
-p:CT_SlideTiming/extLst	TIMING	CT_SlideTiming	element	extLst	CT_ExtensionListModify	0..1			.	.	.	.	.
+p:CT_SlideTiming/tnLst	TIMING	CT_SlideTiming	element	tnLst	CT_TimeNodeList	0..1			y	y	y	.	.
+p:CT_SlideTiming/bldLst	TIMING	CT_SlideTiming	element	bldLst	CT_BuildList	0..1			y	y	y	.	.
+p:CT_SlideTiming/extLst	TIMING	CT_SlideTiming	element	extLst	CT_ExtensionListModify	0..1			r	r	r	.	.
 p:CT_Empty	PRES		type	CT_Empty					.	.	.	.	.
 p:ST_Name	PRES		simple	ST_Name				base=string	.	.	.	.	.
-p:ST_Direction	TRANS		simple	ST_Direction				base=token	.	.	.	.	.
-p:ST_Direction/=horz	TRANS	ST_Direction	value	=horz					.	.	.	.	.
-p:ST_Direction/=vert	TRANS	ST_Direction	value	=vert					.	.	.	.	.
+p:ST_Direction	TRANS		simple	ST_Direction				base=token	y	.	.	.	.
+p:ST_Direction/=horz	TRANS	ST_Direction	value	=horz					y	y	y	.	.
+p:ST_Direction/=vert	TRANS	ST_Direction	value	=vert					y	y	y	.	.
 p:ST_Index	PRES		simple	ST_Index				base=unsignedInt	.	.	.	.	.
 p:CT_IndexRange	PRES		type	CT_IndexRange					.	.	.	.	.
 p:CT_IndexRange/@st	PRES	CT_IndexRange	attribute	@st	ST_Index	required			.	.	.	.	.
@@ -1678,48 +1678,48 @@ a:CT_GraphicalObjectData/@uri	SHAPE	CT_GraphicalObjectData	attribute	@uri	token	
 a:CT_GraphicalObject	SHAPE		type	CT_GraphicalObject					.	y	.	.	.
 a:CT_GraphicalObject/graphicData	SHAPE	CT_GraphicalObject	element	graphicData	CT_GraphicalObjectData				.	y	.	.	.
 a:<graphic>	SHAPE		root	<graphic>	CT_GraphicalObject				.	.	.	.	.
-a:ST_ChartBuildStep	TIMING		simple	ST_ChartBuildStep				base=token	.	.	.	.	.
-a:ST_ChartBuildStep/=category	TIMING	ST_ChartBuildStep	value	=category					.	.	.	.	.
-a:ST_ChartBuildStep/=ptInCategory	TIMING	ST_ChartBuildStep	value	=ptInCategory					.	.	.	.	.
-a:ST_ChartBuildStep/=series	TIMING	ST_ChartBuildStep	value	=series					.	.	.	.	.
-a:ST_ChartBuildStep/=ptInSeries	TIMING	ST_ChartBuildStep	value	=ptInSeries					.	.	.	.	.
-a:ST_ChartBuildStep/=allPts	TIMING	ST_ChartBuildStep	value	=allPts					.	.	.	.	.
-a:ST_ChartBuildStep/=gridLegend	TIMING	ST_ChartBuildStep	value	=gridLegend					.	.	.	.	.
-a:ST_DgmBuildStep	TIMING		simple	ST_DgmBuildStep				base=token	.	.	.	.	.
-a:ST_DgmBuildStep/=sp	TIMING	ST_DgmBuildStep	value	=sp					.	.	.	.	.
-a:ST_DgmBuildStep/=bg	TIMING	ST_DgmBuildStep	value	=bg					.	.	.	.	.
-a:CT_AnimationDgmElement	TIMING		type	CT_AnimationDgmElement					.	.	.	.	.
-a:CT_AnimationDgmElement/@id	TIMING	CT_AnimationDgmElement	attribute	@id	ST_Guid	optional	{00000000-0000-0000-0000-000000000000}		.	.	.	.	.
-a:CT_AnimationDgmElement/@bldStep	TIMING	CT_AnimationDgmElement	attribute	@bldStep	ST_DgmBuildStep	optional	sp		.	.	.	.	.
-a:CT_AnimationChartElement	TIMING		type	CT_AnimationChartElement					.	.	.	.	.
-a:CT_AnimationChartElement/@seriesIdx	TIMING	CT_AnimationChartElement	attribute	@seriesIdx	int	optional	-1		.	.	.	.	.
-a:CT_AnimationChartElement/@categoryIdx	TIMING	CT_AnimationChartElement	attribute	@categoryIdx	int	optional	-1		.	.	.	.	.
-a:CT_AnimationChartElement/@bldStep	TIMING	CT_AnimationChartElement	attribute	@bldStep	ST_ChartBuildStep	required			.	.	.	.	.
-a:CT_AnimationElementChoice	TIMING		type	CT_AnimationElementChoice					.	.	.	.	.
-a:CT_AnimationElementChoice/dgm	TIMING	CT_AnimationElementChoice	element	dgm	CT_AnimationDgmElement	choice			.	.	.	.	.
-a:CT_AnimationElementChoice/chart	TIMING	CT_AnimationElementChoice	element	chart	CT_AnimationChartElement	choice			.	.	.	.	.
-a:ST_AnimationBuildType	TIMING		simple	ST_AnimationBuildType				base=token	.	.	.	.	.
-a:ST_AnimationBuildType/=allAtOnce	TIMING	ST_AnimationBuildType	value	=allAtOnce					.	.	.	.	.
-a:ST_AnimationDgmOnlyBuildType	TIMING		simple	ST_AnimationDgmOnlyBuildType				base=token	.	.	.	.	.
-a:ST_AnimationDgmOnlyBuildType/=one	TIMING	ST_AnimationDgmOnlyBuildType	value	=one					.	.	.	.	.
-a:ST_AnimationDgmOnlyBuildType/=lvlOne	TIMING	ST_AnimationDgmOnlyBuildType	value	=lvlOne					.	.	.	.	.
-a:ST_AnimationDgmOnlyBuildType/=lvlAtOnce	TIMING	ST_AnimationDgmOnlyBuildType	value	=lvlAtOnce					.	.	.	.	.
+a:ST_ChartBuildStep	TIMING		simple	ST_ChartBuildStep				base=token	y	.	.	.	.
+a:ST_ChartBuildStep/=category	TIMING	ST_ChartBuildStep	value	=category					y	y	y	.	.
+a:ST_ChartBuildStep/=ptInCategory	TIMING	ST_ChartBuildStep	value	=ptInCategory					y	y	y	.	.
+a:ST_ChartBuildStep/=series	TIMING	ST_ChartBuildStep	value	=series					y	y	y	.	.
+a:ST_ChartBuildStep/=ptInSeries	TIMING	ST_ChartBuildStep	value	=ptInSeries					y	y	y	.	.
+a:ST_ChartBuildStep/=allPts	TIMING	ST_ChartBuildStep	value	=allPts					y	y	y	.	.
+a:ST_ChartBuildStep/=gridLegend	TIMING	ST_ChartBuildStep	value	=gridLegend					y	y	y	.	.
+a:ST_DgmBuildStep	TIMING		simple	ST_DgmBuildStep				base=token	y	.	.	.	.
+a:ST_DgmBuildStep/=sp	TIMING	ST_DgmBuildStep	value	=sp					y	y	y	.	.
+a:ST_DgmBuildStep/=bg	TIMING	ST_DgmBuildStep	value	=bg					y	y	y	.	.
+a:CT_AnimationDgmElement	TIMING		type	CT_AnimationDgmElement					y	y	y	.	.
+a:CT_AnimationDgmElement/@id	TIMING	CT_AnimationDgmElement	attribute	@id	ST_Guid	optional	{00000000-0000-0000-0000-000000000000}		y	y	y	.	.
+a:CT_AnimationDgmElement/@bldStep	TIMING	CT_AnimationDgmElement	attribute	@bldStep	ST_DgmBuildStep	optional	sp		y	y	y	.	.
+a:CT_AnimationChartElement	TIMING		type	CT_AnimationChartElement					y	y	y	.	.
+a:CT_AnimationChartElement/@seriesIdx	TIMING	CT_AnimationChartElement	attribute	@seriesIdx	int	optional	-1		y	y	y	.	.
+a:CT_AnimationChartElement/@categoryIdx	TIMING	CT_AnimationChartElement	attribute	@categoryIdx	int	optional	-1		y	y	y	.	.
+a:CT_AnimationChartElement/@bldStep	TIMING	CT_AnimationChartElement	attribute	@bldStep	ST_ChartBuildStep	required			y	y	y	.	.
+a:CT_AnimationElementChoice	TIMING		type	CT_AnimationElementChoice					y	y	y	.	.
+a:CT_AnimationElementChoice/dgm	TIMING	CT_AnimationElementChoice	element	dgm	CT_AnimationDgmElement	choice			y	y	y	.	.
+a:CT_AnimationElementChoice/chart	TIMING	CT_AnimationElementChoice	element	chart	CT_AnimationChartElement	choice			y	y	y	.	.
+a:ST_AnimationBuildType	TIMING		simple	ST_AnimationBuildType				base=token	y	.	.	.	.
+a:ST_AnimationBuildType/=allAtOnce	TIMING	ST_AnimationBuildType	value	=allAtOnce					y	.	.	.	.
+a:ST_AnimationDgmOnlyBuildType	TIMING		simple	ST_AnimationDgmOnlyBuildType				base=token	y	.	.	.	.
+a:ST_AnimationDgmOnlyBuildType/=one	TIMING	ST_AnimationDgmOnlyBuildType	value	=one					y	.	.	.	.
+a:ST_AnimationDgmOnlyBuildType/=lvlOne	TIMING	ST_AnimationDgmOnlyBuildType	value	=lvlOne					y	.	.	.	.
+a:ST_AnimationDgmOnlyBuildType/=lvlAtOnce	TIMING	ST_AnimationDgmOnlyBuildType	value	=lvlAtOnce					y	.	.	.	.
 a:ST_AnimationDgmBuildType	TIMING		simple	ST_AnimationDgmBuildType				union=ST_AnimationBuildType ST_AnimationDgmOnlyBuildType	.	.	.	.	.
-a:CT_AnimationDgmBuildProperties	TIMING		type	CT_AnimationDgmBuildProperties					.	.	.	.	.
-a:CT_AnimationDgmBuildProperties/@bld	TIMING	CT_AnimationDgmBuildProperties	attribute	@bld	ST_AnimationDgmBuildType	optional	allAtOnce		.	.	.	.	.
-a:CT_AnimationDgmBuildProperties/@rev	TIMING	CT_AnimationDgmBuildProperties	attribute	@rev	boolean	optional	false		.	.	.	.	.
-a:ST_AnimationChartOnlyBuildType	TIMING		simple	ST_AnimationChartOnlyBuildType				base=token	.	.	.	.	.
-a:ST_AnimationChartOnlyBuildType/=series	TIMING	ST_AnimationChartOnlyBuildType	value	=series					.	.	.	.	.
-a:ST_AnimationChartOnlyBuildType/=category	TIMING	ST_AnimationChartOnlyBuildType	value	=category					.	.	.	.	.
-a:ST_AnimationChartOnlyBuildType/=seriesEl	TIMING	ST_AnimationChartOnlyBuildType	value	=seriesEl					.	.	.	.	.
-a:ST_AnimationChartOnlyBuildType/=categoryEl	TIMING	ST_AnimationChartOnlyBuildType	value	=categoryEl					.	.	.	.	.
+a:CT_AnimationDgmBuildProperties	TIMING		type	CT_AnimationDgmBuildProperties					y	y	y	.	.
+a:CT_AnimationDgmBuildProperties/@bld	TIMING	CT_AnimationDgmBuildProperties	attribute	@bld	ST_AnimationDgmBuildType	optional	allAtOnce		y	y	y	.	.
+a:CT_AnimationDgmBuildProperties/@rev	TIMING	CT_AnimationDgmBuildProperties	attribute	@rev	boolean	optional	false		y	y	y	.	.
+a:ST_AnimationChartOnlyBuildType	TIMING		simple	ST_AnimationChartOnlyBuildType				base=token	y	.	.	.	.
+a:ST_AnimationChartOnlyBuildType/=series	TIMING	ST_AnimationChartOnlyBuildType	value	=series					y	.	.	.	.
+a:ST_AnimationChartOnlyBuildType/=category	TIMING	ST_AnimationChartOnlyBuildType	value	=category					y	.	.	.	.
+a:ST_AnimationChartOnlyBuildType/=seriesEl	TIMING	ST_AnimationChartOnlyBuildType	value	=seriesEl					y	.	.	.	.
+a:ST_AnimationChartOnlyBuildType/=categoryEl	TIMING	ST_AnimationChartOnlyBuildType	value	=categoryEl					y	.	.	.	.
 a:ST_AnimationChartBuildType	TIMING		simple	ST_AnimationChartBuildType				union=ST_AnimationBuildType ST_AnimationChartOnlyBuildType	.	.	.	.	.
-a:CT_AnimationChartBuildProperties	TIMING		type	CT_AnimationChartBuildProperties					.	.	.	.	.
-a:CT_AnimationChartBuildProperties/@bld	TIMING	CT_AnimationChartBuildProperties	attribute	@bld	ST_AnimationChartBuildType	optional	allAtOnce		.	.	.	.	.
-a:CT_AnimationChartBuildProperties/@animBg	TIMING	CT_AnimationChartBuildProperties	attribute	@animBg	boolean	optional	true		.	.	.	.	.
-a:CT_AnimationGraphicalObjectBuildProperties	TIMING		type	CT_AnimationGraphicalObjectBuildProperties					.	.	.	.	.
-a:CT_AnimationGraphicalObjectBuildProperties/bldDgm	TIMING	CT_AnimationGraphicalObjectBuildProperties	element	bldDgm	CT_AnimationDgmBuildProperties	choice			.	.	.	.	.
-a:CT_AnimationGraphicalObjectBuildProperties/bldChart	TIMING	CT_AnimationGraphicalObjectBuildProperties	element	bldChart	CT_AnimationChartBuildProperties	choice			.	.	.	.	.
+a:CT_AnimationChartBuildProperties	TIMING		type	CT_AnimationChartBuildProperties					y	y	y	.	.
+a:CT_AnimationChartBuildProperties/@bld	TIMING	CT_AnimationChartBuildProperties	attribute	@bld	ST_AnimationChartBuildType	optional	allAtOnce		y	y	y	.	.
+a:CT_AnimationChartBuildProperties/@animBg	TIMING	CT_AnimationChartBuildProperties	attribute	@animBg	boolean	optional	true		y	y	y	.	.
+a:CT_AnimationGraphicalObjectBuildProperties	TIMING		type	CT_AnimationGraphicalObjectBuildProperties					y	y	y	.	.
+a:CT_AnimationGraphicalObjectBuildProperties/bldDgm	TIMING	CT_AnimationGraphicalObjectBuildProperties	element	bldDgm	CT_AnimationDgmBuildProperties	choice			y	y	y	.	.
+a:CT_AnimationGraphicalObjectBuildProperties/bldChart	TIMING	CT_AnimationGraphicalObjectBuildProperties	element	bldChart	CT_AnimationChartBuildProperties	choice			y	y	y	.	.
 a:CT_BackgroundFormatting	FILL		type	CT_BackgroundFormatting					.	.	.	.	.
 a:CT_BackgroundFormatting/EG_FillProperties	FILL	CT_BackgroundFormatting	group	EG_FillProperties	EG_FillProperties	0..1			.	.	.	.	.
 a:CT_BackgroundFormatting/EG_EffectProperties	FILL	CT_BackgroundFormatting	group	EG_EffectProperties	EG_EffectProperties	0..1			.	.	.	.	.
@@ -6904,12 +6904,12 @@ x:powerpoint/2013/main/command:CT_DocumentChangesList/extLst	REVIEW	CT_DocumentC
 x:powerpoint/2013/main/command:CT_ChangesInfo	REVIEW		type	CT_ChangesInfo					.	.	.	.	.
 x:powerpoint/2013/main/command:CT_ChangesInfo/docChgLst	REVIEW	CT_ChangesInfo	element	docChgLst	CT_DocumentChangesList	0..unbounded			.	.	.	.	.
 x:powerpoint/2013/main/command:<chgInfo>	REVIEW		root	<chgInfo>	CT_ChangesInfo				.	.	.	.	.
-x:powerpoint/2015/09/main:ST_TransitionMorphOption	TRANS		simple	ST_TransitionMorphOption				base=token	.	.	.	.	.
-x:powerpoint/2015/09/main:ST_TransitionMorphOption/=byObject	TRANS	ST_TransitionMorphOption	value	=byObject					.	.	.	.	.
-x:powerpoint/2015/09/main:ST_TransitionMorphOption/=byWord	TRANS	ST_TransitionMorphOption	value	=byWord					.	.	.	.	.
-x:powerpoint/2015/09/main:ST_TransitionMorphOption/=byChar	TRANS	ST_TransitionMorphOption	value	=byChar					.	.	.	.	.
-x:powerpoint/2015/09/main:CT_MorphTransition	TRANS		type	CT_MorphTransition					.	.	.	.	.
-x:powerpoint/2015/09/main:CT_MorphTransition/@option	TRANS	CT_MorphTransition	attribute	@option	ST_TransitionMorphOption	required			.	.	.	.	.
+x:powerpoint/2015/09/main:ST_TransitionMorphOption	TRANS		simple	ST_TransitionMorphOption				base=token	y	.	.	.	.
+x:powerpoint/2015/09/main:ST_TransitionMorphOption/=byObject	TRANS	ST_TransitionMorphOption	value	=byObject					y	y	y	.	.
+x:powerpoint/2015/09/main:ST_TransitionMorphOption/=byWord	TRANS	ST_TransitionMorphOption	value	=byWord					y	y	y	.	.
+x:powerpoint/2015/09/main:ST_TransitionMorphOption/=byChar	TRANS	ST_TransitionMorphOption	value	=byChar					y	y	y	.	.
+x:powerpoint/2015/09/main:CT_MorphTransition	TRANS		type	CT_MorphTransition					y	y	y	.	.
+x:powerpoint/2015/09/main:CT_MorphTransition/@option	TRANS	CT_MorphTransition	attribute	@option	ST_TransitionMorphOption	required			y	y	y	.	.
 x:powerpoint/2015/09/main:<morph>	TRANS		root	<morph>	CT_MorphTransition				.	.	.	.	.
 x:powerpoint/2015/10/main:ST_ClientID	REVIEW		simple	ST_ClientID				base=string	.	.	.	.	.
 x:powerpoint/2015/10/main:ST_ClientRevisionNumber	REVIEW		simple	ST_ClientRevisionNumber				base=unsignedInt	.	.	.	.	.

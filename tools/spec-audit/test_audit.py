@@ -416,8 +416,8 @@ class Marks(unittest.TestCase):
 
     def test_a_false_mark_on_the_real_checklist_fails_check(self):
         cases = {
-            # Nothing in the crates reads transitions yet.
-            "p:CT_SlideTransition/@spd": ("I", "no reference in casual-slide-import"),
+            # Nothing in the crates reads charts yet.
+            "c:CT_NumFmt/@formatCode": ("I", "no reference in casual-slide-import"),
             # Import names it, but not where the audit can place an owner.
             "p:CT_SlideSize/@cx": ("E", "casual-slide-export"),
             # In code and in a fixture, and no model struct field holds it under that name.

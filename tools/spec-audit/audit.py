@@ -30,7 +30,7 @@ can check, and what it cannot check is left blank by --propose rather than assum
         id>` comment, and a test must still name it.
         A helper that reads or writes a known element's attributes says so with a
         `// spec-audit: owner=bodyPr,lvl1pPr` comment before its `fn`, which stands for the
-        call site the audit cannot follow. `Node::a("x")` and `Node::new(space, "x")` in the
+        call site the audit cannot follow. `Node::a("x")`, `Node::new(space, "x")` and `p_node("x")` in the
         exporter name their element for the rest of the chain.
   Tests A test file that reads docs/spec/checklist.tsv and names an area in a literal walks
         that area's element, attribute and value rows, so it names them. The exporter's tests
@@ -95,7 +95,7 @@ CRATES = {"I": "casual-slide-import", "E": "casual-slide-export", "M": "casual-s
 RESOLVER_CRATE = "casual-slide-ooxml"
 GENERATED_SOURCES = ("schema_names.rs",)
 TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE"),
-         "1E": ("GEOM", "FILL", "LINE", "EFFECT", "D3"), "1F": ("TEXT",)}
+         "1E": ("GEOM", "FILL", "LINE", "EFFECT", "D3"), "1F": ("TEXT",), "1I": ("TIMING", "TRANS")}
 LEAF_KINDS = ("element", "attribute", "root", "rootattr", "value")
 # Model fields too generic to say anything about which attribute they hold.
 GENERIC_FIELDS = frozenset("id name type val value uri ref kind data text index key".split())
@@ -485,7 +485,7 @@ def strip_test_items(toks, tests=None):
 
 ATTR_CALL = re.compile(r"attr", re.I)
 ELEM_CALL = re.compile(r"child|elem|start|open|tag|find|descend|empty|begin", re.I)
-BUILDER_CALLS = frozenset(("a", "new"))  # the exporter's Node::a("x"), Node::new(space, "x")
+BUILDER_CALLS = frozenset(("a", "new", "p_node"))  # the exporter's Node::a("x"), Node::new(space, "x"), p_node("x")
 NAME_RX = re.compile(r"^(?:([A-Za-z_][\w.-]*):)?([A-Za-z_][\w.-]*)$")
 VERBS = re.compile(r"^(?:read|parse|write|import|export|emit|load|save|to|from|build|serialize|deserialize)_")
 TAG_RX = re.compile(r"<(/?)(?:([A-Za-z_][\w.-]*):)?([A-Za-z_][\w.-]*)((?:[^<>]|\{[^{}]*\})*)")

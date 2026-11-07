@@ -179,6 +179,23 @@ A geometry diagnostic holds no text from the file (`SEC-019`), and every refusal
 
 Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fixed shape, and a colour's transforms have their own bound. `a:t` is bounded by `max_value_bytes`.
 
+## Timing: `TimingLimits`
+
+`crates/casual-slide-import/src/timing.rs`, nested in `SlideLimits` as `timing`. Nothing here refuses a deck or a part: crossing a bound leaves the whole `p:timing` or `p:transition` unread and in the tree, reported as `CS-TMG-0001` naming what crossed it (owner instruction 24), and an edit may replace it. The real decks committed hold 6 levels of time nodes at most, and 65 `cTn` across a whole deck (`T1I-01`).
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_node_depth` | `32` | Time nodes nested in time nodes, `mc:AlternateContent` counting as one. Three XML levels each, so it is met well before `max_xml_depth`. The writer holds a tree built by hand to it, as `CS-EXP-0008` | CS-TMG-0001 | Tested; `hostile/timing-limit-depth.bin` |
+| `max_nodes` | `100_000` | Time nodes in one part's timing, the build list's templates included | CS-TMG-0001 | Tested; `hostile/timing-limit-nodes.bin` |
+| `max_conditions` | `4_096` | Conditions in one list | CS-TMG-0001 | Tested; `hostile/timing-limit-conditions.bin` |
+| `max_attr_names` | `1_024` | `attrName` in one `attrNameLst` | CS-TMG-0001 | Tested; `hostile/timing-limit-attr-names.bin` |
+| `max_animate_values` | `65_536` | `tav` in one `tavLst` | CS-TMG-0001 | Tested; `hostile/timing-limit-animate-values.bin` |
+| `max_builds` | `65_536` | Entries in one `bldLst` | CS-TMG-0001 | Tested; `hostile/timing-limit-builds.bin` |
+| `max_templates` | `64` | `tmpl` in one `tmplLst`. Between the schema's 9 and this, they are kept | CS-TMG-0001 | Tested; `hostile/timing-limit-templates.bin` |
+| `max_branches` | `64` | Branches in one `mc:AlternateContent` holding timing or a transition | CS-TMG-0001 | Tested; `hostile/timing-limit-branches.bin` |
+
+Each fixture is seen to read with its bound raised by one (`raising_each_limit_by_one_reads_what_it_refused`). `hostile/timing-long-value.bin` is `CS-TMG-0002` under a lowered `max_value_bytes`. Past `max_xml_depth`, `hostile/timing-beyond-xml-depth.bin` fails in the XML reader before this one sees it: that slide is left out and reported as `CS-IMF-0012`, the deck opens, and `REC-03` and `REC-04` will read more of it. Nothing here evaluates a path or a formula, runs a command, or plays anything. Infinite repeats and a timeline's time budget are Phase 8's (`SEC-C10`).
+
 ## Export
 
 | Limit | Default | Bounds | Code | Status |
