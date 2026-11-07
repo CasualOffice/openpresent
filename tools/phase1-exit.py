@@ -176,7 +176,6 @@ def corpus(args):
     counts = {
         "PowerPoint Windows": sum("PowerPoint" in r[7] and "Mac" not in r[7] + r[8] for r in rows),
         "PowerPoint Mac": sum("PowerPoint" in r[7] and "Mac" in r[7] + r[8] for r in rows),
-        "Keynote": sum("Keynote" in r[7] for r in rows),
         "Google Slides": sum("Google" in r[7] for r in rows),
     }
     return all(counts.values()), ", ".join(f"{k} {v}" for k, v in counts.items()) + f" of {len(rows)} recorded decks"
