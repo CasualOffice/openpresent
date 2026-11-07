@@ -67,7 +67,7 @@ impl Ctx<'_, '_> {
         Ok(cam)
     }
 
-    fn light_rig(&mut self, el: &Elem) -> Res<LightRig> {
+    pub(crate) fn light_rig(&mut self, el: &Elem) -> Res<LightRig> {
         let mut e = el.clone();
         let mut rig = LightRig {
             rig: self.req(&mut e, "rig")?,
@@ -125,7 +125,7 @@ impl Ctx<'_, '_> {
         Ok(v)
     }
 
-    fn bevel(&mut self, el: &Elem) -> Res<Bevel> {
+    pub(crate) fn bevel(&mut self, el: &Elem) -> Res<Bevel> {
         let mut e = el.clone();
         let b = Bevel {
             width: self.pos_coord(&mut e, "w")?,

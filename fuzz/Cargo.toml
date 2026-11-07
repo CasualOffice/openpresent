@@ -35,6 +35,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "tables"
+path = "fuzz_targets/tables.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "part_name"
 path = "fuzz_targets/part_name.rs"
 test = false

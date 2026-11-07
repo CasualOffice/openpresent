@@ -1,6 +1,6 @@
 //! `scene3d` and `sp3d` as what the tree should say (`docs/spec/D3.md`).
 
-use casual_slide_model::d3::{Bevel, Scene3D, Shape3D, SphereCoords, Vector3D};
+use casual_slide_model::d3::{Bevel, LightRig, Scene3D, Shape3D, SphereCoords, Vector3D};
 
 use crate::drawing::{Node, Space};
 
@@ -18,6 +18,14 @@ fn vector(local: &'static str, v: &Vector3D) -> Node {
         .lex("dz", v.dz.as_ref())
 }
 
+/// `a:CT_LightRig`.
+pub(crate) fn light_rig(r: &LightRig) -> Node {
+    Node::a("lightRig")
+        .lex("rig", r.rig.as_ref())
+        .lex("dir", r.direction.as_ref())
+        .opt(r.rotation.as_ref().map(sphere))
+}
+
 /// `a:CT_Scene3D`, under the name it has here.
 pub(crate) fn scene3d_node(s: &Scene3D, space: Space, local: &'static str) -> Node {
     let camera = s.camera.as_ref().map(|c| {
@@ -27,12 +35,7 @@ pub(crate) fn scene3d_node(s: &Scene3D, space: Space, local: &'static str) -> No
             .pct("zoom", c.zoom)
             .opt(c.rotation.as_ref().map(sphere))
     });
-    let rig = s.light_rig.as_ref().map(|r| {
-        Node::a("lightRig")
-            .lex("rig", r.rig.as_ref())
-            .lex("dir", r.direction.as_ref())
-            .opt(r.rotation.as_ref().map(sphere))
-    });
+    let rig = s.light_rig.as_ref().map(light_rig);
     let backdrop = s.backdrop.as_ref().map(|b| {
         let anchor = b.anchor.as_ref().map(|p| {
             Node::a("anchor")
@@ -48,7 +51,7 @@ pub(crate) fn scene3d_node(s: &Scene3D, space: Space, local: &'static str) -> No
     Node::new(space, local).opt(camera).opt(rig).opt(backdrop)
 }
 
-fn bevel(local: &'static str, b: &Bevel) -> Node {
+pub(crate) fn bevel(local: &'static str, b: &Bevel) -> Node {
     Node::a(local)
         .lex("w", b.width.as_ref())
         .lex("h", b.height.as_ref())

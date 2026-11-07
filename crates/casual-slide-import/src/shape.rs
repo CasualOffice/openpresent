@@ -2,9 +2,9 @@
 //! `graphicFrame` and `contentPart`, each a node with an [`ObjectId`].
 //!
 //! Each node's identity, transform, locks, non-visual properties and hyperlinks are
-//! read here; geometry, fills, lines, effects and 3D by [`crate::drawing`], and text
-//! bodies by [`crate::text`]. Everything else a node holds (the frame's graphic data)
-//! stays in the tree and is reported as retained.
+//! read here; geometry, fills, lines, effects and 3D by [`crate::drawing`], text bodies
+//! by [`crate::text`], and a frame's table by [`crate::table`]. Everything else a node
+//! holds (a chart reference, a diagram) stays in the tree and is reported as retained.
 //!
 //! The walk follows the input to a depth of [`SlideLimits::max_group_depth`] and
 //! no further, and counts nodes against [`SlideLimits::max_shapes_per_part`]. An
@@ -20,6 +20,7 @@ use casual_slide_model::shape::{
     AppNonVisual, Connection, Hyperlink, Locks, MediaKind, NodeKind, NonVisualDrawing, ObjectId,
     Placeholder, ShapeNode, Transform,
 };
+use casual_slide_model::table::Table;
 use casual_slide_ooxml::{AlternateResolution, Branch, MARKUP_COMPATIBILITY, Relationship};
 
 use crate::color::Findings as ColorFindings;
@@ -27,6 +28,7 @@ use crate::drawing::{Ctx, DrawingLimits, note_dag_siblings, read_blip_fill};
 use crate::presentation::read_positive_size;
 use crate::properties::{Elem, ImportError, ImportFindingKind as K, Reader, ns};
 use crate::slide::{SlideError, SlideLimits};
+use crate::table::{TableCounts, TableReader};
 use crate::text::{TextCounts, TextReader};
 
 /// `a16:` Office 2016 drawing, where `creationId` lives.
@@ -90,6 +92,7 @@ pub(crate) struct ShapeReader<'s, 'r, 'a> {
     pub map: Option<&'s mut SourceMap>,
     pub color: &'s mut ColorFindings,
     pub text_counts: TextCounts,
+    pub table_counts: TableCounts,
 }
 
 impl ShapeReader<'_, '_, '_> {
@@ -197,7 +200,7 @@ impl ShapeReader<'_, '_, '_> {
                     n.properties.picture = fill.map(Box::new);
                 }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
-                "graphic" => n.graphic_uri = self.graphic(&child)?,
+                "graphic" => n.graphic_uri = self.graphic(&child, &mut n.table)?,
                 "txBody" => {
                     let mut text = TextReader {
                         r: &mut *self.r,
@@ -537,7 +540,11 @@ impl ShapeReader<'_, '_, '_> {
         Ok(t)
     }
 
-    fn graphic(&mut self, el: &Elem) -> Result<Option<String>, SlideError> {
+    fn graphic(
+        &mut self,
+        el: &Elem,
+        table: &mut Option<Box<Table>>,
+    ) -> Result<Option<String>, SlideError> {
         self.r.finish(el);
         let mut uri = None;
         for child in self.r.children(el)? {
@@ -548,9 +555,23 @@ impl ShapeReader<'_, '_, '_> {
             let mut data = child.clone();
             uri = self.r.required::<String>(&mut data, "uri", |_| true)?;
             self.r.finish(&data);
-            // A table, a chart reference, a diagram, an OLE object: later tiers.
+            // A chart reference, a diagram, an OLE object: later tiers.
             for inner in self.r.children(&data)? {
-                self.r.retained(&inner);
+                if !inner.is(ns::DML, "tbl") {
+                    self.r.retained(&inner);
+                } else if table.is_some() {
+                    self.r.note(K::DuplicateElement, &inner, None);
+                } else {
+                    let mut reader = TableReader {
+                        r: &mut *self.r,
+                        rels: self.rels,
+                        limits: &self.limits.table,
+                        color: &mut *self.color,
+                        text_counts: &mut self.text_counts,
+                        counts: &mut self.table_counts,
+                    };
+                    *table = Some(Box::new(reader.tbl(&inner)?));
+                }
             }
         }
         Ok(uri)

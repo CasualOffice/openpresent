@@ -227,7 +227,11 @@ const SHADES: &[&str] = &["lin", "path"];
 
 fn choices_of(parent: &str) -> impl Iterator<Item = &'static [&'static str]> {
     let shade = (parent == "gradFill").then_some(SHADES);
-    CHOICES.iter().copied().chain(shade)
+    CHOICES
+        .iter()
+        .copied()
+        .chain(shade)
+        .chain(crate::table::choices_in(parent).iter().copied())
 }
 
 /// Where a child goes among its siblings: the schema's sequence for the parent. `None`
@@ -256,7 +260,7 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
         "blipFill" => &["blip", "srcRect", "tile", "stretch"],
         "pattFill" => &["fgClr", "bgClr"],
         "clrChange" => &["clrFrom", "clrTo"],
-        "ln" | "hiddenLine" => &[
+        "ln" | "hiddenLine" | "lnL" | "lnR" | "lnT" | "lnB" | "lnTlToBr" | "lnBlToTr" => &[
             "noFill",
             "solidFill",
             "gradFill",
@@ -288,7 +292,7 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
         "lineSketchStyleProps" => &["custGeom", "prstGeom", "type", "seed", "extLst"],
         // Any number of effects, in any order, then `extLst`.
         "blip" => return Some(usize::from(local == "extLst")),
-        _ => return None,
+        _ => crate::table::order_in(parent)?,
     };
     order.iter().position(|o| *o == local)
 }

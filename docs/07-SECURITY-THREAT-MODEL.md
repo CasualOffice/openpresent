@@ -57,6 +57,7 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 | SEC-C11 | Effects costing unbounded CPU, such as huge blur radii | Radius and rasterized-area caps per object | Planned 2C |
 | SEC-C12 | SmartArt layout definitions and chart data at huge scale | Render from stored drawing; never run layout definitions on load; point caps | Planned 1J, 1K |
 | SEC-C13 | Text bodies: a paragraph or run count sized to exhaust memory; a tab list far beyond the schema; a bad value in any of some hundred attributes; document text reaching a report | `TextLimits`, each bound refusing with its own code; bad values reported and left out, with the tree keeping them; findings carry names only. `hostile/text-*.bin`, `hostile_text_refuses_with_its_code`, `no_message_or_finding_carries_text_from_a_body`, fuzz target `text_bodies` | Tested |
+| SEC-C14 | Tables: a grid, row or cell count sized to exhaust memory; a span of 2147483647 sizing or walking anything; overlapping merges costing the square of the cells; an unknown style GUID crashing a reader, as it has LibreOffice ([52](52-COMPETITOR-STUDY.md)) | `TableLimits`, each bound refusing with its own code; a span is compared and never followed, and merges are one pass; damage is reported (`CS-TBF`) and never repaired; an unknown GUID is an answer. `hostile/table-*.bin`, `hostile_tables_refuse_with_their_codes_and_open_above_the_bound`, `a_hostile_table_opens_with_everything_reported_and_nothing_from_the_document_in_it`, fuzz target `tables` | Tested |
 
 ## Links and network
 

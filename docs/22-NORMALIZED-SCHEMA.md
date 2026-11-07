@@ -50,7 +50,7 @@ too. Ids are what ops and the wire carry.
 
 ## Tier 1D: slides and shape trees as built
 
-**Model** (`casual-slide-model`, `slide.rs`, `shape.rs`). The six slide-like parts (`sld`, `sldLayout`, `sldMaster`, `notes`, `notesMaster`, `handoutMaster`) are one `SlidePart` with a kind. A field the kind lacks stays `None`. A part holds `cSld` (name, background, shape tree), `clrMap` or `clrMapOvr`, `showMasterSp`, `showMasterPhAnim`, `show`, the layout attributes, `hf`, `sldLayoutIdLst`, and which of `txStyles` and `notesStyle` are present. A `ShapeNode` is `sp`, `grpSp`, `cxnSp`, `pic`, `graphicFrame` or `contentPart`. It holds `cNvPr` (spid, name, alt text, hidden, hyperlinks, `a16:creationId`, `adec:decorative`), the kind's locks, `txBox`, connector ends, `nvPr` (placeholder, media kind, `isPhoto`, `userDrawn`), transform, `bwMode`, `useBgFill`, the frame's graphic URI and the content part's `r:id`. Everything else a node holds is preserved, not modelled, and named in the report as `CS-IMF-0010`. That covers table and chart content, transitions and timing. Geometry, fills, lines, effects and 3D are Tier 1E's, below.
+**Model** (`casual-slide-model`, `slide.rs`, `shape.rs`). The six slide-like parts (`sld`, `sldLayout`, `sldMaster`, `notes`, `notesMaster`, `handoutMaster`) are one `SlidePart` with a kind. A field the kind lacks stays `None`. A part holds `cSld` (name, background, shape tree), `clrMap` or `clrMapOvr`, `showMasterSp`, `showMasterPhAnim`, `show`, the layout attributes, `hf`, `sldLayoutIdLst`, and which of `txStyles` and `notesStyle` are present. A `ShapeNode` is `sp`, `grpSp`, `cxnSp`, `pic`, `graphicFrame` or `contentPart`. It holds `cNvPr` (spid, name, alt text, hidden, hyperlinks, `a16:creationId`, `adec:decorative`), the kind's locks, `txBox`, connector ends, `nvPr` (placeholder, media kind, `isPhoto`, `userDrawn`), transform, `bwMode`, `useBgFill`, the frame's graphic URI and the content part's `r:id`. Everything else a node holds is preserved, not modelled, and named in the report as `CS-IMF-0010`. That covers chart content, transitions and timing. Geometry, fills, lines, effects and 3D are Tier 1E's, below.
 
 **Identity.** An `ObjectId` is the part's ordinal in the deck's structure plus the node's place in a depth-first walk of that part's shape tree. Node 0 is the part and node 1 is `spTree`. Ids depend on neither `spid` nor load order. A duplicate `spid` is reported as `CS-IMF-0005` and moves nothing. Ids last for a session and are never written to the file. A node inside `mc:AlternateContent` gets its id in the branch markup compatibility selects.
 
@@ -87,7 +87,7 @@ Every patched part is read back before saving.
 
 **Export** (`casual-slide-export`, `drawing.rs`). The model, before and after, becomes a small description of the elements it stands for, and only what differs touches the tree. An edited attribute changes that attribute. A child is matched to its element by name and occurrence, whatever the file's order. A choice that changed (a solid fill to a gradient) replaces that element and any repeat of it, in schema order. A list whose order changed is rebuilt. Unknown attributes, foreign children and other `ext` entries stay. A percentage follows the spelling it replaces, or the conformance class. Nothing is range-checked at write: the part is read back, and a value the reader would not believe is refused as `CS-EXP-0007`. An extension is added only with a `uri` from a real deck (`hiddenFill`, `hiddenLine`, `hiddenEffects`, `useLocalDpi`), or the sketch's, which is Inferred; others are patched where a file has them, and adding one is `CS-EXP-0002`.
 
-**Not in this tier.** `p:bgPr` is read by the slide reader as a background and stays retained; `T1C-02` reads the format scheme's fills; a table cell's fills are read by its tier, with these functions, and a run's already are (Tier 1F). `flatTx` and `prstTxWarp` are in a text body.
+**Not in this tier.** `p:bgPr` is read by the slide reader as a background and stays retained; `T1C-02` reads the format scheme's fills; a table cell's fills and borders are read with these functions (Tier 1G), and a run's already are (Tier 1F). `flatTx` and `prstTxWarp` are in a text body.
 
 **Evidence.** `MS-OI29500` v20260818, by section at each use: 2.1.1270, 2.1.1272, 2.1.1274, 2.1.1276, 2.1.1287, 2.1.1291, 2.1.1292, 2.1.1294, 2.1.1295 to 2.1.1300, 2.1.1303, 2.1.1304, 2.1.1311, 2.1.1312. Where they bear on drawing and not on what is stored, the model's documentation records them for Tier 2B and 2C, and nothing acts on them yet. The sketch extension's `uri` is Inferred.
 
@@ -97,7 +97,7 @@ Every patched part is read back before saving.
 
 **Lexemes.** Where a type's written form is a union, `Written<T>` keeps the text beside the value: `fontScale="62.5%"` reads as 62500 and stays `62.5%`. `Written` compares by value, so another spelling of the same value is not an edit and the tree's bytes stay. A new value is spelled in the form the element has, or `N%` in Strict. `buSzPct` has only the `N%` form in the vendored Transitional schema too, so a new one is spelled that way, while a real deck's `100000` is read and kept.
 
-**What stays in the tree.** A run's fill, line, effects and underline line and fill are Tier 1E's types, read and written by its readers and writer. `scene3d`, `sp3d`, `flatTx`, a warp's `avLst`, `a:blip`'s content in a picture bullet beyond `r:embed`, and `extLst` stay in the tree, and are reported as `CS-IMF-0010`. Something else inside a paragraph, such as an equation's `mc:AlternateContent`, keeps its place as `TextItem::Retained` and is reported. A table cell's text is Tier 1G's.
+**What stays in the tree.** A run's fill, line, effects and underline line and fill are Tier 1E's types, read and written by its readers and writer. `scene3d`, `sp3d`, `flatTx`, a warp's `avLst`, `a:blip`'s content in a picture bullet beyond `r:embed`, and `extLst` stay in the tree, and are reported as `CS-IMF-0010`. Something else inside a paragraph, such as an equation's `mc:AlternateContent`, keeps its place as `TextItem::Retained` and is reported. A table cell's text is read the same way (Tier 1G).
 
 **Limits** (`TextLimits`, [21](21-PARSER-LIMITS.md)). `CS-TXT-0001` to `0005`. Text never reaches a finding or a message.
 
@@ -115,6 +115,26 @@ Every patched part is read back before saving.
 | Defaults | Only what `MS-OI29500` states: `sz` 1800, `baseline` 0, `marL` and `indent` 0, `defTabSz` 914400, `eaLnBrk` and `hangingPunct` true, `latinLnBrk` false; `grpFill` in text is `noFill` (2.1.1298) | 2.1.1399, 2.1.1406 |
 
 **Known and absent.** `MS-OI29500` 2.1.1379, 2.1.1388 and 2.1.1399 put the theme's object defaults (`txDef`, `lnDef`, `spDef`) before the master, and a shape's `p:style/fontRef` is overridden by its text body. Neither is in the chain, because neither is on the model yet. Whether PowerPoint uses `otherStyle` for a shape that is no placeholder is open until `PV-01`.
+
+## Tier 1G: tables as built
+
+**Model** (`casual-slide-model`, `table.rs`). A graphic frame holds `ShapeNode::table`: `tblPr`, the grid, rows, cells. A cell's text is Tier 1F's `TextBody`, and its fill, borders and `cell3D` Tier 1E's types. `TableStyleList` is the `tableStyles` part, and `TableStyle` is also what `tblPr/tableStyle` holds. Absent stays absent, and a list present and empty is not an absent one. `Table::merges` gives the merges, what does not hold of them, and each covered cell's origin. A row height is what was stored, and nothing here lays anything out (owner instruction 20).
+
+**Import** (`casual-slide-import`, `table.rs`). What `MS-OI29500` says Office requires and the schema does not is **reported and not repaired**: `CS-TBF` in [20](20-ERROR-CODE-REGISTRY.md). The exception is a span under 1 or leaving the table, which is left out, as no consumer should have to bound it. A cell's place in its row is its column (2.1.1424 c). `import_slide_parts` reads the part from the main part's relationship and returns it as `ImportedSlides::table_styles`, and each `tableStyleId` naming nothing is `CS-TBF-0008`. Over a bound, `CS-TBL`. `a16:rowId`, `a16:colId` and every `extLst` stay in the tree and are reported as `CS-IMF-0010`.
+
+**Export** (`casual-slide-export`, `table.rs`). Rows, cells and columns match by position, and only what differs is touched. A table, row, cell or column added or removed is refused as `CS-EXP-0009`: those are edit operations, which move ids and merges together. `save_table_styles` writes the part alone. Adding a `tableStyles` part to a deck with none is refused as `CS-SLE-0001`, and is the writer tier's. A style reference is written as the model states it, and nothing keeps it naming a listed style.
+
+**Resolution** (`casual-slide-style`, `table.rs`). `table_style` says where a table's style comes from, and `StyleSource::NotInDeck` is an answer and not an error. `CellChain` answers fill, bold, italic, text colour, font, margins, anchor and overflow from the cell, then the part styles. Positions are grid positions and never sizes.
+
+| Rule | Evidence |
+| --- | --- |
+| Part styles apply whole table, bands, last and first column, last row, its corners, first row, its corners | `MS-OI29500` 2.1.1265 |
+| An invalid `tableStyleId` applies no style, if it is neither built in nor in the file | `MS-OI29500` 2.1.1423 |
+| `tcPr` over the style; flags turn on the parts of the same name; corners need both flags; bands count past the header and skip a header or total; a covered cell answers as its origin | Inferred |
+
+**Known and absent.** **We hold no definitions of Office's built-in styles**, and real decks refer to one with an empty list (`z19828779-education-ar`, `z17310490-vierfelder-de`), so such a table resolves to no style here and is drawn styled by PowerPoint. A style's borders are read and not resolved to a cell's edges, as which of two neighbours' borders shows is Tier 2E's (BEH-14, 2.1.1424 e, f), and so is row growth (2.1.1427). `MS-OI29500` 2.1.1415's `dkEdge` and `flood` are recorded on the model and not resolved.
+
+**A disagreement in the notes.** 2.1.1427 b says a row holds more than 1 cell, and 2.1.1425 allows one column. A single-column table is not reported.
 
 ## The fidelity contract
 

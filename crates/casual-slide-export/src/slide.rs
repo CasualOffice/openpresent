@@ -8,7 +8,8 @@
 //! What this tier writes: a node's transform, `cNvPr` attributes, hyperlink
 //! attributes, locks, `txBox`, placeholder attributes, `isPhoto`, `userDrawn`,
 //! `useBgFill`, `bwMode`, through `drawing.rs` its geometry, fill, line, effects
-//! and 3D, and through `text.rs` its text body; a part's root attributes,
+//! and 3D, through `text.rs` its text body, and through `table.rs` a frame's table; a
+//! part's root attributes,
 //! `cSld/@name`, `clrMap` slots, `clrMapOvr`, `hf`, `txStyles` and `notesStyle`.
 //! Anything else that differs (a node added, removed
 //! or reordered, a background, a layout list) is refused as `CS-SLE-0001`, and
@@ -383,7 +384,8 @@ impl Patch<'_, '_> {
             || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
             || b.rel_id != a.rel_id
-            || b.text_body != a.text_body;
+            || b.text_body != a.text_body
+            || b.table != a.table;
         if own_changed {
             let mapped = self
                 .map
@@ -445,6 +447,14 @@ impl Patch<'_, '_> {
             a.text_body.as_ref(),
             |w, el, before, after| patch_text_body(w, el, before.map(|b| &**b), after),
         )?;
+        if b.table != a.table {
+            crate::table::patch_frame_table(
+                &mut self.w,
+                el,
+                b.table.as_deref(),
+                a.table.as_deref(),
+            )?;
+        }
         if b.properties != a.properties {
             crate::drawing::patch_properties(
                 &mut self.w,

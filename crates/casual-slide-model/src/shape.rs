@@ -568,8 +568,10 @@ pub struct ShapeNode {
     pub graphic_uri: Option<String>,
     /// `@r:id`, content parts only.
     pub rel_id: Option<String>,
-    /// `txBody`, shapes only. A table cell's text is Tier 1G's.
+    /// `txBody`, shapes only. A table cell's text is in [`Self::table`].
     pub text_body: Option<Box<TextBody>>,
+    /// `a:tbl` in the frame's `graphicData`, graphic frames only.
+    pub table: Option<Box<crate::table::Table>>,
     /// A group's children, in document order, which is z-order.
     pub children: Vec<ShapeNode>,
 }
@@ -593,6 +595,7 @@ impl ShapeNode {
             graphic_uri: None,
             rel_id: None,
             text_body: None,
+            table: None,
             children: Vec::new(),
         }
     }

@@ -177,6 +177,21 @@ as `SEC-015`, in a crate that row does not name.
 
 Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fixed shape, and a colour's transforms have their own bound. `a:t` is bounded by `max_value_bytes`.
 
+## Tables: `TableLimits`
+
+`crates/casual-slide-import/src/table.rs`, nested in `SlideLimits` as `table`. Each is at or beyond what Office accepts (`MS-OI29500` 2.1.1424 a and b: 1000 rows, 1000 columns), so no table Office would open is refused by one of these, though `max_paragraphs_per_part` can refuse the text of one that large. Between Office's 1000 and these, a table is kept and reported as `CS-TBF-0006`. No count or span from a file sizes anything: a span is compared with what is left of the table at that cell, and `Table::merges` is one pass over the cells that exist, with one slot per grid column. A size test holds a cell at no more than 96 bytes of model before its text and properties, which are boxed and bounded by `TextLimits` and `DrawingLimits`, so cells in one part stay near 200 MiB at the default.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_rows` | `4_096` | `tr` in one table | CS-TBL-0001 | Tested; `hostile/table-limit-rows.bin` |
+| `max_columns` | `4_096` | `gridCol` in one grid | CS-TBL-0002 | Tested; `hostile/table-limit-columns.bin` |
+| `max_cells_per_table` | `1_048_576` | `tc` in one table | CS-TBL-0003 | Tested; `hostile/table-limit-cells-in-table.bin` |
+| `max_cells_per_part` | `2_097_152` | `tc` across one part | CS-TBL-0004 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_table_styles` | `4_096` | `tblStyle` in the list | CS-TBL-0005 | Tested; `hostile/table-limit-styles.bin` |
+| `max_headers_per_cell` | `1_024` | `header` in one cell's `headers` | CS-TBL-0006 | Tested; `hostile/table-limit-headers.bin` |
+
+A table has a fixed depth, and a style's parts follow no input. What is damaged but not over a bound opens and is reported: `hostile/table-bad-structure.bin`.
+
 ## Export
 
 | Limit | Default | Bounds | Code | Status |
