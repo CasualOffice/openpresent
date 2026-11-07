@@ -12,6 +12,8 @@
 //! Evidence: ECMA-376 Part 1 21.4 and `MS-ODRAWXML` 2.13 (`dsp`, `dgm14`), by the schemas in
 //! `schemas/`. Which part a drawing relationship names follows `dsp:dataModelExt/@relId`.
 
+// Generated: a union with a free member reads `|| true`, which keeps the generator uniform.
+#[allow(clippy::overly_complex_bool_expr)]
 pub mod schema;
 
 use std::fmt;
