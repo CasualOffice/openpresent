@@ -15,6 +15,7 @@ use casual_slide_import::properties::{Elem, ns};
 use casual_slide_model::color::Color;
 use casual_slide_model::d3::{FlatText, Shape3D};
 use casual_slide_model::effect::EffectProperties;
+use casual_slide_model::fill::Blip;
 use casual_slide_model::fill::Fill;
 use casual_slide_model::line::Line;
 use casual_slide_model::presentation::Percentage;
@@ -761,8 +762,21 @@ fn patch_bullet(w: &mut Writer<'_>, el: &Elem, b: Option<&Bullet>, a: Option<&Bu
             };
             w.attr(&holder, "char", old, value.as_ref())
         }
-        // Same picture is caught by `b == a`; another means writing Tier 1H's element.
-        Some(Bullet::Picture { .. }) => Err(unsupported(w, "a picture bullet")),
+        Some(Bullet::Picture(blip)) => {
+            let Some(blip) = blip else {
+                return Err(unsupported(w, "a picture bullet with no picture"));
+            };
+            let old = match b {
+                Some(Bullet::Picture(Some(old))) => Some(&**old),
+                _ => None,
+            };
+            crate::drawing::check_svg_fallback(w, old, Some(blip))?;
+            let holder = swap_choice(w, el, GROUP, PARAGRAPH_PROPERTIES_ORDER, "buBlip")?;
+            let of = |blip: Option<&Blip>| {
+                crate::drawing::Node::a("buBlip").opt(blip.map(crate::fill::blip))
+            };
+            crate::drawing::patch(w, &holder, Some(&of(old)), &of(Some(blip)))
+        }
     }
 }
 

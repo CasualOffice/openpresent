@@ -370,6 +370,26 @@ pub struct VtVector {
     /// `@baseType`.
     pub base_type: VectorBaseType,
     /// The items.
+    // spec-audit: vt:CT_Vector/variant
+    // spec-audit: vt:CT_Vector/i1
+    // spec-audit: vt:CT_Vector/i2
+    // spec-audit: vt:CT_Vector/i4
+    // spec-audit: vt:CT_Vector/i8
+    // spec-audit: vt:CT_Vector/ui1
+    // spec-audit: vt:CT_Vector/ui2
+    // spec-audit: vt:CT_Vector/ui4
+    // spec-audit: vt:CT_Vector/ui8
+    // spec-audit: vt:CT_Vector/r4
+    // spec-audit: vt:CT_Vector/r8
+    // spec-audit: vt:CT_Vector/lpstr
+    // spec-audit: vt:CT_Vector/lpwstr
+    // spec-audit: vt:CT_Vector/bstr
+    // spec-audit: vt:CT_Vector/date
+    // spec-audit: vt:CT_Vector/filetime
+    // spec-audit: vt:CT_Vector/bool
+    // spec-audit: vt:CT_Vector/cy
+    // spec-audit: vt:CT_Vector/error
+    // spec-audit: vt:CT_Vector/clsid
     pub items: Vec<Variant>,
 }
 
@@ -383,6 +403,23 @@ pub struct VtArray {
     /// `@baseType`.
     pub base_type: ArrayBaseType,
     /// The items.
+    // spec-audit: vt:CT_Array/variant
+    // spec-audit: vt:CT_Array/i1
+    // spec-audit: vt:CT_Array/i2
+    // spec-audit: vt:CT_Array/i4
+    // spec-audit: vt:CT_Array/int
+    // spec-audit: vt:CT_Array/ui1
+    // spec-audit: vt:CT_Array/ui2
+    // spec-audit: vt:CT_Array/ui4
+    // spec-audit: vt:CT_Array/uint
+    // spec-audit: vt:CT_Array/r4
+    // spec-audit: vt:CT_Array/r8
+    // spec-audit: vt:CT_Array/decimal
+    // spec-audit: vt:CT_Array/bstr
+    // spec-audit: vt:CT_Array/date
+    // spec-audit: vt:CT_Array/bool
+    // spec-audit: vt:CT_Array/error
+    // spec-audit: vt:CT_Array/cy
     pub items: Vec<Variant>,
 }
 
@@ -516,6 +553,7 @@ pub struct AppProperties {
     /// `HyperlinksChanged`.
     pub hyperlinks_changed: Option<bool>,
     /// `DigSig`: the base64 content of its `vt:blob`.
+    // spec-audit: ep:CT_DigSigBlob/vt:blob
     pub dig_sig: Option<String>,
     /// `Application`.
     pub application: Option<String>,
@@ -537,6 +575,41 @@ pub struct CustomProperty {
     /// `@linkTarget`.
     pub link_target: Option<String>,
     /// The single value child. `None` when it was absent or unusable.
+    // spec-audit: ep:CT_VectorVariant/vt:vector
+    // spec-audit: ep:CT_VectorLpstr/vt:vector
+    // spec-audit: cp:CT_Property/vt:vector
+    // spec-audit: cp:CT_Property/vt:array
+    // spec-audit: cp:CT_Property/vt:blob
+    // spec-audit: cp:CT_Property/vt:oblob
+    // spec-audit: cp:CT_Property/vt:empty
+    // spec-audit: cp:CT_Property/vt:null
+    // spec-audit: cp:CT_Property/vt:i1
+    // spec-audit: cp:CT_Property/vt:i2
+    // spec-audit: cp:CT_Property/vt:i4
+    // spec-audit: cp:CT_Property/vt:i8
+    // spec-audit: cp:CT_Property/vt:int
+    // spec-audit: cp:CT_Property/vt:ui1
+    // spec-audit: cp:CT_Property/vt:ui2
+    // spec-audit: cp:CT_Property/vt:ui4
+    // spec-audit: cp:CT_Property/vt:ui8
+    // spec-audit: cp:CT_Property/vt:uint
+    // spec-audit: cp:CT_Property/vt:r4
+    // spec-audit: cp:CT_Property/vt:r8
+    // spec-audit: cp:CT_Property/vt:decimal
+    // spec-audit: cp:CT_Property/vt:lpstr
+    // spec-audit: cp:CT_Property/vt:lpwstr
+    // spec-audit: cp:CT_Property/vt:bstr
+    // spec-audit: cp:CT_Property/vt:date
+    // spec-audit: cp:CT_Property/vt:filetime
+    // spec-audit: cp:CT_Property/vt:bool
+    // spec-audit: cp:CT_Property/vt:cy
+    // spec-audit: cp:CT_Property/vt:error
+    // spec-audit: cp:CT_Property/vt:stream
+    // spec-audit: cp:CT_Property/vt:ostream
+    // spec-audit: cp:CT_Property/vt:storage
+    // spec-audit: cp:CT_Property/vt:ostorage
+    // spec-audit: cp:CT_Property/vt:vstream
+    // spec-audit: cp:CT_Property/vt:clsid
     pub value: Option<Variant>,
 }
 

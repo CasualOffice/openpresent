@@ -605,6 +605,19 @@ mod tests {
     }
 
     /// `SEC-X05`: one fixed rule, whatever the order suggests.
+    /// Named by Part 3 for a consumer that resaves. Accepted without complaint: bytes are kept.
+    #[test]
+    fn preserve_elements_and_preserve_attributes_are_accepted() {
+        for attribute in ["PreserveElements", "PreserveAttributes"] {
+            let xml = format!(
+                r#"<root xmlns:mc="{MARKUP_COMPATIBILITY}" xmlns:x="urn:x" mc:Ignorable="x" mc:{attribute}="x:keep"/>"#
+            );
+            let c = resolve_compatibility(&tree(&xml));
+            assert!(c.nonconformances.is_empty(), "{attribute}");
+            assert!(c.must_understand.is_empty(), "{attribute}");
+        }
+    }
+
     #[test]
     fn the_first_choice_whose_requirements_are_understood_wins() {
         let t = tree(&doc("<mc:AlternateContent>\

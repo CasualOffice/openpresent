@@ -22,6 +22,13 @@ libfuzzer-sys = "0.4"
 [workspace]
 
 [[bin]]
+name = "media_references"
+path = "fuzz_targets/media_references.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "geometry"
 path = "fuzz_targets/geometry.rs"
 test = false
@@ -115,6 +122,13 @@ bench = false
 [[bin]]
 name = "text_bodies"
 path = "fuzz_targets/text_bodies.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "timing_trees"
+path = "fuzz_targets/timing_trees.rs"
 test = false
 doc = false
 bench = false

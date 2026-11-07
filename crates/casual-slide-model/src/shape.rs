@@ -214,8 +214,7 @@ impl Action {
     }
 }
 
-/// `a:CT_Hyperlink`, for `hlinkClick` and `hlinkHover`. `snd` and `extLst` stay in
-/// the tree.
+/// `a:CT_Hyperlink`, for `hlinkClick` and `hlinkHover`. `extLst` stays in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Hyperlink {
     /// `@r:id`. Empty is meaningful: an action with no target part.
@@ -234,6 +233,8 @@ pub struct Hyperlink {
     pub highlight_click: Option<bool>,
     /// `@endSnd`.
     pub end_sound: Option<bool>,
+    /// `snd`.
+    pub sound: Option<crate::media::EmbeddedWavAudioFile>,
 }
 
 /// `a:CT_NonVisualDrawingProps`, `cNvPr`.
@@ -255,8 +256,10 @@ pub struct NonVisualDrawing {
     /// `hlinkHover`.
     pub hyperlink_hover: Option<Hyperlink>,
     /// `extLst/ext/a16:creationId/@id`, PowerPoint's persistent id for a shape.
+    // spec-audit: x:drawing/2014/main:<creationId>
     pub creation_id: Option<String>,
     /// `extLst/ext/adec:decorative/@val`.
+    // spec-audit: x:drawing/2017/decorative:<decorative>
     pub decorative: Option<bool>,
 }
 
@@ -367,7 +370,7 @@ pub struct Connection {
     pub site: u32,
 }
 
-/// Which `EG_Media` child `nvPr` holds. The media itself is Tier 1H.
+/// Which `EG_Media` child `nvPr` holds. [`crate::media::Media`] holds what it says.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MediaKind {
     /// `a:audioCd`.
@@ -382,14 +385,16 @@ pub enum MediaKind {
     QuickTimeFile,
 }
 
-/// `p:CT_ApplicationNonVisualDrawingProps`, `nvPr`. `custDataLst` and `extLst`
-/// stay in the tree.
+/// `p:CT_ApplicationNonVisualDrawingProps`, `nvPr`. `custDataLst` and other `extLst`
+/// entries stay in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AppNonVisual {
     /// `ph`.
     pub placeholder: Option<Placeholder>,
     /// The `EG_Media` child, if any.
-    pub media: Option<MediaKind>,
+    pub media: Option<crate::media::Media>,
+    /// `extLst/ext/p14:media`.
+    pub media_extension: Option<Box<crate::media::MediaExtension>>,
     /// `@isPhoto`.
     pub is_photo: Option<bool>,
     /// `@userDrawn`.
@@ -545,8 +550,18 @@ pub struct ShapeNode {
     /// Which element.
     pub kind: NodeKind,
     /// `cNvPr`.
+    // spec-audit: p:CT_ShapeNonVisual/cNvPr
+    // spec-audit: p:CT_ConnectorNonVisual/cNvPr
+    // spec-audit: p:CT_PictureNonVisual/cNvPr
+    // spec-audit: p:CT_GraphicalObjectFrameNonVisual/cNvPr
+    // spec-audit: p:CT_GroupShapeNonVisual/cNvPr
     pub non_visual: Option<NonVisualDrawing>,
     /// The kind's locking element in its `cNv…Pr`.
+    // spec-audit: p:CT_ShapeNonVisual/cNvSpPr
+    // spec-audit: p:CT_ConnectorNonVisual/cNvCxnSpPr
+    // spec-audit: p:CT_PictureNonVisual/cNvPicPr
+    // spec-audit: p:CT_GraphicalObjectFrameNonVisual/cNvGraphicFramePr
+    // spec-audit: p:CT_GroupShapeNonVisual/cNvGrpSpPr
     pub locks: Option<Locks>,
     /// `cNvSpPr/@txBox`, shapes only.
     pub text_box: Option<bool>,
@@ -555,20 +570,39 @@ pub struct ShapeNode {
     /// `cNvCxnSpPr/endCxn`, connectors only.
     pub end_connection: Option<Connection>,
     /// `nvPr`.
+    // spec-audit: p:CT_ShapeNonVisual/nvPr
+    // spec-audit: p:CT_ConnectorNonVisual/nvPr
+    // spec-audit: p:CT_PictureNonVisual/nvPr
+    // spec-audit: p:CT_GraphicalObjectFrameNonVisual/nvPr
+    // spec-audit: p:CT_GroupShapeNonVisual/nvPr
     pub app: Option<AppNonVisual>,
     /// `spPr/xfrm`, `grpSpPr/xfrm`, or a graphic frame's `p:xfrm`.
+    // spec-audit: p:CT_GraphicalObjectFrame/xfrm
     pub transform: Option<Transform>,
     /// `spPr/@bwMode`, `grpSpPr/@bwMode`, or the graphic frame's own.
+    // spec-audit: p:CT_GraphicalObjectFrame/@bwMode
     pub bw_mode: Option<BlackWhiteMode>,
     /// `@useBgFill`, shapes only.
+    // spec-audit: p:CT_Shape/@useBgFill
     pub use_bg_fill: Option<bool>,
+    /// `cNvPicPr/@preferRelativeResize`, pictures only.
+    pub prefer_relative_resize: Option<bool>,
     /// Geometry, fill, line, effects and 3D: Tier 1E.
+    // spec-audit: p:CT_Shape/spPr
+    // spec-audit: p:CT_Connector/spPr
+    // spec-audit: p:CT_Picture/spPr
+    // spec-audit: p:CT_GroupShape/grpSpPr
     pub properties: crate::drawing::ShapeProperties,
     /// `a:graphic/a:graphicData/@uri`, graphic frames only: what the frame holds.
+    // spec-audit: p:CT_GraphicalObjectFrame/a:graphic
+    // spec-audit: a:CT_GraphicalObject/graphicData
+    // spec-audit: a:<graphic>
     pub graphic_uri: Option<String>,
     /// `@r:id`, content parts only.
+    // spec-audit: p:CT_Rel/@r:id
     pub rel_id: Option<String>,
     /// `txBody`, shapes only. A table cell's text is in [`Self::table`].
+    // spec-audit: p:CT_Shape/txBody
     pub text_body: Option<Box<TextBody>>,
     /// `a:tbl` in the frame's `graphicData`, graphic frames only.
     pub table: Option<Box<crate::table::Table>>,
@@ -577,9 +611,20 @@ pub struct ShapeNode {
     /// What a group's `mc:AlternateContent` holds in the branches not taken, where it is
     /// a content part's ink or an equation. The taken branch's nodes are [`Self::children`].
     pub alternates: Vec<AlternateBranch>,
+    /// An OLE object or 3D model this node stands for: identity and fallback only.
+    pub retained: Option<Box<crate::retained::RetainedObject>>,
     /// `p:style` on a shape, connector or picture: references into the theme.
+    // spec-audit: p:CT_Shape/style
+    // spec-audit: p:CT_Connector/style
+    // spec-audit: p:CT_Picture/style
     pub style: Option<Box<crate::theme::ShapeStyle>>,
     /// A group's children, in document order, which is z-order.
+    // spec-audit: p:CT_GroupShape/sp
+    // spec-audit: p:CT_GroupShape/grpSp
+    // spec-audit: p:CT_GroupShape/graphicFrame
+    // spec-audit: p:CT_GroupShape/cxnSp
+    // spec-audit: p:CT_GroupShape/pic
+    // spec-audit: p:CT_GroupShape/contentPart
     pub children: Vec<ShapeNode>,
 }
 
@@ -611,6 +656,7 @@ impl ShapeNode {
             transform: None,
             bw_mode: None,
             use_bg_fill: None,
+            prefer_relative_resize: None,
             properties: crate::drawing::ShapeProperties::default(),
             graphic_uri: None,
             rel_id: None,
@@ -618,6 +664,7 @@ impl ShapeNode {
             table: None,
             diagram: None,
             alternates: Vec::new(),
+            retained: None,
             style: None,
             children: Vec::new(),
         }
@@ -626,6 +673,16 @@ impl ShapeNode {
     /// The node's placeholder, if it is one.
     pub fn placeholder(&self) -> Option<&Placeholder> {
         self.app.as_ref()?.placeholder.as_ref()
+    }
+
+    /// A media node's poster frame: the blip of the picture its `nvPr` sits on. `None`
+    /// on anything else, a picture with no media included.
+    pub fn poster(&self) -> Option<&crate::fill::Blip> {
+        let app = self.app.as_ref()?;
+        if app.media.is_none() && app.media_extension.is_none() {
+            return None;
+        }
+        self.properties.picture.as_ref()?.blip.as_ref()
     }
 
     /// Every node in the subtree, this one first, depth first. Iterative.

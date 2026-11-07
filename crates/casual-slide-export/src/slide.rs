@@ -39,6 +39,7 @@ use crate::presentation::SaveOutcome;
 use crate::properties::{ExportError, Writer};
 use crate::text::{patch_list_style, patch_text_body};
 use crate::theme::{set_color_map_override, set_color_map_slot};
+use crate::timing::{new_dangling_target, patch_motion};
 use crate::writer::{SavePlan, WriterError, WriterLimits};
 
 /// Why a slide-like part could not be written. Nothing was saved.
@@ -75,6 +76,11 @@ pub enum SlideExportError {
         /// The part.
         part: String,
     },
+    /// An animation target or a build would name a `spid` no shape in the part holds.
+    UnknownTarget {
+        /// The part.
+        part: String,
+    },
     /// The part's ordinal is not in the deck's structure.
     NotInStructure {
         /// The ordinal.
@@ -93,6 +99,7 @@ impl SlideExportError {
             Self::StaleAlternate { .. } => "CS-SLE-0002",
             Self::DuplicateShapeId { .. } => "CS-SLE-0003",
             Self::NotInStructure { .. } => "CS-SLE-0004",
+            Self::UnknownTarget { .. } => "CS-SLE-0005",
         }
     }
 }
@@ -118,6 +125,12 @@ impl fmt::Display for SlideExportError {
             }
             Self::NotInStructure { ordinal } => {
                 write!(f, "[{code}] part {ordinal} is not in the deck")
+            }
+            Self::UnknownTarget { part } => {
+                write!(
+                    f,
+                    "[{code}] {part:?}: an animation would name a shape not in the part"
+                )
             }
         }
     }
@@ -220,6 +233,8 @@ impl Patch<'_, '_> {
             part: self.w.part.to_owned(),
         })
     }
+
+    // spec-audit: owner=sld,sldLayout,sldMaster,notes,notesMaster,handoutMaster
 
     fn part(&mut self, root: &Elem, before: &SlidePart, after: &SlidePart) -> Result<()> {
         if before.kind != after.kind || before.id != after.id {
@@ -332,6 +347,9 @@ impl Patch<'_, '_> {
                 if b.background != a.background {
                     return Err(self.unsupported("a background"));
                 }
+                if !crate::retained::controls_unchanged(&b.controls, &a.controls) {
+                    return Err(self.unsupported("a retained control"));
+                }
                 match (&b.shape_tree, &a.shape_tree) {
                     (Some(bt), Some(at)) => self.node(bt, at)?,
                     (None, None) => {}
@@ -345,6 +363,8 @@ impl Patch<'_, '_> {
         }
         Ok(())
     }
+
+    // spec-audit: owner=clrMapOvr
 
     fn color_map_override(
         &mut self,
@@ -370,6 +390,8 @@ impl Patch<'_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=sp,cxnSp,pic,graphicFrame,grpSp,contentPart
+
     fn node(&mut self, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
         if b == a {
             return Ok(());
@@ -393,8 +415,10 @@ impl Patch<'_, '_> {
             || b.transform != a.transform
             || b.bw_mode != a.bw_mode
             || b.use_bg_fill != a.use_bg_fill
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
+            || !crate::retained::object_unchanged(b.retained.as_deref(), a.retained.as_deref())
             || b.rel_id != a.rel_id
             || b.text_body != a.text_body
             || b.table != a.table
@@ -427,7 +451,12 @@ impl Patch<'_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=sp,cxnSp,pic,graphicFrame,grpSp,contentPart
+
     fn own(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
+        if !crate::retained::object_unchanged(b.retained.as_deref(), a.retained.as_deref()) {
+            return Err(self.unsupported("a retained object"));
+        }
         if b.graphic_uri != a.graphic_uri {
             return Err(self.unsupported("a graphic frame's content"));
         }
@@ -443,6 +472,7 @@ impl Patch<'_, '_> {
         let changed_nv = b.non_visual != a.non_visual
             || b.locks != a.locks
             || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.start_connection != a.start_connection
             || b.end_connection != a.end_connection
             || b.app != a.app;
@@ -523,6 +553,8 @@ impl Patch<'_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=nvSpPr,nvCxnSpPr,nvPicPr,nvGraphicFramePr,nvGrpSpPr
+
     fn non_visual(&mut self, container: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
         if b.non_visual != a.non_visual {
             let (Some(bn), Some(an)) = (&b.non_visual, &a.non_visual) else {
@@ -556,9 +588,15 @@ impl Patch<'_, '_> {
                 )?;
             }
         }
-        if b.locks != a.locks || b.text_box != a.text_box {
+        if b.locks != a.locks
+            || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
+        {
             let el = self.child(container, ns::PML, a.kind.non_visual_properties())?;
             let el = self.need(el, "the kind's non-visual properties")?;
+            if a.kind == NodeKind::Picture {
+                return self.c_nv_pic_pr(&el, b, a);
+            }
             self.w
                 .attr(&el, "txBox", b.text_box.as_ref(), a.text_box.as_ref())?;
             let lock = a.kind.lock_element();
@@ -586,6 +624,28 @@ impl Patch<'_, '_> {
         }
         Ok(())
     }
+
+    fn c_nv_pic_pr(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
+        self.w.attr(
+            el,
+            "preferRelativeResize",
+            b.prefer_relative_resize.as_ref(),
+            a.prefer_relative_resize.as_ref(),
+        )?;
+        sync_ordered(
+            &mut self.w,
+            el,
+            ns::DML,
+            "a",
+            &["picLocks", "extLst"],
+            "picLocks",
+            b.locks.as_ref(),
+            a.locks.as_ref(),
+            pic_locks,
+        )?;
+        Ok(())
+    }
+    // spec-audit: owner=cNvPr
 
     fn drawing(&mut self, el: &Elem, b: &NonVisualDrawing, a: &NonVisualDrawing) -> Result<()> {
         if a.spid.is_none() || a.name.is_none() {
@@ -617,10 +677,10 @@ impl Patch<'_, '_> {
         Ok(())
     }
 
+    // spec-audit: owner=nvPr
+
     fn app(&mut self, el: &Elem, b: &AppNonVisual, a: &AppNonVisual) -> Result<()> {
-        if b.media != a.media {
-            return Err(self.unsupported("media"));
-        }
+        crate::media::patch_app_media(&mut self.w, el, b, a)?;
         self.w
             .attr(el, "isPhoto", b.is_photo.as_ref(), a.is_photo.as_ref())?;
         self.w.attr(
@@ -639,6 +699,8 @@ impl Patch<'_, '_> {
         }
         Ok(())
     }
+
+    // spec-audit: owner=spPr,grpSpPr,graphicFrame
 
     fn transform(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
         if a.kind == NodeKind::GraphicFrame {
@@ -689,6 +751,7 @@ impl Patch<'_, '_> {
 }
 
 /// `a:CT_Connection`, a connector's end.
+// spec-audit: owner=stCxn,endCxn
 // spec-audit: owner=stCxn,endCxn
 fn patch_connection(
     w: &mut Writer<'_>,
@@ -742,6 +805,7 @@ pub(crate) fn sync_ordered<T: PartialEq>(
     patch(w, &el, before, wanted)
 }
 
+// spec-audit: owner=hf
 fn patch_header_footer(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -774,6 +838,7 @@ fn patch_header_footer(
     )
 }
 
+// spec-audit: owner=txStyles
 fn patch_text_styles(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -812,6 +877,33 @@ fn patch_text_styles(
     Ok(())
 }
 
+/// `AG_Locking`, as any node has it, and `noCrop`, which only a picture does.
+fn pic_locks(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&Locks>,
+    a: &Locks,
+) -> std::result::Result<(), ExportError> {
+    w.attr(
+        el,
+        "noCrop",
+        b.and_then(|b| b.no_crop.as_ref()),
+        a.no_crop.as_ref(),
+    )?;
+    let without = |l: &Locks| Locks {
+        no_crop: None,
+        ..*l
+    };
+    patch_locks(
+        w,
+        el,
+        NodeKind::Picture,
+        b.map(without).as_ref(),
+        &without(a),
+    )
+}
+
+// spec-audit: owner=spLocks,grpSpLocks,cxnSpLocks,picLocks,graphicFrameLocks
 fn patch_locks(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -836,6 +928,7 @@ fn patch_locks(
     Ok(())
 }
 
+// spec-audit: owner=hlinkClick,hlinkHover
 pub(crate) fn patch_hyperlink(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -876,9 +969,17 @@ pub(crate) fn patch_hyperlink(
         b.highlight_click.as_ref(),
         a.highlight_click.as_ref(),
     )?;
-    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())
+    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())?;
+    if b.sound != a.sound {
+        let holder = |link: &Hyperlink| {
+            crate::drawing::Node::a("hlink").opt(link.sound.as_ref().map(crate::media::snd))
+        };
+        crate::drawing::patch(w, el, Some(&holder(b)), &holder(a))?;
+    }
+    Ok(())
 }
 
+// spec-audit: owner=ph
 fn patch_placeholder(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -902,6 +1003,7 @@ fn patch_placeholder(
     )
 }
 
+// spec-audit: owner=off,chOff
 fn patch_point(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -912,6 +1014,7 @@ fn patch_point(
     w.attr(el, "y", b.map(|b| &b.y), Some(&a.y))
 }
 
+// spec-audit: owner=ext,chExt
 fn patch_size(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -941,6 +1044,7 @@ fn patch_size(
     w.attr(el, "cy", b.map(|b| &b.cy), Some(&a.cy))
 }
 
+// spec-audit: owner=xfrm
 pub(crate) fn patch_transform(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1043,6 +1147,7 @@ fn check_unique_ids(part: &SlidePart, before: &SlidePart, name: &str) -> Result<
 /// Patch one slide-like part's tree to say `after`. Returns the nodes changed;
 /// with 0, the tree is as it was. What was asked is read back before returning.
 #[allow(clippy::too_many_arguments)]
+// spec-audit: owner=sld,sldLayout,sldMaster,notes,notesMaster,handoutMaster
 pub fn patch_slide_part(
     tree: &mut XmlTree,
     part: &str,
@@ -1066,6 +1171,11 @@ pub fn patch_slide_part(
         return Ok(0);
     }
     check_unique_ids(after, &before, part)?;
+    if new_dangling_target(tree, &before, after) {
+        return Err(SlideExportError::UnknownTarget {
+            part: part.to_owned(),
+        });
+    }
     let mut patch = Patch {
         w: Writer {
             tree,
@@ -1077,6 +1187,14 @@ pub fn patch_slide_part(
         map: &map,
     };
     patch.part(&root, &before, after)?;
+    patch_motion(
+        &mut patch.w,
+        &root,
+        root_order(after.kind),
+        &before,
+        after,
+        &limits.timing,
+    )?;
     let changes = patch.w.changes;
     let again = XmlTree::parse(&tree.to_bytes(), part, xml_limits)?;
     let mut findings = Findings::new(import_limits.max_findings);
