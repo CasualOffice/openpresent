@@ -864,7 +864,7 @@ fn a_zoom_and_its_fallback_stand_apart_under_an_edit() {
         assert!(after.contains(name), "{name}");
     }
     assert!(
-        after.contains("fixedLayout") == false,
+        !after.contains("fixedLayout"),
         "the edit named this one's layout"
     );
     assert!(before.contains("fixedLayout"));
