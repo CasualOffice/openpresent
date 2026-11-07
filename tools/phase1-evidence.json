@@ -30,7 +30,7 @@
   "optimized": false
  },
  "damage": {
-  "commit": "64d000bbccec694a75abfd77b92ae3473bff7db5",
+  "commit": "485fb1b84158de8ea40d234a5609aa056a703960",
   "corpus": "damage corpus: 16 decks, 6203 damaged",
   "counts": [
    "open   broken-xml: 4580",
@@ -52,14 +52,14 @@
    "repair CS-REC-0101: 404",
    "repair CS-REC-0102: 61",
    "repair CS-REC-0103: 227",
-   "repair CS-REC-0104: 174",
+   "repair CS-REC-0104: 176",
    "repair CS-REC-0105: 1",
    "repair CS-REC-0106: 2",
    "repair CS-REC-0201: 424",
    "repair CS-REC-0202: 1427",
    "repair CS-REC-0203: 247",
    "repair CS-REC-0204: 502",
-   "repair CS-REC-0205: 502",
+   "repair CS-REC-0205: 503",
    "repair CS-REC-0207: 369",
    "repair CS-REC-0301: 16",
    "repair CS-REC-0302: 3087",
@@ -76,26 +76,26 @@
    "repair CS-REC-0404: 245",
    "repair CS-REC-0405: 150"
   ],
-  "date": "2026-11-07T22:11Z",
+  "date": "2026-11-07T22:32Z",
   "decks": 16,
   "decks_sha256": "a04efea713bb83c3440c002c1798f947b554717e92816cb106235931a855d86d",
   "engine_uncommitted": false,
   "exit": 101,
-  "f4": "F4: 6201 outputs, 58 failing lines, 12 more in a part kept as it arrived",
-  "failure": "panicked at crates/casual-slide-export/tests/damage_corpus.rs:777:9:\n58 F4 failures in 6201 outputs:\n[z19828779-education-ar truncated @39513] z19828779-education-ar--04273.pptx: invalid         ppt/slideLayouts/slideLayout9.xml  [ooxml/pml.xsd]\n[z19828779-education-ar truncated @39513] z19828779-education-ar--04273.pptx:   2: element cSld: Schemas validity error : Element '{http://schemas.openxmlformats.org/presentationml/2006/main}cSld': Character content other than whitespace is not allowed because the content type is 'element-only'.\n[sdk-strict-animclr broken-xml ppt/slideLayouts/slideLayout11.xml#8@2987] sdk-strict-animclr--02479.pptx: invalid         ppt/slideLayouts/slideLayout11.xml  [ooxml-strict/pml.xsd]\n[sdk-strict-animclr broken-xml ppt/slideLayouts/slideLayout11.xml#8@2987] sdk-strict-animclr--02479.pptx:   2: element materClrMapping: Schemas validity error : Element '{http://purl.oclc.org/ooxml/drawingml/main}materClrMapping': This element is not expected. Expected is one of ( {http://purl.oclc.org/ooxml/drawingml/main}masterClrMapping, {http://purl.oclc.org/ooxml/drawingml/main}overrideClrMapping ).\n[sdk-strict-animclr broken-xml ppt/slides/slide1.xml#8@168] sdk-strict-animclr--02438.pptx: invalid         ppt/slides/slide1.xml  [ooxml/pml.xsd]\n[sdk-strict-animclr broken-xml ppt/slides/slide1.xml#8@168] sdk-strict-animclr--02438.pptx:   2: namespace error : xmlns:r: 'http://purl.oclc.org/ooxml/officeDocument/relationships xmlns:p=' is not a valid URI\n[sdk-of16-01 broken-xml ppt/slides/slide1.xml#8@86] sdk-of16-01--02038.pptx: invalid         ppt/slides/slide1.xml  [ooxml/pml.xsd]  branches=fallback\n[sdk-of16-01 broken-xml ppt/slides/slide1.xml#8@86] sdk-of16-01--02038.pptx:   2: namespace error : xmlns:a: 'http://schemas.openxmlformats.org/drawingml/2006/main xmlns:r=' is not a valid URI\n[z17310490-vierfelder-de broken-xml _rels/.rels#5@175] z17310490-vierfelder-de--03561.pptx: invalid         _rels/.rels  [opc/opc-relationships.xsd]\n[z17310490-vierfelder-de broken-xml _rels/.rels#5@175] z17310490-vierfelder-de--03561.pptx:   2: element Relationship: Schemas validity error : Element '{http://schemas.openxmlformats.org/package/2006/relationships}Relationship', attribute 'Type': '...' is not a valid value of the atomic type 'xs:anyURI'.\n[z18866178-doklad-ru broken-xml ppt/slides/slide1.xml#9@146] z18866178-doklad-ru--04032.pptx: invalid         ppt/slides/slide1.xml  [ooxml/pml.xsd]\n[z18866178-doklad-ru broken-xml ppt/slides/slide1.xml#9@146] z18866178-doklad-ru--04032.pptx:   2: element blip: Schemas validity error : Element '{http://schemas.openxmlformats.org/drawingml/2006/main}blip', attribute '{http://sc}embed': The attribute '{http://sc}embed' is not allowed.\n[z18866178-doklad-ru broken-xml ppt/_rels/presentation.xml.rels#5@1664] z18866178-doklad-ru--04005.pptx: invalid         ppt/_rels/presentation.xml.rels  [opc/opc-relationships.xsd]\n[z18866178-doklad-ru broken-xml ppt/_rels/presentation.xml.rels#5@1664] z18866178-doklad-ru-",
+  "f4": "F4: 6201 outputs, 8 failing lines, 62 more in a part kept as it arrived",
+  "failure": "panicked at crates/casual-slide-export/tests/damage_corpus.rs:856:9:\n8 F4 failures in 6201 outputs:\n[sdk-strict-animclr broken-xml ppt/slideLayouts/slideLayout11.xml#8@2987] sdk-strict-animclr--02479.pptx: invalid         ppt/slideLayouts/slideLayout11.xml  [ooxml-strict/pml.xsd]\n[sdk-strict-animclr broken-xml ppt/slideLayouts/slideLayout11.xml#8@2987] sdk-strict-animclr--02479.pptx:   2: element materClrMapping: Schemas validity error : Element '{http://purl.oclc.org/ooxml/drawingml/main}materClrMapping': This element is not expected. Expected is one of ( {http://purl.oclc.org/ooxml/drawingml/main}masterClrMapping, {http://purl.oclc.org/ooxml/drawingml/main}overrideClrMapping ).\n[z21464709-souzou-ja broken-xml ppt/_rels/presentation.xml.rels#5@4] z21464709-souzou-ja--05168.pptx: malformed       ppt/_rels/presentation.xml.rels\n[z21464709-souzou-ja broken-xml ppt/_rels/presentation.xml.rels#5@4] z21464709-souzou-ja--05168.pptx:   not well-formed (invalid token)\n[gs-unstructured-fake-en broken-xml ppt/notesSlides/_rels/notesSlide1.xml.rels#4@3] gs-unstructured-fake-en--00525.pptx: malformed       ppt/notesSlides/_rels/notesSlide1.xml.rels\n[gs-unstructured-fake-en broken-xml ppt/notesSlides/_rels/notesSlide1.xml.rels#4@3] gs-unstructured-fake-en--00525.pptx:   not well-formed (invalid token)\n[sdk-animation broken-xml docProps/app.xml#8@1063] sdk-animation--01774.pptx: invalid         docProps/app.xml  [ooxml/shared-documentPropertiesExtended.xsd]\n[sdk-animation broken-xml docProps/app.xml#8@1063] sdk-animation--01774.pptx:   2: element HyperlinksChanged: Schemas validity error : Element '{http://schemas.openxmlformats.org/officeDocument/2006/extended-properties}HyperlinksChanged': '...' is not a valid value of the atomic type 'xs:boolean'.\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p casual-slide-export --test damage_corpus`\n",
   "load_after": [
-   13.5,
-   13.7,
-   11.6
+   12.4,
+   12.3,
+   12.0
   ],
   "load_before": [
-   5.7,
-   5.7,
-   5.7
+   14.0,
+   12.0,
+   11.1
   ],
   "machine": "Darwin arm64, 10 cores",
   "ok": false,
-  "opened": "opened 6201, refused 2, slowest 1.945571834s"
+  "opened": "opened 6201, refused 2, slowest 1.972301083s"
  },
  "export": {
   "commit": "9c5239d331f3c81d501bd6825cb251fcc0fcd9d7",
