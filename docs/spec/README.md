@@ -133,4 +133,6 @@ holds every `y` to code, a test and a fixture, and `--propose` says what the evi
 
 Excluded on purpose: these MS-ODRAWXML namespaces belong to Word and Excel parts: `excel/2010/spreadsheetDrawing`, `word/2010/wordml`, `word/2010/wordprocessingCanvas`, `word/2010/wordprocessingDrawing`, `word/2010/wordprocessingGroup`, `word/2010/wordprocessingShape`, `word/2012/wordprocessingDrawing`.
 
+Vendored only so that `vml-main.xsd` compiles in F4 (`F4-04`); they describe Word and Excel parts, so give no rows: `schemas/ooxml/dml-wordprocessingDrawing.xsd`, `schemas/ooxml/vml-spreadsheetDrawing.xsd`, `schemas/ooxml/vml-wordprocessingDrawing.xsd`, `schemas/ooxml/wml.xsd`.
+
 Not from a schema: [MCE](MCE.md). Written by hand, since ECMA-376 Part 3 ships no XSD: `tools/spec-checklist/markup-compatibility.tsv`. Tied to `BEH-18` in [51](../51-SPEC-CHECKLIST-AND-FIDELITY.md). Built in `crates/casual-slide-ooxml/src/mce.rs`.
