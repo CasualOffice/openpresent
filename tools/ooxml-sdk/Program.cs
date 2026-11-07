@@ -3,7 +3,8 @@
 // Usage: Validator <format-version> <deck>...
 // Writes one JSON object per deck to stdout:
 //   {"deck": "...", "status": "pass"|"fail"|"refused", "reason": "...",
-//    "errors": [{"id": "...", "part": "...", "path": "...", "type": "...", "description": "..."}]}
+//    "errors": [{"id": "...", "part": "...", "path": "...", "type": "...", "description": "..."}],
+//    "total": n, "per_part": {"/part": n}}
 //
 // Decks are untrusted. validate.py bounds the archive before this runs, and the SDK is
 // opened read-only, with no auto-save, a per-part character cap, and markup
@@ -20,8 +21,10 @@ static class Program
 {
     // Characters per part, matching OoxmlLimits::max_xml_part_bytes as an upper bound.
     const long MaxCharactersInPart = 256L << 20;
-    // Errors reported per deck. The count stays exact.
-    const int MaxErrors = 1000;
+    // Errors reported per part, so one part's flood cannot hide another part's findings,
+    // and per deck, as a memory bound. Counts stay exact, and a cap that bites is reported.
+    const int MaxErrorsPerPart = 1000;
+    const int MaxErrors = 100_000;
 
     static readonly Regex Quoted = new("'[^']*'", RegexOptions.Compiled);
 
@@ -74,6 +77,7 @@ static class Program
         };
         var errors = new List<Dictionary<string, string>>();
         var total = 0;
+        var perPart = new SortedDictionary<string, int>(StringComparer.Ordinal);
         try
         {
             var settings = new OpenSettings
@@ -89,11 +93,14 @@ static class Program
             foreach (var e in validator.Validate(doc))
             {
                 total++;
-                if (errors.Count >= MaxErrors) continue;
+                var part = e.Part?.Uri.ToString() ?? "";
+                var inPart = perPart.GetValueOrDefault(part);
+                perPart[part] = inPart + 1;
+                if (errors.Count >= MaxErrors || inPart >= MaxErrorsPerPart) continue;
                 errors.Add(new Dictionary<string, string>
                 {
                     ["id"] = e.Id ?? "",
-                    ["part"] = e.Part?.Uri.ToString() ?? "",
+                    ["part"] = part,
                     ["path"] = e.Path?.XPath ?? "",
                     ["type"] = e.ErrorType.ToString(),
                     ["description"] = Redact(e.Description),
@@ -113,6 +120,8 @@ static class Program
         if (total > 0) result["status"] = "fail";
         result["errors"] = errors;
         result["total"] = total;
+        // Every part's exact count, so a cap that bit is reported against its part.
+        result["per_part"] = perPart;
         return result;
     }
 }

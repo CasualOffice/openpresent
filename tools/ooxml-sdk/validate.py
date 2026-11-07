@@ -188,8 +188,15 @@ def judge(results, use_known):
                 used.add(hit)
                 explained.append((error, rows[hit]))
         if result.get("total", 0) > len(result["errors"]):
-            unexplained.append({"id": "truncated", "part": "", "path": "",
-                                "description": f"{result['total']} errors, only {len(result['errors'])} kept"})
+            # Named per part: the SDK reports up to a cap on each, so one part's flood
+            # cannot hide another's findings, and what a cap cut is never passed.
+            kept = {}
+            for error in result["errors"]:
+                kept[error["part"]] = kept.get(error["part"], 0) + 1
+            for part, count in sorted((result.get("per_part") or {"": result["total"]}).items()):
+                if count > kept.get(part, 0):
+                    unexplained.append({"id": "truncated", "part": part, "path": "",
+                                        "description": f"{count} errors, only {kept.get(part, 0)} kept"})
         result["unexplained"] = unexplained
         result["explained"] = explained
         result["verdict"] = "FAIL" if unexplained else ("KNOWN" if explained else "PASS")

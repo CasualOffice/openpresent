@@ -98,17 +98,14 @@
   "opened": "opened 6201, refused 2, slowest 929.9035ms"
  },
  "export": {
-  "commit": "eabfb60c7c483e4fc490b347fc5334c1ab4642bc",
-  "date": "2026-11-07T23:14Z",
+  "commit": "0ae80d4a0a71f557bf920f22385599d1524e6cd4",
+  "date": "2026-11-07T23:30Z",
   "decks": 145,
   "edits_left_out": [],
   "engine_uncommitted": false,
   "exit": 0,
   "f4_and_sdk_checked": 181,
   "failures": [
-   "F4 edited/area-vml.pptx: fail, input pass",
-   "SDK edited/graphics-diagram-every-row.pptx: FAIL, input KNOWN; new:  truncated",
-   "SDK edited/shapecrawler-021-sections.pptx: FAIL, input FAIL",
    "LibreOffice edited/chart-every-row-classic.pptx: no-pdf 0, unedited input no-pdf",
    "LibreOffice edited/rich-properties.pptx: crash 134, unedited input crash",
    "LibreOffice edited/strict-properties.pptx: crash 134, unedited input crash",
@@ -128,19 +125,19 @@
    "rr/sa/RR-SA-thmx-thmx.thmx": "no-pdf"
   },
   "load_after": [
-   19.7,
-   13.2,
-   9.8
+   6.7,
+   6.6,
+   7.6
   ],
   "load_before": [
-   8.0,
-   7.1,
-   7.3
+   4.2,
+   6.3,
+   7.7
   ],
   "machine": "Darwin arm64, 10 cores",
   "ok": false,
   "saveas": 39,
-  "sdk_known_only": 41,
+  "sdk_known_only": 43,
   "written": 145
  },
  "hostile": {
