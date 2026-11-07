@@ -471,15 +471,15 @@ def sa_inputs():
     """Rows that are not presentations here. **Synthetic:** `.thmx` follows PRONOM's
     signature only, and `.ppt` and `.pdf` are their magic numbers, since nothing reads them
     yet. Each says only what is refused (`INV-SA-08` to `-12`)."""
-    yield "rr/inputs/sa.ppam", sa_deck("ppam"), "refuse:CS-OPC-0004"
+    yield "rr/inputs/sa.ppam", sa_deck("ppam"), "recover:CS-OPC-0004 CS-FND-0008 CS-REC-0205"
     thmx = [("[Content_Types].xml", f'{DECL}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
              '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
              '<Default Extension="xml" ContentType="application/vnd.openxmlformats-officedocument.themeManager+xml"/></Types>'),
             ("_rels/.rels", rels(("officeDocument", "theme/theme/themeManager.xml"))),
             ("theme/theme/themeManager.xml", f'{DECL}<a:themeManager xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"/>')]
-    yield "rr/inputs/sa.thmx", zipped(thmx), "refuse:CS-OPC-0004"
+    yield "rr/inputs/sa.thmx", zipped(thmx), "recover:CS-OPC-0004 CS-REC-0204 CS-REC-0205"
     odp = [("mimetype", "application/vnd.oasis.opendocument.presentation"), ("content.xml", f"{DECL}<office:document-content xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\"/>")]
-    yield "rr/inputs/sa.odp", zipped(odp), "refuse:CS-OPC-0001"
+    yield "rr/inputs/sa.odp", zipped(odp), "recover:CS-OPC-0001 CS-FND-0005 CS-REC-0201 CS-REC-0204 CS-REC-0205"
     yield "rr/inputs/sa.pdf", b"%PDF-1.7\n%%EOF\n", "refuse:CS-PKG-0005"
     yield "rr/inputs/sa.ppt", bytes.fromhex("d0cf11e0a1b11ae1") + bytes(504), "refuse:CS-OPC-0005"
 

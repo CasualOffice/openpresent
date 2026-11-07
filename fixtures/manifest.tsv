@@ -144,9 +144,9 @@ generated/rr-sa.ppsx	9d822fce4aec7191e73919044203897af80be6c739ee661927bec57fc4b
 generated/rr-sa.ppsm	a4dc1729eaf17a0ced18c6893e0b7036b109d51fa8eac57d5c3aae8b7836bf14	open CS-FND-0008
 generated/rr-sa.potx	2a6faa8e5f17fc5b15bf979b07828128a40ef7594e646c0c2bbaa0ce45ee8fd8	open
 generated/rr-sa.potm	022cdbd280554f0d318723723a915fa5e5f0f31adcd929fa60c13aad1c305f15	open CS-FND-0008
-rr/inputs/sa.ppam	dcd283c4c8700162dd3ba6ddf49879f5d4479c8ec5de5976c8d159213e204814	refuse:CS-OPC-0004
-rr/inputs/sa.thmx	ed9d95e6255a47a9d249542077eae346434cdbd0721bfce0a8ab537b8a963472	refuse:CS-OPC-0004
-rr/inputs/sa.odp	8ba698db796d512a9e48ac544ae33ed79bd5977078626b6aa2ebd0ea99496218	refuse:CS-OPC-0001
+rr/inputs/sa.ppam	dcd283c4c8700162dd3ba6ddf49879f5d4479c8ec5de5976c8d159213e204814	recover:CS-OPC-0004 CS-FND-0008 CS-REC-0205
+rr/inputs/sa.thmx	ed9d95e6255a47a9d249542077eae346434cdbd0721bfce0a8ab537b8a963472	recover:CS-OPC-0004 CS-REC-0204 CS-REC-0205
+rr/inputs/sa.odp	8ba698db796d512a9e48ac544ae33ed79bd5977078626b6aa2ebd0ea99496218	recover:CS-OPC-0001 CS-FND-0005 CS-REC-0201 CS-REC-0204 CS-REC-0205
 rr/inputs/sa.pdf	1e7313ace78f0fb481a486939b4885902663102818090805515553d84e0bbfd3	refuse:CS-PKG-0005
 rr/inputs/sa.ppt	a899fb4496afa7230c378d5be03cf3461990994993110fd2dad3257111081275	refuse:CS-OPC-0005
 generated/rr-vba.pptm	1b90fe575d27a315b8bf967a4a494214af58cc77f3e67bc00dfee4d632e9c070	open CS-FND-0008
