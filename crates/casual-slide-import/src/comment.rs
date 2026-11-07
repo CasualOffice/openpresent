@@ -187,6 +187,8 @@ pub(crate) fn first<'s>(
     fresh
 }
 
+// `Reader::required` hands a validator `&String`, so this signature is fixed.
+#[allow(clippy::ptr_arg)]
 pub(crate) fn guid_attr(s: &String) -> bool {
     is_guid(s)
 }

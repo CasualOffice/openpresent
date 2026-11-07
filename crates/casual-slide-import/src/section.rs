@@ -284,19 +284,19 @@ pub fn mark_elements(
                 }
             }
             continue;
-        } else if el.is(ns::PML, "graphicFrame") {
-            if let Some(zoom) = zoom_in(tree, part, &el)? {
-                if charge(&mut out.over) {
-                    let id = kids(&el)?
-                        .iter()
-                        .find(|k| k.local == "nvGraphicFramePr")
-                        .map(kids)
-                        .transpose()?
-                        .and_then(|n| n.iter().find(|k| k.local == "cNvPr").and_then(own_shape_id));
-                    out.zooms.push((zoom, id, held));
-                }
-                continue;
+        } else if el.is(ns::PML, "graphicFrame")
+            && let Some(zoom) = zoom_in(tree, part, &el)?
+        {
+            if charge(&mut out.over) {
+                let id = kids(&el)?
+                    .iter()
+                    .find(|k| k.local == "nvGraphicFramePr")
+                    .map(kids)
+                    .transpose()?
+                    .and_then(|n| n.iter().find(|k| k.local == "cNvPr").and_then(own_shape_id));
+                out.zooms.push((zoom, id, held));
             }
+            continue;
         }
         for kid in children.into_iter().rev() {
             stack.push((kid, shape, held));
