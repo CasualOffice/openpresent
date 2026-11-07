@@ -116,6 +116,8 @@ def extension_deck():
         f'{RECT}<a:noFill/><a:extLst><a:ext uri="{{909E8E84-426E-40DD-AFC4-6F175D3DCCD1}}"><a14:hiddenFill xmlns:a14="{A14_OLD}"><a:solidFill>{RED}</a:solidFill></a14:hiddenFill></a:ext>'
         f'<a:ext uri="{{91240B29-F687-4F45-9708-019B960494DF}}"><a14:hiddenLine xmlns:a14="{A14_OLD}" w="9525"><a:solidFill>{BLUE}</a:solidFill></a14:hiddenLine></a:ext></a:extLst>'),
         at=(2, 1)))
+    node_extension = '<p:extLst><p:ext uri="{7A9C1D30-5B1E-4F7A-8C2D-0E1F2A3B4C5D}"><f:future xmlns:f="urn:example:future"/></p:ext></p:extLst>'
+    shapes.append(placed(33, "Node extension", RECT, f"{text_body('Node extension')}{node_extension}", at=(3, 1)))
     return replace(deck(), "ppt/slides/slide1.xml", slide_of(*shapes))
 
 

@@ -1380,6 +1380,63 @@ fn the_text_3d_choice_replaces_itself_and_leaves_no_other() {
     assert!(!out.contains("sp3d"), "{out}");
 }
 
+/// One the model could not hold, over a bound, is still in the tree: choosing the other of
+/// the choice takes it away, or the reader would find it first.
+#[test]
+fn choosing_flat_text_replaces_an_extrusion_left_out_over_a_bound() {
+    let limits = SlideLimits {
+        drawing: casual_slide_import::drawing::DrawingLimits {
+            max_items_per_property: 1,
+            ..Default::default()
+        },
+        ..SlideLimits::default()
+    };
+    let xml = body_slide(
+        r#"<a:bodyPr><a:sp3d z="1"><a:bevelT/><a:bevelB/></a:sp3d></a:bodyPr>"#,
+        "",
+    );
+    let mut tree = XmlTree::parse(xml.as_bytes(), PART, &OoxmlLimits::default()).unwrap();
+    let mut findings = Findings::new(100);
+    let mut color = ColorFindings::default();
+    let import = ImportLimits::default();
+    let mut after = import_slide_part(
+        &tree,
+        PART,
+        &[],
+        SlideKind::Slide,
+        0,
+        &limits,
+        &import,
+        &mut findings,
+        &mut color,
+    )
+    .unwrap();
+    let props = after.shape_tree_mut().unwrap().children[0]
+        .text_body
+        .as_mut()
+        .unwrap()
+        .properties
+        .as_mut()
+        .unwrap();
+    assert_eq!(props.text_3d, None, "left out over the bound");
+    props.text_3d = Some(casual_slide_model::text::Text3D::Flat(
+        casual_slide_model::d3::FlatText { z: None },
+    ));
+    patch_slide_part(
+        &mut tree,
+        PART,
+        false,
+        &[],
+        &after,
+        &limits,
+        &import,
+        &OoxmlLimits::default(),
+    )
+    .unwrap();
+    let out = String::from_utf8(tree.to_bytes()).unwrap();
+    assert!(out.contains("flatTx") && !out.contains("sp3d"), "{out}");
+}
+
 /// `DRAW-01`, `MS-OI29500` 2.1.1330: every `ST_PositiveCoordinate` a shape's properties
 /// hold stops at 2147483647 when it is new, and what a file already holds stays.
 #[test]

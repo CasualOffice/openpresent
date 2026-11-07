@@ -4,14 +4,14 @@
 //! differs, the importer read past it and said nothing, which is the one thing it may not
 //! do. Slide parts only, and only inside the shape tree; other tiers keep their own.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::HashSet;
 use std::path::Path;
 
 use casual_slide_import::color::Findings as ColorFindings;
 use casual_slide_import::properties::{Findings, ImportLimits};
 use casual_slide_import::slide::{SlideLimits, import_slide_part};
 use casual_slide_model::slide::{SlideKind, SlidePart};
-use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
+use casual_slide_ooxml::{ElementId, OoxmlLimits, PresentationPackage, XmlTree};
 
 const PART: &str = "ppt/slides/slide1.xml";
 /// The decks walked. Anything with a body-level `extLst` or a foreign child is here too, as
@@ -72,51 +72,91 @@ fn read(xml: &[u8]) -> Option<Read> {
     Some((part, report, colors))
 }
 
-/// Local names the report names as kept and not modelled, or as anything else.
-fn named_in_report((_, report, colors): &Read) -> BTreeSet<String> {
-    report
-        .iter()
-        .chain(colors)
-        .filter_map(|line| line.split(' ').nth(1))
-        .map(|name| name.rsplit(':').next().unwrap_or(name).to_owned())
-        .collect()
+fn local(name: &str) -> &str {
+    name.rsplit(':').next().unwrap_or(name)
 }
 
-/// Whether this deck's slide reads differently with each thing taken out. What does not,
-/// unless the report names it or what holds it: a report says what is kept by name, so a
-/// second `extLst` in a part changes nothing in it and is still said. A kind of thing is
-/// tried once for each place it can be, as a part reads slowly in a debug build.
+/// Every element in the tree, with what holds it.
+fn elements(tree: &XmlTree) -> Vec<(ElementId, ElementId)> {
+    let mut out = Vec::new();
+    let mut stack = vec![tree.root()];
+    while let Some(parent) = stack.pop() {
+        for kid in tree.child_elements(parent) {
+            out.push((parent, kid));
+            stack.push(kid);
+        }
+    }
+    out
+}
+
+/// Whether taking this element out goes unnoticed. A report says what is kept by name, so a
+/// second `extLst` in a part changes nothing in it: every other element of the name goes
+/// first, and then this one has to be what the report was saying. An element inside one the
+/// report names is that element's: `ext` in `extLst`, or `a:r` in an `mc:Fallback`. Whichever
+/// holds it is asked this same question in its own turn.
+fn goes_unnoticed(whole: &XmlTree, parent: ElementId, kid: ElementId, above: &[String]) -> bool {
+    let without = |tree: &XmlTree| {
+        let mut gone = tree.clone();
+        gone.remove_child(parent, kid);
+        read(&gone.to_bytes())
+    };
+    let as_read = read(&whole.to_bytes());
+    if without(whole) != as_read {
+        return false;
+    }
+    let name = local(whole.qualified_name(kid)).to_owned();
+    let mut alone = whole.clone();
+    let others = elements(whole);
+    let inside = |candidate: ElementId| {
+        let mut stack = vec![candidate];
+        while let Some(id) = stack.pop() {
+            if id == kid {
+                return true;
+            }
+            stack.extend(whole.child_elements(id));
+        }
+        false
+    };
+    for (holder, other) in others {
+        if other != kid && local(whole.qualified_name(other)) == name && !inside(other) {
+            alone.remove_child(holder, other);
+        }
+    }
+    let Some(isolated) = read(&alone.to_bytes()) else {
+        return false;
+    };
+    if without(&alone).as_ref() != Some(&isolated) {
+        return false;
+    }
+    !named_above(&isolated, above)
+}
+
+/// What in this slide reads no differently for being gone. A kind of thing is tried once for
+/// each place it can be, as a part reads slowly in a debug build.
 fn silent_in(xml: &[u8]) -> Vec<String> {
-    let limits = OoxmlLimits::default();
-    let whole = XmlTree::parse(xml, PART, &limits).unwrap();
+    let whole = XmlTree::parse(xml, PART, &OoxmlLimits::default()).unwrap();
     let as_read = read(xml).unwrap();
-    let named = named_in_report(&as_read);
-    let local = |n: &str| n.rsplit(':').next().unwrap_or(n).to_owned();
     let mut silent = Vec::new();
     let mut tried = HashSet::new();
-    // Each element with the local names of what holds it, nearest last.
+    // Each element with the local names of what holds it.
     let mut stack = vec![(whole.root(), Vec::<String>::new())];
     while let Some((parent, above)) = stack.pop() {
         for kid in whole.child_elements(parent) {
             let name = whole.qualified_name(kid).to_owned();
             let attrs = whole.attributes(kid, PART).unwrap();
             let mut path = above.clone();
-            path.push(local(&name));
-            let kept = path.iter().any(|n| named.contains(n));
+            path.push(local(&name).to_owned());
             stack.push((kid, path));
-            if matches!(name.as_str(), "p:cSld" | "p:spTree" | "p:nvGrpSpPr") || kept {
+            if matches!(name.as_str(), "p:cSld" | "p:spTree" | "p:nvGrpSpPr") {
                 continue;
             }
             let held = whole.qualified_name(parent).to_owned();
             let empty = attrs.is_empty() && whole.child_elements(kid).is_empty();
             if !(empty && EMPTY_HOLDERS.contains(&name.as_str()))
                 && tried.insert((held.clone(), name.clone(), String::new()))
+                && goes_unnoticed(&whole, parent, kid, &above)
             {
-                let mut tree = whole.clone();
-                tree.remove_child(parent, kid);
-                if read(&tree.to_bytes()).as_ref() == Some(&as_read) {
-                    silent.push(format!("<{name}>"));
-                }
+                silent.push(format!("<{name}> in <{held}>"));
             }
             for (attr, _) in attrs {
                 let skipped = attr == "xmlns"
@@ -127,13 +167,24 @@ fn silent_in(xml: &[u8]) -> Vec<String> {
                 }
                 let mut tree = whole.clone();
                 tree.remove_attribute(kid, &attr);
-                if read(&tree.to_bytes()).as_ref() == Some(&as_read) {
-                    silent.push(format!("<{name}>/@{attr}"));
+                if read(&tree.to_bytes()).as_ref() == Some(&as_read)
+                    && !named_above(&as_read, &above)
+                {
+                    silent.push(format!("<{name}>/@{attr} in <{held}>"));
                 }
             }
         }
     }
     silent
+}
+
+/// Whether the report names something holding this.
+fn named_above((_, report, colors): &Read, above: &[String]) -> bool {
+    report
+        .iter()
+        .chain(colors)
+        .filter_map(|line| line.split(' ').nth(1))
+        .any(|named| above.iter().any(|a| a == local(named)))
 }
 
 fn slide_of(deck: &str) -> Vec<u8> {

@@ -841,8 +841,23 @@ fn slide_limits_reach_every_drawing_reader() {
         DrawingLimits::default(),
     );
     assert!(!same.findings.has(over, "gradFill"));
-    // A picture's fill: 1 item per property is below what it holds.
-    assert!(every.findings.has(over, "blipFill"), "{:?}", every.findings);
+    // A picture's own `p:blipFill`, which the node holds beside `spPr`.
+    let picture = |parts: &casual_slide_import::slide::ImportedSlides| {
+        parts
+            .parts
+            .parts
+            .iter()
+            .flatten()
+            .filter_map(|p| p.shape_tree())
+            .flat_map(ShapeNode::descendants)
+            .find(|n| n.kind == casual_slide_model::shape::NodeKind::Picture)
+            .unwrap()
+            .properties
+            .picture
+            .clone()
+    };
+    assert_eq!(picture(&every), None, "left out over the bound");
+    assert!(picture(&same).is_some());
 
     // A body's warp and 3D.
     let warp = open_with("generated/text-warp-and-3d.pptx", tight);
@@ -852,21 +867,52 @@ fn slide_limits_reach_every_drawing_reader() {
     // A run's own fill, and one in the master's text styles.
     let text = open_with("generated/text-every-property.pptx", tight);
     assert!(text.findings.has(over, "ln"), "{:?}", text.findings);
-    let styled = open_with(
-        "generated/text-inheritance.pptx",
-        DrawingLimits {
-            max_items_per_property: 0,
-            ..DrawingLimits::default()
-        },
-    );
-    assert!(
-        styled
-            .findings
-            .iter()
-            .any(|f| f.kind == over && f.part.contains("slideMaster")),
-        "{:?}",
-        styled.findings
-    );
+    const LEVEL: &str = r#"<a:lvl1pPr><a:defRPr><a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="000000"/></a:gs><a:gs pos="1000"><a:srgbClr val="000000"/></a:gs></a:gsLst></a:gradFill></a:defRPr></a:lvl1pPr>"#;
+    let master = |root: &str, kind, limits: DrawingLimits| {
+        let styles = if root == "sldMaster" {
+            format!("<p:txStyles><p:titleStyle>{LEVEL}</p:titleStyle></p:txStyles>")
+        } else {
+            format!("<p:notesStyle>{LEVEL}</p:notesStyle>")
+        };
+        let xml = format!(
+            r#"<p:{root} xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree/></p:cSld>{styles}</p:{root}>"#
+        );
+        let tree = XmlTree::parse(xml.as_bytes(), "m", &OoxmlLimits::default()).unwrap();
+        let import = ImportLimits::default();
+        let mut findings = Findings::new(100);
+        let mut color = casual_slide_import::color::Findings::default();
+        let part = casual_slide_import::slide::import_slide_part(
+            &tree,
+            "m",
+            &[],
+            kind,
+            0,
+            &SlideLimits {
+                drawing: limits,
+                ..SlideLimits::default()
+            },
+            &import,
+            &mut findings,
+            &mut color,
+        )
+        .unwrap();
+        let style = part
+            .notes_style
+            .clone()
+            .or_else(|| part.text_styles.clone().and_then(|t| t.title))
+            .unwrap();
+        style.levels[0].clone().unwrap().default_run.unwrap().fill
+    };
+    for (root, kind) in [
+        ("sldMaster", SlideKind::Master),
+        ("notesMaster", SlideKind::NotesMaster),
+    ] {
+        assert!(
+            master(root, kind, DrawingLimits::default()).is_some(),
+            "{root}"
+        );
+        assert_eq!(master(root, kind, tight), None, "{root}");
+    }
 }
 
 /// The real deck that uses the older namespace, and a synthetic with hidden properties in
