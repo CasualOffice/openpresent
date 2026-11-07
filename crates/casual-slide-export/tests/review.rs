@@ -1042,11 +1042,16 @@ fn retained_parts_are_byte_identical_through_an_edit() {
         for part in retained {
             assert_eq!(before[part], after[part], "{deck}: {part}");
         }
-        assert_eq!(
-            out.changed_parts,
-            vec!["ppt/presentation.xml".to_owned()],
-            "{deck}"
-        );
+        // A stale thumbnail goes with any edit, and its link with it (`INV-TH-02`).
+        let thumbnail = ["_rels/.rels", "docProps/thumbnail.jpeg"];
+        let others: Vec<&String> = out
+            .changed_parts
+            .iter()
+            .filter(|p| {
+                !(before.contains_key("docProps/thumbnail.jpeg") && thumbnail.contains(&p.as_str()))
+            })
+            .collect();
+        assert_eq!(others, ["ppt/presentation.xml"], "{deck}");
     }
 }
 
@@ -1068,7 +1073,14 @@ fn a_set_aside_part_stays_byte_for_byte_through_an_edit() {
     assert_eq!(unedited.bytes, damaged);
     r.comments.legacy[0].list.comments[0].text = Some("Edited".to_owned());
     let out = save(&damaged, &r).unwrap();
-    assert_eq!(parts(&out.bytes)["ppt/comments/comment1.xml"], damage);
+    // What arrived is kept whole, and a valid form stands where it was (docs/29).
+    let saved = parts(&out.bytes);
+    assert!(
+        saved
+            .iter()
+            .any(|(name, bytes)| name.starts_with("recovered/") && *bytes == damage)
+    );
+    assert_ne!(saved["ppt/comments/comment1.xml"], damage);
     assert_eq!(
         out.changed_parts,
         vec!["ppt/comments/comment2.xml".to_owned()]

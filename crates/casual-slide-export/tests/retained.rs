@@ -232,8 +232,13 @@ fn changing_an_object_or_a_control_through_the_model_is_refused() {
 fn a_damaged_object_comes_through_an_edit_as_it_arrived() {
     let bytes = damaged("hostile/retained-objects-damaged.bin");
     assert_eq!(open(bytes.clone()).save_unedited(), bytes);
-    let (a, b) = (stored(&bytes), stored(&edit_title(&bytes)));
+    let edited = edit_title(&bytes);
+    let (a, b) = (stored(&bytes), stored(&edited));
     let name = "ppt/embeddings/oleObject1.bin";
-    assert!(a.contains_key(name));
-    assert_eq!(a.get(name), b.get(name));
+    // The first four bytes `stored` gives are the checksum. An edit writes a valid file
+    // (docs/29), so the bytes come through and the checksum that fails them does not.
+    assert_eq!(a[name][4..], b[name][4..]);
+    assert_ne!(a[name][..4], b[name][..4]);
+    let mut strict = PresentationPackage::open_strict(edited, OoxmlLimits::default()).unwrap();
+    assert_eq!(strict.read_part(name).unwrap(), b[name][4..]);
 }

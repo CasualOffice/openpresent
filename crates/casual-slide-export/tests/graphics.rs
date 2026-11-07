@@ -635,8 +635,17 @@ fn a_damaged_part_is_set_aside_and_the_rest_reads() {
     let mut after = read.clone();
     assert!(after.set_point_text("{00000000-0000-4000-8000-000000000001}", "Second"));
     let saved = save_diagram(&mut pkg, &part, &ids, &after, &limits(), &import()).unwrap();
-    let mut out = open(saved.outcome.bytes);
-    assert_eq!(out.read_part(&layout).unwrap(), b"<not xml");
+    // What arrived is kept whole, and a form that reads stands where it was (docs/29).
+    let mut out =
+        PresentationPackage::open_strict(saved.outcome.bytes, OoxmlLimits::default()).unwrap();
+    let kept = out
+        .part_names()
+        .into_iter()
+        .filter(|n| n.starts_with("recovered/"))
+        .any(|n| out.read_part(&n).unwrap() == b"<not xml");
+    assert!(kept);
+    let standing = out.read_xml_part(&layout).unwrap();
+    XmlTree::parse(&standing, &layout, &OoxmlLimits::default()).unwrap();
     // An edit of it is refused: the model has nothing to write into.
     let mut asked = read;
     asked.layout = d.layout;
