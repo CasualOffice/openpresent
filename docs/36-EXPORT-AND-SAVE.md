@@ -1,7 +1,7 @@
 # 36 — Export and save (Tier 1N)
 
 The design for the writer: tracker rows `WR-02`, `WR-03`, `WR-04` and `WR-05`. Owning crate: `casual-slide-export`, with
-render-on-save hosted in `casual-slide-sdk`. Status: design, nothing here is implemented yet. The fidelity contract it
+render-on-save hosted in `casual-slide-sdk`. Status: the `PN`, `RI`, `CT`, `SP`, `ID`, `SL` and `NM` families are built, in `crates/casual-slide-export/src/writer/` (`T1N-01` to `T1N-04`), see [Implementation status](#implementation-status); the rest is design. The fidelity contract it
 delivers is in [22](22-NORMALIZED-SCHEMA.md); the edit mechanism is ADR-013 and `ARC-01` in
 [28](28-PACKAGE-AND-PART-GRAPH.md); the ladder and `PV-01` are in [51](51-SPEC-CHECKLIST-AND-FIDELITY.md). The shape follows
 OpenCalc's `36-EXPORT-AND-ROUNDTRIP-DESIGN.md`.
@@ -478,6 +478,88 @@ So `PV-01` stays a release gate, and "matches PowerPoint" stays unclaimable unti
 | `RR-SA-14` | `INV-SA-14` | Retype a Strict deck | Form changes |
 
 Plus the 121 grid fixtures `RR-SA-<open>-<save>`, which use the same `INV-SA-*` checks.
+
+## Implementation status
+
+Tier 1N's core, `T1N-01` to `T1N-04`. **Nothing here was observed in PowerPoint; the marks above stand as written.** "Built" means the rule runs in preflight or at emission, a good deck passes it, and a seeded break was seen refused, with the rule also seen to fail when disabled.
+
+**The writer.** A `SavePlan` holds model patches, replaced parts and `Op`s. `SavePlan::stage` applies them to a `Draft` beside the untouched input; `Draft::preflight` runs every rule on both, so what the save added is the difference; `Draft::emit` writes, then reads the ZIP back. `save_deck` and `save_slide_parts` are plans of one kind of change. Model patches run first, on the deck as it arrived; then replaced parts; then operations in order; then the sweep.
+
+**Where this departs from the text above, on purpose:**
+
+- **A clone keeps its relationship ids.** `INV-SP-10` says the clone's `relId` is rewritten. Its rels part is a copy with the same ids, so `relId` needs no rewriting and the slide stays a byte copy; preflight checks that it lands on the clone's own drawing. Same outcome, fewer edits.
+- **A model may renumber on purpose.** `INV-ID-02` and `-04` judge what the writer allocates. When a `Deck` patch rewrites the main part they stand aside, since an existing test asks for exactly that, and `INV-SL-04` is what stops one that orphans a section entry.
+- **`INV-RI-04`, `INV-ID-06` and `INV-ID-07` read bodies only of parts the save wrote**, or a save would parse every slide. So a seeded deck with one of these breaks is reported when that part is next written, not on any save.
+- **An `RR-*` deck comes from the writer, not `generate.py`.** Python builds the inputs (`fixtures/tools/generate_rr.py`), and `tests/writer_rr.rs` writes `fixtures/rr/good` and `fixtures/rr/seeded`, with `RR_WRITE=1`. `fixtures/rr/manifest.tsv` says what became of each seeded deck: a name `Package::rewrite` refuses cannot be written, and two entries naming one part cannot be opened, which are second lines of defence.
+
+**Not built, and not in these rows:** a zoom naming a deleted slide is refused (`CS-SAV-0009`) rather than replaced by its fallback, which is `INV-FB-05`. Macro actions are not removed on dropping VBA, `INV-SA-04`. `app.xml` counts are stale after an add or delete until `T1N-05` (`INV-AP-01`), and so are thumbnails (`INV-TH-02`). The format grid is `T1N-06`; `Op::Retype` is the one edit it rests on.
+
+| Invariant | Status | Fixture | Evidence mark, for `PV-01` |
+| --- | --- | --- | --- |
+| `INV-PN-01` | Built | `RR-PN-01` | Documented |
+| `INV-PN-02` | Built | `RR-PN-02` | Documented, Inferred |
+| `INV-PN-03` | Built | `RR-PN-03` | Documented |
+| `INV-PN-04` | Built | `RR-PN-04` | Documented |
+| `INV-PN-05` | Built | `RR-PN-05` | Inferred |
+| `INV-PN-06` | Built | `RR-PN-06` | Inferred, Unverified |
+| `INV-PN-07` | Built | `RR-PN-07` | Documented, Inferred |
+| `INV-PN-08` | Built | `RR-PN-08` | Documented |
+| `INV-PN-09` | Built | `RR-PN-09` | Documented |
+| `INV-PN-10` | Built | `RR-PN-10` | Documented |
+| `INV-PN-11` | Built | `RR-PN-11` | Inferred |
+| `INV-RI-01` | Built | `RR-RI-01` | Documented |
+| `INV-RI-02` | Built | `RR-RI-02` | Inferred |
+| `INV-RI-03` | Built | `RR-RI-03` | Inferred |
+| `INV-RI-04` | Built | `RR-RI-04` | Documented, Inferred |
+| `INV-RI-05` | Built | `RR-RI-05` | Inferred |
+| `INV-RI-06` | Built | `RR-RI-06` | Documented |
+| `INV-RI-07` | Built | `RR-RI-07` | Documented, Inferred |
+| `INV-RI-08` | Built | `RR-RI-08` | Documented |
+| `INV-RI-09` | Built | `RR-RI-09` | Documented, Inferred |
+| `INV-RI-10` | Built | `RR-RI-10` | Inferred |
+| `INV-CT-01` | Built | `RR-CT-01` | Documented |
+| `INV-CT-02` | Built | `RR-CT-02` | Documented |
+| `INV-CT-03` | Built | `RR-CT-03` | Documented |
+| `INV-CT-04` | Built | `RR-CT-04` | Inferred |
+| `INV-CT-05` | Built | `RR-CT-05` | Inferred |
+| `INV-CT-06` | Built | `RR-CT-06` | Documented, Inferred |
+| `INV-CT-07` | Built | `RR-CT-07` | Documented |
+| `INV-CT-08` | Built | `RR-CT-08` | Inferred |
+| `INV-CT-09` | Built | `RR-CT-09` | Inferred |
+| `INV-CT-10` | Built | `RR-CT-10` | Unverified |
+| `INV-SP-01` | Built | `RR-SP-01` | Inferred |
+| `INV-SP-02` | Built | `RR-SP-02` | Documented, Inferred |
+| `INV-SP-03` | Built | `RR-SP-03` | Inferred |
+| `INV-SP-04` | Built | `RR-SP-04` | Inferred |
+| `INV-SP-05` | Built | `RR-SP-05` | Inferred |
+| `INV-SP-06` | Built | `RR-SP-06` | Documented, Inferred |
+| `INV-SP-07` | Built | `RR-SP-07` | Documented, Inferred |
+| `INV-SP-08` | Built | `RR-SP-08` | Unverified |
+| `INV-SP-09` | Built | `RR-SP-09` | Inferred |
+| `INV-SP-10` | Built | `RR-SP-10` | Inferred |
+| `INV-ID-01` | Built | `RR-ID-01` | Documented, Inferred |
+| `INV-ID-02` | Built | `RR-ID-02` | Inferred |
+| `INV-ID-03` | Built | `RR-ID-03` | Documented, Inferred |
+| `INV-ID-04` | Built | `RR-ID-04` | Inferred |
+| `INV-ID-05` | Built | `RR-ID-05` | Documented |
+| `INV-ID-06` | Built | `RR-ID-06` | Documented, Inferred, Unverified |
+| `INV-ID-07` | Built | `RR-ID-07` | Documented |
+| `INV-ID-08` | Built | `RR-ID-08` | Documented |
+| `INV-ID-09` | Built | `RR-ID-09` | Documented |
+| `INV-SL-01` | Built | `RR-SL-01` | Documented |
+| `INV-SL-02` | Built | `RR-SL-02` | Documented |
+| `INV-SL-03` | Built | `RR-SL-03` | Documented |
+| `INV-SL-04` | Built | `RR-SL-04` | Documented, Inferred |
+| `INV-SL-05` | Built | `RR-SL-05` | Inferred, Unverified |
+| `INV-SL-06` | Built | `RR-SL-06` | Inferred |
+| `INV-SL-07` | Built | `RR-SL-07` | Documented |
+| `INV-NM-01` | Built | `RR-NM-01` | Documented |
+| `INV-NM-02` | Built | `RR-NM-02` | Inferred |
+| `INV-NM-03` | Built | `RR-NM-03` | Documented, Inferred, Unverified |
+| `INV-NM-04` | Built | `RR-NM-04` | Documented |
+| `INV-NM-05` | Built | `RR-NM-05` | Inferred |
+
+**For `PV-01`:** open both decks of each of these, each marked Inferred or Unverified above: `INV-PN-02`, `INV-PN-05`, `INV-PN-06`, `INV-PN-07`, `INV-PN-11`, `INV-RI-02`, `INV-RI-03`, `INV-RI-04`, `INV-RI-05`, `INV-RI-07`, `INV-RI-09`, `INV-RI-10`, `INV-CT-04`, `INV-CT-05`, `INV-CT-06`, `INV-CT-08`, `INV-CT-09`, `INV-CT-10`, `INV-SP-01`, `INV-SP-02`, `INV-SP-03`, `INV-SP-04`, `INV-SP-05`, `INV-SP-06`, `INV-SP-07`, `INV-SP-08`, `INV-SP-09`, `INV-SP-10`, `INV-ID-01`, `INV-ID-02`, `INV-ID-03`, `INV-ID-04`, `INV-ID-06`, `INV-SL-04`, `INV-SL-05`, `INV-SL-06`, `INV-NM-02`, `INV-NM-03`, `INV-NM-05`. Also unsourced and in the code, so also to observe: the placeholder copies a new slide gets from its layout, `sldIdLst` left empty when the last slide goes, a duplicated slide keeping its `p14:creationId` and `a16:creationId`s, and a 3D model shared rather than copied by a clone.
 
 ## Proposed for other documents
 

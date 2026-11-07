@@ -246,7 +246,9 @@ impl<'p> Draft<'p> {
             new_slides: Vec::new(),
             input_reach: BTreeSet::new(),
         };
-        draft.input_reach = draft.reach_from(&[String::new()]);
+        // The package admitted these, so this cannot fail. If it did, nothing would count
+        // as reachable, and the sweep, which only removes what was, would remove nothing.
+        draft.input_reach = draft.reach_from(&[String::new()]).unwrap_or_default();
         draft
     }
 
@@ -661,21 +663,21 @@ impl<'p> Draft<'p> {
     }
 
     /// What is reachable from `from` over internal relationships, by key. Each part once.
-    pub(crate) fn reach_from(&mut self, from: &[String]) -> BTreeSet<String> {
+    pub(crate) fn reach_from(&mut self, from: &[String]) -> Result<BTreeSet<String>, WriterError> {
         let mut seen = BTreeSet::new();
         let mut queue: VecDeque<String> = from.iter().cloned().collect();
         while let Some(part) = queue.pop_front() {
             if !seen.insert(key(&part)) {
                 continue;
             }
-            let rels = self.relationships(&part).unwrap_or_default();
+            let rels = self.relationships(&part)?;
             for rel in rels {
                 if let Some(target) = self.resolve(&part, &rel) {
                     queue.push_back(target);
                 }
             }
         }
-        seen
+        Ok(seen)
     }
 
     /// Remove what this save's edits made unreachable, and only that (`INV-SP-01`,
@@ -689,7 +691,7 @@ impl<'p> Draft<'p> {
                 roots.push(name.clone());
             }
         }
-        let kept = self.reach_from(&roots);
+        let kept = self.reach_from(&roots)?;
         let gone: Vec<String> = self
             .names
             .iter()

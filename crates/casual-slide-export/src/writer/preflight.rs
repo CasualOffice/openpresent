@@ -111,7 +111,7 @@ fn name_is_well_formed(name: &str) -> bool {
     })
 }
 
-fn is_section_guid(id: &str) -> bool {
+pub(crate) fn is_section_guid(id: &str) -> bool {
     let Some(inner) = id.strip_prefix('{').and_then(|s| s.strip_suffix('}')) else {
         return false;
     };

@@ -9,6 +9,7 @@ use super::draft::{Draft, rel_kind, set_attr, sibling_name};
 use super::error::WriterError;
 use super::names::key;
 use super::notes::{check_text, new_slide_xml};
+use super::preflight::is_section_guid;
 use super::view::{pml_child, pml_children, prefix_is_relationships, rel_attribute};
 
 const PML: &str = "application/vnd.openxmlformats-officedocument.presentationml.";
@@ -496,6 +497,7 @@ impl Draft<'_> {
         let (_, entry) = self.slide(slide)?;
         let part = Self::slide_part(&entry)?;
         self.refuse_if_zoom_target(&entry.raw_id, &part)?;
+        let listed = self.slide_entries()?;
         let survivors = self.survivors_without(&part)?;
         let sources: Vec<String> = std::iter::once(String::new())
             .chain(self.names.values().cloned())
@@ -514,9 +516,17 @@ impl Draft<'_> {
         }
         // The list entry may have no relationship left to find it by.
         self.remove_slide_element(entry.element)?;
-        self.drop_from_sections(&entry.raw_id)?;
-        if let Some(id) = entry.id {
-            self.log.retired_slide_ids.insert(id);
+        // A part listed twice loses both entries, with their sections.
+        let left: BTreeSet<String> = self
+            .slide_entries()?
+            .into_iter()
+            .map(|e| e.raw_id)
+            .collect();
+        for gone in listed.iter().filter(|e| !left.contains(&e.raw_id)) {
+            self.drop_from_sections(&gone.raw_id)?;
+            if let Some(id) = gone.id {
+                self.log.retired_slide_ids.insert(id);
+            }
         }
         // The slide itself goes by the sweep, or stays where only an orphan points to it.
         Ok(())
@@ -1060,6 +1070,16 @@ impl Draft<'_> {
     ) -> Result<(), WriterError> {
         let main = self.main.clone();
         check_text(name, &main)?;
+        // The host supplies the id (`INV-SL-07`), so a bad one is its error, not the writer's.
+        if !is_section_guid(id) {
+            return Err(bad("not a brace-wrapped upper-case GUID", "section id"));
+        }
+        if self
+            .sections()?
+            .is_some_and(|sections| sections.iter().any(|s| s.id == id))
+        {
+            return Err(bad("a section already has this id", id));
+        }
         self.log.section_list_requested = true;
         let Some(mut sections) = self.sections()? else {
             return self.create_section_list(id, name);
