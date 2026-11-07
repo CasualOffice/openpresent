@@ -397,7 +397,14 @@ fn read_part(
                 p.common = Some(read_common(&mut shapes, &el)?);
             }
             "clrMap" => p.color_map = Some(read_color_map(tree, el.id, color)),
-            "clrMapOvr" => p.color_map_override = read_color_map_override(tree, el.id, color),
+            "clrMapOvr" => {
+                p.color_map_override = read_color_map_override(tree, el.id, color);
+                // The colour findings name no part: one holding neither choice, such as a
+                // misspelt `masterClrMapping`, is kept as it arrived and named here too.
+                if p.color_map_override.is_none() {
+                    r.note(K::MissingRequired, &el, None);
+                }
+            }
             "hf" => p.header_footer = Some(read_header_footer(r, &el)?),
             "sldLayoutIdLst" => p.layout_ids = Some(read_layout_ids(r, &el, rels, limits)?),
             "txStyles" => {

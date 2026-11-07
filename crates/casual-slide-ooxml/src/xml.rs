@@ -477,6 +477,17 @@ pub fn walk(
             Event::Decl(_) if !at_first => {
                 return Err(malformed(part, "an XML declaration not at the start"));
             }
+            // A processing instruction's target is a name with no colon, and not `xml` in
+            // any case (XML 1.0 [17], Namespaces in XML 7). A damaged declaration, such as
+            // `<?xm&x;l ...?>`, reads as one that is not, and is malformed.
+            Event::PI(pi)
+                if !is_ncname(pi.target()) || pi.target().eq_ignore_ascii_case(b"xml") =>
+            {
+                return Err(malformed(
+                    part,
+                    "a processing instruction with a bad target",
+                ));
+            }
             Event::Eof => break,
             _ => {
                 buf.clear();
