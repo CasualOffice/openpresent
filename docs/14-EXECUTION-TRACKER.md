@@ -283,7 +283,7 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1K-03 | Ink | In progress | P2 | `contentPart`, InkML, actions; fallback retained | Fixed point |
 | T1L-01 | OLE and controls | Done | P1 | Retained with fallback image; never opened; `SEC-C07` | Bytes compared |
 | T1L-02 | VML | Done | P2 | Legacy drawing parts retained, and schema-checked in F4 (`F4-04`, `F4-06`) | Bytes compared |
-| T1L-03 | 3D models | In progress | P2 | Retained with fallback until `D3-01` | Bytes compared |
+| T1L-03 | 3D models | Done | P2 | Retained with fallback until `D3-01`: `area-model3d`'s `model3d1.glb` and its fallback `image1.png` stay byte-identical through an unrelated edit (export `retained.rs` `an_unrelated_edit_leaves_every_retained_part_byte_identical`, seen red in `a35c0e7`; 6 of 6 pass, 2026-11-08). Changing the object through the model is refused until `D3-01` | Bytes compared |
 | T1M-01 | Comments | In progress | P1 | Legacy and modern, authors, threads, reactions, tasks | Both forms round-trip |
 | T1M-02 | Sections, zoom, classification | In progress | P1 | `sectionLst`, zoom objects with fallback, labels (ENT-04) | Section ids stay in sync |
 | T1M-03 | Review and custom data | In progress | P2 | Change tracking, revision info, Designer, tags, custom XML retained | Bytes compared |
