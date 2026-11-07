@@ -121,6 +121,16 @@ Every patched part is read back before saving.
 
 **Open until `PV-01`.** Whether PowerPoint uses `otherStyle` for a shape that is no placeholder. Whether all three object defaults apply to every shape, as 2.1.1379 reads, or "corresponding" narrows them by kind of shape. A default's `style` and `spPr` take no part: the notes name `bodyPr` and `lstStyle`.
 
+## Tier 1J: charts as built
+
+**Generated.** `tools/chart-codegen/generate.py` walks the vendored schemas once and writes three views: `casual-slide-model/src/chart/<ns>.rs`, one struct per type; `casual-slide-import/src/chart/<ns>.rs`, its reader; `casual-slide-export/src/chart/<ns>.rs`, what its values say the tree should hold. `check-repo.py` fails if any differs from what the tool writes. The hand-written part of each crate is its `src/chart.rs`.
+
+**Model.** `ChartPart` by root: `c:chartSpace`, `cx:chartSpace`, `c:userShapes`, `cs:chartStyle`, `cs:colorStyle`. A repeated choice stays one list in the file's order, because that is the order charts draw in: `PlotArea::charts`, `PlotArea::axes`. A graphic frame's `ShapeNode::chart` holds the relationship. `ExtItem` is what `c14`, `c15` and `c16` extensions hold. DrawingML is Tier 1E's `ShapeProperties`, 1F's `TextBody` and 1C's `Color`; any other DrawingML, such as a user shape's non-visual properties, a style part's `defRPr` and `bodyPr`, `clrMapOvr`, and colour transforms in a colour part, is `Retained`: named in the model, kept in the tree, reported as `CS-IMF-0010`, and removable but not creatable. A value in a union with percent and number spellings is kept as written. `AxisId` is signed (`T1J-04`). `mc:AlternateContent` under `c:chartSpace` holding `c14:style` is `AlternateStyle`; one of another shape is reported and kept. `cdr14:contentPart` is `AlternateContentPart`.
+
+**Import.** `read_deck_charts`, from `import_slide_parts`: `ImportedSlides::charts`. A part is read for what its root says. A part that cannot be read, is over a bound in `ChartLimits`, or has the wrong root is set aside, reported, kept byte for byte, and **the deck opens**. An embedded workbook is recorded (`ChartWorkbook`), and no byte of it is read (`SEC-P09`).
+
+**Export.** `patch_chart_part`, `save_chart_parts`: edits patch named nodes, by one function for every type, and read back. `rewrite_from_model` writes from nothing, is never used to save, and exists so that tests hold the writer to every row. Adding or removing a chart part, or changing which chart a frame holds, is refused: those are Phase 6's.
+
 ## Tier 1G: tables as built
 
 **Model** (`casual-slide-model`, `table.rs`). A graphic frame holds `ShapeNode::table`: `tblPr`, the grid, rows, cells. A cell's text is Tier 1F's `TextBody`, and its fill, borders and `cell3D` Tier 1E's types. `TableStyleList` is the `tableStyles` part, and `TableStyle` is also what `tblPr/tableStyle` holds. Absent stays absent, and a list present and empty is not an absent one. `Table::merges` gives the merges, what does not hold of them, and each covered cell's origin. A row height is what was stored, and nothing here lays anything out (owner instruction 20).

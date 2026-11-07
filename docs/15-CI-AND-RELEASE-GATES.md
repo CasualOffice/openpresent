@@ -89,6 +89,7 @@ non-zero and names every problem.
 | `check-fuzz-lock.py` | Every separate workspace's lockfile (`fuzz/`, `spikes/`, `tools/real-decks/`) agrees with its manifests |
 | `check-error-codes.py` | Every stable code in the code is in [20](20-ERROR-CODE-REGISTRY.md), and every code there is in the code (`DOC-010`) |
 | `check-parser-limits.py` | Every limit field and `MAX_*` constant in the code is in [21](21-PARSER-LIMITS.md) with the default the code holds |
+| `check-chart-codegen.py` | The generated chart modules are what `tools/chart-codegen/generate.py` writes from the schemas (`T1J-01`) |
 | `check-workflows.py` | The job contract above, SHA pins, permissions, no retries, and the release rules below |
 | `check-commits.py` | Conventional Commits; run by the `commit-msg` hook and `commit-messages`, not by `check-repo.py`, since it judges history rather than the tree |
 

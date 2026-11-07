@@ -160,3 +160,10 @@ path = "fuzz_targets/deck_recover.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "charts"
+path = "fuzz_targets/charts.rs"
+test = false
+doc = false
+bench = false

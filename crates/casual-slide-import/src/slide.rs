@@ -26,6 +26,7 @@ use casual_slide_ooxml::{
     resolve_compatibility, resolve_internal,
 };
 
+use crate::chart::ChartLimits;
 use crate::color::Findings as ColorFindings;
 use crate::drawing::DrawingLimits;
 use crate::presentation::is_optional_part_fault;
@@ -60,6 +61,8 @@ pub struct SlideLimits {
     pub max_layout_ids: usize,
     /// Bounds on tables and table styles.
     pub table: TableLimits,
+    /// Bounds on chart parts.
+    pub chart: ChartLimits,
     /// Bounds on one drawing property of a shape or a run. `CS-DRW-0001`.
     pub drawing: DrawingLimits,
     /// Bounds on a part's timing and transition. `CS-TMG-0001`.
@@ -75,6 +78,7 @@ impl Default for SlideLimits {
             max_parts: 250_000,
             max_layout_ids: 10_000,
             table: TableLimits::default(),
+            chart: ChartLimits::default(),
             drawing: DrawingLimits::default(),
             timing: TimingLimits::default(),
         }
@@ -1087,6 +1091,8 @@ pub struct ImportedSlides {
     pub table_styles: Option<casual_slide_model::table::TableStyleList>,
     /// The parts that arrived damaged, by ordinal, so a host can mark them.
     pub damaged: Vec<u32>,
+    /// Every chart-family part, each read or set aside, and each embedded workbook unread.
+    pub charts: crate::chart::DeckCharts,
 }
 
 /// Index the deck and read every slide-like part. A part that cannot be used, by being
@@ -1174,11 +1180,20 @@ pub fn import_slide_parts(
     )?;
     let parts = SlideParts { structure, parts };
     check_style_references(&parts, table_styles.as_ref(), &mut findings);
+    let charts = crate::chart::read_deck_charts(
+        package,
+        &limits.chart,
+        limits.drawing,
+        import_limits,
+        &mut findings,
+        &mut color_findings,
+    );
     Ok(ImportedSlides {
         parts,
         findings,
         color_findings,
         table_styles,
         damaged,
+        charts,
     })
 }

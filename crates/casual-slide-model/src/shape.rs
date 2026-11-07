@@ -608,6 +608,8 @@ pub struct ShapeNode {
     pub table: Option<Box<crate::table::Table>>,
     /// An OLE object or 3D model this node stands for: identity and fallback only.
     pub retained: Option<Box<crate::retained::RetainedObject>>,
+    /// `c:chart` or `cx:chart` in the frame's `graphicData`, graphic frames only.
+    pub chart: Option<crate::chart::ChartReference>,
     /// `p:style` on a shape, connector or picture: references into the theme.
     // spec-audit: p:CT_Shape/style
     // spec-audit: p:CT_Connector/style
@@ -645,6 +647,7 @@ impl ShapeNode {
             text_body: None,
             table: None,
             retained: None,
+            chart: None,
             style: None,
             children: Vec::new(),
         }

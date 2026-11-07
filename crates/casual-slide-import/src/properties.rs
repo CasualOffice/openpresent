@@ -303,6 +303,8 @@ pub enum ImportFindingKind {
     Review(crate::comment::ReviewFinding),
     /// What the timing reader noticed, under its own codes.
     Timing(crate::timing::TimingFinding),
+    /// What a chart's reader noticed, under its own codes.
+    Chart(crate::chart::ChartFinding),
 }
 
 impl ImportFindingKind {
@@ -330,6 +332,7 @@ impl ImportFindingKind {
             Self::Color(finding) => finding.code(),
             Self::Review(finding) => finding.code(),
             Self::Timing(finding) => finding.code(),
+            Self::Chart(finding) => finding.code(),
         }
     }
 }
