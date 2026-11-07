@@ -115,7 +115,7 @@ def main(argv):
             "f4_refused": before and before.get("refused"),
             "f4_failures": [
                 {"part": p["part"], "status": p["status"], "errors": p.get("errors", [])}
-                for p in (before or {}).get("parts", []) if p["status"] not in ("valid", "no-schema")
+                for p in (before or {}).get("parts", []) if p["status"] not in ("valid", "no-schema", "recorded")
             ],
             "f4_no_schema": sum(p["status"] == "no-schema" for p in (before or {}).get("parts", [])),
             "f4_same_after_rewrite": None if after is None else summary(before) == summary(after),

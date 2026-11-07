@@ -1054,17 +1054,16 @@ fn unknown_attributes_children_and_extensions_survive_an_edit() {
         xml.replace(r#"val="112233""#, r#"val="AABBCC""#)
             .replace(r#"<a:ln w="1""#, r#"<a:ln w="2""#)
     );
-    // Each thing the reader could not model was named.
-    for name in ["n", "m", "keep", "keep2"] {
-        assert!(
-            r.findings.has(
-                casual_slide_import::properties::ImportFindingKind::RetainedElement,
-                name
-            ),
-            "{name}: {:?}",
-            r.findings
-        );
-    }
+    // What the reader could not model was reported, and under no name the part made up
+    // (`SEC-018`). The part keeps them, as the comparison above shows.
+    assert!(
+        r.findings.has(
+            casual_slide_import::properties::ImportFindingKind::RetainedElement,
+            "(unknown)"
+        ),
+        "{:?}",
+        r.findings
+    );
 }
 
 #[test]

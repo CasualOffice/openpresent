@@ -22,6 +22,7 @@ from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 XS = "{http://www.w3.org/2001/XMLSchema}"
 OUT = ROOT / "docs/spec"
+SCHEMA_NAMES = ROOT / "crates/casual-slide-import/src/schema_names.rs"
 STATUS = ("M", "I", "E", "R", "U")  # model, import, export, render, UI
 COLUMNS = ("id", "area", "owner", "kind", "name", "type", "use", "default", "restriction") + STATUS
 
@@ -62,7 +63,16 @@ AREAS = {
     "DESIGN": ("Designer metadata", "1M", "-", "-", "Retain"),
     "CUSTOM": ("Tags, customer data, custom XML, app data", "1M", "-", "-", "Retain"),
     "SIMPLE": ("Shared value types", "1A", "-", "-", "Edit"),
+    "MCE": ("Markup compatibility (ECMA-376 Part 3)", "1A", "-", "-", "Retain"),
 }
+
+# Part 3 ships no XSD, so there is nothing to read these from (SPEC-08). Their ids start
+# `mc:`, which is what tells the audit they are not the schemas' rows.
+HAND_WRITTEN = ROOT / "tools/spec-checklist/markup-compatibility.tsv"
+HAND_WRITTEN_PREFIX = "mc"
+HAND_WRITTEN_AREA = "MCE"
+HAND_WRITTEN_NOTE = ("Written by hand, since ECMA-376 Part 3 ships no XSD: `tools/spec-checklist/markup-compatibility.tsv`. "
+                     "Tied to `BEH-18` in [51](../51-SPEC-CHECKLIST-AND-FIDELITY.md). Built in `crates/casual-slide-ooxml/src/mce.rs`.")
 
 # Rules are (file glob name, regex on the type's name, area). First match wins.
 PML = [
@@ -288,7 +298,26 @@ def collect():
             raise SystemExit(f"no area rule for extension namespace {short}")
         rows += rows_for(ROOT / "schemas/ms-extensions" / fname, "x:" + short, EXT_AREA[short])
         sources.append((f"schemas/ms-extensions/{fname}", "x:" + short))
+    rows += hand_written_rows()
     return rows, sources, skipped
+
+
+def hand_written_rows(path=HAND_WRITTEN):
+    """The rows no schema gives. A row of the wrong shape, or an id seen twice, stops generation."""
+    rows = []
+    for line in path.read_text(encoding="utf8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        cols = line.split("\t")
+        if len(cols) != 6:
+            raise SystemExit(f"{path.name}: a row needs 6 tab-separated columns: {line[:60]}")
+        owner, kind, name, typ, use, res = cols
+        rid = f"{HAND_WRITTEN_PREFIX}:{owner}/{name}" if owner else f"{HAND_WRITTEN_PREFIX}:{name}"
+        rows.append({"id": rid, "area": HAND_WRITTEN_AREA, "owner": owner, "kind": kind, "name": name, "type": typ,
+                     "use": use, "default": "", "restriction": res})
+    if not rows:
+        raise SystemExit(f"{path.name}: no rows")
+    return rows
 
 
 def read_status(path):
@@ -320,7 +349,8 @@ def render(rows, sources, skipped, status):
            "Every tag, property and enum value in the vendored schemas, each assigned to a roadmap",
            "tier. A phase cannot close while a row in its scope is unaccounted for.", "",
            "Status letters: `M` model, `I` import, `E` export, `R` render, `U` UI. Values: `.` not started,",
-           "`y` done with a test, `r` retained verbatim, `n/a` does not apply.", "",
+           "`y` done with a test, `r` retained verbatim, `n/a` does not apply. `tools/spec-audit/audit.py --check`",
+           "holds every `y` to code, a test and a fixture, and `--propose` says what the evidence earns (`STAT-01`).", "",
            f"**Rows: {len(rows)}.** " + ", ".join(f"{k} {v}" for k, v in kinds.most_common()) + ".", "",
            "| Area | What | Rows | Import, export, model | Render | Edit UI | Level |", "| --- | --- | ---: | --- | --- | --- | --- |"]
     for code, (title, tier, ren, edit, level) in sorted(AREAS.items(), key=lambda kv: (kv[1][1], kv[0])):
@@ -329,7 +359,8 @@ def render(rows, sources, skipped, status):
     idx += ["", "## Sources", "", "| File | Namespace key |", "| --- | --- |"]
     idx += [f"| `{p}` | `{k}` |" for p, k in sources]
     idx += ["", "Excluded on purpose: these MS-ODRAWXML namespaces belong to Word and Excel parts: "
-            + ", ".join(f"`{s}`" for s in sorted(skipped)) + "."]
+            + ", ".join(f"`{s}`" for s in sorted(skipped)) + ".", "",
+            f"Not from a schema: [{HAND_WRITTEN_AREA}]({HAND_WRITTEN_AREA}.md). {HAND_WRITTEN_NOTE}"]
     out["README.md"] = "\n".join(idx) + "\n"
 
     for code, (title, tier, ren, edit, level) in AREAS.items():
@@ -337,6 +368,8 @@ def render(rows, sources, skipped, status):
         if not sub:
             continue
         lines = [f"# {code}: {title}", "", f"Generated. Tier {tier}; render {ren}; edit {edit}; level {level}. {len(sub)} rows.", ""]
+        if code == HAND_WRITTEN_AREA:
+            lines += [HAND_WRITTEN_NOTE, ""]
         owner = None
         for r in sub:
             key = (r["id"].split("/")[0] if r["owner"] else r["id"])
@@ -360,6 +393,24 @@ def render(rows, sources, skipped, status):
     return out
 
 
+def schema_names(rows):
+    """The Rust table of every element and attribute name in the checklist. A report may
+    repeat a name only if it is here: any other name is one a part made up (SEC-018)."""
+    names = set()
+    for r in rows:
+        if r["kind"] in ("element", "attribute", "root", "rootattr"):
+            local = r["name"].strip("<>").lstrip("@").split(":")[-1]
+            if not local.isascii():
+                raise SystemExit(f"a name that is not ASCII: {r['id']}")
+            names.add(local)
+    ordered = sorted(names)
+    lines = ["//! Generated by `tools/spec-checklist/generate.py`. Every element and attribute name in",
+             "//! the schemas, sorted, so that a report can tell a name from text a part made up.",
+             "", f"pub(crate) static NAMES: [&str; {len(ordered)}] = ["]
+    lines += [f'    "{n}",' for n in ordered]
+    return "\n".join(lines + ["];", ""])
+
+
 def main():
     rows, sources, skipped = collect()
     ids = Counter(r["id"] for r in rows)
@@ -367,8 +418,11 @@ def main():
     if repeated:
         raise SystemExit(f"duplicate row ids: {repeated[:5]}")
     files = render(rows, sources, skipped, read_status(OUT / "checklist.tsv"))
+    names = schema_names(rows)
     if "--check" in sys.argv:
         stale = [n for n, t in files.items() if not (OUT / n).exists() or (OUT / n).read_text(encoding="utf8") != t]
+        if not SCHEMA_NAMES.exists() or SCHEMA_NAMES.read_text(encoding="utf8") != names:
+            stale.append(SCHEMA_NAMES.name)
         if stale:
             raise SystemExit(f"docs/spec is stale: {stale[:5]}. Run tools/spec-checklist/generate.py")
         print(f"spec checklist current: {len(rows)} rows")
@@ -376,6 +430,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for n, t in files.items():
         (OUT / n).write_text(t, encoding="utf8")
+    SCHEMA_NAMES.write_text(names, encoding="utf8")
     print(f"{len(rows)} rows, {len(files)} files")
     print(Counter(r["kind"] for r in rows).most_common())
     print(sorted(Counter(r["area"] for r in rows).items()))

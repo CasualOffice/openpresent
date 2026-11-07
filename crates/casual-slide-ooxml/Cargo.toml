@@ -11,6 +11,7 @@ casual-slide-package = { path = "../casual-slide-package" }
 quick-xml = "0.41"
 
 [dev-dependencies]
+casual-slide-geometry = { path = "../casual-slide-geometry" }
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [lints]

@@ -142,6 +142,19 @@ def parser_limit_cases():
            {"crates/x/src/other.rs": "const MAX_WIDTH: u32 = 9;\n"}, "MAX_WIDTH")
 
 
+def error_code_cases():
+    code = 'fn code() -> &str { "CS-AAA-0001" }\nfn other() -> &str { "CS-AAA-0002" }\n'
+    doc = "One: CS-AAA-0001 a thing (`MS-OI29500` 2.1.1292, 2026-11-07); 0002 another.\n"
+    clean = {"crates/x/src/lib.rs": code, "docs/20-ERROR-CODE-REGISTRY.md": doc}
+    yield ("a code with no entry", clean,
+           {"crates/x/src/more.rs": 'const C: &str = "CS-BBB-0001";\n'}, "CS-BBB-0001: in")
+    yield ("an entry with no code", clean,
+           {"docs/20-ERROR-CODE-REGISTRY.md": doc + "And CS-CCC-0009.\n"}, "CS-CCC-0009: in docs/20")
+    yield ("a code only a test holds", clean,
+           {"crates/x/tests/t.rs": 'const C: &str = "CS-DDD-0001";\n',
+            "docs/20-ERROR-CODE-REGISTRY.md": doc + "And CS-DDD-0001.\n"}, "CS-DDD-0001: in docs/20")
+
+
 def workflow_cases():
     wf = ("name: ci\non:\n  push:\npermissions:\n  contents: read\njobs:\n  build:\n    runs-on: ubuntu-latest\n"
           "    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4\n      - run: make\n")
@@ -176,6 +189,7 @@ GATES = [
     ("check-crate-deps.py", crate_dep_cases),
     ("check-fuzz-lock.py", fuzz_lock_cases),
     ("check-parser-limits.py", parser_limit_cases),
+    ("check-error-codes.py", error_code_cases),
     ("check-workflows.py", workflow_cases),
 ]
 

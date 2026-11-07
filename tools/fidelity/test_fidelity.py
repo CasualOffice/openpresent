@@ -8,6 +8,7 @@ anything from fixtures/hostile: those decks only ever reach the preflight.
 """
 import json
 import pathlib
+import os
 import shutil
 import socket
 import subprocess
@@ -24,7 +25,8 @@ import render as rnd  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 FIXTURES = REPO / "fixtures"
-HAVE_SOFFICE = bool(shutil.which("soffice"))
+# Off unless asked for, or every run of this file starts LibreOffice on the machine.
+HAVE_SOFFICE = bool(shutil.which("soffice")) and os.environ.get("OPENPRESENT_ALLOW_SOFFICE") == "1"
 T = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 SLIDE_RELS = "ppt/slides/_rels/slide1.xml.rels"
 RELS_HEAD = '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'

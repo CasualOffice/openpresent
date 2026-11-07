@@ -465,7 +465,7 @@ fn walk_graph(
         }
         let rels = read_rels(package, index, &part, limits, &mut total)?;
         for r in &rels {
-            let id = Some(r.id.as_str());
+            let id = r.reportable_id();
             inspect_type(r, &part, &mut note);
             match r.mode {
                 TargetMode::External => {
@@ -542,7 +542,7 @@ fn inspect_type(
     part: &str,
     note: &mut impl FnMut(FindingKind, &str, Option<&str>),
 ) {
-    let id = Some(r.id.as_str());
+    let id = r.reportable_id();
     match suffix(&r.rel_type) {
         Some("oleObject" | "package" | "control") => {
             note(FindingKind::EmbeddedObject, part, id);

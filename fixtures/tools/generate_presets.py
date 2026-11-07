@@ -5,7 +5,7 @@ Enum values are read from the vendored schemas, so a value cannot be left out by
 recollection. Each shape carries its value as a label, so a rendered page is readable.
 fixtures/tools/generate.py pulls these into the manifest; run it to write them.
 
-    python3 fixtures/tools/generate_presets.py --validate   # every part against the XSDs, by xmllint
+    python3 fixtures/tools/generate_presets.py --validate   # every part through tools/f4/validate.py
 
 Not done here, because they are not cheap or need parts with real content: charts,
 SmartArt, equations, ink, media, OLE, comments, VML, signatures, and the extension namespaces.
@@ -334,7 +334,8 @@ def texts():
     cases = []
     cases += [(f"algn {v}", body(paras=para(f' algn="{v}"', text="Two words wide enough to justify when it wraps over lines"))) for v in enum("ST_TextAlignType")]
     cases += [(f"fontAlgn {v}", body(paras=para(f' fontAlgn="{v}"'))) for v in enum("ST_TextFontAlignType")]
-    cases += [(f"anchor {v}", body(f' anchor="{v}"')) for v in enum("ST_TextAnchoringType")]
+    # just and dist are in Ecma's list and the Open XML SDK refuses them: text_ecma_only.
+    cases += [(f"anchor {v}", body(f' anchor="{v}"')) for v in enum("ST_TextAnchoringType") if v not in ("just", "dist")]
     cases += [(f"vert {v}", body(f' vert="{v}"')) for v in enum("ST_TextVerticalType")]
     cases += [(f"wrap {v}", body(f' wrap="{v}"', para(text="A long run that either wraps in the box or does not wrap at all"))) for v in enum("ST_TextWrappingType")]
     cases += [(f"vertOverflow {v}", body(f' vertOverflow="{v}"')) for v in enum("ST_TextVertOverflowType")]
@@ -348,7 +349,7 @@ def texts():
         cases.append((f"buAutoNum {v}", body(paras=f"<a:p>{p}</a:p><a:p>{p}</a:p>")))
     rich = ('<a:p><a:pPr marL="114300" indent="-114300" algn="l" defTabSz="457200" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">'
             '<a:lnSpc><a:spcPct val="120000"/></a:lnSpc><a:spcBef><a:spcPts val="600"/></a:spcBef><a:spcAft><a:spcPts val="300"/></a:spcAft>'
-            '<a:buClr><a:srgbClr val="C00000"/></a:buClr><a:buSzPct val="100%"/><a:buFont typeface="Arial"/><a:buChar char="&#8226;"/>'
+            '<a:buClr><a:srgbClr val="C00000"/></a:buClr><a:buSzPct val="130000"/><a:buFont typeface="Arial"/><a:buChar char="&#8226;"/>'
             '<a:tabLst><a:tab pos="914400" algn="ctr"/></a:tabLst></a:pPr>'
             '<a:r><a:rPr lang="en-US" sz="1000" b="1" i="1" kern="1200" baseline="30000" spc="100">'
             '<a:solidFill><a:srgbClr val="C00000"/></a:solidFill><a:latin typeface="+mn-lt"/></a:rPr><a:t>Rich</a:t></a:r>'
@@ -371,6 +372,23 @@ def texts():
               f'<p:txBody>{item[1]}</p:txBody></p:sp>')
 
     return build(grid("Text properties", cases, 7, 5, draw), **IMAGE)
+
+
+def text_ecma_only():
+    """What Ecma's lists allow, F4 accepts, the Open XML SDK refuses and none of the real
+    decks writes, kept apart so area-text is what both validators accept (F4-02)."""
+    run = '<a:r><a:rPr lang="en-US" sz="1000"/><a:t>Sample text</a:t></a:r>'
+    cases = [(f"anchor {v}", f'<a:bodyPr anchor="{v}"/><a:lstStyle/><a:p>{run}</a:p>') for v in ("just", "dist")]
+    cases.append(("buSzPct percent string", f'<a:bodyPr/><a:lstStyle/><a:p><a:pPr marL="114300"><a:buSzPct val="100%"/>'
+                                            f'<a:buChar char="&#8226;"/></a:pPr>{run}</a:p>'))
+
+    def draw(s, box, item):
+        x, y, cx, cy = box
+        sid = s.nid()
+        s.add(f'<p:sp><p:nvSpPr><p:cNvPr id="{sid}" name="{item[0]}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+              f'<p:spPr>{xfrm(x, y, cx, cy)}{geom()}</p:spPr><p:txBody>{item[1]}</p:txBody></p:sp>')
+
+    return build(grid("Text values only Ecma's lists have", cases, 3, 1, draw))
 
 
 # ---------------------------------------------------------------- TABLE, PIC, SHAPE, SLIDE, TIMING, TRANS
@@ -498,45 +516,18 @@ def fixtures():
     """(relative path, bytes, manifest expectation), in a fixed order."""
     decks = (("preset-shapes", preset_shapes), ("preset-text-warps", text_warps), ("area-custom-geometry", custom_geometry),
              ("area-color", colors), ("area-fill", fills), ("area-line", lines), ("area-effect", effects), ("area-d3", scene),
-             ("area-text", texts), ("area-table", table), ("area-pic", pictures), ("area-shape-tree", shape_tree),
+             ("area-text", texts), ("area-text-ecma-only", text_ecma_only), ("area-table", table), ("area-pic", pictures), ("area-shape-tree", shape_tree),
              ("area-slide", slide_props), ("area-timing", timing), ("area-trans", transitions))
     for name, make in decks:
         yield f"generated/{name}.pptx", make(), "open"
 
 
 def validate():
-    """Every XML part of every deck here, against the vendored schemas. Returns the failure count."""
-    failures = 0
-    schema_pml = REPO / "schemas/ooxml/pml.xsd"
-    schema_dml = REPO / "schemas/ooxml/dml-main.xsd"
+    """Every XML part of every deck here, through F4. Returns its exit code."""
     with tempfile.TemporaryDirectory() as tmp:
         for rel, data, _ in fixtures():
-            work = pathlib.Path(tmp) / pathlib.Path(rel).stem
-            work.mkdir()
-            deck_path = work / "deck.pptx"
-            deck_path.write_bytes(data)
-            parts = {"pml": [], "dml": []}
-            with zipfile.ZipFile(deck_path) as z:
-                for i, name in enumerate(z.namelist()):
-                    if not name.endswith(".xml") or name == "[Content_Types].xml":
-                        continue
-                    out = work / f"{i}.xml"
-                    out.write_bytes(z.read(name))
-                    parts["dml" if "/theme/" in name else "pml"].append(out)
-            bad = 0
-            for kind, schema in (("pml", schema_pml), ("dml", schema_dml)):
-                if not parts[kind]:
-                    continue
-                run = subprocess.run(["xmllint", "--nonet", "--noout", "--schema", str(schema), *map(str, parts[kind])],
-                                     capture_output=True, text=True, timeout=300)
-                if run.returncode:
-                    bad += 1
-                    print(rel)
-                    print("\n".join(run.stderr.splitlines()[:12]))
-            failures += bad
-            n = sum(map(len, parts.values()))
-            print(f"{rel}: {n} parts {'INVALID' if bad else 'valid'}")
-    return failures
+            (pathlib.Path(tmp) / pathlib.Path(rel).name).write_bytes(data)
+        return subprocess.run([sys.executable, "-I", str(REPO / "tools/f4/validate.py"), tmp], check=False).returncode
 
 
 if __name__ == "__main__":

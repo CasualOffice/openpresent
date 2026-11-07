@@ -581,7 +581,7 @@ fn bad_values_are_reported_and_left_out_never_coerced() {
         (K::MissingRequired, "stCxn", Some("idx")),
         (K::MissingRequired, "graphicData", Some("uri")),
         (K::MissingRequired, "contentPart", Some("r:id")),
-        (K::RetainedElement, "unknownNode", None),
+        (K::RetainedElement, "(unknown)", None),
     ] {
         let found = s
             .findings
@@ -636,4 +636,198 @@ fn absent_stays_absent_on_a_bare_node_and_part() {
         (ph.idx, ph.size, ph.orient, ph.has_custom_prompt),
         (None, None, None, None)
     );
+}
+
+// --- T1D-03 ---------------------------------------------------------------------------
+
+#[test]
+fn a_deck_past_the_slide_bound_refuses_with_its_code() {
+    let mut pkg = open("hostile/import-limit-structure-slides.bin");
+    // Past the import bound too, which holds the same default and refuses first.
+    assert_eq!(
+        import_deck(&mut pkg, &ImportLimits::default())
+            .unwrap_err()
+            .code(),
+        "CS-IMP-0001"
+    );
+    let roomy = ImportLimits {
+        max_slides: 200_000,
+        ..ImportLimits::default()
+    };
+    let deck = import_deck(&mut pkg, &roomy).unwrap().deck;
+    let mut findings = Findings::new(100);
+    let err = index_deck(
+        &pkg,
+        &deck.presentation,
+        &SlideLimits::default(),
+        &mut findings,
+    )
+    .err()
+    .unwrap();
+    assert_eq!(err.code(), "CS-SLD-0003");
+}
+
+#[test]
+fn a_deck_past_the_layout_id_bound_refuses_with_its_code() {
+    let err = try_slides(
+        "hostile/slide-limit-layout-ids.bin",
+        &SlideLimits::default(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(err.code(), "CS-SLD-0004");
+    assert!(err.to_string().contains("layout ids"), "{err}");
+}
+
+#[test]
+fn a_deck_past_the_part_bound_refuses_with_its_code() {
+    let tight = SlideLimits {
+        max_parts: 5,
+        ..SlideLimits::default()
+    };
+    let err = try_slides("hostile/slide-limit-parts.bin", &tight)
+        .err()
+        .unwrap();
+    assert_eq!(err.code(), "CS-SLD-0004");
+    assert!(err.to_string().contains("slide-like parts"), "{err}");
+    assert!(try_slides("hostile/slide-limit-parts.bin", &SlideLimits::default()).is_ok());
+}
+
+/// The default cannot be crossed: a package with that many parts is refused on open. If
+/// these two ever change places, `max_parts` needs a fixture of its own.
+#[test]
+fn the_default_part_bound_is_behind_the_package_entry_bound() {
+    let entries = OoxmlLimits::default().package.max_entries;
+    assert!(SlideLimits::default().max_parts > entries);
+}
+
+/// A `bgRef` colour's finding keeps its code, instead of turning into a generic one.
+#[test]
+fn a_background_references_colour_finding_keeps_its_code() {
+    let bytes = std::fs::read(fixtures().join("generated/minimal.pptx")).unwrap();
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let slide = String::from_utf8(pkg.read_part("ppt/slides/slide1.xml").unwrap()).unwrap();
+    let edited = slide.replace(
+        "<p:cSld>",
+        "<p:cSld><p:bg><p:bgRef idx=\"1001\"><a:srgbClr val=\"nothex\"/></p:bgRef></p:bg>",
+    );
+    assert_ne!(slide, edited);
+    let mut edits = PartEdits::default();
+    edits.replace("ppt/slides/slide1.xml", edited.into_bytes());
+    let got = slides_of(pkg.save_with(&edits).unwrap());
+    assert_eq!(got.color_findings.codes(), ["CS-CLR-0001"]);
+    assert!(!got.findings.has(K::MalformedValue, "bgRef"));
+}
+
+/// Every value and lock attribute of `area-slide-values` reaches the model.
+#[test]
+fn every_tier_1d_value_and_lock_attribute_reads() {
+    use casual_slide_model::properties::Lexical;
+    let s = slides("generated/area-slide-values.pptx");
+    let parts: Vec<&SlidePart> = s.parts.parts.iter().flatten().collect();
+    let layouts: std::collections::BTreeSet<String> = parts
+        .iter()
+        .filter_map(|p| p.layout_type.as_ref().map(Lexical::to_lexical))
+        .collect();
+    assert_eq!(layouts.len(), 36, "{layouts:?}");
+
+    let slide = parts.iter().find(|p| p.kind == SlideKind::Slide).unwrap();
+    let tree = slide.common.as_ref().unwrap().shape_tree.as_ref().unwrap();
+    let nodes: Vec<&ShapeNode> = tree.descendants().collect();
+    let kinds: std::collections::BTreeSet<String> = nodes
+        .iter()
+        .filter_map(|n| {
+            n.placeholder()?
+                .placeholder_type
+                .as_ref()
+                .map(Lexical::to_lexical)
+        })
+        .collect();
+    assert_eq!(kinds.len(), 16, "{kinds:?}");
+    assert!(nodes.iter().any(|n| {
+        n.placeholder()
+            .is_some_and(|p| p.size == Some(PlaceholderSize::Full))
+    }));
+    let modes: std::collections::BTreeSet<String> = nodes
+        .iter()
+        .filter_map(|n| n.bw_mode.as_ref().map(Lexical::to_lexical))
+        .collect();
+    assert_eq!(modes.len(), 11, "{modes:?}");
+
+    let flags = |name: &str| {
+        let node = nodes
+            .iter()
+            .find(|n| n.non_visual.as_ref().and_then(|v| v.name.as_deref()) == Some(name))
+            .unwrap();
+        let locks = node.locks.as_ref().unwrap();
+        [
+            "noGrp",
+            "noUngrp",
+            "noSelect",
+            "noRot",
+            "noChangeAspect",
+            "noMove",
+            "noResize",
+            "noDrilldown",
+            "noTextEdit",
+        ]
+        .into_iter()
+        .filter(|f| locks.get(f) == Some(true))
+        .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        flags("Locked"),
+        [
+            "noGrp",
+            "noSelect",
+            "noRot",
+            "noChangeAspect",
+            "noMove",
+            "noResize",
+            "noTextEdit"
+        ]
+    );
+    assert_eq!(
+        flags("Locked group"),
+        [
+            "noGrp",
+            "noUngrp",
+            "noSelect",
+            "noRot",
+            "noChangeAspect",
+            "noMove",
+            "noResize"
+        ]
+    );
+    assert_eq!(
+        flags("Locked frame"),
+        [
+            "noGrp",
+            "noSelect",
+            "noChangeAspect",
+            "noMove",
+            "noResize",
+            "noDrilldown"
+        ]
+    );
+    assert!(
+        s.findings.iter().all(|f| f.element != "(unknown)"),
+        "{:?}",
+        s.findings
+    );
+}
+
+/// A master's `txStyles` holds its `titleStyle`, in the model and through the corpus.
+#[test]
+fn a_masters_title_style_is_read() {
+    let s = slides("generated/slides-masters-layouts.pptx");
+    let master = s
+        .parts
+        .parts
+        .iter()
+        .flatten()
+        .find(|p| p.kind == SlideKind::Master)
+        .unwrap();
+    let styles = master.text_styles.as_ref().unwrap();
+    assert!(styles.title.is_some(), "titleStyle");
 }
