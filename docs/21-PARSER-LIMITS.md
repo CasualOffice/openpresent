@@ -194,6 +194,24 @@ Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fi
 
 A table has a fixed depth, and a style's parts follow no input. What is damaged but not over a bound opens and is reported: `hostile/table-bad-structure.bin`.
 
+## Charts: `ChartLimits` (Tier 1J)
+
+`crates/casual-slide-import/src/chart.rs`, nested in `SlideLimits` as `chart`. Over a bound, that one part is set aside, reported under the bound's code and `CS-IMF-0012`, and kept byte for byte; **the deck opens** (owner instruction 24). Each is beyond what Office's interface makes. An embedded workbook is never read, so it spends nothing here and has no limit here (`SEC-P09`). No count in the file sizes anything: `ptCount` is compared, never allocated by.
+
+| Field | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_chart_parts` | `8_192` | Chart-family parts read in one deck | CS-CHT-0001 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_series` | `4_096` | Series in one part | CS-CHT-0002 | Tested; `hostile/chart-limit-series.bin` |
+| `max_points` | `1_048_576` | Cached points in one part | CS-CHT-0003 | Tested; `hostile/chart-limit-points.bin` |
+| `max_data_points` | `262_144` | `dPt` and `cx:dataPoint` in one part | CS-CHT-0004 | Tested; `hostile/chart-limit-data-points.bin` |
+| `max_data_labels` | `262_144` | `dLbl` and `cx:dataLabel` in one part | CS-CHT-0005 | Tested; `hostile/chart-limit-data-labels.bin` |
+| `max_levels` | `4_096` | `lvl` in one part | CS-CHT-0006 | Tested; `hostile/chart-limit-levels.bin` |
+| `max_anchors` | `65_536` | Anchors in one chart drawing | CS-CHT-0007 | Tested; `hostile/chart-limit-anchors.bin` |
+| `max_extensions` | `262_144` | `ext` in one part | CS-CHT-0008 | Tested; `hostile/chart-limit-extensions.bin` |
+| `max_group_depth` | `64` | Groups nested in one chart drawing, the one recursion in these schemas | CS-CHT-0009 | Tested; `hostile/chart-limit-group-depth.bin` |
+
+What is damaged but not over a bound is read as far as it goes and reported: `hostile/chart-bad-structure.bin`. What is not XML, or is rooted wrongly, is set aside: `hostile/chart-not-xml.bin`. A workbook that could not be read if anyone tried is untouched: `hostile/chart-workbook-corrupt.bin`.
+
 ## Export
 
 | Limit | Default | Bounds | Code | Status |

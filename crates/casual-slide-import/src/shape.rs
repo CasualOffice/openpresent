@@ -205,7 +205,7 @@ impl ShapeReader<'_, '_, '_> {
                     n.properties.picture = fill.map(Box::new);
                 }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
-                "graphic" => n.graphic_uri = self.graphic(&child, &mut n.table)?,
+                "graphic" => n.graphic_uri = self.graphic(&child, &mut n.table, &mut n.chart)?,
                 "txBody" => {
                     let mut text = TextReader {
                         r: &mut *self.r,
@@ -554,6 +554,7 @@ impl ShapeReader<'_, '_, '_> {
         &mut self,
         el: &Elem,
         table: &mut Option<Box<Table>>,
+        chart: &mut Option<casual_slide_model::chart::ChartReference>,
     ) -> Result<Option<String>, SlideError> {
         self.r.finish(el);
         let mut uri = None;
@@ -565,9 +566,15 @@ impl ShapeReader<'_, '_, '_> {
             let mut data = child.clone();
             uri = self.r.required::<String>(&mut data, "uri", |_| true)?;
             self.r.finish(&data);
-            // A chart reference, a diagram, an OLE object: later tiers.
+            // A diagram, an OLE object: later tiers.
             for inner in self.r.children(&data)? {
-                if !inner.is(ns::DML, "tbl") {
+                if let Some(found) = crate::chart::read_chart_reference(self.r, self.rels, &inner) {
+                    if chart.is_some() {
+                        self.r.note(K::DuplicateElement, &inner, None);
+                    } else {
+                        *chart = Some(found);
+                    }
+                } else if !inner.is(ns::DML, "tbl") {
                     self.r.retained(&inner);
                 } else if table.is_some() {
                     self.r.note(K::DuplicateElement, &inner, None);

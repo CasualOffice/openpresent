@@ -1,5 +1,6 @@
 //! `casual-slide-export`. See docs/19 and docs/28 (ADR-013).
 
+pub mod chart;
 pub mod color;
 mod d3;
 mod drawing;

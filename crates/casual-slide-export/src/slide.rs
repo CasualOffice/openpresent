@@ -386,6 +386,7 @@ impl Patch<'_, '_> {
             || b.rel_id != a.rel_id
             || b.text_body != a.text_body
             || b.table != a.table
+            || b.chart != a.chart
             || b.style != a.style;
         if own_changed {
             let mapped = self
@@ -447,6 +448,9 @@ impl Patch<'_, '_> {
             a.text_body.as_ref(),
             |w, el, before, after| patch_text_body(w, el, before.map(|b| &**b), after),
         )?;
+        if b.chart != a.chart {
+            return Err(self.unsupported("changing which chart a frame holds"));
+        }
         if b.table != a.table {
             crate::table::patch_frame_table(
                 &mut self.w,

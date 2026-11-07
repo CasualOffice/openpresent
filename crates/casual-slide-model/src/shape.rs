@@ -572,6 +572,8 @@ pub struct ShapeNode {
     pub text_body: Option<Box<TextBody>>,
     /// `a:tbl` in the frame's `graphicData`, graphic frames only.
     pub table: Option<Box<crate::table::Table>>,
+    /// `c:chart` or `cx:chart` in the frame's `graphicData`, graphic frames only.
+    pub chart: Option<crate::chart::ChartReference>,
     /// `p:style` on a shape, connector or picture: references into the theme.
     pub style: Option<Box<crate::theme::ShapeStyle>>,
     /// A group's children, in document order, which is z-order.
@@ -598,6 +600,7 @@ impl ShapeNode {
             rel_id: None,
             text_body: None,
             table: None,
+            chart: None,
             style: None,
             children: Vec::new(),
         }

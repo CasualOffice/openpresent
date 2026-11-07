@@ -751,7 +751,7 @@ fn hidden_nodes(h: &HiddenProperties) -> Vec<Node> {
     out
 }
 
-fn properties_node(p: &ShapeProperties, holder: &'static str) -> Node {
+pub(crate) fn properties_node(p: &ShapeProperties, holder: &'static str) -> Node {
     let mut n = Node::new(Space::Pml, holder)
         .opt(p.geometry.as_ref().map(geometry_node))
         .opt(p.fill.as_ref().map(fill_node))
