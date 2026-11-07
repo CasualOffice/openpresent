@@ -128,6 +128,17 @@ impl Node {
         self
     }
 
+    /// An extension's item, named with its conventional prefix.
+    pub fn extension(qualified: &'static str) -> Self {
+        match qualified.split_once(':') {
+            Some(("asvg", local)) => Self::new(Space::Asvg, local),
+            Some(("woe", local)) => Self::new(Space::Woe, local),
+            Some(("aif", local)) => Self::new(Space::Aif, local),
+            Some((_, local)) => Self::new(Space::P173, local),
+            None => Self::a(qualified),
+        }
+    }
+
     /// In DrawingML.
     pub fn a(local: &'static str) -> Self {
         Self::new(Space::Dml, local)
@@ -311,6 +322,8 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
             "extLst",
         ],
         "audioCd" => &["st", "end", "extLst"],
+        "tracksInfo" => &["trackLst"],
+        "trackLst" => &["track"],
         "media" => &["trim", "fade", "bmkLst", "extLst"],
         "hlinkClick" | "hlinkHover" | "hlinkMouseOver" => &["snd", "extLst"],
         "gradFill" => &["gsLst", "lin", "path", "tileRect"],

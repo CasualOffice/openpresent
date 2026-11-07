@@ -4,15 +4,29 @@ use casual_slide_model::fill::{
     Blip, BlipFill, BlipFillMode, Fill, GradientFill, GradientShade, PatternFill, RelativeRect,
 };
 
+use casual_slide_model::picture::{ImageFormula, OEmbed, SvgBlip};
+
 use crate::drawing::{Node, Space};
 use crate::effect::{effect_node, image_properties_node};
 
-fn rect(local: &'static str, r: &RelativeRect) -> Node {
-    Node::a(local)
-        .pct("l", r.l)
-        .pct("t", r.t)
-        .pct("r", r.r)
-        .pct("b", r.b)
+fn relative_rect(node: Node, r: &RelativeRect) -> Node {
+    node.pct("l", r.l).pct("t", r.t).pct("r", r.r).pct("b", r.b)
+}
+
+fn fill_to_rect(r: &RelativeRect) -> Node {
+    relative_rect(Node::a("fillToRect"), r)
+}
+
+fn tile_rect(r: &RelativeRect) -> Node {
+    relative_rect(Node::a("tileRect"), r)
+}
+
+fn fill_rect(r: &RelativeRect) -> Node {
+    relative_rect(Node::a("fillRect"), r)
+}
+
+fn src_rect(r: &RelativeRect) -> Node {
+    relative_rect(Node::a("srcRect"), r)
 }
 
 fn gradient(g: &GradientFill) -> Node {
@@ -20,9 +34,12 @@ fn gradient(g: &GradientFill) -> Node {
         GradientShade::Linear { angle, scaled } => Node::a("lin")
             .ang("ang", *angle)
             .lex("scaled", scaled.as_ref()),
-        GradientShade::Path { path, fill_to_rect } => Node::a("path")
+        GradientShade::Path {
+            path,
+            fill_to_rect: target,
+        } => Node::a("path")
             .lex("path", path.as_ref())
-            .opt(fill_to_rect.as_ref().map(|r| rect("fillToRect", r))),
+            .opt(target.as_ref().map(fill_to_rect)),
     });
     let stops = g.stops.as_ref().map(|stops| {
         Node::a("gsLst").list(
@@ -36,7 +53,7 @@ fn gradient(g: &GradientFill) -> Node {
         .lex("rotWithShape", g.rotate_with_shape.as_ref())
         .opt(stops)
         .opt(shade)
-        .opt(g.tile_rect.as_ref().map(|r| rect("tileRect", r)))
+        .opt(g.tile_rect.as_ref().map(tile_rect))
 }
 
 fn pattern(p: &PatternFill) -> Node {
@@ -54,38 +71,67 @@ fn pattern(p: &PatternFill) -> Node {
         )
 }
 
+fn svg_blip(s: &SvgBlip) -> Node {
+    Node::extension("asvg:svgBlip")
+        .rel("embed", s.embed.as_ref())
+        .rel("link", s.link.as_ref())
+}
+
+fn image_formula(v: &ImageFormula) -> Node {
+    Node::extension("aif:imageFormula")
+        .lex("formula", v.formula.as_ref())
+        .ext_uri(v.ext_uri.as_ref())
+}
+
+fn oembed(o: &OEmbed) -> Node {
+    Node::extension("woe:oembed")
+        .lex("oEmbedUrl", o.o_embed_url.as_ref())
+        .lex("mediaType", o.media_type.as_ref())
+        .lex(
+            "picLocksAutoForOEmbed",
+            o.pic_locks_auto_for_o_embed.as_ref(),
+        )
+        .ext_uri(o.ext_uri.as_ref())
+}
+
 /// `a:CT_Blip`.
-pub(crate) fn blip_node(b: &Blip) -> Node {
-    let svg = b.svg.as_ref().map(|s| {
-        Node::new(Space::Asvg, "svgBlip")
-            .rel("embed", s.embed.as_ref())
-            .rel("link", s.link.as_ref())
-    });
-    let formula = b.image_formula.as_ref().map(|v| {
-        Node::new(Space::Aif, "imageFormula")
-            .lex("formula", v.formula.as_ref())
-            .ext_uri(v.ext_uri.as_ref())
-    });
-    let oembed = b.oembed.as_ref().map(|o| {
-        Node::new(Space::Woe, "oembed")
-            .lex("oEmbedUrl", o.url.as_ref())
-            .lex("mediaType", o.media_type.as_ref())
-            .lex("picLocksAutoForOEmbed", o.pic_locks_auto.as_ref())
-            .ext_uri(o.ext_uri.as_ref())
-    });
+pub(crate) fn blip(b: &Blip) -> Node {
     let local_dpi = b
         .use_local_dpi
         .map(|v| Node::new(Space::A14, "useLocalDpi").lex("val", Some(&v)));
+    // A blip holds only these. Anything else is left out here, and refused by the read-back.
+    let effects = b.effects.iter().map(effect_node).filter(|n| {
+        matches!(
+            n.local(),
+            "alphaBiLevel"
+                | "alphaCeiling"
+                | "alphaFloor"
+                | "alphaInv"
+                | "alphaMod"
+                | "alphaModFix"
+                | "alphaRepl"
+                | "biLevel"
+                | "blur"
+                | "clrChange"
+                | "clrRepl"
+                | "duotone"
+                | "fillOverlay"
+                | "grayscl"
+                | "hsl"
+                | "lum"
+                | "tint"
+        )
+    });
     Node::a("blip")
         .rel("embed", b.embed.as_ref())
         .rel("link", b.link.as_ref())
-        .lex("cstate", b.compression.as_ref())
-        .list(b.effects.iter().map(effect_node))
+        .lex("cstate", b.cstate.as_ref())
+        .list(effects)
         .ext(b.image_properties.as_ref().map(image_properties_node))
         .ext(local_dpi)
-        .ext(svg)
-        .ext(formula)
-        .ext(oembed)
+        .ext(b.svg.as_ref().map(svg_blip))
+        .ext(b.image_formula.as_ref().map(image_formula))
+        .ext(b.oembed.as_ref().map(oembed))
 }
 
 /// `a:CT_BlipFillProperties`: `a:blipFill`, or a picture's `p:blipFill`.
@@ -98,13 +144,13 @@ pub(crate) fn blip_fill_node(f: &BlipFill, space: Space) -> Node {
             .pct("sy", t.sy)
             .lex("flip", t.flip.as_ref())
             .lex("algn", t.align.as_ref()),
-        BlipFillMode::Stretch(r) => Node::a("stretch").opt(r.as_ref().map(|r| rect("fillRect", r))),
+        BlipFillMode::Stretch(r) => Node::a("stretch").opt(r.as_ref().map(fill_rect)),
     });
     Node::new(space, "blipFill")
         .lex("dpi", f.dpi.as_ref())
         .lex("rotWithShape", f.rotate_with_shape.as_ref())
-        .opt(f.blip.as_ref().map(blip_node))
-        .opt(f.source_rect.as_ref().map(|r| rect("srcRect", r)))
+        .opt(f.blip.as_ref().map(blip))
+        .opt(f.source_rect.as_ref().map(src_rect))
         .opt(mode)
 }
 

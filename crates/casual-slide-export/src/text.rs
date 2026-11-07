@@ -677,7 +677,7 @@ fn patch_bullet(w: &mut Writer<'_>, el: &Elem, b: Option<&Bullet>, a: Option<&Bu
             crate::drawing::check_svg_fallback(w, old, Some(blip))?;
             let holder = swap_choice(w, el, GROUP, PARAGRAPH_PROPERTIES_ORDER, "buBlip")?;
             let of = |blip: Option<&Blip>| {
-                crate::drawing::Node::a("buBlip").opt(blip.map(crate::fill::blip_node))
+                crate::drawing::Node::a("buBlip").opt(blip.map(crate::fill::blip))
             };
             crate::drawing::patch(w, &holder, Some(&of(old)), &of(Some(blip)))
         }

@@ -143,7 +143,7 @@ fn slide_and_edits(data: &[u8]) {
             app.media_extension = Some(Box::new(MediaExtension {
                 embed: Some("rId2".to_owned()),
                 trim: Some(MediaTrim {
-                    start: Some("1".to_owned()),
+                    st: Some("1".to_owned()),
                     end: None,
                 }),
                 ..MediaExtension::default()
@@ -170,6 +170,7 @@ fuzz_target!(|data: &[u8]| {
         };
         if let Ok(mut pkg) = PresentationPackage::open(data.to_vec(), limits) {
             let media = MediaLimits {
+                max_part_bytes: 1 << 20,
                 max_catalog_bytes: 1 << 22,
                 ..MediaLimits::default()
             };

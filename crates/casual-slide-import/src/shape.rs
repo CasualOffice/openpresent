@@ -374,7 +374,7 @@ impl ShapeReader<'_, '_, '_> {
             n.text_box = self.r.attr(&mut el, "txBox")?;
         }
         if n.kind == NodeKind::Picture {
-            n.prefer_relative_resize = self.r.attr(&mut el, "preferRelativeResize")?;
+            return self.c_nv_pic_pr(&el, n);
         }
         self.r.finish(&el);
         let mut seen = HashSet::new();
@@ -398,6 +398,33 @@ impl ShapeReader<'_, '_, '_> {
             }
         }
         Ok(())
+    }
+
+    fn c_nv_pic_pr(&mut self, el: &Elem, n: &mut ShapeNode) -> Result<(), SlideError> {
+        let mut e = el.clone();
+        n.prefer_relative_resize = self.r.attr(&mut e, "preferRelativeResize")?;
+        self.r.finish(&e);
+        let mut seen = false;
+        for child in self.r.children(&e)? {
+            if !child.is(ns::DML, "picLocks") {
+                self.r.retained(&child);
+            } else if seen {
+                self.r.note(K::DuplicateElement, &child, None);
+            } else {
+                seen = true;
+                n.locks = Some(self.pic_locks(&child)?);
+            }
+        }
+        Ok(())
+    }
+
+    /// `AG_Locking` as any node has it, and `noCrop`, which only a picture does.
+    fn pic_locks(&mut self, el: &Elem) -> Result<Locks, SlideError> {
+        let mut e = el.clone();
+        let no_crop = self.r.attr(&mut e, "noCrop")?;
+        let mut locks = self.locks(&e, NodeKind::Picture)?;
+        locks.no_crop = no_crop;
+        Ok(locks)
     }
 
     fn locks(&mut self, el: &Elem, kind: NodeKind) -> Result<Locks, SlideError> {

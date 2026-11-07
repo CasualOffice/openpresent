@@ -10,7 +10,7 @@ use casual_slide_model::picture::{ImageFormula, OEmbed, SvgBlip};
 
 use crate::drawing::{A14, Ctx, Res};
 use crate::effect::EffectScope;
-use crate::media::{AIF, ASVG, Expect, MediaFinding, WOE, read_rel};
+use crate::media::{Expect, MediaFinding, is_extension, read_rel};
 use crate::properties::{Elem, ImportFindingKind as K, ns};
 
 impl Ctx<'_, '_> {
@@ -206,7 +206,7 @@ impl Ctx<'_, '_> {
         let mut b = Blip {
             embed: read_rel(self.r, self.rels, &mut e, "embed", Expect::Image),
             link: read_rel(self.r, self.rels, &mut e, "link", Expect::Image),
-            compression: self.attr(&mut e, "cstate")?,
+            cstate: self.attr(&mut e, "cstate")?,
             ..Blip::default()
         };
         self.r.finish(&e);
@@ -220,13 +220,80 @@ impl Ctx<'_, '_> {
                 }
                 seen_ext = true;
                 self.blip_extensions(&kid, &mut b)?;
-            } else if let Some(effect) = self.effect(&kid, EffectScope::Blip)? {
+            } else if matches!(
+                kid.local.as_str(),
+                "alphaBiLevel"
+                    | "alphaCeiling"
+                    | "alphaFloor"
+                    | "alphaInv"
+                    | "alphaMod"
+                    | "alphaModFix"
+                    | "alphaRepl"
+                    | "biLevel"
+                    | "blur"
+                    | "clrChange"
+                    | "clrRepl"
+                    | "duotone"
+                    | "fillOverlay"
+                    | "grayscl"
+                    | "hsl"
+                    | "lum"
+                    | "tint"
+            ) && let Some(effect) = self.effect(&kid, EffectScope::Blip)?
+            {
                 b.effects.push(effect);
             } else {
                 self.r.retained(&kid);
             }
         }
         Ok(b)
+    }
+
+    /// A reference. Nothing here, or anywhere, parses what it reaches.
+    fn svg_blip(&mut self, item: &Elem, no_fallback: bool) -> Res<SvgBlip> {
+        let mut k = item.clone();
+        let svg = SvgBlip {
+            embed: read_rel(self.r, self.rels, &mut k, "embed", Expect::Image),
+            link: read_rel(self.r, self.rels, &mut k, "link", Expect::Image),
+        };
+        self.r.finish(&k);
+        self.no_kids(item)?;
+        if no_fallback {
+            self.r
+                .note(K::Media(MediaFinding::SvgWithoutFallback), item, None);
+        }
+        Ok(svg)
+    }
+
+    fn image_formula(&mut self, item: &Elem) -> Res<ImageFormula> {
+        let mut k = item.clone();
+        let formula = ImageFormula {
+            formula: self.attr(&mut k, "formula")?,
+            ext_uri: self.holder_uri(item),
+        };
+        self.r.finish(&k);
+        self.no_kids(item)?;
+        Ok(formula)
+    }
+
+    fn oembed(&mut self, item: &Elem) -> Res<OEmbed> {
+        let mut k = item.clone();
+        let oembed = OEmbed {
+            o_embed_url: self.r.required(&mut k, "oEmbedUrl", |_: &String| true)?,
+            media_type: self.r.required(&mut k, "mediaType", |_: &String| true)?,
+            pic_locks_auto_for_o_embed: self.attr(&mut k, "picLocksAutoForOEmbed")?,
+            ext_uri: self.holder_uri(item),
+        };
+        self.r.finish(&k);
+        self.no_kids(item)?;
+        if oembed.o_embed_url.is_some() {
+            self.r.note(
+                K::Media(MediaFinding::ExternalTarget),
+                item,
+                Some("oEmbedUrl"),
+            );
+        }
+        Ok(oembed)
     }
 
     /// `@uri` of the `a:ext` an extension's item sits in.
@@ -243,46 +310,12 @@ impl Ctx<'_, '_> {
                 let mut k = item.clone();
                 b.use_local_dpi = self.attr(&mut k, "val")?;
                 self.r.finish(&k);
-            } else if item.is(ASVG, "svgBlip") && b.svg.is_none() {
-                // A reference. Nothing here, or anywhere, parses what it reaches.
-                let mut k = item.clone();
-                let svg = SvgBlip {
-                    embed: read_rel(self.r, self.rels, &mut k, "embed", Expect::Image),
-                    link: read_rel(self.r, self.rels, &mut k, "link", Expect::Image),
-                };
-                self.r.finish(&k);
-                self.no_kids(&item)?;
-                b.svg = Some(svg);
-                if b.embed.is_none() && b.link.is_none() {
-                    self.r
-                        .note(K::Media(MediaFinding::SvgWithoutFallback), &item, None);
-                }
-            } else if item.is(AIF, "imageFormula") && b.image_formula.is_none() {
-                let mut k = item.clone();
-                b.image_formula = Some(ImageFormula {
-                    formula: self.attr(&mut k, "formula")?,
-                    ext_uri: self.holder_uri(&item),
-                });
-                self.r.finish(&k);
-                self.no_kids(&item)?;
-            } else if item.is(WOE, "oembed") && b.oembed.is_none() {
-                let mut k = item.clone();
-                let oembed = OEmbed {
-                    url: self.r.required(&mut k, "oEmbedUrl", |_: &String| true)?,
-                    media_type: self.r.required(&mut k, "mediaType", |_: &String| true)?,
-                    pic_locks_auto: self.attr(&mut k, "picLocksAutoForOEmbed")?,
-                    ext_uri: self.holder_uri(&item),
-                };
-                self.r.finish(&k);
-                self.no_kids(&item)?;
-                if oembed.url.is_some() {
-                    self.r.note(
-                        K::Media(MediaFinding::ExternalTarget),
-                        &item,
-                        Some("oEmbedUrl"),
-                    );
-                }
-                b.oembed = Some(oembed);
+            } else if is_extension(&item, "asvg:svgBlip") && b.svg.is_none() {
+                b.svg = Some(self.svg_blip(&item, b.embed.is_none() && b.link.is_none())?);
+            } else if is_extension(&item, "aif:imageFormula") && b.image_formula.is_none() {
+                b.image_formula = Some(self.image_formula(&item)?);
+            } else if is_extension(&item, "woe:oembed") && b.oembed.is_none() {
+                b.oembed = Some(self.oembed(&item)?);
             } else {
                 // Nobody's: it stays in the tree.
                 self.r.retained(&item);

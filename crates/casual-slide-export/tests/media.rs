@@ -19,8 +19,8 @@ use casual_slide_import::slide::{SlideLimits, import_slide_part, import_slide_pa
 use casual_slide_model::color::Percentage;
 use casual_slide_model::fill::{Blip, BlipFill, BlipFillMode, Fill, RelativeRect};
 use casual_slide_model::media::{
-    AudioCd, AudioCdTime, DisplayLocation, EmbeddedWav, Media, MediaBookmark, MediaExtension,
-    MediaFade, MediaFile, MediaTrack, MediaTrim, TracksInfo,
+    AudioCd, AudioCdTime, DisplayLocation, EmbeddedWavAudioFile, Media, MediaBookmark,
+    MediaExtension, MediaFade, MediaFile, MediaTrack, MediaTrim, TrackList, TracksInfo,
 };
 use casual_slide_model::picture::SvgBlip;
 use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
@@ -247,7 +247,7 @@ fn check_edit(
     bytes
 }
 
-/// Every text position where two byte strings differ lies inside one element: its start
+/// Every text position where two byte strings differ lies inside one element: its st
 /// tag, in both, starts with this name.
 fn only_inside(old: &str, new: &str, element: &str, label: &str) {
     let prefix = old
@@ -807,7 +807,7 @@ fn media_leaving_out_what_the_schema_requires_is_refused() {
         },
         |p| {
             named_mut(p, "Wave").app.as_mut().unwrap().media =
-                Some(Media::WavAudioFile(EmbeddedWav::default()))
+                Some(Media::WavAudioFile(EmbeddedWavAudioFile::default()))
         },
         |p| {
             named_mut(p, "CD").app.as_mut().unwrap().media =
@@ -815,7 +815,7 @@ fn media_leaving_out_what_the_schema_requires_is_refused() {
         },
         |p| {
             named_mut(p, "CD").app.as_mut().unwrap().media = Some(Media::AudioCd(AudioCd {
-                start: Some(AudioCdTime::default()),
+                st: Some(AudioCdTime::default()),
                 end: Some(AudioCdTime {
                     track: Some(1),
                     time: None,
@@ -827,16 +827,17 @@ fn media_leaving_out_what_the_schema_requires_is_refused() {
                 .tracks
                 .as_mut()
                 .unwrap()
-                .display_location = None
+                .display_loc = None
         },
         |p| {
             media_of(p, "Video embedded")
                 .tracks
                 .as_mut()
                 .unwrap()
-                .tracks
+                .track_lst
                 .as_mut()
-                .unwrap()[0]
+                .unwrap()
+                .track[0]
                 .id = None
         },
         |p| {
@@ -844,9 +845,10 @@ fn media_leaving_out_what_the_schema_requires_is_refused() {
                 .tracks
                 .as_mut()
                 .unwrap()
-                .tracks
+                .track_lst
                 .as_mut()
-                .unwrap()[0]
+                .unwrap()
+                .track[0]
                 .label = None
         },
     ];
@@ -1026,12 +1028,12 @@ fn each_picture_and_media_field_is_written_and_reads_back() {
                 .oembed = None
         }),
         ("trim", |p| {
-            media_of(p, "Video embedded").trim.as_mut().unwrap().start = Some("1".to_owned())
+            media_of(p, "Video embedded").trim.as_mut().unwrap().st = Some("1".to_owned())
         }),
         ("trim gone", |p| media_of(p, "Video embedded").trim = None),
         ("trim made", |p| {
             media_of(p, "Video linked").trim = Some(MediaTrim {
-                start: Some("2".to_owned()),
+                st: Some("2".to_owned()),
                 end: None,
             })
         }),
@@ -1081,9 +1083,10 @@ fn each_picture_and_media_field_is_written_and_reads_back() {
                 .tracks
                 .as_mut()
                 .unwrap()
-                .tracks
+                .track_lst
                 .as_mut()
-                .unwrap()[0]
+                .unwrap()
+                .track[0]
                 .label = Some("New".to_owned())
         }),
         ("track location", |p| {
@@ -1091,16 +1094,17 @@ fn each_picture_and_media_field_is_written_and_reads_back() {
                 .tracks
                 .as_mut()
                 .unwrap()
-                .display_location = Some(DisplayLocation::Slide)
+                .display_loc = Some(DisplayLocation::Slide)
         }),
         ("track removed", |p| {
             media_of(p, "Video embedded")
                 .tracks
                 .as_mut()
                 .unwrap()
-                .tracks
+                .track_lst
                 .as_mut()
                 .unwrap()
+                .track
                 .remove(1);
         }),
         ("tracks gone", |p| {
@@ -1108,14 +1112,16 @@ fn each_picture_and_media_field_is_written_and_reads_back() {
         }),
         ("tracks made", |p| {
             media_of(p, "Audio embedded").tracks = Some(TracksInfo {
-                display_location: Some(DisplayLocation::Media),
-                tracks: Some(vec![MediaTrack {
-                    id: Some("{3C8F3A2E-5B6D-4E7F-8A9B-0C1D2E3F4A5B}".to_owned()),
-                    label: Some("L".to_owned()),
-                    lang: None,
-                    embed: Some("rId9".to_owned()),
-                    link: None,
-                }]),
+                display_loc: Some(DisplayLocation::Media),
+                track_lst: Some(TrackList {
+                    track: vec![MediaTrack {
+                        id: Some("{3C8F3A2E-5B6D-4E7F-8A9B-0C1D2E3F4A5B}".to_owned()),
+                        label: Some("L".to_owned()),
+                        lang: None,
+                        embed: Some("rId9".to_owned()),
+                        link: None,
+                    }],
+                }),
             })
         }),
         ("p14 gone", |p| {
@@ -1155,14 +1161,14 @@ fn each_picture_and_media_field_is_written_and_reads_back() {
         }),
         ("wave", |p| {
             named_mut(p, "Wave").app.as_mut().unwrap().media =
-                Some(Media::WavAudioFile(EmbeddedWav {
+                Some(Media::WavAudioFile(EmbeddedWavAudioFile {
                     embed: Some("rId8".to_owned()),
                     name: None,
                 }))
         }),
         ("cd", |p| {
             named_mut(p, "CD").app.as_mut().unwrap().media = Some(Media::AudioCd(AudioCd {
-                start: Some(AudioCdTime {
+                st: Some(AudioCdTime {
                     track: Some(9),
                     time: None,
                 }),
@@ -1213,7 +1219,7 @@ fn each_picture_and_media_field_is_written_and_reads_back() {
                 panic!()
             };
             blip.effects.clear();
-            blip.compression = None;
+            blip.cstate = None;
         }),
         ("bullet to char", |p| {
             let body = named_mut(p, "Bullet").text_body.as_mut().unwrap();
@@ -1442,22 +1448,72 @@ fn the_every_reference_slide_written_from_its_model_validates() {
         "QuickTime",
     ] {
         let node = named_mut(&mut emptied, name);
+        node.locks = None;
         node.properties.picture = None;
         node.prefer_relative_resize = None;
         let app = node.app.as_mut().unwrap();
         app.media = None;
         app.media_extension = None;
     }
+    named_mut(&mut emptied, "Bullet")
+        .text_body
+        .as_mut()
+        .unwrap()
+        .paragraphs[0]
+        .properties
+        .as_mut()
+        .unwrap()
+        .bullet = None;
     let mut tree = XmlTree::parse(&bytes, SLIDE1, &xml).unwrap();
     patch_slide_part(
         &mut tree, SLIDE1, false, &rels, &emptied, &limits, &import, &xml,
     )
     .unwrap();
-    assert!(!String::from_utf8_lossy(&tree.to_bytes()).contains("p14:media"));
+    let emptied_text = String::from_utf8_lossy(&tree.to_bytes()).into_owned();
+    assert!(!emptied_text.contains("p14:media"));
+    for name in [
+        "svgBlip",
+        "oEmbedUrl",
+        "picLocksAutoForOEmbed",
+        "picLocks",
+        "noCrop",
+        "alphaBiLevel",
+    ] {
+        assert!(!emptied_text.contains(name), "{name} was not taken away");
+    }
     patch_slide_part(
         &mut tree, SLIDE1, false, &rels, part, &limits, &import, &xml,
     )
     .unwrap();
+    // Made again from the model: each of these from nothing, and every recolour effect,
+    // since a blip writes those and no others.
+    let written = String::from_utf8_lossy(&tree.to_bytes()).into_owned();
+    for name in [
+        "svgBlip",
+        "oEmbedUrl",
+        "picLocksAutoForOEmbed",
+        "picLocks",
+        "noCrop",
+        "alphaBiLevel",
+        "alphaCeiling",
+        "alphaFloor",
+        "alphaInv",
+        "alphaMod",
+        "alphaModFix",
+        "alphaRepl",
+        "biLevel",
+        "blur",
+        "clrChange",
+        "clrRepl",
+        "duotone",
+        "fillOverlay",
+        "grayscl",
+        "hsl",
+        "lum",
+        "tint",
+    ] {
+        assert!(written.contains(name), "{name} was not written");
+    }
     // A whole deck with the part so written.
     let mut edits = casual_slide_package::PartEdits::default();
     edits.replace(SLIDE1.to_owned(), tree.to_bytes());
@@ -1589,7 +1645,7 @@ fn an_edit_leaves_external_targets_byte_for_byte() {
         ordinal,
         |p| {
             media_of(p, "Video linked").trim = Some(MediaTrim {
-                start: Some("2".to_owned()),
+                st: Some("2".to_owned()),
                 end: None,
             })
         },

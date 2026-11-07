@@ -25,11 +25,11 @@ pub struct SvgBlip {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct OEmbed {
     /// `@oEmbedUrl`. Never fetched, and reported.
-    pub url: Option<String>,
+    pub o_embed_url: Option<String>,
     /// `@mediaType`.
     pub media_type: Option<String>,
     /// `@picLocksAutoForOEmbed`.
-    pub pic_locks_auto: Option<bool>,
+    pub pic_locks_auto_for_o_embed: Option<bool>,
     /// The `uri` of the `a:ext` holding it. No document gives the one to write, so it is
     /// kept with the value, and only a file can supply one.
     pub ext_uri: Option<String>,

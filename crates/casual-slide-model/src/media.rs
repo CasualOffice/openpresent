@@ -27,7 +27,7 @@ pub struct MediaFile {
 
 /// `a:CT_EmbeddedWAVAudioFile`, as `wavAudioFile` and as a hyperlink's `snd`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct EmbeddedWav {
+pub struct EmbeddedWavAudioFile {
     /// `@r:embed`, which the schema requires.
     pub embed: Option<String>,
     /// `@name`.
@@ -47,7 +47,7 @@ pub struct AudioCdTime {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct AudioCd {
     /// `st`.
-    pub start: Option<AudioCdTime>,
+    pub st: Option<AudioCdTime>,
     /// `end`.
     pub end: Option<AudioCdTime>,
 }
@@ -58,7 +58,7 @@ pub enum Media {
     /// `audioCd`.
     AudioCd(AudioCd),
     /// `wavAudioFile`.
-    WavAudioFile(EmbeddedWav),
+    WavAudioFile(EmbeddedWavAudioFile),
     /// `audioFile`.
     AudioFile(MediaFile),
     /// `videoFile`.
@@ -85,7 +85,7 @@ impl Media {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MediaTrim {
     /// `@st`.
-    pub start: Option<String>,
+    pub st: Option<String>,
     /// `@end`.
     pub end: Option<String>,
 }
@@ -131,13 +131,20 @@ pub struct MediaTrack {
     pub link: Option<String>,
 }
 
+/// `p173:CT_TrackList`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TrackList {
+    /// `track`.
+    pub track: Vec<MediaTrack>,
+}
+
 /// `p173:CT_TracksInfo`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TracksInfo {
     /// `@displayLoc`, which the schema requires.
-    pub display_location: Option<DisplayLocation>,
+    pub display_loc: Option<DisplayLocation>,
     /// `trackLst`. An absent list and an empty one differ.
-    pub tracks: Option<Vec<MediaTrack>>,
+    pub track_lst: Option<TrackList>,
 }
 
 /// `p14:CT_Media`, from `nvPr/p:extLst`: where PowerPoint keeps embedded media, its

@@ -219,7 +219,7 @@ pub struct Blip {
     /// `@r:link`. Never followed.
     pub link: Option<String>,
     /// `@cstate`.
-    pub compression: Option<BlipCompression>,
+    pub cstate: Option<BlipCompression>,
     /// The blip effects, in document order.
     pub effects: Vec<Effect>,
     /// `a14:imgProps`, from `extLst`.

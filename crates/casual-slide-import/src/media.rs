@@ -19,9 +19,9 @@
 use std::collections::BTreeMap;
 
 use casual_slide_model::media::{
-    AudioCd, AudioCdTime, ContentHash, EmbeddedWav, ExternalMedia, ImageDimensions, ImageFormat,
-    Media, MediaBookmark, MediaCatalog, MediaClass, MediaExtension, MediaFade, MediaFile,
-    MediaPart, MediaReferrer, MediaTrack, MediaTrim, TracksInfo,
+    AudioCd, AudioCdTime, ContentHash, EmbeddedWavAudioFile, ExternalMedia, ImageDimensions,
+    ImageFormat, Media, MediaBookmark, MediaCatalog, MediaClass, MediaExtension, MediaFade,
+    MediaFile, MediaPart, MediaReferrer, MediaTrack, MediaTrim, TrackList, TracksInfo,
 };
 use casual_slide_ooxml::{
     PresentationPackage, Relationship, TargetMode, part_name_key, resolve_internal,
@@ -52,6 +52,9 @@ pub struct MediaLimits {
     pub max_bookmarks: usize,
     /// `track` in one `trackLst`. The whole `p14:media` is left out over it. `CS-MED-0002`.
     pub max_tracks: usize,
+    /// Bytes one part may declare and still be read for a catalog, checked before anything
+    /// is inflated. `CS-MED-0003`.
+    pub max_part_bytes: u64,
     /// Parts listed by one catalog. `CS-MED-0008`.
     pub max_catalog_parts: usize,
     /// Bytes read by one catalog. It stops well short of the package's budget, which is
@@ -68,6 +71,7 @@ impl Default for MediaLimits {
         Self {
             max_bookmarks: 4_096,
             max_tracks: 1_024,
+            max_part_bytes: 256 << 20,
             max_catalog_parts: 100_000,
             max_catalog_bytes: 2 << 30,
             max_image_pixels: 1 << 28,
@@ -115,6 +119,21 @@ impl MediaFinding {
             Self::UnreadablePart => "CS-MED-0009",
         }
     }
+}
+
+/// Whether an extension's item is this one, named with its conventional prefix.
+pub(crate) fn is_extension(item: &Elem, qualified: &str) -> bool {
+    let Some((prefix, local)) = qualified.split_once(':') else {
+        return false;
+    };
+    let uris = match prefix {
+        "asvg" => ASVG,
+        "woe" => WOE,
+        "aif" => AIF,
+        "p173" => P173,
+        _ => return false,
+    };
+    item.is(uris, local)
 }
 
 /// What a relationship id should reach.
@@ -207,18 +226,41 @@ fn cd_time(r: &mut Reader<'_>, el: &Elem) -> Result<AudioCdTime, ImportError> {
     Ok(time)
 }
 
+fn read_audio_cd(r: &mut Reader<'_>, el: &Elem) -> Result<AudioCd, ImportError> {
+    r.finish(el);
+    let mut cd = AudioCd::default();
+    for kid in r.children(el)? {
+        if kid.in_namespace(ns::DML) && kid.local == "st" {
+            if cd.st.is_some() {
+                r.note(K::DuplicateElement, &kid, None);
+            } else {
+                cd.st = Some(cd_time(r, &kid)?);
+            }
+        } else if kid.in_namespace(ns::DML) && kid.local == "end" {
+            if cd.end.is_some() {
+                r.note(K::DuplicateElement, &kid, None);
+            } else {
+                cd.end = Some(cd_time(r, &kid)?);
+            }
+        } else {
+            r.retained(&kid);
+        }
+    }
+    Ok(cd)
+}
+
 /// `a:CT_EmbeddedWAVAudioFile`, as `wavAudioFile` and `snd`.
 pub(crate) fn read_wav(
     r: &mut Reader<'_>,
     rels: &[Relationship],
     el: &Elem,
-) -> Result<EmbeddedWav, ImportError> {
+) -> Result<EmbeddedWavAudioFile, ImportError> {
     let mut e = el.clone();
     let embed = read_rel(r, rels, &mut e, "embed", Expect::Wav);
     if embed.is_none() {
         r.note(K::MissingRequired, el, Some("r:embed"));
     }
-    let wav = EmbeddedWav {
+    let wav = EmbeddedWavAudioFile {
         embed,
         name: r.attr(&mut e, "name")?,
     };
@@ -236,56 +278,67 @@ pub(crate) fn is_media_element(el: &Elem) -> bool {
         )
 }
 
+/// The end of reading a clip's element: what is left of it is reported.
+fn media_file(
+    r: &mut Reader<'_>,
+    el: &Elem,
+    e: &Elem,
+    link: Option<String>,
+    content_type: Option<String>,
+) -> Result<MediaFile, ImportError> {
+    if link.is_none() {
+        r.note(K::MissingRequired, el, Some("r:link"));
+    }
+    r.finish(e);
+    report_kids(r, el)?;
+    Ok(MediaFile { link, content_type })
+}
+
+fn read_audio_file(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<MediaFile, ImportError> {
+    let mut e = el.clone();
+    let link = read_rel(r, rels, &mut e, "link", Expect::Clip);
+    let content_type = r.attr(&mut e, "contentType")?;
+    media_file(r, el, &e, link, content_type)
+}
+
+fn read_video_file(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<MediaFile, ImportError> {
+    let mut e = el.clone();
+    let link = read_rel(r, rels, &mut e, "link", Expect::Clip);
+    let content_type = r.attr(&mut e, "contentType")?;
+    media_file(r, el, &e, link, content_type)
+}
+
+fn read_quick_time_file(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<MediaFile, ImportError> {
+    let mut e = el.clone();
+    let link = read_rel(r, rels, &mut e, "link", Expect::Clip);
+    media_file(r, el, &e, link, None)
+}
+
 /// One element of `a:EG_Media`, which [`is_media_element`] has said it is.
 pub(crate) fn read_media(
     r: &mut Reader<'_>,
     rels: &[Relationship],
     el: &Elem,
 ) -> Result<Media, ImportError> {
-    match el.local.as_str() {
-        "audioCd" => {
-            r.finish(el);
-            let mut cd = AudioCd::default();
-            for kid in r.children(el)? {
-                let slot = match (kid.in_namespace(ns::DML), kid.local.as_str()) {
-                    (true, "st") => &mut cd.start,
-                    (true, "end") => &mut cd.end,
-                    _ => {
-                        r.retained(&kid);
-                        continue;
-                    }
-                };
-                if slot.is_some() {
-                    r.note(K::DuplicateElement, &kid, None);
-                } else {
-                    *slot = Some(cd_time(r, &kid)?);
-                }
-            }
-            Ok(Media::AudioCd(cd))
-        }
-        "wavAudioFile" => Ok(Media::WavAudioFile(read_wav(r, rels, el)?)),
-        local => {
-            let mut e = el.clone();
-            let link = read_rel(r, rels, &mut e, "link", Expect::Clip);
-            if link.is_none() {
-                r.note(K::MissingRequired, el, Some("r:link"));
-            }
-            let file = MediaFile {
-                link,
-                content_type: match local {
-                    "quickTimeFile" => None,
-                    _ => r.attr(&mut e, "contentType")?,
-                },
-            };
-            r.finish(&e);
-            report_kids(r, el)?;
-            Ok(match local {
-                "audioFile" => Media::AudioFile(file),
-                "videoFile" => Media::VideoFile(file),
-                _ => Media::QuickTimeFile(file),
-            })
-        }
-    }
+    Ok(match el.local.as_str() {
+        "audioCd" => Media::AudioCd(read_audio_cd(r, el)?),
+        "wavAudioFile" => Media::WavAudioFile(read_wav(r, rels, el)?),
+        "audioFile" => Media::AudioFile(read_audio_file(r, rels, el)?),
+        "videoFile" => Media::VideoFile(read_video_file(r, rels, el)?),
+        _ => Media::QuickTimeFile(read_quick_time_file(r, rels, el)?),
+    })
 }
 
 /// `extLst/p:ext/`, the items inside.
@@ -344,6 +397,23 @@ fn track(r: &mut Reader<'_>, rels: &[Relationship], el: &Elem) -> Result<MediaTr
     Ok(t)
 }
 
+fn read_track_lst(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<TrackList, ImportError> {
+    r.finish(el);
+    let mut list = TrackList::default();
+    for item in r.children(el)? {
+        if item.is(P173, "track") {
+            list.track.push(track(r, rels, &item)?);
+        } else {
+            r.retained(&item);
+        }
+    }
+    Ok(list)
+}
+
 fn tracks_info(
     r: &mut Reader<'_>,
     rels: &[Relationship],
@@ -351,26 +421,17 @@ fn tracks_info(
 ) -> Result<TracksInfo, ImportError> {
     let mut e = el.clone();
     let mut info = TracksInfo {
-        display_location: r.required(&mut e, "displayLoc", |_| true)?,
-        tracks: None,
+        display_loc: r.required(&mut e, "displayLoc", |_| true)?,
+        track_lst: None,
     };
     r.finish(&e);
     for kid in r.children(el)? {
         if !kid.is(P173, "trackLst") {
             r.retained(&kid);
-        } else if info.tracks.is_some() {
+        } else if info.track_lst.is_some() {
             r.note(K::DuplicateElement, &kid, None);
         } else {
-            r.finish(&kid);
-            let mut list = Vec::new();
-            for item in r.children(&kid)? {
-                if item.is(P173, "track") {
-                    list.push(track(r, rels, &item)?);
-                } else {
-                    r.retained(&item);
-                }
-            }
-            info.tracks = Some(list);
+            info.track_lst = Some(read_track_lst(r, rels, &kid)?);
         }
     }
     Ok(info)
@@ -411,7 +472,7 @@ pub(crate) fn read_media_extension(
         match kid.local.as_str() {
             "trim" => {
                 media.trim = Some(MediaTrim {
-                    start: time(r, &mut k, "st")?,
+                    st: time(r, &mut k, "st")?,
                     end: time(r, &mut k, "end")?,
                 });
                 r.finish(&k);
@@ -445,7 +506,7 @@ pub(crate) fn read_media_extension(
             }
             _ => {
                 for item in extension_items(r, &kid)? {
-                    if item.is(P173, "tracksInfo") && media.tracks.is_none() {
+                    if is_extension(&item, "p173:tracksInfo") && media.tracks.is_none() {
                         media.tracks = Some(tracks_info(r, rels, &item)?);
                     } else {
                         r.retained(&item);
@@ -710,10 +771,9 @@ pub struct CatalogFinding {
 /// reaching it, and each external target. Reads every media part it can within bounds,
 /// which charges the package's budget, so it is called when wanted and not by opening.
 ///
-/// The read is `read_xml_part`, the only capped read `PresentationPackage` offers, so a
-/// part over `OoxmlLimits::max_xml_part_bytes` is refused from its declared size with
-/// nothing inflated. The name is wrong for this and the bound is right. The bytes go only
-/// to the hash and the header sniff, and are dropped.
+/// A part declaring more than [`MediaLimits::max_part_bytes`] is refused from its declared
+/// size, with nothing inflated. The bytes go only to the hash and the header sniff, and
+/// are dropped.
 pub fn catalog_media(
     package: &mut PresentationPackage,
     limits: &MediaLimits,
@@ -803,7 +863,7 @@ pub fn catalog_media(
             findings.push(note(MediaFinding::PartOverCap));
             continue;
         }
-        let bytes = match package.read_xml_part(&entry.part) {
+        let bytes = match package.read_part_capped(&entry.part, limits.max_part_bytes) {
             Ok(bytes) => bytes,
             Err(err) => {
                 findings.push(note(match err.code() {

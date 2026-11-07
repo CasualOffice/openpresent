@@ -234,7 +234,7 @@ pub struct Hyperlink {
     /// `@endSnd`.
     pub end_sound: Option<bool>,
     /// `snd`.
-    pub sound: Option<crate::media::EmbeddedWav>,
+    pub sound: Option<crate::media::EmbeddedWavAudioFile>,
 }
 
 /// `a:CT_NonVisualDrawingProps`, `cNvPr`.

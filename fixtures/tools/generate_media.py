@@ -163,13 +163,13 @@ def hostile():
     bookmark = '<p14:bmk name="b" time="1"/>'
     yield ("hostile/media-limit-bookmarks.bin",
            with_slide(media_pic(2, "b", p14_media('r:embed="rId5"', f'<p14:bmkLst>{bookmark * 4097}</p14:bmkLst>'))),
-           "open CS-FND-0001 CS-FND-0007")
+           "open CS-FND-0001")
     track = '<p173:track id="{1C8F3A2E-5B6D-4E7F-8A9B-0C1D2E3F4A5B}" label="t"/>'
     yield ("hostile/media-limit-tracks.bin",
            with_slide(media_pic(2, "t", p14_media('r:embed="rId5"', (
                '<p14:extLst><p:ext uri="{3AFAAA56-56D3-431D-BCD4-E75A35582382}">'
                f'<p173:tracksInfo xmlns:p173="{P173}" displayLoc="slide"><p173:trackLst>{track * 1025}</p173:trackLst></p173:tracksInfo></p:ext></p14:extLst>')))),
-           "open CS-FND-0001 CS-FND-0007")
+           "open CS-FND-0001")
     # Every wrong thing a reference can be, in one slide. Each is reported and none refuses.
     bad = (media_pic(2, "wrong type", '<a:videoFile r:link="rId2" contentType=""/><a:audioFile r:link="rId4"/>') +
            media_pic(3, "dangling", '<a:audioFile r:link="rId404"/>' + p14_media('r:embed="rId404" r:link="rId405"', '<p14:trim st="soon" end="-"/><p14:fade in="1e9"/><p14:bmkLst><p14:bmk/><p14:wat/></p14:bmkLst><p14:wat/>')) +
@@ -183,7 +183,7 @@ def hostile():
                                  f'<woe:oembed xmlns:woe="{WOE}"/><aif:imageFormula xmlns:aif="{AIF}" x="1"/></a:ext></a:extLst></a:blip>'),
                fill_rest='<a:srcRect l="x" t="999999999"/><a:tile sx="z"/><a:stretch/>') +
            pic(10, "no fallback", blip=f'<a:blip><a:extLst><a:ext uri="y"><asvg:svgBlip xmlns:asvg="{ASVG}" r:embed="rId3"/></a:ext></a:extLst></a:blip>'))
-    yield "hostile/media-bad-references.bin", with_slide(bad), "open CS-FND-0001 CS-FND-0007"
+    yield "hostile/media-bad-references.bin", with_slide(bad), "open CS-FND-0001"
 
     # Small files that claim enormous images, for SEC-C01. Header only, so not an image.
     bomb_png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + (0x7FFFFFFF).to_bytes(4, "big") * 2 + b"\x08\x06\x00\x00\x00"
@@ -211,6 +211,6 @@ def hostile():
 
 def fixtures():
     """(relative path, bytes, manifest expectation), in a fixed order."""
-    yield "generated/media-every-reference.pptx", zipped(everything_deck()), "open CS-FND-0001 CS-FND-0007"
+    yield "generated/media-every-reference.pptx", zipped(everything_deck()), "open CS-FND-0001"
     yield "generated/svg-with-script.pptx", zipped(svg_deck()), "open"
     yield from hostile()

@@ -473,12 +473,9 @@ impl Patch<'_, '_> {
         {
             let el = self.child(container, ns::PML, a.kind.non_visual_properties())?;
             let el = self.need(el, "the kind's non-visual properties")?;
-            self.w.attr(
-                &el,
-                "preferRelativeResize",
-                b.prefer_relative_resize.as_ref(),
-                a.prefer_relative_resize.as_ref(),
-            )?;
+            if a.kind == NodeKind::Picture {
+                return self.c_nv_pic_pr(&el, b, a);
+            }
             self.w
                 .attr(&el, "txBox", b.text_box.as_ref(), a.text_box.as_ref())?;
             let lock = a.kind.lock_element();
@@ -504,6 +501,27 @@ impl Patch<'_, '_> {
             let el = self.need(el, "nvPr")?;
             self.app(&el, ba, aa)?;
         }
+        Ok(())
+    }
+
+    fn c_nv_pic_pr(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
+        self.w.attr(
+            el,
+            "preferRelativeResize",
+            b.prefer_relative_resize.as_ref(),
+            a.prefer_relative_resize.as_ref(),
+        )?;
+        sync_ordered(
+            &mut self.w,
+            el,
+            ns::DML,
+            "a",
+            &["picLocks", "extLst"],
+            "picLocks",
+            b.locks.as_ref(),
+            a.locks.as_ref(),
+            pic_locks,
+        )?;
         Ok(())
     }
 
@@ -718,6 +736,32 @@ fn patch_text_styles(
     Ok(())
 }
 
+/// `AG_Locking`, as any node has it, and `noCrop`, which only a picture does.
+fn pic_locks(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&Locks>,
+    a: &Locks,
+) -> std::result::Result<(), ExportError> {
+    w.attr(
+        el,
+        "noCrop",
+        b.and_then(|b| b.no_crop.as_ref()),
+        a.no_crop.as_ref(),
+    )?;
+    let without = |l: &Locks| Locks {
+        no_crop: None,
+        ..*l
+    };
+    patch_locks(
+        w,
+        el,
+        NodeKind::Picture,
+        b.map(without).as_ref(),
+        &without(a),
+    )
+}
+
 fn patch_locks(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -785,11 +829,7 @@ pub(crate) fn patch_hyperlink(
     w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())?;
     if b.sound != a.sound {
         let holder = |link: &Hyperlink| {
-            crate::drawing::Node::a("hlink").opt(
-                link.sound
-                    .as_ref()
-                    .map(|s| crate::media::wav_node("snd", s)),
-            )
+            crate::drawing::Node::a("hlink").opt(link.sound.as_ref().map(crate::media::snd))
         };
         crate::drawing::patch(w, el, Some(&holder(b)), &holder(a))?;
     }

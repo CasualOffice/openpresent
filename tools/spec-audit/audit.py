@@ -77,7 +77,7 @@ XML_NS = "http://www.w3.org/XML/1998/namespace"
 CRATES = {"I": "casual-slide-import", "E": "casual-slide-export", "M": "casual-slide-model"}
 RESOLVER_CRATE = "casual-slide-ooxml"
 GENERATED_SOURCES = ("schema_names.rs",)
-TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE")}
+TIERS = {"1A": ("DSIG", "PKG", "SIMPLE", "MCE"), "1B": ("PRES", "VIEW"), "1C": ("COLOR", "THEME"), "1D": ("SHAPE", "SLIDE"), "1H": ("PIC", "MEDIA")}
 LEAF_KINDS = ("element", "attribute", "root", "rootattr", "value")
 # Model fields too generic to say anything about which attribute they hold.
 GENERIC_FIELDS = frozenset("id name type val value uri ref kind data text index key".split())
@@ -86,6 +86,10 @@ NEVER_EARNED = frozenset(("extLst",))
 # Schema type to model struct, where the two are named differently. Hand-kept, and read
 # from crates/casual-slide-model/src. A type with no struct here or by name earns no M.
 OWNER_STRUCTS = {
+    "AG_Blob": "Blip",
+    "CT_AudioFile": "MediaFile", "CT_VideoFile": "MediaFile", "CT_QuickTimeFile": "MediaFile",
+    "CT_Track": "MediaTrack",
+    "CT_NonVisualPictureProperties": "ShapeNode",
     "CT_Properties": "AppProperties",
     "AG_Locking": "Locks", "CT_ShapeLocking": "Locks", "CT_GroupLocking": "Locks", "CT_ConnectorLocking": "Locks",
     "CT_PictureLocking": "Locks", "CT_GraphicalObjectFrameLocking": "Locks", "CT_ContentPartLocking": "Locks",
@@ -138,6 +142,10 @@ KNOWN_PREFIXES = {
     "p15": "http://schemas.microsoft.com/office/powerpoint/2012/main",
     "a14": "http://schemas.microsoft.com/office/drawing/2010/main",
     "a16": "http://schemas.microsoft.com/office/drawing/2014/main",
+    "asvg": "http://schemas.microsoft.com/office/drawing/2016/SVG/main",
+    "woe": "http://schemas.microsoft.com/office/word/2020/oembed",
+    "aif": "http://schemas.microsoft.com/office/drawing/2022/imageformula",
+    "p173": "http://schemas.microsoft.com/office/powerpoint/2017/3/main",
 }
 
 

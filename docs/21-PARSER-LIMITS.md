@@ -54,7 +54,7 @@ the central directory, before anything is inflated.
 | Declared size | as declared | A part may not produce more bytes than its entry declares (`SEC-P02`) | CS-PKG-0003 | Partial: removing our bound leaves tests green, because the `zip` crate also enforces it (`SEC-017`) |
 | Whole-package budget | `max_total_uncompressed` | Every read is charged; once spent, reads refuse. **Cumulative over the package's life**, so a long editing session can exhaust it on a legitimate deck (`PKG-01`) | CS-PKG-0003 | Tested |
 | `MAX_UP_FRONT` | `1 << 20` | Capacity allocated before decompressing, whatever the entry declares, so a forged size cannot abort a WebAssembly instance (`SEC-P04`). Nothing proves `read_part` uses it (`SEC-017`) | none: allocation only | Partial |
-| `read_part_capped` | caller's `max` | A caller-chosen ceiling for one part, refused on the declaration with nothing inflated. `PresentationPackage::read_part` does not use it, so optional parts are bounded only by the budget (`PKG-04`) | CS-PKG-0009 | Tested |
+| `read_part_capped` | caller's `max` | A caller-chosen ceiling for one part, refused on the declaration with nothing inflated. `PresentationPackage::read_part_capped` exposes it for binary parts. `PresentationPackage::read_part` does not use it, so optional parts are bounded only by the budget (`PKG-04`) | CS-PKG-0009 | Tested |
 
 ## XML and graph: `OoxmlLimits`
 
@@ -185,12 +185,13 @@ Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fi
 | --- | --- | --- | --- | --- |
 | `max_bookmarks` | `4_096` | `bmk` in one `bmkLst`. Over it, the whole `p14:media` is left out, reported, and kept in the tree | CS-MED-0002 | Tested; `hostile/media-limit-bookmarks.bin`, at the bound and one past |
 | `max_tracks` | `1_024` | `track` in one `trackLst`, the same way | CS-MED-0002 | Tested; `hostile/media-limit-tracks.bin`, at the bound and one past |
+| `max_part_bytes` | `256 << 20` | Bytes one part may declare and still be read for a catalog, refused from the declaration with nothing inflated | CS-MED-0003 | Tested, with the bound lowered: `a_catalog_stops_at_its_bounds_and_says_so`, `a_binary_part_over_the_ceiling_is_refused_with_nothing_inflated` |
 | `max_catalog_parts` | `100_000` | Parts one catalog lists | CS-MED-0008 | Tested, with the bound lowered: the package's `max_entries` is under it by default |
 | `max_catalog_bytes` | `2 << 30` | Bytes one catalog reads, half the package's budget, which is cumulative (`PKG-01`). Checked between parts, so one part can overshoot by its size, itself capped below | CS-MED-0003 | Tested, with the bound lowered |
 | `max_image_pixels` | `1 << 28` | Pixels an image may declare before it is reported. Reported and not refused: nothing here decodes; the renderer in Tier 2E must check it first (`SEC-C01`) | CS-MED-0004 | Tested; `hostile/media-image-bomb.bin`, at the bound and one past |
 | `MAX_HEADER_SCAN` | `1 << 20` | Bytes looked through for a JPEG's size. Past it, the size stays unknown | none: left unknown | Tested in part: `hostile/media-lying-images.bin` covers cut and looping headers. Nothing crosses the bound itself |
 
-A part in a catalog is read by `read_xml_part`, the only capped read `PresentationPackage` offers, so one over `max_xml_part_bytes` (256 MiB) is refused from its declared size, with nothing inflated, as CS-MED-0003.
+A part in a catalog is read by `PresentationPackage::read_part_capped`, which refuses as `CS-PKG-0009` from the declared size; the catalog reports that as CS-MED-0003.
 
 ## Export
 

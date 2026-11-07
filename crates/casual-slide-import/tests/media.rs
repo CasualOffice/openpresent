@@ -15,7 +15,8 @@ use casual_slide_import::properties::{Findings, ImportFindingKind as K, ImportLi
 use casual_slide_import::slide::{SlideLimits, import_slide_part, import_slide_parts};
 use casual_slide_model::fill::{Blip, BlipFillMode, Fill};
 use casual_slide_model::media::{
-    AudioCd, AudioCdTime, DisplayLocation, EmbeddedWav, ImageFormat, Media, MediaClass, MediaFile,
+    AudioCd, AudioCdTime, DisplayLocation, EmbeddedWavAudioFile, ImageFormat, Media, MediaClass,
+    MediaFile,
 };
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{NodeKind, ShapeNode};
@@ -23,6 +24,8 @@ use casual_slide_model::slide::{SlideKind, SlidePart};
 use casual_slide_model::text::Bullet;
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, Relationship, XmlTree};
 
+/// How a name outside the schemas is reported, as it may be document text.
+const UNKNOWN_NAME: &str = "(unknown)";
 const SLIDE: &str = "ppt/slides/slide1.xml";
 const EVERYTHING: &str = "generated/media-every-reference.pptx";
 const EXT: &str = r#"<a:extLst><a:ext uri="{00000000-0000-0000-0000-000000000001}"/></a:extLst>"#;
@@ -519,7 +522,7 @@ fn every_enumerated_value_reads_as_itself() {
                 .blip
                 .as_ref()
                 .unwrap()
-                .compression;
+                .cstate;
             assert_eq!(got.map(|c| c.to_lexical()).as_deref(), Some(value));
         } else {
             let read = read_xml(
@@ -532,7 +535,7 @@ fn every_enumerated_value_reads_as_itself() {
             );
             let node = named(&read.part, "Video embedded");
             let info = node.app.as_ref().unwrap().media_extension.as_ref().unwrap();
-            let got = info.tracks.as_ref().unwrap().display_location.unwrap();
+            let got = info.tracks.as_ref().unwrap().display_loc.unwrap();
             assert_eq!(got.to_lexical(), value);
         }
     }
@@ -580,7 +583,7 @@ fn a_picture_reads_its_references_crop_tile_stretch_and_recolour() {
     );
     let oembed = blip.oembed.as_ref().unwrap();
     assert_eq!(oembed.media_type.as_deref(), Some("video"));
-    assert_eq!(oembed.pic_locks_auto, Some(true));
+    assert_eq!(oembed.pic_locks_auto_for_o_embed, Some(true));
 
     let tiled = named(&read.part, "Tiled");
     assert_eq!(picture_blip(tiled).link.as_deref(), Some("rId14"));
@@ -612,7 +615,7 @@ fn audio_and_video_read_embedded_and_linked_with_trim_bookmarks_tracks_and_poste
     let m = app.media_extension.as_ref().unwrap();
     assert_eq!(m.embed.as_deref(), Some("rId5"));
     let trim = m.trim.as_ref().unwrap();
-    assert_eq!(trim.start.as_deref(), Some("1000.5"));
+    assert_eq!(trim.st.as_deref(), Some("1000.5"));
     assert_eq!(trim.end.as_deref(), Some("2000"));
     let fade = m.fade.as_ref().unwrap();
     assert_eq!(fade.fade_in.as_deref(), Some("300"));
@@ -622,8 +625,8 @@ fn audio_and_video_read_embedded_and_linked_with_trim_bookmarks_tracks_and_poste
     assert_eq!(marks[1].name.as_deref(), Some("Two"));
     assert_eq!(marks[1].time.as_deref(), Some("200.25"));
     let tracks = m.tracks.as_ref().unwrap();
-    assert_eq!(tracks.display_location, Some(DisplayLocation::Media));
-    let list = tracks.tracks.as_ref().unwrap();
+    assert_eq!(tracks.display_loc, Some(DisplayLocation::Media));
+    let list = &tracks.track_lst.as_ref().unwrap().track;
     assert_eq!(list[0].embed.as_deref(), Some("rId9"));
     assert_eq!(list[0].lang.as_deref(), Some("en-US"));
     assert_eq!(list[1].link.as_deref(), Some("rId10"));
@@ -646,7 +649,7 @@ fn audio_and_video_read_embedded_and_linked_with_trim_bookmarks_tracks_and_poste
     ));
     assert_eq!(
         named(&read.part, "Wave").app.as_ref().unwrap().media,
-        Some(Media::WavAudioFile(EmbeddedWav {
+        Some(Media::WavAudioFile(EmbeddedWavAudioFile {
             embed: Some("rId8".to_owned()),
             name: Some("chime.wav".to_owned()),
         }))
@@ -654,7 +657,7 @@ fn audio_and_video_read_embedded_and_linked_with_trim_bookmarks_tracks_and_poste
     assert_eq!(
         named(&read.part, "CD").app.as_ref().unwrap().media,
         Some(Media::AudioCd(AudioCd {
-            start: Some(AudioCdTime {
+            st: Some(AudioCdTime {
                 track: Some(1),
                 time: Some(2)
             }),
@@ -697,7 +700,7 @@ fn a_picture_bullet_holds_the_whole_blip() {
     };
     assert_eq!(blip.embed.as_deref(), Some("rId2"));
     assert_eq!(blip.effects.len(), 1);
-    assert_eq!(blip.compression.unwrap().to_lexical(), "email");
+    assert_eq!(blip.cstate.unwrap().to_lexical(), "email");
     assert_eq!(blip.svg.as_ref().unwrap().embed.as_deref(), Some("rId3"));
 }
 
@@ -789,7 +792,7 @@ fn every_wrong_reference_is_reported_and_none_refuses() {
     assert!(f.has(K::DanglingRelationship, "audioFile"));
     assert!(f.has(K::DanglingRelationship, "media"));
     assert!(f.has(K::MalformedValue, "trim"));
-    assert!(f.has(K::RetainedElement, "wat"));
+    assert!(f.has(K::RetainedElement, UNKNOWN_NAME));
     // `r:embed` reaching outside the package is reported twice over.
     assert!(f.has(K::WrongRelationship, "wavAudioFile"));
     assert!(f.has(K::WrongRelationship, "media"));
@@ -901,7 +904,7 @@ fn nothing_a_media_element_does_not_model_goes_unreported() {
         ),
         &rels,
     );
-    assert!(read.findings.has(K::RetainedElement, "foreign"));
+    assert!(read.findings.has(K::RetainedElement, UNKNOWN_NAME));
     assert!(
         named(&read.part, "Video embedded")
             .app
@@ -1212,13 +1215,20 @@ fn a_target_that_is_not_there_is_reported() {
 /// inflated, and by the catalog's own byte budget.
 #[test]
 fn a_catalog_stops_at_its_bounds_and_says_so() {
-    let limits = OoxmlLimits {
-        max_xml_part_bytes: 8192,
-        ..OoxmlLimits::default()
-    };
-    let mut pkg =
-        PresentationPackage::open(read_fixture("real/z14230715-ddi-ko.pptx"), limits).unwrap();
-    let (catalog, findings) = catalog_media(&mut pkg, &MediaLimits::default());
+    let mut pkg = PresentationPackage::open(
+        read_fixture("real/z14230715-ddi-ko.pptx"),
+        OoxmlLimits::default(),
+    )
+    .unwrap();
+    let before = pkg.consumed();
+    let (catalog, findings) = catalog_media(
+        &mut pkg,
+        &MediaLimits {
+            max_part_bytes: 0,
+            ..MediaLimits::default()
+        },
+    );
+    assert_eq!(pkg.consumed(), before, "refused with nothing inflated");
     let over = codes(&findings, MediaFinding::PartOverCap);
     assert!(!over.is_empty(), "the deck has a picture larger than this");
     for name in &over {

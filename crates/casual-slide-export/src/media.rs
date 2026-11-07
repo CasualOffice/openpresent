@@ -15,7 +15,8 @@ use casual_slide_import::properties::{Elem, ImportLimits, ns};
 use casual_slide_import::slide::SlideLimits;
 use casual_slide_model::fill::{Blip, Fill};
 use casual_slide_model::media::{
-    AudioCdTime, EmbeddedWav, Media, MediaCatalog, MediaExtension, MediaFile, TracksInfo,
+    AudioCd, AudioCdTime, EmbeddedWavAudioFile, Media, MediaCatalog, MediaExtension, MediaFile,
+    MediaTrack, TrackList, TracksInfo,
 };
 use casual_slide_model::shape::{AppNonVisual, ObjectId, ShapeNode};
 use casual_slide_model::slide::SlidePart;
@@ -31,34 +32,60 @@ const MEDIA_EXTENSION_URI: &str = "{DAA4B4D4-6D71-4841-9C94-3DE7FCFB9230}";
 /// `MS-PPTX` "TracksInfo Extensions".
 const TRACKS_EXTENSION_URI: &str = "{3AFAAA56-56D3-431D-BCD4-E75A35582382}";
 
-fn file_node(local: &'static str, f: &MediaFile) -> Node {
-    Node::a(local)
+fn audio_file(f: &MediaFile) -> Node {
+    Node::a("audioFile")
         .rel("link", f.link.as_ref())
         .lex("contentType", f.content_type.as_ref())
 }
 
-fn cd_time_node(local: &'static str, t: &AudioCdTime) -> Node {
-    Node::a(local)
-        .lex("track", t.track.as_ref())
+fn video_file(f: &MediaFile) -> Node {
+    Node::a("videoFile")
+        .rel("link", f.link.as_ref())
+        .lex("contentType", f.content_type.as_ref())
+}
+
+fn quick_time_file(f: &MediaFile) -> Node {
+    Node::a("quickTimeFile")
+        .rel("link", f.link.as_ref())
+        .lex("contentType", f.content_type.as_ref())
+}
+
+fn cd_time(node: Node, t: &AudioCdTime) -> Node {
+    node.lex("track", t.track.as_ref())
         .lex("time", t.time.as_ref())
 }
 
-/// `a:CT_EmbeddedWAVAudioFile`, as `wavAudioFile` and `snd`.
-pub(crate) fn wav_node(local: &'static str, w: &EmbeddedWav) -> Node {
-    Node::a(local)
-        .rel("embed", w.embed.as_ref())
+fn st(t: &AudioCdTime) -> Node {
+    cd_time(Node::a("st"), t)
+}
+
+fn audio_cd(cd: &AudioCd) -> Node {
+    Node::a("audioCd")
+        .opt(cd.st.as_ref().map(st))
+        .opt(cd.end.as_ref().map(|t| cd_time(Node::a("end"), t)))
+}
+
+fn wav(node: Node, w: &EmbeddedWavAudioFile) -> Node {
+    node.rel("embed", w.embed.as_ref())
         .lex("name", w.name.as_ref())
+}
+
+fn wav_audio_file(w: &EmbeddedWavAudioFile) -> Node {
+    wav(Node::a("wavAudioFile"), w)
+}
+
+/// A hyperlink's sound.
+pub(crate) fn snd(w: &EmbeddedWavAudioFile) -> Node {
+    wav(Node::a("snd"), w)
 }
 
 fn media_node(m: &Media) -> Node {
     match m {
-        Media::AudioCd(cd) => Node::a("audioCd")
-            .opt(cd.start.as_ref().map(|t| cd_time_node("st", t)))
-            .opt(cd.end.as_ref().map(|t| cd_time_node("end", t))),
-        Media::WavAudioFile(w) => wav_node("wavAudioFile", w),
-        Media::AudioFile(f) => file_node("audioFile", f),
-        Media::VideoFile(f) => file_node("videoFile", f),
-        Media::QuickTimeFile(f) => file_node("quickTimeFile", f),
+        Media::AudioCd(cd) => audio_cd(cd),
+        Media::WavAudioFile(w) => wav_audio_file(w),
+        Media::AudioFile(f) => audio_file(f),
+        Media::VideoFile(f) => video_file(f),
+        Media::QuickTimeFile(f) => quick_time_file(f),
     }
 }
 
@@ -66,7 +93,7 @@ fn media_node(m: &Media) -> Node {
 fn extension_node(m: &MediaExtension) -> Node {
     let trim = m.trim.as_ref().map(|t| {
         Node::new(Space::P14, "trim")
-            .lex("st", t.start.as_ref())
+            .lex("st", t.st.as_ref())
             .lex("end", t.end.as_ref())
     });
     let fade = m.fade.as_ref().map(|f| {
@@ -89,20 +116,23 @@ fn extension_node(m: &MediaExtension) -> Node {
         .opt(bookmarks)
 }
 
-fn tracks_node(t: &TracksInfo) -> Node {
-    let list = t.tracks.as_ref().map(|list| {
-        Node::new(Space::P173, "trackLst").list(list.iter().map(|t| {
-            Node::new(Space::P173, "track")
-                .lex("id", t.id.as_ref())
-                .lex("label", t.label.as_ref())
-                .lex("lang", t.lang.as_ref())
-                .rel("embed", t.embed.as_ref())
-                .rel("link", t.link.as_ref())
-        }))
-    });
-    Node::new(Space::P173, "tracksInfo")
-        .lex("displayLoc", t.display_location.as_ref())
-        .opt(list)
+fn track(t: &MediaTrack) -> Node {
+    Node::extension("p173:track")
+        .lex("id", t.id.as_ref())
+        .lex("label", t.label.as_ref())
+        .lex("lang", t.lang.as_ref())
+        .rel("embed", t.embed.as_ref())
+        .rel("link", t.link.as_ref())
+}
+
+fn track_lst(list: &TrackList) -> Node {
+    Node::extension("p173:trackLst").list(list.track.iter().map(track))
+}
+
+fn tracks_info(t: &TracksInfo) -> Node {
+    Node::extension("p173:tracksInfo")
+        .lex("displayLoc", t.display_loc.as_ref())
+        .opt(t.track_lst.as_ref().map(track_lst))
 }
 
 /// Where an element keeps its extension list. `nvPr` has `p:extLst`. `p14:media` has
@@ -199,7 +229,7 @@ fn patch_extension(
 /// arrived without it is reported on reading, and left as it is until someone edits it.
 fn media_is_complete(media: &Media) -> bool {
     match media {
-        Media::AudioCd(cd) => [cd.start, cd.end]
+        Media::AudioCd(cd) => [cd.st, cd.end]
             .iter()
             .all(|t| t.is_some_and(|t| t.track.is_some())),
         Media::WavAudioFile(w) => w.embed.is_some(),
@@ -208,11 +238,11 @@ fn media_is_complete(media: &Media) -> bool {
 }
 
 fn tracks_are_complete(info: &TracksInfo) -> bool {
-    info.display_location.is_some()
+    info.display_loc.is_some()
         && info
-            .tracks
+            .track_lst
             .iter()
-            .flatten()
+            .flat_map(|l| &l.track)
             .all(|t| t.id.is_some() && t.label.is_some())
 }
 
@@ -260,8 +290,8 @@ pub(crate) fn patch_app_media(
         return Ok(());
     };
     let (bt, at) = (
-        be.and_then(|m| m.tracks.as_ref()).map(tracks_node),
-        after.tracks.as_ref().map(tracks_node),
+        be.and_then(|m| m.tracks.as_ref()).map(tracks_info),
+        after.tracks.as_ref().map(tracks_info),
     );
     patch_extension(
         w,
@@ -468,8 +498,8 @@ fn retarget_node(node: &mut ShapeNode, old: &str, new: &str) -> Result<usize, ()
             for t in m
                 .tracks
                 .iter_mut()
-                .flat_map(|t| t.tracks.iter_mut())
-                .flatten()
+                .flat_map(|t| t.track_lst.iter_mut())
+                .flat_map(|l| l.track.iter_mut())
             {
                 count += slot(&mut t.embed);
                 count += slot(&mut t.link);
