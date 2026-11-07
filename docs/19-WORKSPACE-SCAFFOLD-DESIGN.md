@@ -13,11 +13,13 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
  anim ─────────────▶ model
  transaction ──────▶ model
  export ───────────▶ ooxml, model, package
- import ───────────▶ ooxml, model
+ import ───────────▶ ooxml, model, geometry
  style, chart ─▶ model
  ooxml ────────────▶ package
  model, text, package, geometry: no internal dependencies
 ```
+
+`-import` depends on `-geometry` from Tier 1E (`GEO-04`), to check a preset's token and adjust names and to compile custom geometry as it is read. It evaluates nothing at a size. `-geometry` parses no XML and depends on nothing.
 
 `-style` exists from Tier 1D and depends on `-model` alone; its tests read fixtures through `-import` and `-ooxml` as dev-dependencies only, which the DAG allows because nothing ships them. `-layout` is its first product consumer (Phase 2).
 

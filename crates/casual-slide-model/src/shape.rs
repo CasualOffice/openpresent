@@ -2,8 +2,8 @@
 //! transform, locks, non-visual properties, hyperlinks and actions, for `sp`,
 //! `grpSp`, `cxnSp`, `pic`, `graphicFrame` and `contentPart`.
 //!
-//! What a node holds beyond this (geometry, fills, lines, effects, text bodies,
-//! table and chart content, the picture's `blipFill`) stays in the part's tree,
+//! Geometry, fills, lines, effects and 3D are in [`ShapeNode::properties`]. What a node
+//! holds beyond those (text bodies, table and chart content) stays in the part's tree,
 //! preserved but not modelled, and is named in the import report. `Option` means
 //! the file did not state a value, or stated one that could not be used; a schema
 //! default is never filled in here. Effective values come from `casual-slide-style`.
@@ -560,6 +560,8 @@ pub struct ShapeNode {
     pub bw_mode: Option<BlackWhiteMode>,
     /// `@useBgFill`, shapes only.
     pub use_bg_fill: Option<bool>,
+    /// Geometry, fill, line, effects and 3D: Tier 1E.
+    pub properties: crate::drawing::ShapeProperties,
     /// `a:graphic/a:graphicData/@uri`, graphic frames only: what the frame holds.
     pub graphic_uri: Option<String>,
     /// `@r:id`, content parts only.
@@ -583,6 +585,7 @@ impl ShapeNode {
             transform: None,
             bw_mode: None,
             use_bg_fill: None,
+            properties: crate::drawing::ShapeProperties::default(),
             graphic_uri: None,
             rel_id: None,
             children: Vec::new(),

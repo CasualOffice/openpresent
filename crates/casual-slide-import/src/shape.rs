@@ -1,9 +1,10 @@
 //! Read a shape tree from an [`XmlTree`]: `sp`, `grpSp`, `cxnSp`, `pic`,
 //! `graphicFrame` and `contentPart`, each a node with an [`ObjectId`].
 //!
-//! Each node's identity, transform, locks, non-visual properties and hyperlinks
-//! are read. Everything else a node holds (geometry, fills, lines, effects, text,
-//! the frame's graphic data) stays in the tree and is reported as retained.
+//! Each node's identity, transform, locks, non-visual properties and hyperlinks are
+//! read here; geometry, fills, lines, effects and 3D by [`crate::drawing`]. Everything
+//! else a node holds (text, the frame's graphic data) stays in the tree and is reported
+//! as retained.
 //!
 //! The walk follows the input to a depth of [`SlideLimits::max_group_depth`] and
 //! no further, and counts nodes against [`SlideLimits::max_shapes_per_part`]. An
@@ -21,6 +22,7 @@ use casual_slide_model::shape::{
 };
 use casual_slide_ooxml::{AlternateResolution, Branch, MARKUP_COMPATIBILITY, Relationship};
 
+use crate::drawing::{Ctx, DrawingLimits, note_dag_siblings, read_blip_fill};
 use crate::presentation::read_positive_size;
 use crate::properties::{Elem, ImportFindingKind as K, Reader, ns};
 use crate::slide::{SlideError, SlideLimits};
@@ -172,9 +174,10 @@ impl ShapeReader<'_, '_, '_> {
                         "spPr"
                     ) | (NodeKind::Group, "grpSpPr")
                         | (NodeKind::GraphicFrame, "xfrm" | "graphic")
+                        | (NodeKind::Picture, "blipFill")
                 );
             if !modelled {
-                // `style`, `txBody`, `blipFill`, `extLst` and the unknown.
+                // `style`, `txBody`, `extLst` and the unknown.
                 self.r.retained(&child);
                 continue;
             }
@@ -184,6 +187,10 @@ impl ShapeReader<'_, '_, '_> {
             }
             match name {
                 "spPr" | "grpSpPr" => self.properties(&child, &mut n)?,
+                "blipFill" => {
+                    let fill = read_blip_fill(self.r, self.rels, DrawingLimits::default(), &child)?;
+                    n.properties.picture = fill.map(Box::new);
+                }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
                 "graphic" => n.graphic_uri = self.graphic(&child)?,
                 _ => self.non_visual(&child, &mut n)?,
@@ -483,10 +490,14 @@ impl ShapeReader<'_, '_, '_> {
         n.bw_mode = self.r.attr(&mut el, "bwMode")?;
         self.r.finish(&el);
         let mut seen = false;
+        let mut slots = HashSet::new();
+        let group = n.kind == NodeKind::Group;
         for child in self.r.children(&el)? {
             if !child.is(ns::DML, "xfrm") {
-                // Geometry, fill, line, effects, 3D and `extLst`: Tier 1E.
-                self.r.retained(&child);
+                let mut drawing = Ctx::new(&mut *self.r, self.rels, DrawingLimits::default());
+                if !drawing.property(&child, &mut n.properties, group, &mut slots)? {
+                    self.r.retained(&child);
+                }
                 continue;
             }
             if seen {
@@ -496,6 +507,7 @@ impl ShapeReader<'_, '_, '_> {
             seen = true;
             n.transform = Some(self.transform(&child, n.kind == NodeKind::Group)?);
         }
+        note_dag_siblings(self.r, &el, &n.properties);
         Ok(())
     }
 

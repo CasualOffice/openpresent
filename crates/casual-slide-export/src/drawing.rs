@@ -1,0 +1,740 @@
+//! Patch a shape's geometry, fill, line, effects and 3D into its tree (ADR-013, Tier 1E).
+//!
+//! The model is turned into a small description of the elements it stands for, before
+//! and after, and only what differs between the two descriptions touches the tree. So
+//! an unedited property changes nothing, spelling included; an edited one changes its
+//! own attributes and children; unknown attributes, foreign children and other `ext`
+//! entries stay where they are. Replacing a choice (a solid fill by a gradient) replaces
+//! that element, and whatever was in it went with the edit that named it.
+//!
+//! Nothing is checked for range here. `patch_slide_part` reads every patched part back
+//! and refuses the save if it does not read as asked, so a value the reader would not
+//! believe is refused by the reader's own rule, as `CS-EXP-0007`.
+
+use std::collections::{HashMap, VecDeque};
+
+use casual_slide_import::drawing::{A14, ASK};
+use casual_slide_import::properties::{Elem, ns};
+use casual_slide_model::color::{Angle, Color, ColorValue, Percentage, format_percentage};
+use casual_slide_model::drawing::{HiddenProperties, ShapeProperties};
+use casual_slide_model::properties::Lexical;
+use casual_slide_model::shape::NodeKind;
+
+use crate::effect::effect_properties_node;
+use crate::fill::{blip_fill_node, fill_node};
+use crate::geometry::geometry_node;
+use crate::line::line_node;
+use crate::properties::{ExportError, Writer};
+
+/// Which namespace an element is in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum Space {
+    Dml,
+    Pml,
+    A14,
+    Ask,
+}
+
+impl Space {
+    fn uris(self) -> &'static [&'static str] {
+        match self {
+            Self::Dml => ns::DML,
+            Self::Pml => ns::PML,
+            Self::A14 => A14,
+            Self::Ask => ASK,
+        }
+    }
+
+    fn prefix(self) -> &'static str {
+        match self {
+            Self::Dml => "a",
+            Self::Pml => "p",
+            Self::A14 => "a14",
+            Self::Ask => "ask",
+        }
+    }
+}
+
+/// An attribute's value.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Value {
+    /// As `Lexical` writes it.
+    Text(String),
+    /// A percentage, whose spelling follows what it replaces or the conformance class.
+    Percent(i32),
+    /// A relationship id: the attribute is in the relationships namespace.
+    Rel(String),
+}
+
+/// An element, as the model says it should be.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Node {
+    space: Space,
+    local: &'static str,
+    attrs: Vec<(&'static str, Value)>,
+    kids: Vec<Node>,
+    text: Option<String>,
+    /// What this element's `extLst` holds, by item, each in an `ext` of its own.
+    exts: Vec<Node>,
+}
+
+impl Node {
+    pub fn new(space: Space, local: &'static str) -> Self {
+        Self {
+            space,
+            local,
+            attrs: Vec::new(),
+            kids: Vec::new(),
+            text: None,
+            exts: Vec::new(),
+        }
+    }
+
+    /// In DrawingML.
+    pub fn a(local: &'static str) -> Self {
+        Self::new(Space::Dml, local)
+    }
+
+    pub fn lex<T: Lexical>(mut self, name: &'static str, value: Option<&T>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::Text(value.to_lexical())));
+        }
+        self
+    }
+
+    pub fn pct(mut self, name: &'static str, value: Option<Percentage>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::Percent(value.0)));
+        }
+        self
+    }
+
+    pub fn ang(mut self, name: &'static str, value: Option<Angle>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::Text(value.0.to_string())));
+        }
+        self
+    }
+
+    pub fn rel(mut self, name: &'static str, value: Option<&String>) -> Self {
+        if let Some(value) = value {
+            self.attrs.push((name, Value::Rel(value.clone())));
+        }
+        self
+    }
+
+    pub fn kid(mut self, kid: Node) -> Self {
+        self.kids.push(kid);
+        self
+    }
+
+    pub fn opt(mut self, kid: Option<Node>) -> Self {
+        self.kids.extend(kid);
+        self
+    }
+
+    pub fn list(mut self, kids: impl IntoIterator<Item = Node>) -> Self {
+        self.kids.extend(kids);
+        self
+    }
+
+    pub fn color(self, color: Option<&Color>) -> Self {
+        self.opt(color.map(color_node))
+    }
+
+    pub fn text(mut self, text: Option<String>) -> Self {
+        self.text = text;
+        self
+    }
+
+    pub fn ext(mut self, item: Option<Node>) -> Self {
+        self.exts.extend(item);
+        self
+    }
+
+    /// Whether this element holds this attribute.
+    fn value(&self, name: &str) -> Option<&Value> {
+        self.attrs.iter().find(|(n, _)| *n == name).map(|(_, v)| v)
+    }
+
+    fn same_name(&self, other: &Node) -> bool {
+        self.local == other.local && self.space == other.space
+    }
+
+    fn is(&self, el: &Elem) -> bool {
+        el.is(self.space.uris(), self.local)
+    }
+}
+
+/// A colour and its transforms.
+pub(crate) fn color_node(color: &Color) -> Node {
+    let node = Node::a(color.value.element_name());
+    let node = match color.value {
+        ColorValue::ScRgb { r, g, b } => node.pct("r", Some(r)).pct("g", Some(g)).pct("b", Some(b)),
+        ColorValue::Srgb(rgb) => node.lex("val", Some(&rgb.to_hex())),
+        ColorValue::Hsl { hue, sat, lum } => node
+            .ang("hue", Some(hue))
+            .pct("sat", Some(sat))
+            .pct("lum", Some(lum)),
+        ColorValue::System { val, last } => node
+            .lex("val", Some(&val.as_xml().to_owned()))
+            .lex("lastClr", last.map(|l| l.to_hex()).as_ref()),
+        ColorValue::Scheme(s) => node.lex("val", Some(&s.as_xml().to_owned())),
+        ColorValue::Preset(p) => node.lex("val", Some(&p.as_xml().to_owned())),
+    };
+    node.list(color.transforms.iter().map(|t| {
+        let domain = t.kind.domain();
+        let kid = Node::a(t.kind.as_xml());
+        if domain == casual_slide_model::color::ValueDomain::None {
+            kid
+        } else if domain.is_percentage() {
+            kid.pct("val", Some(Percentage(t.value)))
+        } else {
+            kid.ang("val", Some(Angle(t.value)))
+        }
+    }))
+}
+
+/// Children of which one may be present, so changing which one replaces it.
+const CHOICES: &[&[&str]] = &[
+    &[
+        "scrgbClr",
+        "srgbClr",
+        "hslClr",
+        "sysClr",
+        "schemeClr",
+        "prstClr",
+    ],
+    &[
+        "noFill",
+        "solidFill",
+        "gradFill",
+        "blipFill",
+        "pattFill",
+        "grpFill",
+    ],
+    &["custGeom", "prstGeom"],
+    &["effectLst", "effectDag"],
+    &["prstDash", "custDash"],
+    &["round", "bevel", "miter"],
+    &["tile", "stretch"],
+];
+
+/// `path` means a shade only in a gradient; in `pathLst` it is one of a list.
+const SHADES: &[&str] = &["lin", "path"];
+
+fn choices_of(parent: &str) -> impl Iterator<Item = &'static [&'static str]> {
+    let shade = (parent == "gradFill").then_some(SHADES);
+    CHOICES.iter().copied().chain(shade)
+}
+
+/// Where a child goes among its siblings: the schema's sequence for the parent. `None`
+/// for what the parent lists no order for, which goes at the end.
+fn rank(parent: &str, local: &str) -> Option<usize> {
+    let order: &[&str] = match parent {
+        "spPr" | "grpSpPr" => &[
+            "xfrm",
+            "custGeom",
+            "prstGeom",
+            "noFill",
+            "solidFill",
+            "gradFill",
+            "blipFill",
+            "pattFill",
+            "grpFill",
+            "ln",
+            "effectLst",
+            "effectDag",
+            "scene3d",
+            "sp3d",
+            "extLst",
+        ],
+        "pic" => &["nvPicPr", "blipFill", "spPr", "style", "extLst"],
+        "gradFill" => &["gsLst", "lin", "path", "tileRect"],
+        "blipFill" => &["blip", "srcRect", "tile", "stretch"],
+        "pattFill" => &["fgClr", "bgClr"],
+        "clrChange" => &["clrFrom", "clrTo"],
+        "ln" | "hiddenLine" => &[
+            "noFill",
+            "solidFill",
+            "gradFill",
+            "pattFill",
+            "prstDash",
+            "custDash",
+            "round",
+            "bevel",
+            "miter",
+            "headEnd",
+            "tailEnd",
+            "extLst",
+        ],
+        "custGeom" => &["avLst", "gdLst", "ahLst", "cxnLst", "rect", "pathLst"],
+        "scene3d" | "hiddenScene3d" => &["camera", "lightRig", "backdrop", "extLst"],
+        "backdrop" => &["anchor", "norm", "up", "extLst"],
+        "sp3d" | "hiddenSp3d" => &["bevelT", "bevelB", "extrusionClr", "contourClr", "extLst"],
+        "effectLst" => &[
+            "blur",
+            "fillOverlay",
+            "glow",
+            "innerShdw",
+            "outerShdw",
+            "prstShdw",
+            "reflection",
+            "softEdge",
+        ],
+        "backgroundRemoval" => &["foregroundMark", "backgroundMark"],
+        "lineSketchStyleProps" => &["custGeom", "prstGeom", "type", "seed", "extLst"],
+        // Any number of effects, in any order, then `extLst`.
+        "blip" => return Some(usize::from(local == "extLst")),
+        _ => return None,
+    };
+    order.iter().position(|o| *o == local)
+}
+
+/// The sibling a new child of this name goes before, by the schema's order.
+fn landmark(w: &Writer<'_>, parent: &Elem, local: &str) -> Result<Option<Elem>, ExportError> {
+    let Some(mine) = rank(&parent.local, local) else {
+        return Ok(None);
+    };
+    Ok(parent.children(w.tree, w.part)?.into_iter().find(|c| {
+        (c.in_namespace(ns::DML) || c.in_namespace(ns::PML))
+            && rank(&parent.local, &c.local).is_some_and(|theirs| theirs > mine)
+    }))
+}
+
+fn out_of_range(w: &Writer<'_>, what: &'static str) -> ExportError {
+    ExportError::ValueOutOfRange {
+        what,
+        part: w.part.to_owned(),
+    }
+}
+
+/// A new child: built, placed, then patched from nothing.
+fn insert_new(
+    w: &mut Writer<'_>,
+    parent: &Elem,
+    before: Option<&Elem>,
+    node: &Node,
+) -> Result<(), ExportError> {
+    let el = w.new_child(parent, node.space.uris(), node.space.prefix(), node.local)?;
+    let anchor = match before {
+        Some(el) => Some(el.id),
+        None => landmark(w, parent, node.local)?.map(|l| l.id),
+    };
+    w.tree.insert_child(parent.id, anchor, el.id);
+    patch(w, &el, None, node)
+}
+
+fn write_attr(w: &mut Writer<'_>, el: &Elem, name: &str, value: &Value) -> Result<(), ExportError> {
+    let (name, text) = match value {
+        Value::Text(text) => (name.to_owned(), text.clone()),
+        Value::Percent(v) => {
+            let spelled = w.strict || el.get(name).is_some_and(|old| old.contains('%'));
+            let text = if spelled {
+                format_percentage(*v)
+            } else {
+                v.to_string()
+            };
+            (name.to_owned(), text)
+        }
+        Value::Rel(id) => {
+            if !id.is_empty()
+                && w.known_rels
+                    .as_ref()
+                    .is_some_and(|known| !known.contains(id))
+            {
+                return Err(ExportError::UnknownRelationship {
+                    part: w.part.to_owned(),
+                });
+            }
+            let written = match el.name_of_ns(ns::REL, name) {
+                Some(written) => written.to_owned(),
+                None => format!("{}:{name}", w.declared_prefix(el, ns::REL, "r")?),
+            };
+            (written, id.clone())
+        }
+    };
+    w.attr(el, &name, None::<&String>, Some(&text))
+}
+
+/// Bring an element from what `before` says to what `after` says.
+pub(crate) fn patch(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    before: Option<&Node>,
+    after: &Node,
+) -> Result<(), ExportError> {
+    if before == Some(after) {
+        return Ok(());
+    }
+    for (name, value) in &after.attrs {
+        if before.and_then(|b| b.value(name)) != Some(value) {
+            write_attr(w, el, name, value)?;
+        }
+    }
+    for (name, value) in before.iter().flat_map(|b| &b.attrs) {
+        if after.value(name).is_none() {
+            let written = match value {
+                Value::Rel(_) => el.name_of_ns(ns::REL, name).map(str::to_owned),
+                _ => Some((*name).to_owned()),
+            };
+            if let Some(written) = written {
+                w.tree.remove_attribute(el.id, &written);
+                w.changes += 1;
+            }
+        }
+    }
+    if before.and_then(|b| b.text.as_ref()) != after.text.as_ref() {
+        match &after.text {
+            Some(text) => w.set_text(el, text)?,
+            None => {
+                w.set_text(el, "")?;
+            }
+        }
+    }
+    patch_kids(w, el, before.map_or(&[], |b| &b.kids), &after.kids)?;
+    patch_exts(w, el, before.map_or(&[], |b| &b.exts), &after.exts)
+}
+
+fn patch_kids(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    before: &[Node],
+    after: &[Node],
+) -> Result<(), ExportError> {
+    if before == after {
+        return Ok(());
+    }
+    let mut tree_kids: Vec<Elem> = el.children(w.tree, w.part)?;
+
+    // A choice that changed: every element of that choice goes, what the model could
+    // not see included, or the reader would find it instead of the new one.
+    let names = |list: &[Node], group: &[&str]| -> Vec<&'static str> {
+        list.iter()
+            .filter(|n| n.space == Space::Dml && group.contains(&n.local))
+            .map(|n| n.local)
+            .collect()
+    };
+    let mut replaced: Vec<&'static [&'static str]> = Vec::new();
+    for group in choices_of(&el.local) {
+        if names(before, group) != names(after, group) {
+            for kid in &tree_kids {
+                if kid.in_namespace(ns::DML) && group.contains(&kid.local.as_str()) {
+                    w.tree.remove_child(el.id, kid.id);
+                    w.changes += 1;
+                }
+            }
+            replaced.push(group);
+        }
+    }
+    let gone = |n: &Node| n.space == Space::Dml && replaced.iter().any(|g| g.contains(&n.local));
+    tree_kids.retain(|k| {
+        !(k.in_namespace(ns::DML) && replaced.iter().any(|g| g.contains(&k.local.as_str())))
+    });
+
+    // Each `before` child owns the next tree child of its name.
+    let mut owners: HashMap<(Space, &str), VecDeque<usize>> = HashMap::new();
+    let mut element_of: Vec<Option<usize>> = Vec::with_capacity(before.len());
+    {
+        let mut by_name: HashMap<(&str, Space), VecDeque<usize>> = HashMap::new();
+        for (i, kid) in tree_kids.iter().enumerate() {
+            for space in [Space::Dml, Space::Pml, Space::A14, Space::Ask] {
+                if kid.in_namespace(space.uris()) {
+                    by_name
+                        .entry((kid.local.as_str(), space))
+                        .or_default()
+                        .push_back(i);
+                }
+            }
+        }
+        for (i, n) in before.iter().enumerate() {
+            let found = if gone(n) {
+                None
+            } else {
+                by_name
+                    .get_mut(&(n.local, n.space))
+                    .and_then(VecDeque::pop_front)
+            };
+            element_of.push(found);
+            if found.is_some() {
+                owners.entry((n.space, n.local)).or_default().push_back(i);
+            }
+        }
+    }
+
+    // Each `after` child takes the `before` child of the same name and occurrence.
+    let mut paired: Vec<Option<usize>> = Vec::with_capacity(after.len());
+    for n in after {
+        paired.push(
+            owners
+                .get_mut(&(n.space, n.local))
+                .and_then(VecDeque::pop_front),
+        );
+    }
+    let reordered = paired
+        .iter()
+        .flatten()
+        .zip(paired.iter().flatten().skip(1))
+        .any(|(x, y)| x > y);
+    if reordered {
+        // A list whose order changed is rebuilt: its order is what the edit named.
+        for owned in element_of.iter().flatten() {
+            if let Some(kid) = tree_kids.get(*owned) {
+                w.tree.remove_child(el.id, kid.id);
+                w.changes += 1;
+            }
+        }
+        for n in after {
+            insert_new(w, el, None, n)?;
+        }
+        return Ok(());
+    }
+
+    // Surplus and removed: every child of a name no longer wanted, repeats included.
+    let mut used = vec![false; before.len()];
+    for p in paired.iter().flatten() {
+        if let Some(slot) = used.get_mut(*p) {
+            *slot = true;
+        }
+    }
+    let mut keep = vec![true; tree_kids.len()];
+    for (i, owned) in element_of.iter().enumerate() {
+        if used.get(i).copied().unwrap_or(false) {
+            continue;
+        }
+        let Some(owned) = *owned else { continue };
+        if let Some(kid) = tree_kids.get(owned) {
+            w.tree.remove_child(el.id, kid.id);
+            w.changes += 1;
+        }
+        if let Some(slot) = keep.get_mut(owned) {
+            *slot = false;
+        }
+    }
+    for n in before {
+        if !after.iter().any(|a| a.same_name(n)) {
+            for (i, kid) in tree_kids.iter().enumerate() {
+                if keep.get(i).copied().unwrap_or(false) && n.is(kid) {
+                    w.tree.remove_child(el.id, kid.id);
+                    w.changes += 1;
+                    if let Some(slot) = keep.get_mut(i) {
+                        *slot = false;
+                    }
+                }
+            }
+        }
+    }
+
+    // In order, so what follows a new child is known when it is placed.
+    let owned: std::collections::HashSet<usize> = element_of.iter().flatten().copied().collect();
+    for (j, n) in after.iter().enumerate() {
+        let pairing = paired.get(j).copied().flatten();
+        if let Some(i) = pairing {
+            let kid = element_of
+                .get(i)
+                .copied()
+                .flatten()
+                .and_then(|o| tree_kids.get(o));
+            if let (Some(kid), Some(b)) = (kid, before.get(i)) {
+                patch(w, kid, Some(b), n)?;
+            }
+            continue;
+        }
+        // One the model could not see, of this name: use it.
+        let adopted = tree_kids
+            .iter()
+            .enumerate()
+            .find(|(i, k)| !owned.contains(i) && keep.get(*i).copied().unwrap_or(false) && n.is(k));
+        if let Some((i, kid)) = adopted {
+            if let Some(slot) = keep.get_mut(i) {
+                *slot = false;
+            }
+            patch(w, kid, None, n)?;
+            continue;
+        }
+        // Before the next child that stays, or by the schema if none does.
+        let next = paired
+            .get(j + 1..)
+            .unwrap_or_default()
+            .iter()
+            .flatten()
+            .next()
+            .and_then(|i| element_of.get(*i).copied().flatten())
+            .and_then(|o| tree_kids.get(o));
+        insert_new(w, el, next, n)?;
+    }
+    Ok(())
+}
+
+/// The `uri` for an extension this writer may add. Those from real decks are as
+/// PowerPoint writes them (`fixtures/real`); the sketch's is Inferred, from memory of
+/// PowerPoint's output and no deck here. Others are patched where a file has them, and
+/// cannot be added.
+fn extension_uri(local: &str) -> Option<&'static str> {
+    Some(match local {
+        "hiddenFill" => "{909E8E84-426E-40DD-AFC4-6F175D3DCCD1}",
+        "hiddenLine" => "{91240B29-F687-4F45-9708-019B960494DF}",
+        "hiddenEffects" => "{AF507438-7753-43E0-B8FC-AC1667EBCBE1}",
+        "useLocalDpi" => "{28A0092B-C50C-407E-A947-70E740481C1C}",
+        "lineSketchStyleProps" => "{C807C97D-BFC1-408E-A445-0C87EB9F89A2}",
+        _ => return None,
+    })
+}
+
+/// Find an extension's item, with its `ext` and `extLst`.
+fn find_item(
+    w: &Writer<'_>,
+    el: &Elem,
+    node: &Node,
+) -> Result<Option<(Elem, Elem, Elem)>, ExportError> {
+    let Some(list) = el.first_child(w.tree, w.part, ns::DML, "extLst")? else {
+        return Ok(None);
+    };
+    for ext in list.children(w.tree, w.part)? {
+        if !ext.is(ns::DML, "ext") {
+            continue;
+        }
+        for item in ext.children(w.tree, w.part)? {
+            if node.is(&item) {
+                return Ok(Some((list, ext, item)));
+            }
+        }
+    }
+    Ok(None)
+}
+
+fn patch_exts(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    before: &[Node],
+    after: &[Node],
+) -> Result<(), ExportError> {
+    if before == after {
+        return Ok(());
+    }
+    for b in before {
+        if after.iter().any(|a| a.same_name(b)) {
+            continue;
+        }
+        if let Some((list, ext, item)) = find_item(w, el, b)? {
+            w.tree.remove_child(ext.id, item.id);
+            w.changes += 1;
+            // The holders go with their last entry; another's entry keeps them.
+            if ext.children(w.tree, w.part)?.is_empty() {
+                w.tree.remove_child(list.id, ext.id);
+                if list.children(w.tree, w.part)?.is_empty() {
+                    w.tree.remove_child(el.id, list.id);
+                }
+            }
+        }
+    }
+    for a in after {
+        let b = before.iter().find(|b| b.same_name(a));
+        if let Some((_, _, item)) = find_item(w, el, a)? {
+            patch(w, &item, b, a)?;
+            continue;
+        }
+        let Some(uri) = extension_uri(a.local) else {
+            return Err(out_of_range(w, "adding this extension"));
+        };
+        let list = match el.first_child(w.tree, w.part, ns::DML, "extLst")? {
+            Some(list) => list,
+            None => {
+                let list = w.new_child(el, ns::DML, "a", "extLst")?;
+                let anchor = landmark(w, el, "extLst")?.map(|l| l.id);
+                w.tree.insert_child(el.id, anchor, list.id);
+                list
+            }
+        };
+        let ext = w.new_child(&list, ns::DML, "a", "ext")?;
+        w.tree.insert_child(list.id, None, ext.id);
+        w.attr(&ext, "uri", None::<&String>, Some(&uri.to_owned()))?;
+        insert_new(w, &ext, None, a)?;
+    }
+    Ok(())
+}
+
+fn hidden_nodes(h: &HiddenProperties) -> Vec<Node> {
+    let mut out = Vec::new();
+    if let Some(fill) = &h.fill {
+        out.push(Node::new(Space::A14, "hiddenFill").kid(fill_node(fill)));
+    }
+    if let Some(line) = &h.line {
+        out.push(line_node(line, Space::A14, "hiddenLine"));
+    }
+    if let Some(effects) = &h.effects {
+        out.push(Node::new(Space::A14, "hiddenEffects").kid(effect_properties_node(effects)));
+    }
+    if let Some(scene) = &h.scene3d {
+        out.push(crate::d3::scene3d_node(scene, Space::A14, "hiddenScene3d"));
+    }
+    if let Some(sp3d) = &h.sp3d {
+        out.push(crate::d3::sp3d_node(sp3d, Space::A14, "hiddenSp3d"));
+    }
+    if let Some(value) = &h.shadow_obscured {
+        out.push(Node::new(Space::A14, "shadowObscured").lex("val", Some(value)));
+    }
+    out
+}
+
+fn properties_node(p: &ShapeProperties, holder: &'static str) -> Node {
+    let mut n = Node::new(Space::Pml, holder)
+        .opt(p.geometry.as_ref().map(geometry_node))
+        .opt(p.fill.as_ref().map(fill_node))
+        .opt(p.line.as_ref().map(|l| line_node(l, Space::Dml, "ln")))
+        .opt(p.effects.as_ref().map(effect_properties_node))
+        .opt(
+            p.scene3d
+                .as_ref()
+                .map(|s| crate::d3::scene3d_node(s, Space::Dml, "scene3d")),
+        )
+        .opt(
+            p.sp3d
+                .as_ref()
+                .map(|s| crate::d3::sp3d_node(s, Space::Dml, "sp3d")),
+        );
+    if let Some(hidden) = &p.hidden {
+        for item in hidden_nodes(hidden) {
+            n = n.ext(Some(item));
+        }
+    }
+    n
+}
+
+/// Bring a node's properties from `before` to `after`.
+pub(crate) fn patch_properties(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    kind: NodeKind,
+    before: &ShapeProperties,
+    after: &ShapeProperties,
+) -> Result<(), ExportError> {
+    let holder = match kind {
+        NodeKind::Shape | NodeKind::Connector | NodeKind::Picture => "spPr",
+        NodeKind::Group => "grpSpPr",
+        NodeKind::GraphicFrame | NodeKind::ContentPart => {
+            return Err(out_of_range(w, "drawing properties on this kind of node"));
+        }
+    };
+    let (b, a) = (
+        properties_node(before, holder),
+        properties_node(after, holder),
+    );
+    if b != a {
+        let Some(props) = el.first_child(w.tree, w.part, ns::PML, holder)? else {
+            return Err(out_of_range(w, "drawing properties on a node with no spPr"));
+        };
+        patch(w, &props, Some(&b), &a)?;
+    }
+    if before.picture != after.picture {
+        if kind != NodeKind::Picture {
+            return Err(out_of_range(w, "a picture fill on a node not a picture"));
+        }
+        let of = |p: &ShapeProperties| {
+            let root = Node::new(Space::Pml, "pic");
+            root.opt(p.picture.as_ref().map(|f| blip_fill_node(f, Space::Pml)))
+        };
+        patch(w, el, Some(&of(before)), &of(after))?;
+    }
+    Ok(())
+}
