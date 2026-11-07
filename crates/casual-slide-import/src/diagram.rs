@@ -513,6 +513,19 @@ pub(crate) fn read_character(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<Cha
 }
 
 pub(crate) fn read_style(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<ShapeStyle> {
+    // Tier 1E's reader takes the four references and reports nothing; what else the
+    // element holds is reported here, so it is not read past (`docs/06`, gate item 6).
+    c.finish(el);
+    for child in c.children(el)? {
+        let known = child.in_namespace(ns::DML)
+            && matches!(
+                child.local.as_str(),
+                "lnRef" | "fillRef" | "effectRef" | "fontRef"
+            );
+        if !known {
+            c.retained(&child);
+        }
+    }
     Ok(read_shape_style(c.r.tree, el.id, &mut *c.color))
 }
 

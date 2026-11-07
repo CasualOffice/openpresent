@@ -41,7 +41,7 @@ impl ChartReader<'_, '_> {
                     if out.ptidx.is_some() {
                         self.dup(&child);
                     } else {
-                        out.ptidx = self.r.typed_text::<u32>(&child)?;
+                        out.ptidx = self.leaf_typed::<u32>(&child)?;
                     }
                 }
                 "uniqueID" if child.in_namespace(NS_C16) => {

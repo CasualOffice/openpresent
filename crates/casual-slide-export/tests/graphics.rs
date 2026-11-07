@@ -1471,3 +1471,87 @@ fn read_any_quiet(kind: Kind, tree: &XmlTree) -> Option<AnyRoot> {
         )),
     })
 }
+
+/// A part's model with every finding: what a silent drop would leave unchanged.
+fn read_with_report(
+    kind: Kind,
+    tree: &XmlTree,
+    part: &str,
+    rels: &[Relationship],
+) -> Option<(AnyRoot, Vec<String>)> {
+    let (limits, import) = (limits(), import());
+    let mut f = Findings::new(import.max_findings);
+    let root = match kind {
+        Kind::Diagram => AnyRoot::Dgm(Box::new(
+            import_diagram_root(tree, part, rels, &limits, &import, &mut f).ok()??,
+        )),
+        Kind::Math => AnyRoot::Math(Box::new(
+            import_math_root(tree, part, &[], &limits, &import, &mut f).ok()??,
+        )),
+        Kind::Ink => AnyRoot::Ink(Box::new(
+            import_ink_root(tree, part, &[], &limits, &import, &mut f).ok()??,
+        )),
+    };
+    let report = f
+        .iter()
+        .map(|x| format!("{} {} {:?}", x.kind.code(), x.element, x.attribute))
+        .collect();
+    Some((root, report))
+}
+
+/// The silent-drop test the other way round (`docs/06` gate 6): an element and an attribute
+/// nothing knows, put in every kind of diagram, equation and ink element in turn, must change
+/// the model or the report. A reader that skips a child it does not know, and says nothing,
+/// fails here; the removal walk cannot see that, as no fixture holds such a child. DrawingML
+/// inside is Tiers 1E's and 1F's.
+#[test]
+fn something_unknown_in_any_diagram_equation_or_ink_element_is_reported() {
+    let mut tried = BTreeSet::new();
+    let mut silent = Vec::new();
+    for deck in EVERY_ROW {
+        let mut pkg = open(fixture(deck));
+        for (kind, name) in parts_of(&pkg) {
+            let tree = part_tree(&mut pkg, &name);
+            let rels = pkg.relationships_of(&name).to_vec();
+            let Some(before) = read_with_report(kind, &tree, &name, &rels) else {
+                continue;
+            };
+            let mut stack = vec![tree.root()];
+            while let Some(id) = stack.pop() {
+                let qname = tree.qualified_name(id).to_owned();
+                if qname.starts_with("a:") || qname.starts_with("mc:") {
+                    continue;
+                }
+                stack.extend(tree.child_elements(id));
+                let Some((prefix, _)) = qname.split_once(':') else {
+                    continue;
+                };
+                if !tried.insert(qname.clone()) {
+                    continue;
+                }
+                let mut with_child = tree.clone();
+                let new = with_child.new_element(&format!("{prefix}:madeUp"));
+                with_child.insert_child(id, None, new);
+                let again =
+                    XmlTree::parse(&with_child.to_bytes(), &name, &OoxmlLimits::default()).unwrap();
+                if read_with_report(kind, &again, &name, &rels).as_ref() == Some(&before) {
+                    silent.push(format!("{name}: a child in <{qname}>"));
+                }
+                let mut with_attr = tree.clone();
+                assert!(with_attr.set_attribute(id, "madeUp", "1"));
+                let again =
+                    XmlTree::parse(&with_attr.to_bytes(), &name, &OoxmlLimits::default()).unwrap();
+                if read_with_report(kind, &again, &name, &rels).as_ref() == Some(&before) {
+                    silent.push(format!("{name}: an attribute on <{qname}>"));
+                }
+            }
+        }
+    }
+    assert!(tried.len() > 150, "only {} kinds of element", tried.len());
+    assert!(
+        silent.is_empty(),
+        "{} read past:\n{}",
+        silent.len(),
+        silent.join("\n")
+    );
+}

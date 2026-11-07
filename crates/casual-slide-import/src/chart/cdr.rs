@@ -438,14 +438,14 @@ impl ChartReader<'_, '_> {
                     if out.x.is_some() {
                         self.dup(&child);
                     } else {
-                        out.x = self.r.typed_text::<Float64>(&child)?;
+                        out.x = self.leaf_typed::<Float64>(&child)?;
                     }
                 }
                 "y" if child.in_namespace(NS_CDR) => {
                     if out.y.is_some() {
                         self.dup(&child);
                     } else {
-                        out.y = self.r.typed_text::<Float64>(&child)?;
+                        out.y = self.leaf_typed::<Float64>(&child)?;
                     }
                 }
                 _ => self.other(&child),

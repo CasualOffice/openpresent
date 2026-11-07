@@ -716,9 +716,9 @@ def read_arm(f, mod, target, indent):
     if p[0] == "simple":
         rust = local_path(p[1].rust, mod)
         if rust == "String":
-            read = "self.r.text(&child)?"
+            read = "self.leaf_text(&child)?"
         else:
-            read = f"self.r.typed_text::<{rust}>(&child)?"
+            read = f"self.leaf_typed::<{rust}>(&child)?"
         if f.many:
             return f"{target}.extend({read});"
         return f"{target} = {read};"
@@ -921,7 +921,7 @@ def emit_ext_read(builder):
             elif p[0] == "shape":
                 value = "self.shape(el)?"
             elif p[0] == "simple":
-                value = "self.r.text(el)?.unwrap_or_default()"
+                value = "self.choice_text(el)?"
             out.append(f'                "{name}" => return Ok(ExtItem::{var}({value})),\n')
         out.append("                _ => {}\n            }\n        }\n")
     out.append("        Ok(ExtItem::Other(self.retain(el)))\n    }\n}\n")

@@ -369,7 +369,7 @@ impl ChartReader<'_, '_> {
                     if out.v.is_some() {
                         self.dup(&child);
                     } else {
-                        out.v = self.r.text(&child)?;
+                        out.v = self.leaf_text(&child)?;
                     }
                 }
                 _ => self.other(&child),
@@ -866,14 +866,14 @@ impl ChartReader<'_, '_> {
                     if out.bin_size.is_some() {
                         self.dup(&child);
                     } else {
-                        out.bin_size = self.r.typed_text::<Float64>(&child)?;
+                        out.bin_size = self.leaf_typed::<Float64>(&child)?;
                     }
                 }
                 "binCount" if child.in_namespace(NS_CX) => {
                     if out.bin_count.is_some() {
                         self.dup(&child);
                     } else {
-                        out.bin_count = self.r.typed_text::<u32>(&child)?;
+                        out.bin_count = self.leaf_typed::<u32>(&child)?;
                     }
                 }
                 _ => self.other(&child),
@@ -1047,7 +1047,7 @@ impl ChartReader<'_, '_> {
         for child in self.r.children(el)? {
             match child.local.as_str() {
                 "copyright" if child.in_namespace(NS_CX) => {
-                    out.copyright.extend(self.r.text(&child)?);
+                    out.copyright.extend(self.leaf_text(&child)?);
                 }
                 _ => self.other(&child),
             }
@@ -1228,7 +1228,7 @@ impl ChartReader<'_, '_> {
         for child in self.r.children(el)? {
             match child.local.as_str() {
                 "entityType" if child.in_namespace(NS_CX) => {
-                    out.entity_type.extend(self.r.typed_text::<EntityTypeValue>(&child)?);
+                    out.entity_type.extend(self.leaf_typed::<EntityTypeValue>(&child)?);
                 }
                 _ => self.other(&child),
             }
@@ -1863,7 +1863,7 @@ impl ChartReader<'_, '_> {
                     if out.separator.is_some() {
                         self.dup(&child);
                     } else {
-                        out.separator = self.r.text(&child)?;
+                        out.separator = self.leaf_text(&child)?;
                     }
                 }
                 "extLst" if child.in_namespace(NS_CX) => {
@@ -1933,7 +1933,7 @@ impl ChartReader<'_, '_> {
                     if out.separator.is_some() {
                         self.dup(&child);
                     } else {
-                        out.separator = self.r.text(&child)?;
+                        out.separator = self.leaf_text(&child)?;
                     }
                 }
                 "dataLabel" if child.in_namespace(NS_CX) => {
@@ -2021,7 +2021,7 @@ impl ChartReader<'_, '_> {
                     }
                 }
                 "axisId" if child.in_namespace(NS_CX) => {
-                    out.axis_id.extend(self.r.typed_text::<u32>(&child)?);
+                    out.axis_id.extend(self.leaf_typed::<u32>(&child)?);
                 }
                 "extLst" if child.in_namespace(NS_CX) => {
                     if out.ext_lst.is_some() {
@@ -2399,42 +2399,42 @@ impl ChartReader<'_, '_> {
                     if out.odd_header.is_some() {
                         self.dup(&child);
                     } else {
-                        out.odd_header = self.r.text(&child)?;
+                        out.odd_header = self.leaf_text(&child)?;
                     }
                 }
                 "oddFooter" if child.in_namespace(NS_CX) => {
                     if out.odd_footer.is_some() {
                         self.dup(&child);
                     } else {
-                        out.odd_footer = self.r.text(&child)?;
+                        out.odd_footer = self.leaf_text(&child)?;
                     }
                 }
                 "evenHeader" if child.in_namespace(NS_CX) => {
                     if out.even_header.is_some() {
                         self.dup(&child);
                     } else {
-                        out.even_header = self.r.text(&child)?;
+                        out.even_header = self.leaf_text(&child)?;
                     }
                 }
                 "evenFooter" if child.in_namespace(NS_CX) => {
                     if out.even_footer.is_some() {
                         self.dup(&child);
                     } else {
-                        out.even_footer = self.r.text(&child)?;
+                        out.even_footer = self.leaf_text(&child)?;
                     }
                 }
                 "firstHeader" if child.in_namespace(NS_CX) => {
                     if out.first_header.is_some() {
                         self.dup(&child);
                     } else {
-                        out.first_header = self.r.text(&child)?;
+                        out.first_header = self.leaf_text(&child)?;
                     }
                 }
                 "firstFooter" if child.in_namespace(NS_CX) => {
                     if out.first_footer.is_some() {
                         self.dup(&child);
                     } else {
-                        out.first_footer = self.r.text(&child)?;
+                        out.first_footer = self.leaf_text(&child)?;
                     }
                 }
                 _ => self.other(&child),
