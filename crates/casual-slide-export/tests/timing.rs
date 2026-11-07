@@ -1019,16 +1019,16 @@ fn sdk_passes(name: &str, bytes: &[u8]) {
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join(format!("{name}.pptx"));
     std::fs::write(&file, bytes).unwrap();
-    // The validator needs dotnet, which only CI's SDK job is sure to have.
-    if Command::new("dotnet").arg("--version").output().is_err() {
-        return;
-    }
     let out = Command::new("python3")
         .arg("-I")
         .arg(repo().join("tools/ooxml-sdk/validate.py"))
         .arg(&file)
         .output()
         .unwrap();
+    // Exit 2: the validator could not run on this machine, which judges nothing. The SDK job runs it.
+    if out.status.code() == Some(2) {
+        return;
+    }
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(out.status.success(), "{name}: {text}");
 }
