@@ -235,6 +235,8 @@ def fixtures():
     # Lazy loading is measured on this: opening it must not read 500 slides.
     yield "generated/five-hundred-slides.pptx", zipped(deck(500)), "open"
     yield from slide_hostile()
+    from generate_rr import fixtures as rr_fixtures  # imports this module, so not at the top
+    yield from rr_fixtures()
 
 
 def main_part(xml):

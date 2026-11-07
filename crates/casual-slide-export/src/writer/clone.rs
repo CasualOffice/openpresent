@@ -26,10 +26,13 @@ pub(crate) enum ClonePolicy {
     Master,
 }
 
-fn is_media(kind: &str) -> bool {
+/// Media: read-only bytes that many referrers may share. A 3D model is here, since
+/// nothing edits one (`INV-FB-07`), and a real deck showed it needs to be.
+pub(crate) fn is_media(kind: &str) -> bool {
     matches!(kind, "image" | "audio" | "video" | "movie")
         || kind.ends_with("/media")
         || kind.ends_with("/hdphoto")
+        || kind.ends_with("/model3d")
 }
 
 impl ClonePolicy {
@@ -69,6 +72,7 @@ fn is_known_clone(kind: &str) -> bool {
             | "theme"
             | "customXml"
     ) || kind.ends_with("/diagramDrawing")
+        || kind.ends_with("/chartEx")
         || kind.ends_with("/chartStyle")
         || kind.ends_with("/chartColorStyle")
         || kind.ends_with("/ink")

@@ -163,6 +163,31 @@ pub enum Op {
         /// The initials.
         initials: String,
     },
+    /// Add a custom show of these slides, with the next consecutive id (`INV-ID-05`).
+    AddCustomShow {
+        /// The display name.
+        name: String,
+        /// Which slides, in order.
+        slides: Vec<SlideRef>,
+    },
+    /// Copy a shape within its slide, with new ids, its animation if whole clicks animate
+    /// only it, and a new `a16:creationId` if it has one.
+    CopyShape {
+        /// Which slide.
+        slide: SlideRef,
+        /// The shape's `cNvPr/@id`.
+        shape_id: u32,
+        /// The new `creationId`, supplied because randomness is never sampled here.
+        creation_id: Option<String>,
+    },
+    /// Change the file's type to this extension's: `pptx`, `ppsx`, `potx`, `pptm`, `ppsm`
+    /// or `potm`. One `Override` changes. VBA in a macro-free type needs [`Op::DropVba`].
+    Retype {
+        /// The extension, with no dot.
+        extension: String,
+    },
+    /// Drop the VBA project: the host has the user's confirmation.
+    DropVba,
     /// Attach a new part to a source, with a fresh name in `dir`. For parts the writer
     /// has no operation of its own for.
     AttachPart {
@@ -258,6 +283,14 @@ impl Draft<'_> {
                 index,
             } => self.move_slide_to_section(slide, section, *index),
             Op::AddCommentAuthor { name, initials } => self.add_comment_author(name, initials),
+            Op::AddCustomShow { name, slides } => self.add_custom_show(name, slides),
+            Op::CopyShape {
+                slide,
+                shape_id,
+                creation_id,
+            } => self.copy_shape(slide, *shape_id, creation_id.as_deref()),
+            Op::Retype { extension } => self.retype(extension),
+            Op::DropVba => self.drop_vba(),
             Op::AttachPart {
                 source,
                 kind,
@@ -1104,6 +1137,37 @@ impl Draft<'_> {
         self.write_sections(&sections)?;
         self.log.placed_slides.insert(entry.raw_id);
         self.order_slides_by_sections()
+    }
+
+    fn add_custom_show(&mut self, name: &str, slides: &[SlideRef]) -> Result<(), WriterError> {
+        let main = self.main.clone();
+        check_text(name, &main)?;
+        let mut rels = Vec::with_capacity(slides.len());
+        for slide in slides {
+            rels.push(self.slide(slide)?.1.rel_id);
+        }
+        let list = self.ensure_list("custShowLst")?;
+        let tree = self.tree(&main)?;
+        let id = pml_children(tree, list, "custShow")
+            .into_iter()
+            .filter_map(|el| tree.plain_attribute(el, "id")?.parse::<u64>().ok())
+            .max()
+            .map_or(0, |top| top.saturating_add(1));
+        let show_name = sibling_name(tree, list, "custShow");
+        let show = tree.new_element(&show_name);
+        set_attr(tree, show, "name", name, &main)?;
+        set_attr(tree, show, "id", &id.to_string(), &main)?;
+        let holder_name = sibling_name(tree, list, "sldLst");
+        let holder = tree.new_element(&holder_name);
+        let entry_name = sibling_name(tree, list, "sld");
+        for rel in &rels {
+            let entry = tree.new_element(&entry_name);
+            set_attr(tree, entry, "r:id", rel, &main)?;
+            tree.insert_child(holder, None, entry);
+        }
+        tree.insert_child(show, None, holder);
+        tree.insert_child(list, None, show);
+        Ok(())
     }
 
     fn add_comment_author(&mut self, name: &str, initials: &str) -> Result<(), WriterError> {

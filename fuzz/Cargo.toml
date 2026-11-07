@@ -75,3 +75,10 @@ path = "fuzz_targets/slide_parts.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "writer_plan"
+path = "fuzz_targets/writer_plan.rs"
+test = false
+doc = false
+bench = false

@@ -21,11 +21,13 @@
 mod clone;
 mod draft;
 mod error;
+mod format;
 mod names;
 mod notes;
 mod ops;
 mod plan;
 mod preflight;
+mod shapes;
 mod structure;
 mod view;
 mod zipcheck;

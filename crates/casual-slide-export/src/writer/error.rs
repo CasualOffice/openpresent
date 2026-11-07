@@ -24,6 +24,12 @@ pub enum WriterError {
         /// Each new violation.
         violations: Vec<Violation>,
     },
+    /// `CS-SAV-0003`: a macro-free type was asked for with VBA present, and dropping it
+    /// was not confirmed.
+    VbaNeedsConfirmation {
+        /// The main part.
+        part: String,
+    },
     /// `CS-SAV-0009`: an edit is blocked on a construct that has no safe form yet.
     Blocked {
         /// The construct, a fixed word.
@@ -68,6 +74,7 @@ impl WriterError {
             Self::Slide(err) => err.code(),
             Self::Ooxml(err) => err.code(),
             Self::Preflight { .. } => "CS-SAV-0012",
+            Self::VbaNeedsConfirmation { .. } => "CS-SAV-0003",
             Self::Blocked { .. } => "CS-SAV-0009",
             Self::BadOperation { .. } => "CS-SAV-0017",
             Self::TooLarge { .. } => "CS-SAV-0018",
@@ -103,6 +110,9 @@ impl fmt::Display for WriterError {
                     write!(f, "; {} on {:?} ({})", v.rule, v.part, v.detail)?;
                 }
                 Ok(())
+            }
+            Self::VbaNeedsConfirmation { part } => {
+                write!(f, "[{code}] {part:?}: dropping VBA needs confirmation")
             }
             Self::Blocked { construct, part } => {
                 write!(f, "[{code}] {part:?}: blocked on {construct}")

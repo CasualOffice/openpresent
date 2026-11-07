@@ -15,8 +15,10 @@ use casual_slide_ooxml::{
     relationship_type_to_strict, relationship_type_to_transitional, resolve_internal,
 };
 
+use super::clone::is_media;
 use super::draft::{Draft, rel_kind};
 use super::error::WriterError;
+use super::format::main_type_for;
 use super::names::{Families, family_of, is_mintable_segment, is_rels_part, key};
 use super::view::{View, prefix_is_relationships};
 use crate::presentation::PRESENTATION_ORDER;
@@ -49,12 +51,6 @@ fn add(found: &mut Found, rule: &'static str, part: &str, detail: impl Into<Stri
         part: part.to_owned(),
         detail: detail.into(),
     });
-}
-
-fn is_media(kind: &str) -> bool {
-    matches!(kind, "image" | "audio" | "video" | "movie")
-        || kind.ends_with("/media")
-        || kind.ends_with("/hdphoto")
 }
 
 fn is_slide_like(view: &View, part: &str) -> bool {
@@ -663,21 +659,30 @@ struct Scan {
     repeated_shapes: BTreeSet<String>,
     timing_targets: BTreeSet<String>,
     repeated_authors: BTreeSet<String>,
+    repeated_creation_ids: BTreeSet<String>,
 }
 
 fn scan_part(tree: &XmlTree) -> Scan {
     let mut scan = Scan::default();
     let mut authors = BTreeSet::new();
+    let mut creation_ids = BTreeSet::new();
+    // A SmartArt drawing's shapes are all id 0 in the corpus: the rule is the slide's.
+    let holds_shapes = matches!(
+        tree.local_name(tree.root()),
+        "sld" | "sldLayout" | "sldMaster" | "notes" | "notesMaster" | "handoutMaster"
+    );
     // Each element with whether it is in a fallback branch, which repeats ids by design.
     let mut stack: Vec<(ElementId, bool)> = vec![(tree.root(), false)];
     while let Some((el, fallback)) = stack.pop() {
         let local = tree.local_name(el);
         let fallback = fallback || local == "Fallback";
-        let is_shape = local == "cNvPr";
+        let is_shape = holds_shapes && local == "cNvPr";
         let is_author = local == "cmAuthor";
+        let is_creation_id = holds_shapes && local == "creationId" && !fallback;
         for (name, value) in tree.declared_attributes(el) {
             if let Some((prefix, _)) = name.split_once(':') {
-                if prefix_is_relationships(tree, el, prefix) {
+                // An empty reference is how a SmartArt layout says it has no image yet.
+                if !value.is_empty() && prefix_is_relationships(tree, el, prefix) {
                     scan.rel_ids.insert(value);
                 }
                 continue;
@@ -690,6 +695,10 @@ fn scan_part(tree: &XmlTree) -> Scan {
                 }
             } else if name == "id" && is_shape {
                 scan.shape_ids.insert(value);
+            } else if name == "id" && is_creation_id {
+                if !creation_ids.insert(value.clone()) {
+                    scan.repeated_creation_ids.insert(value);
+                }
             } else if name == "id" && is_author && !authors.insert(value.clone()) {
                 scan.repeated_authors.insert(value);
             }
@@ -733,6 +742,14 @@ fn scan_rules(view: &View, part: &str, label: &str, scan: &Scan, found: &mut Fou
             );
         }
     }
+    for id in &scan.repeated_creation_ids {
+        add(
+            found,
+            "INV-ID-06",
+            label,
+            format!("creationId {} repeated", safe_id(id)),
+        );
+    }
     // INV-ID-07 (Documented as an SDK rule).
     for id in &scan.repeated_authors {
         add(
@@ -769,7 +786,7 @@ fn written_part_rules(
             && (name.to_ascii_lowercase().ends_with(".xml")
                 || view
                     .content_type(name)
-                    .is_some_and(|ct| ct.to_ascii_lowercase().contains("xml")))
+                    .is_some_and(|ct| ct.to_ascii_lowercase().ends_with("xml")))
     };
     let written: Vec<String> = draft
         .overlay_names()
@@ -1041,7 +1058,77 @@ fn name_rules(
     Ok(())
 }
 
+fn copied_shape_rules(draft: &mut Draft<'_>, found: &mut Found) -> Result<(), WriterError> {
+    // INV-ID-06: an animated copy's animation names the copy, not the original.
+    let copies = draft.log.copied_shapes.clone();
+    for copy in copies.iter().filter(|c| c.animated) {
+        let bytes = draft.xml_bytes(&copy.part)?;
+        let Ok(tree) = XmlTree::parse(&bytes, &copy.part, &draft.xml) else {
+            continue;
+        };
+        let count = |id: &str| {
+            super::ops::all_elements(&tree)
+                .into_iter()
+                .filter(|&el| {
+                    tree.local_name(el) == "spTgt"
+                        && tree.plain_attribute(el, "spid").as_deref() == Some(id)
+                })
+                .count()
+        };
+        if count(&copy.old) > 0 && count(&copy.new) == 0 {
+            add(
+                found,
+                "INV-ID-06",
+                &copy.part,
+                format!("spid not remapped to {}", safe_id(&copy.new)),
+            );
+        }
+    }
+    Ok(())
+}
+
 fn content_type_rules(draft: &Draft<'_>, before: &View, after: &View, found: &mut Found) {
+    // INV-CT-10 (Unverified): the main part's type agrees with the file asked for.
+    if let Some(extension) = &draft.log.requested_extension
+        && after.content_type(&after.main) != main_type_for(extension)
+    {
+        add(
+            found,
+            "INV-CT-10",
+            &after.main,
+            format!("its type is not that of .{}", safe_id(extension)),
+        );
+    }
+    // INV-CT-08 (Inferred): the main type changes only when a format is asked for.
+    if draft.log.requested_extension.is_none()
+        && before.content_type(&before.main) != after.content_type(&after.main)
+    {
+        add(
+            found,
+            "INV-CT-08",
+            &after.main,
+            "its type changed with no format asked for",
+        );
+    }
+    // INV-CT-06's exception: dropping VBA leaves no `Default` naming its type, unused.
+    if draft.log.vba_dropped {
+        for (ext, ct) in &after.types.defaults {
+            let used = after.names.keys().any(|k| {
+                k.rsplit('/')
+                    .next()
+                    .and_then(|f| f.rsplit_once('.'))
+                    .is_some_and(|(_, e)| e.eq_ignore_ascii_case(ext))
+            });
+            if ct.eq_ignore_ascii_case("application/vnd.ms-office.vbaproject") && !used {
+                add(
+                    found,
+                    "INV-CT-06",
+                    "[Content_Types].xml",
+                    format!("Default {} still names VBA", safe_id(ext)),
+                );
+            }
+        }
+    }
     // INV-CT-03 (Documented), INV-CT-04 (Inferred).
     let overridden: BTreeSet<String> = after.types.overrides.iter().map(|(n, _)| key(n)).collect();
     for (part, wanted) in &draft.log.expected_types {
@@ -1120,6 +1207,19 @@ fn shared_part_rules(
     roots.extend(orphans);
     let kept = after.reach_of(&roots);
     let incoming = referrers(before);
+    // What relationships still aim at, whether or not the part is there.
+    let aimed_at: BTreeSet<String> = after
+        .rels
+        .iter()
+        .flat_map(|(source, facts)| {
+            facts.items.iter().filter_map(move |rel| {
+                if rel.mode != TargetMode::Internal || rel.target.starts_with('#') {
+                    return None;
+                }
+                part_name_key(&resolve_internal(source, &rel.target)?)
+            })
+        })
+        .collect();
     for name in &removed {
         if after.names.contains_key(&key(name)) || is_rels_part(name) {
             continue;
@@ -1137,7 +1237,7 @@ fn shared_part_rules(
         let is_media_part = incoming
             .get(&key(name))
             .is_some_and(|sources| sources.iter().any(|(_, kind)| is_media(kind)));
-        if is_media_part && kept.contains(&key(name)) {
+        if is_media_part && aimed_at.contains(&key(name)) {
             add(
                 found,
                 "INV-SP-02",
@@ -1176,7 +1276,7 @@ fn shared_part_rules(
         .log
         .added
         .iter()
-        .filter(|n| key(n).starts_with("ppt/media/"))
+        .filter(|n| key(n).starts_with("ppt/media/") && !draft.log.clone_of.contains_key(*n))
         .cloned()
         .collect();
     if !new_media.is_empty() {
@@ -1271,6 +1371,11 @@ fn clone_rules(
         let empty = Vec::new();
         let new = after.rels.get(clone).map_or(&empty, |f| &f.items);
         for rel in &old.items {
+            let pair = (clone.clone(), rel.id.clone());
+            if draft.log.removed_rels.contains(&pair) || draft.log.retargeted.contains(&pair) {
+                // A later operation changed it on purpose: a link to a deleted slide.
+                continue;
+            }
             let Some(now) = new.iter().find(|n| n.id == rel.id) else {
                 add(
                     found,
@@ -1393,6 +1498,32 @@ fn id_rules(draft: &Draft<'_>, before: &View, after: &View, found: &mut Found) {
                 ),
             );
         }
+    }
+    // INV-ID-05 (Documented): a new custom show's id is consecutive.
+    let shows = |view: &View| -> Vec<u64> {
+        view.presentation
+            .custom_shows
+            .iter()
+            .filter_map(|s| s.id.parse().ok())
+            .collect()
+    };
+    let old_shows = shows(before);
+    let mut next = old_shows.iter().max().map_or(0, |t| t.saturating_add(1));
+    let mut new_shows: Vec<u64> = shows(after)
+        .into_iter()
+        .filter(|id| !old_shows.contains(id))
+        .collect();
+    new_shows.sort_unstable();
+    for id in new_shows {
+        if id != next {
+            add(
+                found,
+                "INV-ID-05",
+                main,
+                format!("custom show id {id} is not consecutive"),
+            );
+        }
+        next = id.saturating_add(1);
     }
     // INV-ID-04 (Inferred), the same for the shared pool.
     let pool = |view: &View| -> BTreeSet<u64> {
@@ -1551,6 +1682,7 @@ fn change_rules(draft: &mut Draft<'_>, before: &View, after: &View) -> Result<Fo
     name_rules(draft, before, after, &mut found)?;
     relationship_rules(draft, before, after, &mut found);
     content_type_rules(draft, before, after, &mut found);
+    copied_shape_rules(draft, &mut found)?;
     shared_part_rules(draft, before, after, &mut found)?;
     clone_rules(draft, before, after, &mut found)?;
     id_rules(draft, before, after, &mut found);

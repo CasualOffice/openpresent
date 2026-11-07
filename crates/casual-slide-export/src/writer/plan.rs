@@ -154,6 +154,7 @@ impl<'a> SavePlan<'a> {
             draft.apply(op)?;
         }
         draft.sweep()?;
+        draft.settle_vba()?;
         Ok(draft)
     }
 

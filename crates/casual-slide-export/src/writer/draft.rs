@@ -74,8 +74,19 @@ pub struct WriterOutcome {
     pub report: Vec<ReportEntry>,
     /// The deck carried a digital signature, and an edit has invalidated it.
     pub signature_invalidated: bool,
+    /// Each cloned part, by the part it was copied from: clone to source.
+    pub clones: BTreeMap<String, String>,
     /// The slide parts each `Add` or `Duplicate` created, in plan order.
     pub new_slides: Vec<String>,
+}
+
+/// One id a copied shape was given.
+#[derive(Debug, Clone)]
+pub(crate) struct CopiedShape {
+    pub part: String,
+    pub old: String,
+    pub new: String,
+    pub animated: bool,
 }
 
 /// What has been done to the package, which preflight judges against the input.
@@ -105,6 +116,12 @@ pub(crate) struct Changes {
     pub retired_layout_ids: BTreeSet<u64>,
     /// The notes master this save created.
     pub created_notes_master: Option<String>,
+    /// The file type asked for, by extension.
+    pub requested_extension: Option<String>,
+    /// A VBA project was dropped on confirmation.
+    pub vba_dropped: bool,
+    /// Shapes copied, for the timing they should carry.
+    pub copied_shapes: Vec<CopiedShape>,
     /// A model patch rewrote the main part.
     pub model_edited_main: bool,
     /// New parts an operation authored, whose bytes may equal a removed part's.
@@ -772,6 +789,7 @@ impl<'p> Draft<'p> {
                 dispositions,
                 report: Vec::new(),
                 signature_invalidated: false,
+                clones: BTreeMap::new(),
                 new_slides: Vec::new(),
             });
         }
@@ -841,6 +859,7 @@ impl<'p> Draft<'p> {
             dispositions,
             report,
             signature_invalidated: signed,
+            clones: self.log.clone_of.clone(),
             new_slides,
         })
     }
