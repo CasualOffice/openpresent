@@ -2,10 +2,12 @@
 
 use casual_slide_model::geometry::{
     AdjPoint, AdjustHandle, CustomGeometry, GeomGuide, Geometry, Path2D, PathCommand,
+    PresetTextShape,
 };
 
 use crate::drawing::Node;
 
+// spec-audit: owner=avLst,gdLst,gd
 fn guides(local: &'static str, list: &[GeomGuide]) -> Node {
     Node::a(local).list(list.iter().map(|g| {
         Node::a("gd")
@@ -14,10 +16,12 @@ fn guides(local: &'static str, list: &[GeomGuide]) -> Node {
     }))
 }
 
+// spec-audit: owner=pt,pos
 fn point(local: &'static str, p: &AdjPoint) -> Node {
     Node::a(local).lex("x", p.x.as_ref()).lex("y", p.y.as_ref())
 }
 
+// spec-audit: owner=path,pathLst
 fn command(c: &PathCommand) -> Node {
     match c {
         PathCommand::MoveTo(p) => Node::a("moveTo").opt(p.as_ref().map(|p| point("pt", p))),
@@ -42,16 +46,18 @@ fn command(c: &PathCommand) -> Node {
     }
 }
 
+// spec-audit: owner=path,pathLst
 fn path(p: &Path2D) -> Node {
     Node::a("path")
-        .lex("w", p.w.as_ref())
-        .lex("h", p.h.as_ref())
+        .pos("w", p.w.as_ref())
+        .pos("h", p.h.as_ref())
         .lex("fill", p.fill.as_ref())
         .lex("stroke", p.stroke.as_ref())
         .lex("extrusionOk", p.extrusion_ok.as_ref())
         .list(p.commands.iter().map(command))
 }
 
+// spec-audit: owner=custGeom,ahLst,cxnLst,ahXY,ahPolar,cxn,rect,pathLst
 fn custom(g: &CustomGeometry) -> Node {
     let handles = g.handles.as_ref().map(|list| {
         Node::a("ahLst").list(list.iter().map(|h| {
@@ -103,6 +109,7 @@ fn custom(g: &CustomGeometry) -> Node {
 }
 
 /// `EG_Geometry`.
+// spec-audit: owner=prstGeom,custGeom,spPr
 pub(crate) fn geometry_node(g: &Geometry) -> Node {
     match g {
         Geometry::Preset(p) => Node::a("prstGeom")
@@ -110,4 +117,12 @@ pub(crate) fn geometry_node(g: &Geometry) -> Node {
             .opt(p.adjust.as_ref().map(|l| guides("avLst", l))),
         Geometry::Custom(c) => custom(c),
     }
+}
+
+/// `prstTxWarp`.
+// spec-audit: owner=prstTxWarp
+pub(crate) fn warp_node(w: &PresetTextShape) -> Node {
+    Node::a("prstTxWarp")
+        .lex("prst", w.preset.as_ref())
+        .opt(w.adjust.as_ref().map(|list| guides("avLst", list)))
 }

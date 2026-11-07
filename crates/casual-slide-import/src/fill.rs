@@ -15,6 +15,7 @@ use crate::properties::{Elem, ImportFindingKind as K, ns};
 
 impl Ctx<'_, '_> {
     /// One element of `EG_FillProperties`, which the caller has checked it is.
+    // spec-audit: owner=ln,spPr,grpSpPr,fillOverlay,rPr,defRPr,endParaRPr
     pub(crate) fn fill(&mut self, el: &Elem) -> Res<Fill> {
         self.enter()?;
         let fill = match el.local.as_str() {
@@ -40,6 +41,7 @@ impl Ctx<'_, '_> {
         Ok(fill)
     }
 
+    // spec-audit: owner=gradFill,lin,path
     fn gradient(&mut self, el: &Elem) -> Res<GradientFill> {
         let mut e = el.clone();
         let mut g = GradientFill {
@@ -89,6 +91,7 @@ impl Ctx<'_, '_> {
         Ok(g)
     }
 
+    // spec-audit: owner=gsLst,gs
     fn stops(&mut self, el: &Elem) -> Res<Vec<GradientStop>> {
         self.r.finish(el);
         let kids = self.kids(el, self.limits.max_gradient_stops)?;
@@ -109,6 +112,7 @@ impl Ctx<'_, '_> {
         Ok(stops)
     }
 
+    // spec-audit: owner=tileRect,fillToRect,fillRect,srcRect
     pub(crate) fn relative_rect(&mut self, el: &Elem) -> Res<RelativeRect> {
         let mut e = el.clone();
         let rect = RelativeRect {
@@ -122,6 +126,7 @@ impl Ctx<'_, '_> {
         Ok(rect)
     }
 
+    // spec-audit: owner=pattFill
     fn pattern(&mut self, el: &Elem) -> Res<PatternFill> {
         let mut e = el.clone();
         let mut p = PatternFill {
@@ -150,6 +155,7 @@ impl Ctx<'_, '_> {
     }
 
     /// `a:CT_BlipFillProperties`, under `a:blipFill` or `p:blipFill`.
+    // spec-audit: owner=blipFill,stretch,tile
     pub(crate) fn blip_fill(&mut self, el: &Elem) -> Res<BlipFill> {
         let mut e = el.clone();
         let mut b = BlipFill {
@@ -201,6 +207,7 @@ impl Ctx<'_, '_> {
         Ok(b)
     }
 
+    // spec-audit: owner=blip
     pub(crate) fn blip(&mut self, el: &Elem) -> Res<Blip> {
         let mut e = el.clone();
         let mut b = Blip {
@@ -302,6 +309,7 @@ impl Ctx<'_, '_> {
         self.r.tree.plain_attribute(ext, "uri")
     }
 
+    // spec-audit: owner=useLocalDpi
     fn blip_extensions(&mut self, el: &Elem, b: &mut Blip) -> Res<()> {
         for item in self.extension_items(el)? {
             if item.is(A14, "imgProps") && b.image_properties.is_none() {

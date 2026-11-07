@@ -7,6 +7,7 @@
 //! their own areas and stays in the part's tree, preserved but not modelled.
 
 use crate::color::{Color, xml_enum};
+use crate::text::{BodyProperties, TextListStyle};
 
 xml_enum! {
     /// `ST_ColorSchemeIndex`: the twelve slots of a colour scheme.
@@ -335,16 +336,17 @@ pub enum ThemeableFont {
     Ref(FontRef),
 }
 
-/// `CT_DefaultShapeDefinition`. `spPr`, `bodyPr` and `lstStyle` belong to the
-/// shape and text areas and stay in the part, preserved but not modelled here.
+/// `CT_DefaultShapeDefinition`. `bodyPr` and `lstStyle` take part in a shape's text
+/// inheritance (`MS-OI29500` 2.1.1379, 2.1.1388, 2.1.1399). `spPr` stays in the part,
+/// preserved but not modelled here (`T1C-02`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ShapeDefinition {
     /// `spPr` is present.
     pub has_shape_properties: bool,
-    /// `bodyPr` is present.
-    pub has_body_properties: bool,
-    /// `lstStyle` is present.
-    pub has_list_style: bool,
+    /// `bodyPr`.
+    pub body_properties: Option<BodyProperties>,
+    /// `lstStyle`.
+    pub list_style: Option<TextListStyle>,
     /// `style`.
     pub style: Option<ShapeStyle>,
     /// `extLst`, by `uri`; the content stays in the part.

@@ -23,12 +23,13 @@ use casual_slide_model::shape::{
 use casual_slide_ooxml::{AlternateResolution, Branch, MARKUP_COMPATIBILITY, Relationship};
 
 use crate::color::Findings as ColorFindings;
-use crate::drawing::{Ctx, DrawingLimits, note_dag_siblings, read_blip_fill};
+use crate::drawing::{Ctx, note_dag_siblings, read_blip_fill};
 use crate::media::{MediaLimits, is_media_element, read_app_extensions, read_media, read_wav};
 use crate::presentation::read_positive_size;
 use crate::properties::{Elem, ImportError, ImportFindingKind as K, Reader, ns};
 use crate::slide::{SlideError, SlideLimits};
 use crate::text::{TextCounts, TextReader};
+use crate::theme::read_shape_style;
 
 /// `a16:` Office 2016 drawing, where `creationId` lives.
 pub const A16: &[&str] = &["http://schemas.microsoft.com/office/drawing/2014/main"];
@@ -181,9 +182,13 @@ impl ShapeReader<'_, '_, '_> {
                         | (NodeKind::GraphicFrame, "xfrm" | "graphic")
                         | (NodeKind::Picture, "blipFill")
                         | (NodeKind::Shape, "txBody")
+                        | (
+                            NodeKind::Shape | NodeKind::Connector | NodeKind::Picture,
+                            "style"
+                        )
                 );
             if !modelled {
-                // `style`, `extLst` and the unknown.
+                // `extLst` and the unknown.
                 self.r.retained(&child);
                 continue;
             }
@@ -194,7 +199,7 @@ impl ShapeReader<'_, '_, '_> {
             match name {
                 "spPr" | "grpSpPr" => self.properties(&child, &mut n)?,
                 "blipFill" => {
-                    let fill = read_blip_fill(self.r, self.rels, DrawingLimits::default(), &child)?;
+                    let fill = read_blip_fill(self.r, self.rels, self.limits.drawing, &child)?;
                     n.properties.picture = fill.map(Box::new);
                 }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
@@ -205,8 +210,13 @@ impl ShapeReader<'_, '_, '_> {
                         rels: self.rels,
                         color: &mut *self.color,
                         counts: &mut self.text_counts,
+                        drawing: self.limits.drawing,
                     };
                     n.text_body = Some(Box::new(text.body(&child)?));
+                }
+                "style" => {
+                    let style = read_shape_style(self.r.tree, child.id, &mut *self.color);
+                    n.style = Some(Box::new(style));
                 }
                 _ => self.non_visual(&child, &mut n)?,
             }
@@ -515,7 +525,7 @@ impl ShapeReader<'_, '_, '_> {
         let group = n.kind == NodeKind::Group;
         for child in self.r.children(&el)? {
             if !child.is(ns::DML, "xfrm") {
-                let mut drawing = Ctx::new(&mut *self.r, self.rels, DrawingLimits::default());
+                let mut drawing = Ctx::new(&mut *self.r, self.rels, self.limits.drawing);
                 if !drawing.property(&child, &mut n.properties, group, &mut slots)? {
                     self.r.retained(&child);
                 }

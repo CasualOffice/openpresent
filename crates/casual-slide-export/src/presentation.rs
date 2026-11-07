@@ -205,6 +205,7 @@ fn patch_positive_size(
     w.attr(el, "cy", before.map(|b| &b.cy), Some(&after.cy))
 }
 
+// spec-audit: owner=latin,ea,cs,sym,buFont
 pub(crate) fn patch_text_font(
     w: &mut Writer<'_>,
     el: &Elem,

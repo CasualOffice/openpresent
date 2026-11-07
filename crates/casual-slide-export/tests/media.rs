@@ -17,7 +17,7 @@ use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::{Findings, ImportLimits};
 use casual_slide_import::slide::{SlideLimits, import_slide_part, import_slide_parts};
 use casual_slide_model::color::Percentage;
-use casual_slide_model::fill::{Blip, BlipFill, BlipFillMode, Fill, RelativeRect};
+use casual_slide_model::fill::{Blip, BlipCompression, BlipFill, BlipFillMode, Fill, RelativeRect};
 use casual_slide_model::media::{
     AudioCd, AudioCdTime, DisplayLocation, EmbeddedWavAudioFile, Media, MediaBookmark,
     MediaExtension, MediaFade, MediaFile, MediaTrack, MediaTrim, TrackList, TracksInfo,
@@ -918,6 +918,38 @@ fn each_picture_and_media_field_is_written_and_reads_back() {
     let source = fixture(EVERYTHING);
     let ordinal = model(&source).structure.slides[0];
     let changes: &[(&str, Change)] = &[
+        ("compression email", |p| {
+            let fill = named_mut(p, "Everything")
+                .properties
+                .picture
+                .as_mut()
+                .unwrap();
+            fill.blip.as_mut().unwrap().cstate = Some(BlipCompression::Email);
+        }),
+        ("compression screen", |p| {
+            let fill = named_mut(p, "Everything")
+                .properties
+                .picture
+                .as_mut()
+                .unwrap();
+            fill.blip.as_mut().unwrap().cstate = Some(BlipCompression::Screen);
+        }),
+        ("compression hqprint", |p| {
+            let fill = named_mut(p, "Everything")
+                .properties
+                .picture
+                .as_mut()
+                .unwrap();
+            fill.blip.as_mut().unwrap().cstate = Some(BlipCompression::Hqprint);
+        }),
+        ("compression none", |p| {
+            let fill = named_mut(p, "Everything")
+                .properties
+                .picture
+                .as_mut()
+                .unwrap();
+            fill.blip.as_mut().unwrap().cstate = Some(BlipCompression::None);
+        }),
         ("prefer resize", |p| {
             named_mut(p, "Everything").prefer_relative_resize = Some(true)
         }),

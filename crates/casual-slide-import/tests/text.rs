@@ -194,7 +194,13 @@ fn every_property_deck_reads_as_written() {
     );
     assert_eq!(b.inset_right.as_ref().unwrap().written(), Some("2.5cm"));
     assert_eq!(
-        b.warp.as_ref().unwrap().preset.as_deref(),
+        b.warp
+            .as_ref()
+            .unwrap()
+            .preset
+            .as_ref()
+            .map(Lexical::to_lexical)
+            .as_deref(),
         Some("textPlain")
     );
     let Some(Autofit::Normal {
@@ -303,13 +309,11 @@ fn every_property_deck_reads_as_written() {
     assert_eq!(p.end_properties.as_ref().unwrap().dirty, Some(false));
 
     // Preserved, not modelled, and said so.
-    for element in ["scene3d", "sp3d", "extLst", "avLst"] {
-        assert!(
-            s.findings.has(K::RetainedElement, element),
-            "{element}: {:?}",
-            s.findings
-        );
-    }
+    assert!(
+        s.findings.has(K::RetainedElement, "extLst"),
+        "{:?}",
+        s.findings
+    );
 
     // Each autofit, exactly.
     let fit = |name: &str| {

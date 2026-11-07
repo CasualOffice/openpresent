@@ -9,37 +9,24 @@ use casual_slide_model::picture::{ImageFormula, OEmbed, SvgBlip};
 use crate::drawing::{Node, Space};
 use crate::effect::{effect_node, image_properties_node};
 
-fn relative_rect(node: Node, r: &RelativeRect) -> Node {
-    node.pct("l", r.l).pct("t", r.t).pct("r", r.r).pct("b", r.b)
+// spec-audit: owner=tileRect,fillToRect,fillRect,srcRect
+fn rect(local: &'static str, r: &RelativeRect) -> Node {
+    Node::a(local)
+        .pct("l", r.l)
+        .pct("t", r.t)
+        .pct("r", r.r)
+        .pct("b", r.b)
 }
 
-fn fill_to_rect(r: &RelativeRect) -> Node {
-    relative_rect(Node::a("fillToRect"), r)
-}
-
-fn tile_rect(r: &RelativeRect) -> Node {
-    relative_rect(Node::a("tileRect"), r)
-}
-
-fn fill_rect(r: &RelativeRect) -> Node {
-    relative_rect(Node::a("fillRect"), r)
-}
-
-fn src_rect(r: &RelativeRect) -> Node {
-    relative_rect(Node::a("srcRect"), r)
-}
-
+// spec-audit: owner=gradFill,gs,gsLst,lin,path,ln,spPr
 fn gradient(g: &GradientFill) -> Node {
     let shade = g.shade.as_ref().map(|shade| match shade {
         GradientShade::Linear { angle, scaled } => Node::a("lin")
             .ang("ang", *angle)
             .lex("scaled", scaled.as_ref()),
-        GradientShade::Path {
-            path,
-            fill_to_rect: target,
-        } => Node::a("path")
+        GradientShade::Path { path, fill_to_rect } => Node::a("path")
             .lex("path", path.as_ref())
-            .opt(target.as_ref().map(fill_to_rect)),
+            .opt(fill_to_rect.as_ref().map(|r| rect("fillToRect", r))),
     });
     let stops = g.stops.as_ref().map(|stops| {
         Node::a("gsLst").list(
@@ -53,9 +40,10 @@ fn gradient(g: &GradientFill) -> Node {
         .lex("rotWithShape", g.rotate_with_shape.as_ref())
         .opt(stops)
         .opt(shade)
-        .opt(g.tile_rect.as_ref().map(tile_rect))
+        .opt(g.tile_rect.as_ref().map(|r| rect("tileRect", r)))
 }
 
+// spec-audit: owner=pattFill,ln,spPr
 fn pattern(p: &PatternFill) -> Node {
     Node::a("pattFill")
         .lex("prst", p.preset.as_ref())
@@ -95,6 +83,7 @@ fn oembed(o: &OEmbed) -> Node {
 }
 
 /// `a:CT_Blip`.
+// spec-audit: owner=blip
 pub(crate) fn blip(b: &Blip) -> Node {
     let local_dpi = b
         .use_local_dpi
@@ -135,6 +124,7 @@ pub(crate) fn blip(b: &Blip) -> Node {
 }
 
 /// `a:CT_BlipFillProperties`: `a:blipFill`, or a picture's `p:blipFill`.
+// spec-audit: owner=blipFill,stretch,tile
 pub(crate) fn blip_fill_node(f: &BlipFill, space: Space) -> Node {
     let mode = f.mode.as_ref().map(|mode| match mode {
         BlipFillMode::Tile(t) => Node::a("tile")
@@ -144,17 +134,18 @@ pub(crate) fn blip_fill_node(f: &BlipFill, space: Space) -> Node {
             .pct("sy", t.sy)
             .lex("flip", t.flip.as_ref())
             .lex("algn", t.align.as_ref()),
-        BlipFillMode::Stretch(r) => Node::a("stretch").opt(r.as_ref().map(fill_rect)),
+        BlipFillMode::Stretch(r) => Node::a("stretch").opt(r.as_ref().map(|r| rect("fillRect", r))),
     });
     Node::new(space, "blipFill")
         .lex("dpi", f.dpi.as_ref())
         .lex("rotWithShape", f.rotate_with_shape.as_ref())
         .opt(f.blip.as_ref().map(blip))
-        .opt(f.source_rect.as_ref().map(src_rect))
+        .opt(f.source_rect.as_ref().map(|r| rect("srcRect", r)))
         .opt(mode)
 }
 
 /// One element of `EG_FillProperties`.
+// spec-audit: owner=ln,spPr,grpSpPr
 pub(crate) fn fill_node(fill: &Fill) -> Node {
     match fill {
         Fill::None => Node::a("noFill"),

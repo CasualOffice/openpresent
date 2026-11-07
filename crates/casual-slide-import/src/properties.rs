@@ -295,6 +295,8 @@ pub enum ImportFindingKind {
     Drawing(crate::drawing::DrawingFinding),
     /// What a media reference's reader noticed, under its own codes.
     Media(crate::media::MediaFinding),
+    /// What the colour reader noticed in a shape's properties, under its own codes.
+    Color(crate::color::FindingKind),
 }
 
 impl ImportFindingKind {
@@ -318,6 +320,7 @@ impl ImportFindingKind {
             Self::FindingsTruncated => "CS-IMF-0015",
             Self::Drawing(finding) => finding.code(),
             Self::Media(finding) => finding.code(),
+            Self::Color(finding) => finding.code(),
         }
     }
 }
