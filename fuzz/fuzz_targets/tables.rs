@@ -113,8 +113,8 @@ fuzz_target!(|data: &[u8]| {
     };
     for row in &mut table.rows {
         for cell in &mut row.cells {
-            cell.properties.get_or_insert_with(Default::default).fill = Some(Fill::None);
-            let Some(body) = cell.text.as_mut() else {
+            cell.tc_pr.get_or_insert_with(Default::default).fill = Some(Fill::None);
+            let Some(body) = cell.tx_body.as_mut() else {
                 continue;
             };
             for paragraph in &mut body.paragraphs {

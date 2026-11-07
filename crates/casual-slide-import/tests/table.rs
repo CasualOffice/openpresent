@@ -180,7 +180,7 @@ impl Every<'_> {
         &self.table.rows[0].cells[0]
     }
     fn style(&self) -> &TableStyle {
-        &self.list.styles[0]
+        &self.list.tbl_style[0]
     }
     fn whole(&self) -> &TablePartStyle {
         self.style().part(TablePartKind::WholeTable).unwrap()
@@ -188,10 +188,10 @@ impl Every<'_> {
     fn border(&self, name: &str) -> &TableBorder {
         let b = self
             .whole()
-            .cell
+            .tc_style
             .as_ref()
             .unwrap()
-            .borders
+            .tc_bdr
             .as_ref()
             .unwrap();
         match name {
@@ -199,10 +199,10 @@ impl Every<'_> {
             "right" => b.right.as_ref(),
             "top" => b.top.as_ref(),
             "bottom" => b.bottom.as_ref(),
-            "insideH" => b.inside_horizontal.as_ref(),
-            "insideV" => b.inside_vertical.as_ref(),
-            "tl2br" => b.top_left_to_bottom_right.as_ref(),
-            _ => b.top_right_to_bottom_left.as_ref(),
+            "insideH" => b.inside_h.as_ref(),
+            "insideV" => b.inside_v.as_ref(),
+            "tl2br" => b.tl2br.as_ref(),
+            _ => b.tr2bl.as_ref(),
         }
         .unwrap()
     }
@@ -212,39 +212,41 @@ impl Every<'_> {
 /// panic, so a row added to the checklist fails this until it is handled.
 fn modelled(e: &Every<'_>, owner: &str, name: &str) -> bool {
     let cell = e.cell();
-    let p = cell.properties.as_ref().unwrap();
-    let t = e.table.properties.as_ref().unwrap();
-    let td = e.inline.properties.as_ref().unwrap();
-    let text = e.whole().text.as_ref().unwrap();
-    let tc_style = e.whole().cell.as_ref().unwrap();
+    let p = cell.tc_pr.as_ref().unwrap();
+    let t = e.table.tbl_pr.as_ref().unwrap();
+    let td = e.inline.tbl_pr.as_ref().unwrap();
+    let text = e.whole().tc_tx_style.as_ref().unwrap();
+    let tc_style = e.whole().tc_style.as_ref().unwrap();
     let list = e.list;
     match (owner, name) {
-        ("CT_TableCellProperties", "lnL") => p.line_left.is_some(),
-        ("CT_TableCellProperties", "lnR") => p.line_right.is_some(),
-        ("CT_TableCellProperties", "lnT") => p.line_top.is_some(),
-        ("CT_TableCellProperties", "lnB") => p.line_bottom.is_some(),
-        ("CT_TableCellProperties", "lnTlToBr") => p.line_top_left_to_bottom_right.is_some(),
-        ("CT_TableCellProperties", "lnBlToTr") => p.line_bottom_left_to_top_right.is_some(),
+        ("CT_TableCellProperties", "lnL") => p.ln_l.is_some(),
+        ("CT_TableCellProperties", "lnR") => p.ln_r.is_some(),
+        ("CT_TableCellProperties", "lnT") => p.ln_t.is_some(),
+        ("CT_TableCellProperties", "lnB") => p.ln_b.is_some(),
+        ("CT_TableCellProperties", "lnTlToBr") => p.ln_tl_to_br.is_some(),
+        ("CT_TableCellProperties", "lnBlToTr") => p.ln_bl_to_tr.is_some(),
         ("CT_TableCellProperties", "cell3D") => p.cell3d.is_some(),
         ("CT_TableCellProperties", "EG_FillProperties") => matches!(p.fill, Some(Fill::Solid(_))),
         ("CT_TableCellProperties", "headers") => p.headers.is_some(),
-        ("CT_TableCellProperties", "@marL") => p.margin_left.is_some(),
+        ("CT_TableCellProperties", "@marL") => p.mar_l.is_some(),
         ("CT_TableCellProperties", "@marR") => {
-            p.margin_right.as_ref().and_then(|m| m.written()) == Some("1in")
+            p.mar_r.as_ref().and_then(|m| m.written()) == Some("1in")
         }
-        ("CT_TableCellProperties", "@marT") => p.margin_top.is_some(),
+        ("CT_TableCellProperties", "@marT") => p.mar_t.is_some(),
         ("CT_TableCellProperties", "@marB") => {
-            p.margin_bottom.as_ref().and_then(|m| m.written()) == Some("2.5cm")
+            p.mar_b.as_ref().and_then(|m| m.written()) == Some("2.5cm")
         }
-        ("CT_TableCellProperties", "@vert") => p.vertical.is_some(),
+        ("CT_TableCellProperties", "@vert") => p.vert.is_some(),
         ("CT_TableCellProperties", "@anchor") => p.anchor.is_some(),
-        ("CT_TableCellProperties", "@anchorCtr") => p.anchor_center == Some(true),
-        ("CT_TableCellProperties", "@horzOverflow") => p.horizontal_overflow.is_some(),
-        ("CT_Headers", "header") => p.headers.as_ref().is_some_and(|h| h == &["h1", "h2"]),
-        ("CT_TableCol", "@w") => e.table.grid.as_ref().unwrap()[0].width.is_some(),
+        ("CT_TableCellProperties", "@anchorCtr") => p.anchor_ctr == Some(true),
+        ("CT_TableCellProperties", "@horzOverflow") => p.horz_overflow.is_some(),
+        ("CT_Headers", "header") => p.headers.as_ref().is_some_and(|h| h.header == ["h1", "h2"]),
+        ("CT_TableCol", "@w") => e.table.tbl_grid.as_ref().unwrap().grid_col[0]
+            .width
+            .is_some(),
         ("CT_TableGrid", "gridCol") => e.table.column_count() == 2,
-        ("CT_TableCell", "txBody") => cell.text.is_some(),
-        ("CT_TableCell", "tcPr") => cell.properties.is_some(),
+        ("CT_TableCell", "txBody") => cell.tx_body.is_some(),
+        ("CT_TableCell", "tcPr") => cell.tc_pr.is_some(),
         ("CT_TableCell", "@rowSpan") => cell.row_span == Some(1),
         ("CT_TableCell", "@gridSpan") => cell.grid_span == Some(1),
         ("CT_TableCell", "@hMerge") => cell.h_merge == Some(false),
@@ -266,22 +268,22 @@ fn modelled(e: &Every<'_>, owner: &str, name: &str) -> bool {
         }
         ("CT_TableProperties", "@rtl") => t.rtl == Some(true),
         ("CT_TableProperties", "@firstRow") => t.first_row == Some(true),
-        ("CT_TableProperties", "@firstCol") => t.first_column == Some(true),
+        ("CT_TableProperties", "@firstCol") => t.first_col == Some(true),
         ("CT_TableProperties", "@lastRow") => t.last_row == Some(true),
-        ("CT_TableProperties", "@lastCol") => t.last_column == Some(true),
+        ("CT_TableProperties", "@lastCol") => t.last_col == Some(true),
         ("CT_TableProperties", "@bandRow") => t.band_row == Some(true),
-        ("CT_TableProperties", "@bandCol") => t.band_column == Some(true),
-        ("CT_Table", "tblPr") => e.table.properties.is_some(),
-        ("CT_Table", "tblGrid") => e.table.grid.is_some(),
+        ("CT_TableProperties", "@bandCol") => t.band_col == Some(true),
+        ("CT_Table", "tblPr") => e.table.tbl_pr.is_some(),
+        ("CT_Table", "tblGrid") => e.table.tbl_grid.is_some(),
         ("CT_Table", "tr") => e.table.rows.len() == 2,
         ("CT_Cell3D", "bevel") => p.cell3d.is_some_and(|c| c.bevel.is_some()),
         ("CT_Cell3D", "lightRig") => p.cell3d.is_some_and(|c| c.light_rig.is_some()),
-        ("CT_Cell3D", "@prstMaterial") => p.cell3d.is_some_and(|c| c.material.is_some()),
+        ("CT_Cell3D", "@prstMaterial") => p.cell3d.is_some_and(|c| c.prst_material.is_some()),
         ("CT_ThemeableLineStyle", "ln") => matches!(e.border("left"), TableBorder::Line(_)),
         ("CT_ThemeableLineStyle", "lnRef") => matches!(e.border("right"), TableBorder::Ref(_)),
         ("CT_TableStyleTextStyle", "EG_ThemeableFontStyles") => {
             let plain = e.style().part(TablePartKind::Band1Horizontal).unwrap();
-            let plain = plain.text.as_ref().unwrap();
+            let plain = plain.tc_tx_style.as_ref().unwrap();
             matches!(text.font, Some(ThemeableFont::Inline(_)))
                 && matches!(plain.font, Some(ThemeableFont::Ref(_)))
         }
@@ -295,40 +297,67 @@ fn modelled(e: &Every<'_>, owner: &str, name: &str) -> bool {
             !matches!(e.border(n), TableBorder::Empty)
         }
         ("CT_TableBackgroundStyle", "EG_ThemeableFillStyle") => {
-            let one = e.style().background.as_ref().unwrap();
-            let two = list.styles[1].background.as_ref().unwrap();
+            let one = e.style().tbl_bg.as_ref().unwrap();
+            let two = list.tbl_style[1].tbl_bg.as_ref().unwrap();
             matches!(one.fill, Some(TableStyleFill::Inline(_)))
                 && matches!(two.fill, Some(TableStyleFill::Ref(_)))
         }
         ("CT_TableBackgroundStyle", "EG_ThemeableEffectStyle") => {
-            let one = e.style().background.as_ref().unwrap();
-            let two = list.styles[1].background.as_ref().unwrap();
+            let one = e.style().tbl_bg.as_ref().unwrap();
+            let two = list.tbl_style[1].tbl_bg.as_ref().unwrap();
             matches!(one.effect, Some(TableStyleEffect::Ref(_)))
                 && matches!(two.effect, Some(TableStyleEffect::Inline(_)))
         }
-        ("CT_TableStyleCellStyle", "tcBdr") => tc_style.borders.is_some(),
+        ("CT_TableStyleCellStyle", "tcBdr") => tc_style.tc_bdr.is_some(),
         ("CT_TableStyleCellStyle", "EG_ThemeableFillStyle") => {
             let plain = e.style().part(TablePartKind::Band1Horizontal).unwrap();
             matches!(tc_style.fill, Some(TableStyleFill::Ref(_)))
                 && matches!(
-                    plain.cell.as_ref().unwrap().fill,
+                    plain.tc_style.as_ref().unwrap().fill,
                     Some(TableStyleFill::Inline(_))
                 )
         }
         ("CT_TableStyleCellStyle", "cell3D") => tc_style.cell3d.is_some(),
-        ("CT_TablePartStyle", "tcTxStyle") => e.whole().text.is_some(),
-        ("CT_TablePartStyle", "tcStyle") => e.whole().cell.is_some(),
-        ("CT_TableStyle", "tblBg") => e.style().background.is_some(),
-        ("CT_TableStyle", "@styleId") => e.style().id.as_deref() == Some(STYLE_ID),
-        ("CT_TableStyle", "@styleName") => e.style().name.as_deref() == Some("Fixture Style"),
+        ("CT_TablePartStyle", "tcTxStyle") => e.whole().tc_tx_style.is_some(),
+        ("CT_TablePartStyle", "tcStyle") => e.whole().tc_style.is_some(),
+        ("CT_TableStyle", "tblBg") => e.style().tbl_bg.is_some(),
+        ("CT_TableStyle", "@styleId") => e.style().style_id.as_deref() == Some(STYLE_ID),
+        ("CT_TableStyle", "@styleName") => e.style().style_name.as_deref() == Some("Fixture Style"),
         ("CT_TableStyle", part) => {
             let kind = TablePartKind::from_xml(part)
                 .unwrap_or_else(|| panic!("CT_TableStyle/{part}, with no case here"));
             e.style().part(kind).is_some()
         }
-        ("CT_TableStyleList", "tblStyle") => list.styles.len() == 2,
-        ("CT_TableStyleList", "@def") => list.default_style.as_deref() == Some(STYLE_ID),
+        ("CT_TableStyleList", "tblStyle") => list.tbl_style.len() == 2,
+        ("CT_TableStyleList", "@def") => list.def.as_deref() == Some(STYLE_ID),
         other => panic!("{other:?} in the TABLE rows, with no case here"),
+    }
+}
+
+/// Each part style by its name, and in the order `MS-OI29500` 2.1.1265 applies them.
+#[test]
+fn every_part_style_is_read_under_its_own_name() {
+    let d = deck(EVERY);
+    let style = &d.table_styles.as_ref().unwrap().tbl_style[0];
+    let names = [
+        "wholeTbl", "band1H", "band2H", "band1V", "band2V", "lastCol", "firstCol", "lastRow",
+        "seCell", "swCell", "firstRow", "neCell", "nwCell",
+    ];
+    for (i, name) in names.into_iter().enumerate() {
+        let kind = TablePartKind::from_xml(name).unwrap();
+        assert_eq!(TablePartKind::ALL[i], kind, "{name}");
+        assert!(style.part(kind).is_some(), "{name}");
+    }
+    // Each says which it is by its own colour, its place in the list: so none was read into
+    // another's slot. The first is the rich one, with a colour of its own.
+    for (i, kind) in TablePartKind::ALL.iter().enumerate().skip(1) {
+        let part = style.part(*kind).unwrap();
+        let level = u8::try_from(i + 1).unwrap();
+        assert_eq!(
+            part.tc_tx_style.as_ref().unwrap().color,
+            Some(casual_slide_model::color::Color::srgb(level, level, level)),
+            "{kind:?}"
+        );
     }
 }
 
@@ -404,7 +433,7 @@ fn absent_stays_absent_in_a_bare_table() {
     let (t, findings) = read_table(
         r#"<a:tbl><a:tblGrid><a:gridCol w="5"/></a:tblGrid><a:tr h="5"><a:tc/></a:tr></a:tbl>"#,
     );
-    assert_eq!(t.properties, None);
+    assert_eq!(t.tbl_pr, None);
     let c = &t.rows[0].cells[0];
     assert_eq!(*c, TableCell::default());
     assert!(!findings.iter().any(|f| matches!(f.kind, K::Table(_))));
@@ -415,8 +444,8 @@ fn an_empty_header_list_and_no_header_list_differ() {
     let (t, _) = read_table(
         r#"<a:tbl><a:tblGrid><a:gridCol w="5"/></a:tblGrid><a:tr h="5"><a:tc><a:tcPr><a:headers/></a:tcPr></a:tc></a:tr></a:tbl>"#,
     );
-    let p = t.rows[0].cells[0].properties.as_ref().unwrap();
-    assert_eq!(p.headers.as_deref(), Some(&[][..]));
+    let p = t.rows[0].cells[0].tc_pr.as_ref().unwrap();
+    assert_eq!(p.headers, Some(Default::default()));
 }
 
 #[test]
@@ -424,12 +453,12 @@ fn a_cells_text_is_tier_1fs_and_its_fill_and_lines_tier_1es() {
     let d = deck(EVERY);
     let t = table_of(first_slide(&d), "Every Property");
     let c = &t.rows[0].cells[0];
-    let body = c.text.as_ref().unwrap();
+    let body = c.tx_body.as_ref().unwrap();
     assert!(matches!(
         &body.paragraphs[0].items[0],
         TextItem::Run(r) if r.text.as_deref() == Some("Full")
     ));
-    let line = c.properties.as_ref().unwrap().line_left.as_ref().unwrap();
+    let line = c.tc_pr.as_ref().unwrap().ln_l.as_ref().unwrap();
     assert_eq!(line.width, Some(12700));
     assert!(matches!(line.fill, Some(Fill::Solid(_))));
 }
@@ -480,7 +509,7 @@ fn merged_cells_read_as_mso_oi29500_describes_them() {
     assert_eq!(map.origins[&(2, 2)], (1, 2));
     assert!(!map.origins.contains_key(&(1, 3)));
     // Each covered cell keeps its own text.
-    let covered = t.rows[1].cells[1].text.as_ref().unwrap();
+    let covered = t.rows[1].cells[1].tx_body.as_ref().unwrap();
     assert!(matches!(
         &covered.paragraphs[0].items[0],
         TextItem::Run(r) if r.text.as_deref() == Some("c")
@@ -506,7 +535,7 @@ fn an_unknown_style_guid_is_reported_and_never_crashes() {
             d.findings
         );
         let t = table_of(first_slide(&d), "Unknown");
-        assert!(t.properties.as_ref().unwrap().style.is_some(), "kept");
+        assert!(t.tbl_pr.as_ref().unwrap().style.is_some(), "kept");
     }
     // A listed one is not reported.
     let known = deck(EVERY);
@@ -805,11 +834,11 @@ fn nothing_this_tier_does_not_model_goes_unreported() {
         f.iter().any(|x| {
             x.kind == K::RetainedAttribute
                 && x.element == name
-                && x.attribute.as_deref() == Some("zzUnknown")
+                && x.attribute.as_deref() == Some("(unknown)")
         })
     };
     let names_child = |f: &Findings, name: &str| {
-        f.has(K::RetainedElement, "zzChild") || f.has(K::MalformedValue, name)
+        f.has(K::RetainedElement, "(unknown)") || f.has(K::MalformedValue, name)
     };
 
     for name in [
@@ -871,7 +900,9 @@ fn merges_of_a_hostile_model_cost_one_pass_and_never_index_out() {
         ..TableCell::default()
     };
     let t = Table {
-        grid: Some(vec![Default::default(); 3]),
+        tbl_grid: Some(casual_slide_model::table::TableGrid {
+            grid_col: vec![Default::default(); 3],
+        }),
         rows: vec![
             casual_slide_model::table::TableRow {
                 height: None,
@@ -879,7 +910,7 @@ fn merges_of_a_hostile_model_cost_one_pass_and_never_index_out() {
             };
             40
         ],
-        properties: None,
+        tbl_pr: None,
     };
     let map = t.merges();
     assert_eq!(map.merges.len(), 1);
@@ -891,7 +922,7 @@ fn merges_of_a_hostile_model_cost_one_pass_and_never_index_out() {
     );
     // No grid: nothing is a merge, and nothing panics.
     let none = Table {
-        grid: None,
+        tbl_grid: None,
         ..t.clone()
     };
     assert_eq!(none.merges().merges, []);
@@ -934,7 +965,9 @@ fn every_deck_reads_its_tables_with_no_table_left_unread() {
     for rel in &decks_with_tables {
         let d = deck(rel);
         assert!(
-            d.table_styles.as_ref().is_some_and(|l| l.styles.is_empty()),
+            d.table_styles
+                .as_ref()
+                .is_some_and(|l| l.tbl_style.is_empty()),
             "{rel}"
         );
         assert!(

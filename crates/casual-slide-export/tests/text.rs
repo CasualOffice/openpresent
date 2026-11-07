@@ -190,6 +190,29 @@ fn every_row_of_the_text_area_is_written_or_refused_or_left_alone() {
     assert!(written >= 110, "{written} rows written");
 }
 
+/// `uLn` is `a:CT_LineProperties` under another name, so a new child goes in at the same
+/// schema position: before an `extLst` that only the tree holds, and not after it.
+#[test]
+fn a_new_child_of_an_underline_line_goes_before_its_extension() {
+    let from = concat!(
+        r#"<a:bodyPr/><a:p><a:r><a:rPr><a:uLn w="1"><a:extLst><a:ext uri="{00000000-0000-0000-0000-000000000009}"/></a:extLst></a:uLn></a:rPr>"#,
+        r#"<a:t>x</a:t></a:r></a:p>"#
+    );
+    let mut wanted = read_part(slide_with_body(from).as_bytes());
+    let run = first_run_of_mut(&mut wanted.shape_tree_mut().unwrap().children[0]);
+    let properties = run.properties.as_mut().unwrap();
+    let Some(UnderlineLine::Line(line)) = properties.underline_line.as_mut() else {
+        panic!("no uLn");
+    };
+    line.fill = Some(Fill::None);
+    let bytes = patch_between(from, &wanted).unwrap();
+    let text = String::from_utf8(bytes.clone()).unwrap();
+    let fill = text.find("<a:noFill").unwrap();
+    let extension = text.find("<a:extLst").unwrap();
+    assert!(fill < extension, "{text}");
+    assert_eq!(read_part(&bytes), wanted);
+}
+
 #[test]
 fn every_enum_value_in_the_text_rows_is_written_and_reads_back() {
     let rows = enum_rows();

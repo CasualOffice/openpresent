@@ -260,7 +260,7 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
         "blipFill" => &["blip", "srcRect", "tile", "stretch"],
         "pattFill" => &["fgClr", "bgClr"],
         "clrChange" => &["clrFrom", "clrTo"],
-        "ln" | "hiddenLine" | "lnL" | "lnR" | "lnT" | "lnB" | "lnTlToBr" | "lnBlToTr" => &[
+        "ln" | "hiddenLine" | "uLn" | "lnL" | "lnR" | "lnT" | "lnB" | "lnTlToBr" | "lnBlToTr" => &[
             "noFill",
             "solidFill",
             "gradFill",

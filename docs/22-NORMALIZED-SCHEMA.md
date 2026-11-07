@@ -134,6 +134,8 @@ Every patched part is read back before saving.
 
 **Known and absent.** **We hold no definitions of Office's built-in styles**, and real decks refer to one with an empty list (`z19828779-education-ar`, `z17310490-vierfelder-de`), so such a table resolves to no style here and is drawn styled by PowerPoint. A style's borders are read and not resolved to a cell's edges, as which of two neighbours' borders shows is Tier 2E's (BEH-14, 2.1.1424 e, f), and so is row growth (2.1.1427). `MS-OI29500` 2.1.1415's `dkEdge` and `flood` are recorded on the model and not resolved.
 
+**Status marks.** `TABLE` in `docs/spec/checklist.tsv` holds what `tools/spec-audit/audit.py --check` allows: every `extLst` is `r`, and a blank cell is a row the audit cannot establish, not one that is unread. `every_table_row_in_the_checklist_is_read_or_reported` holds all 113. A blank has one of these reasons: the name is too short or generic to count (`w`, `h`, `tc`, `tr`, `ln`, `b`, `i`, `id`); a schema choice is an enum and not two fields (`tableStyle`, `tableStyleId`, `ln`, `lnRef`); a type or group includes rows of Tier 1E or of another that are not themselves marked; or the owner is not determinable from the source, as for part styles reached through `TablePartKind`.
+
 **A disagreement in the notes.** 2.1.1427 b says a row holds more than 1 cell, and 2.1.1425 allows one column. A single-column table is not reported.
 
 ## The fidelity contract

@@ -24,10 +24,11 @@ use std::collections::HashSet;
 use casual_slide_model::color::Color;
 use casual_slide_model::presentation::{COORDINATE_MIN, Coordinate, POSITIVE_COORDINATE_MAX};
 use casual_slide_model::table::{
-    Cell3D, GridColumn, MergeFault, OFFICE_ROW_HEIGHT_LIMIT, OFFICE_TABLE_DIMENSION_LIMIT, Table,
-    TableBackgroundStyle, TableBorder, TableCell, TableCellBorders, TableCellProperties,
-    TableCellStyle, TablePartKind, TablePartStyle, TableProperties, TableRow, TableStyle,
-    TableStyleChoice, TableStyleEffect, TableStyleFill, TableStyleList, TableTextStyle,
+    Cell3D, Headers, MergeFault, OFFICE_ROW_HEIGHT_LIMIT, OFFICE_TABLE_DIMENSION_LIMIT, Table,
+    TableBackgroundStyle, TableBorder, TableCell, TableCellBorderStyle, TableCellProperties,
+    TableCol, TableGrid, TablePartKind, TablePartStyle, TableProperties, TableRow, TableStyle,
+    TableStyleCellStyle, TableStyleChoice, TableStyleEffect, TableStyleFill, TableStyleList,
+    TableStyleTextStyle,
 };
 use casual_slide_model::text::Written;
 use casual_slide_model::theme::OnOffStyle;
@@ -233,18 +234,18 @@ impl TableReader<'_, '_> {
                     }
                     rows.push(child);
                 }
-                "tblPr" if table.properties.is_some() => {
+                "tblPr" if table.tbl_pr.is_some() => {
                     self.r.note(K::DuplicateElement, &child, None);
                 }
-                "tblPr" => table.properties = Some(Box::new(self.tbl_pr(&child)?)),
-                "tblGrid" if table.grid.is_some() => {
+                "tblPr" => table.tbl_pr = Some(Box::new(self.tbl_pr(&child)?)),
+                "tblGrid" if table.tbl_grid.is_some() => {
                     self.r.note(K::DuplicateElement, &child, None);
                 }
-                "tblGrid" => table.grid = Some(self.tbl_grid(&child)?),
+                "tblGrid" => table.tbl_grid = Some(self.tbl_grid(&child)?),
                 _ => self.r.retained(&child),
             }
         }
-        if table.grid.is_none() {
+        if table.tbl_grid.is_none() {
             self.r.note(K::MissingRequired, el, Some("tblGrid"));
         }
         let office = 1..=OFFICE_TABLE_DIMENSION_LIMIT;
@@ -273,7 +274,7 @@ impl TableReader<'_, '_> {
         Ok(table)
     }
 
-    fn tbl_grid(&mut self, el: &Elem) -> Result<Vec<GridColumn>, SlideError> {
+    fn tbl_grid(&mut self, el: &Elem) -> Result<TableGrid, SlideError> {
         self.r.finish(el);
         let limit = self.limits.max_columns;
         self.check_children(el, TableBound::Columns, limit)?;
@@ -298,12 +299,12 @@ impl TableReader<'_, '_> {
             for kid in self.r.children(&child)? {
                 self.r.retained(&kid);
             }
-            grid.push(GridColumn { width });
+            grid.push(TableCol { width });
         }
         if !(1..=OFFICE_TABLE_DIMENSION_LIMIT).contains(&grid.len()) {
             self.note(TableFinding::Dimension, el, Some("gridCol"));
         }
-        Ok(grid)
+        Ok(TableGrid { grid_col: grid })
     }
 
     fn tr(
@@ -380,8 +381,8 @@ impl TableReader<'_, '_> {
             h_merge: self.r.attr(&mut e, "hMerge")?,
             v_merge: self.r.attr(&mut e, "vMerge")?,
             id: self.r.attr(&mut e, "id")?,
-            text: None,
-            properties: None,
+            tx_body: None,
+            tc_pr: None,
         };
         self.r.finish(&e);
         let mut seen = HashSet::new();
@@ -401,9 +402,9 @@ impl TableReader<'_, '_> {
                     color: &mut *self.color,
                     counts: &mut *self.text_counts,
                 };
-                cell.text = Some(Box::new(text.body(&child)?));
+                cell.tx_body = Some(Box::new(text.body(&child)?));
             } else {
-                cell.properties = Some(Box::new(self.tc_pr(&child)?));
+                cell.tc_pr = Some(Box::new(self.tc_pr(&child)?));
             }
         }
         Ok(cell)
@@ -413,14 +414,14 @@ impl TableReader<'_, '_> {
         let mut e = el.clone();
         let r = &mut *self.r;
         let mut p = TableCellProperties {
-            margin_left: r.attr_in(&mut e, "marL", coordinate32)?,
-            margin_right: r.attr_in(&mut e, "marR", coordinate32)?,
-            margin_top: r.attr_in(&mut e, "marT", coordinate32)?,
-            margin_bottom: r.attr_in(&mut e, "marB", coordinate32)?,
-            vertical: r.attr(&mut e, "vert")?,
+            mar_l: r.attr_in(&mut e, "marL", coordinate32)?,
+            mar_r: r.attr_in(&mut e, "marR", coordinate32)?,
+            mar_t: r.attr_in(&mut e, "marT", coordinate32)?,
+            mar_b: r.attr_in(&mut e, "marB", coordinate32)?,
+            vert: r.attr(&mut e, "vert")?,
             anchor: r.attr(&mut e, "anchor")?,
-            anchor_center: r.attr(&mut e, "anchorCtr")?,
-            horizontal_overflow: r.attr(&mut e, "horzOverflow")?,
+            anchor_ctr: r.attr(&mut e, "anchorCtr")?,
+            horz_overflow: r.attr(&mut e, "horzOverflow")?,
             ..TableCellProperties::default()
         };
         r.finish(&e);
@@ -450,16 +451,20 @@ impl TableReader<'_, '_> {
             match name {
                 "fill" => p.fill = read_fill(self.r, self.rels, limits, &child)?,
                 "cell3D" => p.cell3d = Some(self.cell3d(&child)?),
-                "headers" => p.headers = Some(self.headers(&child)?),
+                "headers" => {
+                    p.headers = Some(Headers {
+                        header: self.headers(&child)?,
+                    })
+                }
                 _ => {
                     let line = read_line(self.r, self.rels, limits, &child)?.map(Box::new);
                     match name {
-                        "lnL" => p.line_left = line,
-                        "lnR" => p.line_right = line,
-                        "lnT" => p.line_top = line,
-                        "lnB" => p.line_bottom = line,
-                        "lnTlToBr" => p.line_top_left_to_bottom_right = line,
-                        _ => p.line_bottom_left_to_top_right = line,
+                        "lnL" => p.ln_l = line,
+                        "lnR" => p.ln_r = line,
+                        "lnT" => p.ln_t = line,
+                        "lnB" => p.ln_b = line,
+                        "lnTlToBr" => p.ln_tl_to_br = line,
+                        _ => p.ln_bl_to_tr = line,
                     }
                 }
             }
@@ -492,7 +497,7 @@ impl TableReader<'_, '_> {
     fn cell3d(&mut self, el: &Elem) -> Result<Cell3D, SlideError> {
         let mut e = el.clone();
         let mut out = Cell3D {
-            material: self.r.attr(&mut e, "prstMaterial")?,
+            prst_material: self.r.attr(&mut e, "prstMaterial")?,
             ..Cell3D::default()
         };
         self.r.finish(&e);
@@ -526,11 +531,11 @@ impl TableReader<'_, '_> {
         let mut p = TableProperties {
             rtl: r.attr(&mut e, "rtl")?,
             first_row: r.attr(&mut e, "firstRow")?,
-            first_column: r.attr(&mut e, "firstCol")?,
+            first_col: r.attr(&mut e, "firstCol")?,
             last_row: r.attr(&mut e, "lastRow")?,
-            last_column: r.attr(&mut e, "lastCol")?,
+            last_col: r.attr(&mut e, "lastCol")?,
             band_row: r.attr(&mut e, "bandRow")?,
-            band_column: r.attr(&mut e, "bandCol")?,
+            band_col: r.attr(&mut e, "bandCol")?,
             ..TableProperties::default()
         };
         r.finish(&e);
@@ -577,10 +582,10 @@ impl TableReader<'_, '_> {
     pub fn tbl_style(&mut self, el: &Elem) -> Result<TableStyle, SlideError> {
         let mut e = el.clone();
         let mut style = TableStyle {
-            id: self
+            style_id: self
                 .r
                 .required(&mut e, "styleId", |s: &String| is_guid(s))?,
-            name: self.r.required(&mut e, "styleName", |_| true)?,
+            style_name: self.r.required(&mut e, "styleName", |_| true)?,
             ..TableStyle::default()
         };
         self.r.finish(&e);
@@ -595,7 +600,7 @@ impl TableReader<'_, '_> {
             match name.as_str() {
                 "tblBg" => {
                     if first {
-                        style.background = Some(self.tbl_bg(&child)?);
+                        style.tbl_bg = Some(self.tbl_bg(&child)?);
                     } else {
                         self.r.note(K::DuplicateElement, &child, None);
                     }
@@ -715,9 +720,9 @@ impl TableReader<'_, '_> {
             if !seen.insert(name.to_owned()) {
                 self.r.note(K::DuplicateElement, &child, None);
             } else if name == "tcTxStyle" {
-                out.text = Some(self.tc_tx_style(&child)?);
+                out.tc_tx_style = Some(self.tc_tx_style(&child)?);
             } else {
-                out.cell = Some(self.tc_style(&child)?);
+                out.tc_style = Some(self.tc_style(&child)?);
             }
         }
         Ok(out)
@@ -747,12 +752,12 @@ impl TableReader<'_, '_> {
         value
     }
 
-    fn tc_tx_style(&mut self, el: &Elem) -> Result<TableTextStyle, SlideError> {
+    fn tc_tx_style(&mut self, el: &Elem) -> Result<TableStyleTextStyle, SlideError> {
         let mut e = el.clone();
-        let mut out = TableTextStyle {
+        let mut out = TableStyleTextStyle {
             bold: self.on_off(&mut e, "b"),
             italic: self.on_off(&mut e, "i"),
-            ..TableTextStyle::default()
+            ..TableStyleTextStyle::default()
         };
         self.r.finish(&e);
         let tree = self.r.tree;
@@ -783,9 +788,9 @@ impl TableReader<'_, '_> {
         Ok(out)
     }
 
-    fn tc_style(&mut self, el: &Elem) -> Result<TableCellStyle, SlideError> {
+    fn tc_style(&mut self, el: &Elem) -> Result<TableStyleCellStyle, SlideError> {
         self.r.finish(el);
-        let mut out = TableCellStyle::default();
+        let mut out = TableStyleCellStyle::default();
         let mut seen = HashSet::new();
         for child in self.r.children(el)? {
             if !child.in_namespace(ns::DML) {
@@ -806,7 +811,7 @@ impl TableReader<'_, '_> {
                 continue;
             }
             match slot {
-                "tcBdr" => out.borders = Some(self.tc_bdr(&child)?),
+                "tcBdr" => out.tc_bdr = Some(self.tc_bdr(&child)?),
                 "fill" => out.fill = self.style_fill(&child)?,
                 _ => out.cell3d = Some(self.cell3d(&child)?),
             }
@@ -814,9 +819,9 @@ impl TableReader<'_, '_> {
         Ok(out)
     }
 
-    fn tc_bdr(&mut self, el: &Elem) -> Result<TableCellBorders, SlideError> {
+    fn tc_bdr(&mut self, el: &Elem) -> Result<TableCellBorderStyle, SlideError> {
         self.r.finish(el);
-        let mut out = TableCellBorders::default();
+        let mut out = TableCellBorderStyle::default();
         let mut seen = HashSet::new();
         for child in self.r.children(el)? {
             let name = child.local.clone();
@@ -840,10 +845,10 @@ impl TableReader<'_, '_> {
                 "right" => out.right = border,
                 "top" => out.top = border,
                 "bottom" => out.bottom = border,
-                "insideH" => out.inside_horizontal = border,
-                "insideV" => out.inside_vertical = border,
-                "tl2br" => out.top_left_to_bottom_right = border,
-                _ => out.top_right_to_bottom_left = border,
+                "insideH" => out.inside_h = border,
+                "insideV" => out.inside_v = border,
+                "tl2br" => out.tl2br = border,
+                _ => out.tr2bl = border,
             }
         }
         Ok(out)
@@ -895,7 +900,7 @@ pub fn import_table_styles(
     let mut reader = Reader::new(tree, part, import_limits, findings);
     let root = reader.root(ns::DML, "tblStyleLst")?;
     let mut e = root.clone();
-    let default_style = reader.required(&mut e, "def", |s: &String| is_guid(s))?;
+    let def = reader.required(&mut e, "def", |s: &String| is_guid(s))?;
     reader.finish(&e);
     let mut text_counts = TextCounts::default();
     let mut counts = TableCounts::default();
@@ -910,8 +915,8 @@ pub fn import_table_styles(
     let limit = limits.table.max_table_styles;
     styles.check_children(&root, TableBound::Styles, limit)?;
     let mut out = TableStyleList {
-        default_style,
-        styles: Vec::new(),
+        def,
+        tbl_style: Vec::new(),
     };
     let mut ids = HashSet::new();
     for child in styles.r.children(&root)? {
@@ -919,18 +924,18 @@ pub fn import_table_styles(
             styles.r.retained(&child);
             continue;
         }
-        if out.styles.len() >= limit {
+        if out.tbl_style.len() >= limit {
             return Err(styles.over(TableBound::Styles, limit));
         }
         let style = styles.tbl_style(&child)?;
-        if let Some(id) = &style.id
+        if let Some(id) = &style.style_id
             && !ids.insert(id.to_ascii_uppercase())
         {
             styles.r.note(K::DuplicateId, &child, Some("styleId"));
         }
-        out.styles.push(style);
+        out.tbl_style.push(style);
     }
-    if let Some(id) = &out.default_style
+    if let Some(id) = &out.def
         && out.find(id).is_none()
     {
         styles
@@ -990,7 +995,7 @@ pub fn check_style_references(
             let style = node
                 .table
                 .as_ref()
-                .and_then(|t| t.properties.as_ref())
+                .and_then(|t| t.tbl_pr.as_ref())
                 .and_then(|p| p.style.as_ref());
             if let Some(TableStyleChoice::Id(id)) = style
                 && list.is_none_or(|l| l.find(id).is_none())

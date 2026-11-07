@@ -2760,73 +2760,73 @@ a:<theme>	THEME		root	<theme>	CT_OfficeStyleSheet				.	.	.	.	.
 a:<themeOverride>	THEME		root	<themeOverride>	CT_BaseStylesOverride				.	.	.	.	.
 a:<themeManager>	THEME		root	<themeManager>	CT_EmptyElement				.	.	.	.	.
 a:CT_TableCellProperties	TABLE		type	CT_TableCellProperties					.	.	.	.	.
-a:CT_TableCellProperties/lnL	TABLE	CT_TableCellProperties	element	lnL	CT_LineProperties	0..1			.	.	.	.	.
-a:CT_TableCellProperties/lnR	TABLE	CT_TableCellProperties	element	lnR	CT_LineProperties	0..1			.	.	.	.	.
-a:CT_TableCellProperties/lnT	TABLE	CT_TableCellProperties	element	lnT	CT_LineProperties	0..1			.	.	.	.	.
-a:CT_TableCellProperties/lnB	TABLE	CT_TableCellProperties	element	lnB	CT_LineProperties	0..1			.	.	.	.	.
-a:CT_TableCellProperties/lnTlToBr	TABLE	CT_TableCellProperties	element	lnTlToBr	CT_LineProperties	0..1			.	.	.	.	.
-a:CT_TableCellProperties/lnBlToTr	TABLE	CT_TableCellProperties	element	lnBlToTr	CT_LineProperties	0..1			.	.	.	.	.
-a:CT_TableCellProperties/cell3D	TABLE	CT_TableCellProperties	element	cell3D	CT_Cell3D	0..1			.	.	.	.	.
+a:CT_TableCellProperties/lnL	TABLE	CT_TableCellProperties	element	lnL	CT_LineProperties	0..1			y	y	y	.	.
+a:CT_TableCellProperties/lnR	TABLE	CT_TableCellProperties	element	lnR	CT_LineProperties	0..1			y	y	y	.	.
+a:CT_TableCellProperties/lnT	TABLE	CT_TableCellProperties	element	lnT	CT_LineProperties	0..1			y	y	y	.	.
+a:CT_TableCellProperties/lnB	TABLE	CT_TableCellProperties	element	lnB	CT_LineProperties	0..1			y	y	y	.	.
+a:CT_TableCellProperties/lnTlToBr	TABLE	CT_TableCellProperties	element	lnTlToBr	CT_LineProperties	0..1			y	y	y	.	.
+a:CT_TableCellProperties/lnBlToTr	TABLE	CT_TableCellProperties	element	lnBlToTr	CT_LineProperties	0..1			y	y	y	.	.
+a:CT_TableCellProperties/cell3D	TABLE	CT_TableCellProperties	element	cell3D	CT_Cell3D	0..1			y	y	.	.	.
 a:CT_TableCellProperties/EG_FillProperties	TABLE	CT_TableCellProperties	group	EG_FillProperties	EG_FillProperties	0..1			.	.	.	.	.
-a:CT_TableCellProperties/headers	TABLE	CT_TableCellProperties	element	headers	CT_Headers	0..1			.	.	.	.	.
-a:CT_TableCellProperties/extLst	TABLE	CT_TableCellProperties	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableCellProperties/@marL	TABLE	CT_TableCellProperties	attribute	@marL	ST_Coordinate32	optional	91440		.	.	.	.	.
-a:CT_TableCellProperties/@marR	TABLE	CT_TableCellProperties	attribute	@marR	ST_Coordinate32	optional	91440		.	.	.	.	.
-a:CT_TableCellProperties/@marT	TABLE	CT_TableCellProperties	attribute	@marT	ST_Coordinate32	optional	45720		.	.	.	.	.
-a:CT_TableCellProperties/@marB	TABLE	CT_TableCellProperties	attribute	@marB	ST_Coordinate32	optional	45720		.	.	.	.	.
-a:CT_TableCellProperties/@vert	TABLE	CT_TableCellProperties	attribute	@vert	ST_TextVerticalType	optional	horz		.	.	.	.	.
-a:CT_TableCellProperties/@anchor	TABLE	CT_TableCellProperties	attribute	@anchor	ST_TextAnchoringType	optional	t		.	.	.	.	.
-a:CT_TableCellProperties/@anchorCtr	TABLE	CT_TableCellProperties	attribute	@anchorCtr	boolean	optional	false		.	.	.	.	.
-a:CT_TableCellProperties/@horzOverflow	TABLE	CT_TableCellProperties	attribute	@horzOverflow	ST_TextHorzOverflowType	optional	clip		.	.	.	.	.
-a:CT_Headers	TABLE		type	CT_Headers					.	.	.	.	.
-a:CT_Headers/header	TABLE	CT_Headers	element	header	string				.	.	.	.	.
+a:CT_TableCellProperties/headers	TABLE	CT_TableCellProperties	element	headers	CT_Headers	0..1			y	y	.	.	.
+a:CT_TableCellProperties/extLst	TABLE	CT_TableCellProperties	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableCellProperties/@marL	TABLE	CT_TableCellProperties	attribute	@marL	ST_Coordinate32	optional	91440		y	y	y	.	.
+a:CT_TableCellProperties/@marR	TABLE	CT_TableCellProperties	attribute	@marR	ST_Coordinate32	optional	91440		y	y	y	.	.
+a:CT_TableCellProperties/@marT	TABLE	CT_TableCellProperties	attribute	@marT	ST_Coordinate32	optional	45720		y	y	y	.	.
+a:CT_TableCellProperties/@marB	TABLE	CT_TableCellProperties	attribute	@marB	ST_Coordinate32	optional	45720		y	y	y	.	.
+a:CT_TableCellProperties/@vert	TABLE	CT_TableCellProperties	attribute	@vert	ST_TextVerticalType	optional	horz		y	y	y	.	.
+a:CT_TableCellProperties/@anchor	TABLE	CT_TableCellProperties	attribute	@anchor	ST_TextAnchoringType	optional	t		y	y	y	.	.
+a:CT_TableCellProperties/@anchorCtr	TABLE	CT_TableCellProperties	attribute	@anchorCtr	boolean	optional	false		y	y	y	.	.
+a:CT_TableCellProperties/@horzOverflow	TABLE	CT_TableCellProperties	attribute	@horzOverflow	ST_TextHorzOverflowType	optional	clip		y	y	y	.	.
+a:CT_Headers	TABLE		type	CT_Headers					y	y	y	.	.
+a:CT_Headers/header	TABLE	CT_Headers	element	header	string				y	y	y	.	.
 a:CT_TableCol	TABLE		type	CT_TableCol					.	.	.	.	.
-a:CT_TableCol/extLst	TABLE	CT_TableCol	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableCol/@w	TABLE	CT_TableCol	attribute	@w	ST_Coordinate	required			.	.	.	.	.
-a:CT_TableGrid	TABLE		type	CT_TableGrid					.	.	.	.	.
-a:CT_TableGrid/gridCol	TABLE	CT_TableGrid	element	gridCol	CT_TableCol	0..unbounded			.	.	.	.	.
+a:CT_TableCol/extLst	TABLE	CT_TableCol	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableCol/@w	TABLE	CT_TableCol	attribute	@w	ST_Coordinate	required			.	.	y	.	.
+a:CT_TableGrid	TABLE		type	CT_TableGrid					y	y	y	.	.
+a:CT_TableGrid/gridCol	TABLE	CT_TableGrid	element	gridCol	CT_TableCol	0..unbounded			y	y	y	.	.
 a:CT_TableCell	TABLE		type	CT_TableCell					.	.	.	.	.
-a:CT_TableCell/txBody	TABLE	CT_TableCell	element	txBody	CT_TextBody	0..1			.	.	.	.	.
-a:CT_TableCell/tcPr	TABLE	CT_TableCell	element	tcPr	CT_TableCellProperties	0..1			.	.	.	.	.
-a:CT_TableCell/extLst	TABLE	CT_TableCell	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableCell/@rowSpan	TABLE	CT_TableCell	attribute	@rowSpan	int	optional	1		.	.	.	.	.
-a:CT_TableCell/@gridSpan	TABLE	CT_TableCell	attribute	@gridSpan	int	optional	1		.	.	.	.	.
-a:CT_TableCell/@hMerge	TABLE	CT_TableCell	attribute	@hMerge	boolean	optional	false		.	.	.	.	.
-a:CT_TableCell/@vMerge	TABLE	CT_TableCell	attribute	@vMerge	boolean	optional	false		.	.	.	.	.
-a:CT_TableCell/@id	TABLE	CT_TableCell	attribute	@id	string	optional			.	.	.	.	.
+a:CT_TableCell/txBody	TABLE	CT_TableCell	element	txBody	CT_TextBody	0..1			y	y	.	.	.
+a:CT_TableCell/tcPr	TABLE	CT_TableCell	element	tcPr	CT_TableCellProperties	0..1			y	y	.	.	.
+a:CT_TableCell/extLst	TABLE	CT_TableCell	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableCell/@rowSpan	TABLE	CT_TableCell	attribute	@rowSpan	int	optional	1		y	y	y	.	.
+a:CT_TableCell/@gridSpan	TABLE	CT_TableCell	attribute	@gridSpan	int	optional	1		y	y	y	.	.
+a:CT_TableCell/@hMerge	TABLE	CT_TableCell	attribute	@hMerge	boolean	optional	false		y	y	y	.	.
+a:CT_TableCell/@vMerge	TABLE	CT_TableCell	attribute	@vMerge	boolean	optional	false		y	y	y	.	.
+a:CT_TableCell/@id	TABLE	CT_TableCell	attribute	@id	string	optional			.	y	y	.	.
 a:CT_TableRow	TABLE		type	CT_TableRow					.	.	.	.	.
-a:CT_TableRow/tc	TABLE	CT_TableRow	element	tc	CT_TableCell	0..unbounded			.	.	.	.	.
-a:CT_TableRow/extLst	TABLE	CT_TableRow	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableRow/@h	TABLE	CT_TableRow	attribute	@h	ST_Coordinate	required			.	.	.	.	.
+a:CT_TableRow/tc	TABLE	CT_TableRow	element	tc	CT_TableCell	0..unbounded			.	y	y	.	.
+a:CT_TableRow/extLst	TABLE	CT_TableRow	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableRow/@h	TABLE	CT_TableRow	attribute	@h	ST_Coordinate	required			.	y	y	.	.
 a:CT_TableProperties	TABLE		type	CT_TableProperties					.	.	.	.	.
 a:CT_TableProperties/EG_FillProperties	TABLE	CT_TableProperties	group	EG_FillProperties	EG_FillProperties	0..1			.	.	.	.	.
-a:CT_TableProperties/EG_EffectProperties	TABLE	CT_TableProperties	group	EG_EffectProperties	EG_EffectProperties	0..1			.	.	.	.	.
-a:CT_TableProperties/tableStyle	TABLE	CT_TableProperties	element	tableStyle	CT_TableStyle	choice			.	.	.	.	.
-a:CT_TableProperties/tableStyleId	TABLE	CT_TableProperties	element	tableStyleId	ST_Guid	choice			.	.	.	.	.
-a:CT_TableProperties/extLst	TABLE	CT_TableProperties	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableProperties/@rtl	TABLE	CT_TableProperties	attribute	@rtl	boolean	optional	false		.	.	.	.	.
-a:CT_TableProperties/@firstRow	TABLE	CT_TableProperties	attribute	@firstRow	boolean	optional	false		.	.	.	.	.
-a:CT_TableProperties/@firstCol	TABLE	CT_TableProperties	attribute	@firstCol	boolean	optional	false		.	.	.	.	.
-a:CT_TableProperties/@lastRow	TABLE	CT_TableProperties	attribute	@lastRow	boolean	optional	false		.	.	.	.	.
-a:CT_TableProperties/@lastCol	TABLE	CT_TableProperties	attribute	@lastCol	boolean	optional	false		.	.	.	.	.
-a:CT_TableProperties/@bandRow	TABLE	CT_TableProperties	attribute	@bandRow	boolean	optional	false		.	.	.	.	.
-a:CT_TableProperties/@bandCol	TABLE	CT_TableProperties	attribute	@bandCol	boolean	optional	false		.	.	.	.	.
-a:CT_Table	TABLE		type	CT_Table					.	.	.	.	.
-a:CT_Table/tblPr	TABLE	CT_Table	element	tblPr	CT_TableProperties	0..1			.	.	.	.	.
-a:CT_Table/tblGrid	TABLE	CT_Table	element	tblGrid	CT_TableGrid				.	.	.	.	.
-a:CT_Table/tr	TABLE	CT_Table	element	tr	CT_TableRow	0..unbounded			.	.	.	.	.
+a:CT_TableProperties/EG_EffectProperties	TABLE	CT_TableProperties	group	EG_EffectProperties	EG_EffectProperties	0..1			.	.	y	.	.
+a:CT_TableProperties/tableStyle	TABLE	CT_TableProperties	element	tableStyle	CT_TableStyle	choice			.	y	y	.	.
+a:CT_TableProperties/tableStyleId	TABLE	CT_TableProperties	element	tableStyleId	ST_Guid	choice			.	y	y	.	.
+a:CT_TableProperties/extLst	TABLE	CT_TableProperties	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableProperties/@rtl	TABLE	CT_TableProperties	attribute	@rtl	boolean	optional	false		y	y	y	.	.
+a:CT_TableProperties/@firstRow	TABLE	CT_TableProperties	attribute	@firstRow	boolean	optional	false		y	y	y	.	.
+a:CT_TableProperties/@firstCol	TABLE	CT_TableProperties	attribute	@firstCol	boolean	optional	false		y	y	y	.	.
+a:CT_TableProperties/@lastRow	TABLE	CT_TableProperties	attribute	@lastRow	boolean	optional	false		y	y	y	.	.
+a:CT_TableProperties/@lastCol	TABLE	CT_TableProperties	attribute	@lastCol	boolean	optional	false		y	y	y	.	.
+a:CT_TableProperties/@bandRow	TABLE	CT_TableProperties	attribute	@bandRow	boolean	optional	false		y	y	y	.	.
+a:CT_TableProperties/@bandCol	TABLE	CT_TableProperties	attribute	@bandCol	boolean	optional	false		y	y	y	.	.
+a:CT_Table	TABLE		type	CT_Table					.	y	y	.	.
+a:CT_Table/tblPr	TABLE	CT_Table	element	tblPr	CT_TableProperties	0..1			y	y	y	.	.
+a:CT_Table/tblGrid	TABLE	CT_Table	element	tblGrid	CT_TableGrid				y	y	y	.	.
+a:CT_Table/tr	TABLE	CT_Table	element	tr	CT_TableRow	0..unbounded			.	y	y	.	.
 a:<tbl>	TABLE		root	<tbl>	CT_Table				.	.	.	.	.
 a:CT_Cell3D	TABLE		type	CT_Cell3D					.	.	.	.	.
-a:CT_Cell3D/bevel	TABLE	CT_Cell3D	element	bevel	CT_Bevel				.	.	.	.	.
-a:CT_Cell3D/lightRig	TABLE	CT_Cell3D	element	lightRig	CT_LightRig	0..1			.	.	.	.	.
-a:CT_Cell3D/extLst	TABLE	CT_Cell3D	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_Cell3D/@prstMaterial	TABLE	CT_Cell3D	attribute	@prstMaterial	ST_PresetMaterialType	optional	plastic		.	.	.	.	.
+a:CT_Cell3D/bevel	TABLE	CT_Cell3D	element	bevel	CT_Bevel				y	y	y	.	.
+a:CT_Cell3D/lightRig	TABLE	CT_Cell3D	element	lightRig	CT_LightRig	0..1			y	y	.	.	.
+a:CT_Cell3D/extLst	TABLE	CT_Cell3D	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_Cell3D/@prstMaterial	TABLE	CT_Cell3D	attribute	@prstMaterial	ST_PresetMaterialType	optional	plastic		y	y	y	.	.
 a:EG_ThemeableFillStyle	THEME		type	EG_ThemeableFillStyle					.	.	.	.	.
 a:EG_ThemeableFillStyle/fill	THEME	EG_ThemeableFillStyle	element	fill	CT_FillProperties	choice			.	.	.	.	.
 a:EG_ThemeableFillStyle/fillRef	THEME	EG_ThemeableFillStyle	element	fillRef	CT_StyleMatrixReference	choice			.	.	.	.	.
-a:CT_ThemeableLineStyle	TABLE		type	CT_ThemeableLineStyle					.	.	.	.	.
-a:CT_ThemeableLineStyle/ln	TABLE	CT_ThemeableLineStyle	element	ln	CT_LineProperties	choice			.	.	.	.	.
-a:CT_ThemeableLineStyle/lnRef	TABLE	CT_ThemeableLineStyle	element	lnRef	CT_StyleMatrixReference	choice			.	.	.	.	.
+a:CT_ThemeableLineStyle	TABLE		type	CT_ThemeableLineStyle					.	.	y	.	.
+a:CT_ThemeableLineStyle/ln	TABLE	CT_ThemeableLineStyle	element	ln	CT_LineProperties	choice			.	.	y	.	.
+a:CT_ThemeableLineStyle/lnRef	TABLE	CT_ThemeableLineStyle	element	lnRef	CT_StyleMatrixReference	choice			.	.	y	.	.
 a:EG_ThemeableEffectStyle	THEME		type	EG_ThemeableEffectStyle					.	.	.	.	.
 a:EG_ThemeableEffectStyle/effect	THEME	EG_ThemeableEffectStyle	element	effect	CT_EffectProperties	choice			.	.	.	.	.
 a:EG_ThemeableEffectStyle/effectRef	THEME	EG_ThemeableEffectStyle	element	effectRef	CT_StyleMatrixReference	choice			.	.	.	.	.
@@ -2838,52 +2838,52 @@ a:ST_OnOffStyleType/=on	THEME	ST_OnOffStyleType	value	=on					y	.	.	.	.
 a:ST_OnOffStyleType/=off	THEME	ST_OnOffStyleType	value	=off					.	.	.	.	.
 a:ST_OnOffStyleType/=def	THEME	ST_OnOffStyleType	value	=def					.	.	.	.	.
 a:CT_TableStyleTextStyle	TABLE		type	CT_TableStyleTextStyle					.	.	.	.	.
-a:CT_TableStyleTextStyle/EG_ThemeableFontStyles	TABLE	CT_TableStyleTextStyle	group	EG_ThemeableFontStyles	EG_ThemeableFontStyles	0..1			.	.	.	.	.
-a:CT_TableStyleTextStyle/EG_ColorChoice	TABLE	CT_TableStyleTextStyle	group	EG_ColorChoice	EG_ColorChoice	0..1			.	.	.	.	.
-a:CT_TableStyleTextStyle/extLst	TABLE	CT_TableStyleTextStyle	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableStyleTextStyle/@b	TABLE	CT_TableStyleTextStyle	attribute	@b	ST_OnOffStyleType	optional	def		.	.	.	.	.
-a:CT_TableStyleTextStyle/@i	TABLE	CT_TableStyleTextStyle	attribute	@i	ST_OnOffStyleType	optional	def		.	.	.	.	.
+a:CT_TableStyleTextStyle/EG_ThemeableFontStyles	TABLE	CT_TableStyleTextStyle	group	EG_ThemeableFontStyles	EG_ThemeableFontStyles	0..1			.	y	y	.	.
+a:CT_TableStyleTextStyle/EG_ColorChoice	TABLE	CT_TableStyleTextStyle	group	EG_ColorChoice	EG_ColorChoice	0..1			.	y	.	.	.
+a:CT_TableStyleTextStyle/extLst	TABLE	CT_TableStyleTextStyle	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableStyleTextStyle/@b	TABLE	CT_TableStyleTextStyle	attribute	@b	ST_OnOffStyleType	optional	def		.	y	y	.	.
+a:CT_TableStyleTextStyle/@i	TABLE	CT_TableStyleTextStyle	attribute	@i	ST_OnOffStyleType	optional	def		.	y	y	.	.
 a:CT_TableCellBorderStyle	TABLE		type	CT_TableCellBorderStyle					.	.	.	.	.
-a:CT_TableCellBorderStyle/left	TABLE	CT_TableCellBorderStyle	element	left	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/right	TABLE	CT_TableCellBorderStyle	element	right	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/top	TABLE	CT_TableCellBorderStyle	element	top	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/bottom	TABLE	CT_TableCellBorderStyle	element	bottom	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/insideH	TABLE	CT_TableCellBorderStyle	element	insideH	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/insideV	TABLE	CT_TableCellBorderStyle	element	insideV	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/tl2br	TABLE	CT_TableCellBorderStyle	element	tl2br	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/tr2bl	TABLE	CT_TableCellBorderStyle	element	tr2bl	CT_ThemeableLineStyle	0..1			.	.	.	.	.
-a:CT_TableCellBorderStyle/extLst	TABLE	CT_TableCellBorderStyle	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableBackgroundStyle	TABLE		type	CT_TableBackgroundStyle					.	.	.	.	.
-a:CT_TableBackgroundStyle/EG_ThemeableFillStyle	TABLE	CT_TableBackgroundStyle	group	EG_ThemeableFillStyle	EG_ThemeableFillStyle	0..1			.	.	.	.	.
-a:CT_TableBackgroundStyle/EG_ThemeableEffectStyle	TABLE	CT_TableBackgroundStyle	group	EG_ThemeableEffectStyle	EG_ThemeableEffectStyle	0..1			.	.	.	.	.
-a:CT_TableStyleCellStyle	TABLE		type	CT_TableStyleCellStyle					.	.	.	.	.
-a:CT_TableStyleCellStyle/tcBdr	TABLE	CT_TableStyleCellStyle	element	tcBdr	CT_TableCellBorderStyle	0..1			.	.	.	.	.
-a:CT_TableStyleCellStyle/EG_ThemeableFillStyle	TABLE	CT_TableStyleCellStyle	group	EG_ThemeableFillStyle	EG_ThemeableFillStyle	0..1			.	.	.	.	.
-a:CT_TableStyleCellStyle/cell3D	TABLE	CT_TableStyleCellStyle	element	cell3D	CT_Cell3D	0..1			.	.	.	.	.
-a:CT_TablePartStyle	TABLE		type	CT_TablePartStyle					.	.	.	.	.
-a:CT_TablePartStyle/tcTxStyle	TABLE	CT_TablePartStyle	element	tcTxStyle	CT_TableStyleTextStyle	0..1			.	.	.	.	.
-a:CT_TablePartStyle/tcStyle	TABLE	CT_TablePartStyle	element	tcStyle	CT_TableStyleCellStyle	0..1			.	.	.	.	.
+a:CT_TableCellBorderStyle/left	TABLE	CT_TableCellBorderStyle	element	left	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/right	TABLE	CT_TableCellBorderStyle	element	right	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/top	TABLE	CT_TableCellBorderStyle	element	top	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/bottom	TABLE	CT_TableCellBorderStyle	element	bottom	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/insideH	TABLE	CT_TableCellBorderStyle	element	insideH	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/insideV	TABLE	CT_TableCellBorderStyle	element	insideV	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/tl2br	TABLE	CT_TableCellBorderStyle	element	tl2br	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/tr2bl	TABLE	CT_TableCellBorderStyle	element	tr2bl	CT_ThemeableLineStyle	0..1			y	y	y	.	.
+a:CT_TableCellBorderStyle/extLst	TABLE	CT_TableCellBorderStyle	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableBackgroundStyle	TABLE		type	CT_TableBackgroundStyle					.	y	.	.	.
+a:CT_TableBackgroundStyle/EG_ThemeableFillStyle	TABLE	CT_TableBackgroundStyle	group	EG_ThemeableFillStyle	EG_ThemeableFillStyle	0..1			.	y	.	.	.
+a:CT_TableBackgroundStyle/EG_ThemeableEffectStyle	TABLE	CT_TableBackgroundStyle	group	EG_ThemeableEffectStyle	EG_ThemeableEffectStyle	0..1			.	y	.	.	.
+a:CT_TableStyleCellStyle	TABLE		type	CT_TableStyleCellStyle					.	y	.	.	.
+a:CT_TableStyleCellStyle/tcBdr	TABLE	CT_TableStyleCellStyle	element	tcBdr	CT_TableCellBorderStyle	0..1			y	y	y	.	.
+a:CT_TableStyleCellStyle/EG_ThemeableFillStyle	TABLE	CT_TableStyleCellStyle	group	EG_ThemeableFillStyle	EG_ThemeableFillStyle	0..1			.	y	.	.	.
+a:CT_TableStyleCellStyle/cell3D	TABLE	CT_TableStyleCellStyle	element	cell3D	CT_Cell3D	0..1			y	y	.	.	.
+a:CT_TablePartStyle	TABLE		type	CT_TablePartStyle					y	y	.	.	.
+a:CT_TablePartStyle/tcTxStyle	TABLE	CT_TablePartStyle	element	tcTxStyle	CT_TableStyleTextStyle	0..1			y	y	.	.	.
+a:CT_TablePartStyle/tcStyle	TABLE	CT_TablePartStyle	element	tcStyle	CT_TableStyleCellStyle	0..1			y	y	.	.	.
 a:CT_TableStyle	TABLE		type	CT_TableStyle					.	.	.	.	.
-a:CT_TableStyle/tblBg	TABLE	CT_TableStyle	element	tblBg	CT_TableBackgroundStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/wholeTbl	TABLE	CT_TableStyle	element	wholeTbl	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/band1H	TABLE	CT_TableStyle	element	band1H	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/band2H	TABLE	CT_TableStyle	element	band2H	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/band1V	TABLE	CT_TableStyle	element	band1V	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/band2V	TABLE	CT_TableStyle	element	band2V	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/lastCol	TABLE	CT_TableStyle	element	lastCol	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/firstCol	TABLE	CT_TableStyle	element	firstCol	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/lastRow	TABLE	CT_TableStyle	element	lastRow	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/seCell	TABLE	CT_TableStyle	element	seCell	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/swCell	TABLE	CT_TableStyle	element	swCell	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/firstRow	TABLE	CT_TableStyle	element	firstRow	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/neCell	TABLE	CT_TableStyle	element	neCell	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/nwCell	TABLE	CT_TableStyle	element	nwCell	CT_TablePartStyle	0..1			.	.	.	.	.
-a:CT_TableStyle/extLst	TABLE	CT_TableStyle	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_TableStyle/@styleId	TABLE	CT_TableStyle	attribute	@styleId	ST_Guid	required			.	.	.	.	.
-a:CT_TableStyle/@styleName	TABLE	CT_TableStyle	attribute	@styleName	string	required			.	.	.	.	.
-a:CT_TableStyleList	TABLE		type	CT_TableStyleList					.	.	.	.	.
-a:CT_TableStyleList/tblStyle	TABLE	CT_TableStyleList	element	tblStyle	CT_TableStyle	0..unbounded			.	.	.	.	.
-a:CT_TableStyleList/@def	TABLE	CT_TableStyleList	attribute	@def	ST_Guid	required			.	.	.	.	.
+a:CT_TableStyle/tblBg	TABLE	CT_TableStyle	element	tblBg	CT_TableBackgroundStyle	0..1			y	y	y	.	.
+a:CT_TableStyle/wholeTbl	TABLE	CT_TableStyle	element	wholeTbl	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/band1H	TABLE	CT_TableStyle	element	band1H	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/band2H	TABLE	CT_TableStyle	element	band2H	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/band1V	TABLE	CT_TableStyle	element	band1V	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/band2V	TABLE	CT_TableStyle	element	band2V	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/lastCol	TABLE	CT_TableStyle	element	lastCol	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/firstCol	TABLE	CT_TableStyle	element	firstCol	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/lastRow	TABLE	CT_TableStyle	element	lastRow	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/seCell	TABLE	CT_TableStyle	element	seCell	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/swCell	TABLE	CT_TableStyle	element	swCell	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/firstRow	TABLE	CT_TableStyle	element	firstRow	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/neCell	TABLE	CT_TableStyle	element	neCell	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/nwCell	TABLE	CT_TableStyle	element	nwCell	CT_TablePartStyle	0..1			y	y	.	.	.
+a:CT_TableStyle/extLst	TABLE	CT_TableStyle	element	extLst	CT_OfficeArtExtensionList	0..1			r	r	r	.	.
+a:CT_TableStyle/@styleId	TABLE	CT_TableStyle	attribute	@styleId	ST_Guid	required			y	y	y	.	.
+a:CT_TableStyle/@styleName	TABLE	CT_TableStyle	attribute	@styleName	string	required			y	y	y	.	.
+a:CT_TableStyleList	TABLE		type	CT_TableStyleList					y	.	.	.	.
+a:CT_TableStyleList/tblStyle	TABLE	CT_TableStyleList	element	tblStyle	CT_TableStyle	0..unbounded			y	.	.	.	.
+a:CT_TableStyleList/@def	TABLE	CT_TableStyleList	attribute	@def	ST_Guid	required			y	.	.	.	.
 a:<tblStyleLst>	TABLE		root	<tblStyleLst>	CT_TableStyleList				.	.	.	.	.
 a:CT_TextParagraph	TEXT		type	CT_TextParagraph					.	.	.	.	.
 a:CT_TextParagraph/pPr	TEXT	CT_TextParagraph	element	pPr	CT_TextParagraphProperties	0..1			.	.	.	.	.

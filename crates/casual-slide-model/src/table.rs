@@ -26,66 +26,34 @@ pub const OFFICE_TABLE_DIMENSION_LIMIT: usize = 1_000;
 /// The tallest row Office accepts (`MS-OI29500` 2.1.1427 a).
 pub const OFFICE_ROW_HEIGHT_LIMIT: i64 = 0x3FFF_FFFF;
 
-/// The schema's name of each field of these types, where a field has a clearer name of
-/// its own. For a reader of this page, and `tools/spec-audit`, which matches names.
-pub const SCHEMA_NAMES: &[&str] = &[
-    "lnL",
-    "lnR",
-    "lnT",
-    "lnB",
-    "lnTlToBr",
-    "lnBlToTr",
-    "marL",
-    "marR",
-    "marT",
-    "marB",
-    "anchorCtr",
-    "horzOverflow",
-    "tblGrid",
-    "gridCol",
-    "txBody",
-    "tcPr",
-    "tc",
-    "tableStyleId",
-    "bandCol",
-    "tblPr",
-    "prstMaterial",
-    "ln",
-    "lnRef",
-    "insideH",
-    "insideV",
-    "tl2br",
-    "tr2bl",
-    "tcBdr",
-    "tcTxStyle",
-    "tcStyle",
-    "tblBg",
-    "styleId",
-    "styleName",
-    "tblStyle",
-    "tblStyleLst",
-    "effectLst",
-    "effectDag",
-    "CT_TableGrid",
-    "CT_ThemeableLineStyle",
-    "CT_TableBackgroundStyle",
-    "CT_TablePartStyle",
-];
-
 /// `a:CT_Table`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Table {
     /// `tblPr`.
-    pub properties: Option<Box<TableProperties>>,
+    pub tbl_pr: Option<Box<TableProperties>>,
     /// `tblGrid`. A grid with no column and no grid at all differ.
-    pub grid: Option<Vec<GridColumn>>,
+    pub tbl_grid: Option<TableGrid>,
     /// `tr`.
     pub rows: Vec<TableRow>,
 }
 
+/// `a:CT_TableGrid`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TableGrid {
+    /// `gridCol`.
+    pub grid_col: Vec<TableCol>,
+}
+
+/// `a:CT_Headers`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Headers {
+    /// `header`, as text.
+    pub header: Vec<String>,
+}
+
 /// `a:CT_TableCol`. `extLst`, which holds `a16:colId`, stays in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GridColumn {
+pub struct TableCol {
     /// `@w`.
     pub width: Option<Written<Coordinate>>,
 }
@@ -114,48 +82,48 @@ pub struct TableCell {
     /// `@id`.
     pub id: Option<String>,
     /// `txBody`.
-    pub text: Option<Box<TextBody>>,
+    pub tx_body: Option<Box<TextBody>>,
     /// `tcPr`.
-    pub properties: Option<Box<TableCellProperties>>,
+    pub tc_pr: Option<Box<TableCellProperties>>,
 }
 
 /// `a:CT_TableCellProperties`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TableCellProperties {
     /// `lnL`.
-    pub line_left: Option<Box<Line>>,
+    pub ln_l: Option<Box<Line>>,
     /// `lnR`.
-    pub line_right: Option<Box<Line>>,
+    pub ln_r: Option<Box<Line>>,
     /// `lnT`.
-    pub line_top: Option<Box<Line>>,
+    pub ln_t: Option<Box<Line>>,
     /// `lnB`.
-    pub line_bottom: Option<Box<Line>>,
+    pub ln_b: Option<Box<Line>>,
     /// `lnTlToBr`.
-    pub line_top_left_to_bottom_right: Option<Box<Line>>,
+    pub ln_tl_to_br: Option<Box<Line>>,
     /// `lnBlToTr`.
-    pub line_bottom_left_to_top_right: Option<Box<Line>>,
+    pub ln_bl_to_tr: Option<Box<Line>>,
     /// `cell3D`.
     pub cell3d: Option<Cell3D>,
     /// `EG_FillProperties`.
     pub fill: Option<Fill>,
-    /// `headers/header`, as text. A list present and empty is not an absent one.
-    pub headers: Option<Vec<String>>,
+    /// `headers`. A list present and empty is not an absent one.
+    pub headers: Option<Headers>,
     /// `@marL`.
-    pub margin_left: Option<Written<Coordinate>>,
+    pub mar_l: Option<Written<Coordinate>>,
     /// `@marR`.
-    pub margin_right: Option<Written<Coordinate>>,
+    pub mar_r: Option<Written<Coordinate>>,
     /// `@marT`.
-    pub margin_top: Option<Written<Coordinate>>,
+    pub mar_t: Option<Written<Coordinate>>,
     /// `@marB`.
-    pub margin_bottom: Option<Written<Coordinate>>,
+    pub mar_b: Option<Written<Coordinate>>,
     /// `@vert`.
-    pub vertical: Option<TextVertical>,
+    pub vert: Option<TextVertical>,
     /// `@anchor`.
     pub anchor: Option<TextAnchor>,
     /// `@anchorCtr`.
-    pub anchor_center: Option<bool>,
+    pub anchor_ctr: Option<bool>,
     /// `@horzOverflow`.
-    pub horizontal_overflow: Option<HorizontalOverflow>,
+    pub horz_overflow: Option<HorizontalOverflow>,
 }
 
 /// `a:CT_Cell3D`. `extLst` stays in the tree.
@@ -163,7 +131,7 @@ pub struct TableCellProperties {
 pub struct Cell3D {
     /// `@prstMaterial`. Office's default is `dkEdge`, not the schema's `plastic`
     /// (`MS-OI29500` 2.1.1415 a).
-    pub material: Option<PresetMaterial>,
+    pub prst_material: Option<PresetMaterial>,
     /// `bevel`.
     pub bevel: Option<Bevel>,
     /// `lightRig`. Office takes a `flood` rig when there is none (2.1.1415 b).
@@ -184,15 +152,15 @@ pub struct TableProperties {
     /// `@firstRow`.
     pub first_row: Option<bool>,
     /// `@firstCol`.
-    pub first_column: Option<bool>,
+    pub first_col: Option<bool>,
     /// `@lastRow`.
     pub last_row: Option<bool>,
     /// `@lastCol`.
-    pub last_column: Option<bool>,
+    pub last_col: Option<bool>,
     /// `@bandRow`.
     pub band_row: Option<bool>,
     /// `@bandCol`.
-    pub band_column: Option<bool>,
+    pub band_col: Option<bool>,
 }
 
 /// The choice in `a:CT_TableProperties`.
@@ -209,17 +177,18 @@ pub enum TableStyleChoice {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TableStyleList {
     /// `@def`, as written.
-    pub default_style: Option<String>,
+    pub def: Option<String>,
     /// `tblStyle`, in order.
-    pub styles: Vec<TableStyle>,
+    pub tbl_style: Vec<TableStyle>,
 }
 
 impl TableStyleList {
     /// The first style with this id. GUIDs compare by value, so case does not count
     /// (Inferred), and a repeated id is reported on import and the first is used.
     pub fn find(&self, id: &str) -> Option<&TableStyle> {
-        self.styles.iter().find(|s| {
-            s.id.as_deref()
+        self.tbl_style.iter().find(|s| {
+            s.style_id
+                .as_deref()
                 .is_some_and(|mine| mine.eq_ignore_ascii_case(id))
         })
     }
@@ -229,37 +198,37 @@ impl TableStyleList {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TableStyle {
     /// `@styleId`.
-    pub id: Option<String>,
+    pub style_id: Option<String>,
     /// `@styleName`.
-    pub name: Option<String>,
+    pub style_name: Option<String>,
     /// `tblBg`.
-    pub background: Option<TableBackgroundStyle>,
+    pub tbl_bg: Option<TableBackgroundStyle>,
     /// `wholeTbl`.
-    pub whole_table: Option<Box<TablePartStyle>>,
+    pub whole_tbl: Option<Box<TablePartStyle>>,
     /// `band1H`.
-    pub band1_horizontal: Option<Box<TablePartStyle>>,
+    pub band1_h: Option<Box<TablePartStyle>>,
     /// `band2H`.
-    pub band2_horizontal: Option<Box<TablePartStyle>>,
+    pub band2_h: Option<Box<TablePartStyle>>,
     /// `band1V`.
-    pub band1_vertical: Option<Box<TablePartStyle>>,
+    pub band1_v: Option<Box<TablePartStyle>>,
     /// `band2V`.
-    pub band2_vertical: Option<Box<TablePartStyle>>,
+    pub band2_v: Option<Box<TablePartStyle>>,
     /// `lastCol`.
-    pub last_column: Option<Box<TablePartStyle>>,
+    pub last_col: Option<Box<TablePartStyle>>,
     /// `firstCol`.
-    pub first_column: Option<Box<TablePartStyle>>,
+    pub first_col: Option<Box<TablePartStyle>>,
     /// `lastRow`.
     pub last_row: Option<Box<TablePartStyle>>,
     /// `seCell`.
-    pub south_east_cell: Option<Box<TablePartStyle>>,
+    pub se_cell: Option<Box<TablePartStyle>>,
     /// `swCell`.
-    pub south_west_cell: Option<Box<TablePartStyle>>,
+    pub sw_cell: Option<Box<TablePartStyle>>,
     /// `firstRow`.
     pub first_row: Option<Box<TablePartStyle>>,
     /// `neCell`.
-    pub north_east_cell: Option<Box<TablePartStyle>>,
+    pub ne_cell: Option<Box<TablePartStyle>>,
     /// `nwCell`.
-    pub north_west_cell: Option<Box<TablePartStyle>>,
+    pub nw_cell: Option<Box<TablePartStyle>>,
 }
 
 xml_enum! {
@@ -291,38 +260,38 @@ impl TableStyle {
     /// A part style's slot.
     pub fn slot(&self, kind: TablePartKind) -> &Option<Box<TablePartStyle>> {
         match kind {
-            TablePartKind::WholeTable => &self.whole_table,
-            TablePartKind::Band1Horizontal => &self.band1_horizontal,
-            TablePartKind::Band2Horizontal => &self.band2_horizontal,
-            TablePartKind::Band1Vertical => &self.band1_vertical,
-            TablePartKind::Band2Vertical => &self.band2_vertical,
-            TablePartKind::LastColumn => &self.last_column,
-            TablePartKind::FirstColumn => &self.first_column,
+            TablePartKind::WholeTable => &self.whole_tbl,
+            TablePartKind::Band1Horizontal => &self.band1_h,
+            TablePartKind::Band2Horizontal => &self.band2_h,
+            TablePartKind::Band1Vertical => &self.band1_v,
+            TablePartKind::Band2Vertical => &self.band2_v,
+            TablePartKind::LastColumn => &self.last_col,
+            TablePartKind::FirstColumn => &self.first_col,
             TablePartKind::LastRow => &self.last_row,
-            TablePartKind::SouthEastCell => &self.south_east_cell,
-            TablePartKind::SouthWestCell => &self.south_west_cell,
+            TablePartKind::SouthEastCell => &self.se_cell,
+            TablePartKind::SouthWestCell => &self.sw_cell,
             TablePartKind::FirstRow => &self.first_row,
-            TablePartKind::NorthEastCell => &self.north_east_cell,
-            TablePartKind::NorthWestCell => &self.north_west_cell,
+            TablePartKind::NorthEastCell => &self.ne_cell,
+            TablePartKind::NorthWestCell => &self.nw_cell,
         }
     }
 
     /// A part style's slot, to fill.
     pub fn slot_mut(&mut self, kind: TablePartKind) -> &mut Option<Box<TablePartStyle>> {
         match kind {
-            TablePartKind::WholeTable => &mut self.whole_table,
-            TablePartKind::Band1Horizontal => &mut self.band1_horizontal,
-            TablePartKind::Band2Horizontal => &mut self.band2_horizontal,
-            TablePartKind::Band1Vertical => &mut self.band1_vertical,
-            TablePartKind::Band2Vertical => &mut self.band2_vertical,
-            TablePartKind::LastColumn => &mut self.last_column,
-            TablePartKind::FirstColumn => &mut self.first_column,
+            TablePartKind::WholeTable => &mut self.whole_tbl,
+            TablePartKind::Band1Horizontal => &mut self.band1_h,
+            TablePartKind::Band2Horizontal => &mut self.band2_h,
+            TablePartKind::Band1Vertical => &mut self.band1_v,
+            TablePartKind::Band2Vertical => &mut self.band2_v,
+            TablePartKind::LastColumn => &mut self.last_col,
+            TablePartKind::FirstColumn => &mut self.first_col,
             TablePartKind::LastRow => &mut self.last_row,
-            TablePartKind::SouthEastCell => &mut self.south_east_cell,
-            TablePartKind::SouthWestCell => &mut self.south_west_cell,
+            TablePartKind::SouthEastCell => &mut self.se_cell,
+            TablePartKind::SouthWestCell => &mut self.sw_cell,
             TablePartKind::FirstRow => &mut self.first_row,
-            TablePartKind::NorthEastCell => &mut self.north_east_cell,
-            TablePartKind::NorthWestCell => &mut self.north_west_cell,
+            TablePartKind::NorthEastCell => &mut self.ne_cell,
+            TablePartKind::NorthWestCell => &mut self.nw_cell,
         }
     }
 }
@@ -358,14 +327,14 @@ pub enum TableStyleEffect {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TablePartStyle {
     /// `tcTxStyle`.
-    pub text: Option<TableTextStyle>,
+    pub tc_tx_style: Option<TableStyleTextStyle>,
     /// `tcStyle`.
-    pub cell: Option<TableCellStyle>,
+    pub tc_style: Option<TableStyleCellStyle>,
 }
 
 /// `a:CT_TableStyleTextStyle`. `extLst` stays in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct TableTextStyle {
+pub struct TableStyleTextStyle {
     /// `@b`.
     pub bold: Option<OnOffStyle>,
     /// `@i`.
@@ -378,9 +347,9 @@ pub struct TableTextStyle {
 
 /// `a:CT_TableStyleCellStyle`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct TableCellStyle {
+pub struct TableStyleCellStyle {
     /// `tcBdr`.
-    pub borders: Option<TableCellBorders>,
+    pub tc_bdr: Option<TableCellBorderStyle>,
     /// `fill` or `fillRef`.
     pub fill: Option<TableStyleFill>,
     /// `cell3D`.
@@ -389,7 +358,7 @@ pub struct TableCellStyle {
 
 /// `a:CT_TableCellBorderStyle`. `extLst` stays in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct TableCellBorders {
+pub struct TableCellBorderStyle {
     /// `left`.
     pub left: Option<TableBorder>,
     /// `right`.
@@ -399,13 +368,13 @@ pub struct TableCellBorders {
     /// `bottom`.
     pub bottom: Option<TableBorder>,
     /// `insideH`.
-    pub inside_horizontal: Option<TableBorder>,
+    pub inside_h: Option<TableBorder>,
     /// `insideV`.
-    pub inside_vertical: Option<TableBorder>,
+    pub inside_v: Option<TableBorder>,
     /// `tl2br`.
-    pub top_left_to_bottom_right: Option<TableBorder>,
+    pub tl2br: Option<TableBorder>,
     /// `tr2bl`.
-    pub top_right_to_bottom_left: Option<TableBorder>,
+    pub tr2bl: Option<TableBorder>,
 }
 
 /// `a:CT_ThemeableLineStyle`. An empty one is `Empty`, which no schema allows and which
@@ -497,7 +466,7 @@ fn span(value: Option<i32>) -> usize {
 impl Table {
     /// The number of columns the grid states.
     pub fn column_count(&self) -> usize {
-        self.grid.as_ref().map_or(0, Vec::len)
+        self.tbl_grid.as_ref().map_or(0, |g| g.grid_col.len())
     }
 
     /// The table's merges, and what does not hold of them. One pass over the cells,
@@ -521,11 +490,11 @@ impl Table {
                 let flagged_h = cell.h_merge == Some(true);
                 let flagged_v = cell.v_merge == Some(true);
                 if let Some(cover) = vertical {
-                    let first_column = column == cover.origin_column;
-                    if !flagged_v || flagged_h == first_column {
+                    let first_col = column == cover.origin_column;
+                    if !flagged_v || flagged_h == first_col {
                         map.faults.push(MergeFault::Overlap { row, column });
                     }
-                    let wide = if first_column { cover.columns } else { 1 };
+                    let wide = if first_col { cover.columns } else { 1 };
                     if span(cell.grid_span) != wide || span(cell.row_span) != 1 {
                         map.faults.push(MergeFault::SpansDisagree { row, column });
                     }

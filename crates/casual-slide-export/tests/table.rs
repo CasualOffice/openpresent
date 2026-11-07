@@ -124,7 +124,7 @@ fn table_mut<'a>(part: &'a mut SlidePart, name: &str) -> &'a mut Table {
 }
 
 fn set_first_run(cell: &mut TableCell, text: &str) {
-    let body = cell.text.as_mut().unwrap();
+    let body = cell.tx_body.as_mut().unwrap();
     let TextItem::Run(run) = &mut body.paragraphs[0].items[0] else {
         panic!("no run");
     };
@@ -205,7 +205,7 @@ fn editing_a_cells_text_and_fill_changes_only_those_nodes() {
     let edited = edit_slide(&source, |slide| {
         let cell = &mut table_mut(slide, "Every Property").rows[1].cells[0];
         set_first_run(cell, "Edited & <new>");
-        cell.properties.get_or_insert_with(Default::default).fill = Some(red());
+        cell.tc_pr.get_or_insert_with(Default::default).fill = Some(red());
     })
     .unwrap();
     // The `tcPr/` of a plain cell becomes one holding the fill: the only structure touched.
@@ -236,7 +236,7 @@ fn an_edit_keeps_rowid_colid_and_every_extension_where_they_are() {
     let source = read_fixture(EVERY);
     let edited = edit_slide(&source, |slide| {
         let t = table_mut(slide, "Every Property");
-        let p = t.rows[0].cells[0].properties.as_mut().unwrap();
+        let p = t.rows[0].cells[0].tc_pr.as_mut().unwrap();
         p.anchor = Some(casual_slide_model::text::TextAnchor::Bottom);
         t.rows[0].height = None;
         t.rows[0].height = Some(casual_slide_model::text::Written::new(
@@ -274,10 +274,10 @@ fn another_spelling_of_the_same_value_is_not_an_edit() {
     // `1in` and 914400 are one value: an equal model changes nothing.
     let same = edit_slide(&source, |slide| {
         let p = table_mut(slide, "Every Property").rows[0].cells[0]
-            .properties
+            .tc_pr
             .as_mut()
             .unwrap();
-        p.margin_right = Some(casual_slide_model::text::Written::new(
+        p.mar_r = Some(casual_slide_model::text::Written::new(
             casual_slide_model::presentation::Coordinate(914_400),
         ));
     })
@@ -359,6 +359,69 @@ fn every_modelled_row_is_written_from_nothing_valid_and_removed_again() {
     let written = patch_between(&bare, &with_id).unwrap();
     let again = read_part(&written);
     assert_eq!(again, with_id);
+    let text = String::from_utf8(written.clone()).unwrap();
+    for name in [
+        "tblPr",
+        "tblGrid",
+        "gridCol",
+        "tr",
+        "tc",
+        "txBody",
+        "tcPr",
+        "lnL",
+        "lnR",
+        "lnT",
+        "lnB",
+        "lnTlToBr",
+        "lnBlToTr",
+        "cell3D",
+        "bevel",
+        "lightRig",
+        "headers",
+        "header",
+        "solidFill",
+        "effectLst",
+        "effectDag",
+        "tableStyle",
+        "tableStyleId",
+        "tblStyle",
+    ] {
+        let name = name.replace("tblStyle", "tableStyle");
+        assert!(
+            text.contains(&format!("<a:{name}")),
+            "{name} was not written"
+        );
+    }
+    for name in [
+        "marL",
+        "marR",
+        "marT",
+        "marB",
+        "vert",
+        "anchor",
+        "anchorCtr",
+        "horzOverflow",
+        "rowSpan",
+        "gridSpan",
+        "hMerge",
+        "vMerge",
+        "id",
+        "h",
+        "w",
+        "rtl",
+        "firstRow",
+        "firstCol",
+        "lastRow",
+        "lastCol",
+        "bandRow",
+        "bandCol",
+        "prstMaterial",
+    ] {
+        assert!(
+            text.contains(&format!(" {name}=")),
+            "{name} was not written"
+        );
+    }
 
     // In a deck, so F4 sees it in place.
     let mut entries = parts(&source);
@@ -394,9 +457,9 @@ fn every_style_row_is_written_from_nothing_valid_and_removed_again() {
     let source = read_fixture(EVERY);
     let wanted = imported(&source).table_styles.unwrap();
     let ids: Vec<&str> = wanted
-        .styles
+        .tbl_style
         .iter()
-        .map(|s| s.id.as_deref().unwrap())
+        .map(|s| s.style_id.as_deref().unwrap())
         .collect();
     let bare = format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -419,6 +482,57 @@ fn every_style_row_is_written_from_nothing_valid_and_removed_again() {
         tree.to_bytes()
     };
     let written = patch(&bare, &wanted);
+    let text = String::from_utf8(written.clone()).unwrap();
+    for name in [
+        "tblStyle",
+        "tblBg",
+        "wholeTbl",
+        "band1H",
+        "band2H",
+        "band1V",
+        "band2V",
+        "lastCol",
+        "firstCol",
+        "lastRow",
+        "seCell",
+        "swCell",
+        "firstRow",
+        "neCell",
+        "nwCell",
+        "tcTxStyle",
+        "tcStyle",
+        "tcBdr",
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "insideH",
+        "insideV",
+        "tl2br",
+        "tr2bl",
+        "ln",
+        "lnRef",
+        "fill",
+        "fillRef",
+        "effect",
+        "effectRef",
+        "font",
+        "fontRef",
+        "cell3D",
+        "schemeClr",
+        "srgbClr",
+    ] {
+        assert!(
+            text.contains(&format!("<a:{name}")),
+            "{name} was not written"
+        );
+    }
+    for name in ["def", "styleId", "styleName", "b", "i"] {
+        assert!(
+            text.contains(&format!(" {name}=")),
+            "{name} was not written"
+        );
+    }
     let mut pkg = open(source.clone());
     let mut edits = casual_slide_package::PartEdits::default();
     edits.replace("ppt/tableStyles.xml".to_owned(), written.clone());
@@ -481,7 +595,7 @@ fn a_tablestyles_part_that_is_not_xml_is_reported_and_the_deck_opens() {
 fn editing_a_style_changes_its_part_alone() {
     let source = read_fixture(EVERY);
     let mut wanted = imported(&source).table_styles.unwrap();
-    wanted.styles[1].name = Some("Renamed".to_owned());
+    wanted.tbl_style[1].style_name = Some("Renamed".to_owned());
     let mut pkg = open(source.clone());
     let outcome = save_table_styles(
         &mut pkg,
@@ -529,16 +643,16 @@ fn editing_a_style_changes_its_part_alone() {
 fn a_change_of_which_choice_replaces_it() {
     let source = read_fixture(EVERY);
     let mut wanted = imported(&source).table_styles.unwrap();
-    let whole = wanted.styles[0]
+    let whole = wanted.tbl_style[0]
         .slot_mut(TablePartKind::WholeTable)
         .as_mut()
         .unwrap();
-    let cell = whole.cell.as_mut().unwrap();
+    let cell = whole.tc_style.as_mut().unwrap();
     // `fillRef` to `fill`, and a border's `lnRef` to `ln`.
     cell.fill = Some(casual_slide_model::table::TableStyleFill::Inline(
         Fill::None,
     ));
-    cell.borders.as_mut().unwrap().right =
+    cell.tc_bdr.as_mut().unwrap().right =
         Some(casual_slide_model::table::TableBorder::Line(Box::default()));
     let mut pkg = open(source);
     let outcome = save_table_styles(
@@ -558,8 +672,8 @@ fn a_change_of_which_choice_replaces_it() {
     let source = read_fixture(EVERY);
     let edited = edit_slide(&source, |slide| {
         let t = table_mut(slide, "Every Property");
-        let style = wanted.styles[1].clone();
-        t.properties.as_mut().unwrap().style = Some(TableStyleChoice::Inline(Box::new(style)));
+        let style = wanted.tbl_style[1].clone();
+        t.tbl_pr.as_mut().unwrap().style = Some(TableStyleChoice::Inline(Box::new(style)));
     })
     .unwrap();
     let text = String::from_utf8(parts(&edited)["ppt/slides/slide1.xml"].clone()).unwrap();
@@ -633,17 +747,17 @@ fn a_new_child_goes_at_its_schema_position_among_siblings_already_there() {
     );
     let mut wanted = read_part(xml.as_bytes());
     let p = table_mut(&mut wanted, "Every Property").rows[0].cells[0]
-        .properties
+        .tc_pr
         .as_mut()
         .unwrap();
     p.fill = Some(red());
-    p.line_left = Some(Box::default());
+    p.ln_l = Some(Box::default());
     p.cell3d = Some(casual_slide_model::table::Cell3D {
         bevel: Some(Default::default()),
         ..Default::default()
     });
     // Before the dash that is there.
-    p.line_bottom.as_mut().unwrap().fill = Some(Fill::None);
+    p.ln_b.as_mut().unwrap().fill = Some(Fill::None);
     let bytes = patch_between(&xml, &wanted).unwrap();
     let text = String::from_utf8(bytes.clone()).unwrap();
     let order = [
@@ -677,11 +791,11 @@ fn a_new_child_goes_before_an_extension_only_the_tree_holds() {
     ));
     let mut wanted = read_part(xml.as_bytes());
     let p = table_mut(&mut wanted, "Every Property").rows[0].cells[0]
-        .properties
+        .tc_pr
         .as_mut()
         .unwrap();
     p.fill = Some(red());
-    p.line_left.as_mut().unwrap().fill = Some(Fill::None);
+    p.ln_l.as_mut().unwrap().fill = Some(Fill::None);
     let bytes = patch_between(&xml, &wanted).unwrap();
     let text = String::from_utf8(bytes.clone()).unwrap();
     // Inside the line, and then inside the cell's properties.
@@ -721,9 +835,9 @@ fn a_new_part_style_or_cell_child_goes_before_an_extension_already_there() {
         .unwrap()
     };
     let mut wanted = read(xml.as_bytes());
-    *wanted.styles[0].slot_mut(TablePartKind::WholeTable) = Some(Box::default());
-    *wanted.styles[0].slot_mut(TablePartKind::NorthWestCell) = Some(Box::default());
-    wanted.styles[0].background = Some(Default::default());
+    *wanted.tbl_style[0].slot_mut(TablePartKind::WholeTable) = Some(Box::default());
+    *wanted.tbl_style[0].slot_mut(TablePartKind::NorthWestCell) = Some(Box::default());
+    wanted.tbl_style[0].tbl_bg = Some(Default::default());
     let mut tree = XmlTree::parse(xml.as_bytes(), "t.xml", &OoxmlLimits::default()).unwrap();
     patch_table_styles(
         &mut tree,
@@ -802,11 +916,11 @@ fn a_stated_choice_replaces_what_the_model_could_not_see_of_it() {
         .unwrap()
     };
     let mut wanted = read(xml.as_bytes());
-    let part = wanted.styles[0]
+    let part = wanted.tbl_style[0]
         .slot_mut(TablePartKind::WholeTable)
         .as_mut()
         .unwrap();
-    part.cell.as_mut().unwrap().fill = Some(casual_slide_model::table::TableStyleFill::Ref(
+    part.tc_style.as_mut().unwrap().fill = Some(casual_slide_model::table::TableStyleFill::Ref(
         casual_slide_model::theme::StyleMatrixRef {
             idx: Some(1),
             color: None,
@@ -856,11 +970,11 @@ fn what_this_tier_does_not_write_is_refused_with_nothing_saved() {
     );
     assert_eq!(
         code(|t| {
-            t.grid.as_mut().unwrap().pop();
+            t.tbl_grid.as_mut().unwrap().grid_col.pop();
         }),
         "CS-EXP-0009"
     );
-    assert_eq!(code(|t| t.grid = None), "CS-EXP-0009");
+    assert_eq!(code(|t| t.tbl_grid = None), "CS-EXP-0009");
     // A span past the grid: the reader would not believe it.
     assert_eq!(
         code(|t| t.rows[0].cells[0].grid_span = Some(9)),
@@ -872,7 +986,7 @@ fn what_this_tier_does_not_write_is_refused_with_nothing_saved() {
     );
     // A text body with no bodyPr, which the schema requires.
     assert_eq!(
-        code(|t| t.rows[0].cells[0].text.as_mut().unwrap().properties = None),
+        code(|t| t.rows[0].cells[0].tx_body.as_mut().unwrap().properties = None),
         "CS-EXP-0009"
     );
     // A character XML cannot carry, and a malformed GUID.
@@ -882,7 +996,7 @@ fn what_this_tier_does_not_write_is_refused_with_nothing_saved() {
     );
     assert_eq!(
         code(|t| {
-            t.properties.as_mut().unwrap().style = Some(TableStyleChoice::Id("x".to_owned()));
+            t.tbl_pr.as_mut().unwrap().style = Some(TableStyleChoice::Id("x".to_owned()));
         }),
         "CS-EXP-0007"
     );
@@ -915,7 +1029,7 @@ fn an_edit_in_a_strict_deck_stays_strict_and_valid() {
     let edited = edit_slide(&source, |slide| {
         let cell = &mut table_mut(slide, "Every Property").rows[1].cells[1];
         set_first_run(cell, "Strict");
-        cell.properties.get_or_insert_with(Default::default).fill = Some(red());
+        cell.tc_pr.get_or_insert_with(Default::default).fill = Some(red());
     })
     .unwrap();
     let text = String::from_utf8(parts(&edited)["ppt/slides/slide1.xml"].clone()).unwrap();
@@ -967,7 +1081,7 @@ fn first_table_cell(wanted: &SlideParts) -> Option<(u32, casual_slide_model::sha
             n.table.as_ref().is_some_and(|t| {
                 t.rows.first().is_some_and(|r| {
                     r.cells.first().is_some_and(|c| {
-                        c.text.as_ref().is_some_and(|b| {
+                        c.tx_body.as_ref().is_some_and(|b| {
                             b.paragraphs.first().is_some_and(|p| {
                                 p.items.iter().any(|i| matches!(i, TextItem::Run(_)))
                             })
@@ -993,14 +1107,14 @@ fn every_deck_with_a_table_takes_a_cell_edit_and_stays_as_valid_as_it_was() {
         };
         let node = wanted.get_mut(ordinal).unwrap().node_mut(id).unwrap();
         let cell = &mut node.table.as_mut().unwrap().rows[0].cells[0];
-        let body = cell.text.as_mut().unwrap();
+        let body = cell.tx_body.as_mut().unwrap();
         for item in &mut body.paragraphs[0].items {
             if let TextItem::Run(run) = item {
                 run.text = Some("Edited cell".to_owned());
                 break;
             }
         }
-        cell.properties.get_or_insert_with(Default::default).fill = Some(red());
+        cell.tc_pr.get_or_insert_with(Default::default).fill = Some(red());
         let mut pkg = open(source.clone());
         let outcome = match save_slide_parts(
             &mut pkg,
@@ -1068,7 +1182,7 @@ fn real_decks_take_a_fill_on_every_cell_and_stay_valid() {
                 let t = part.node_mut(*id).unwrap().table.as_mut().unwrap();
                 for row in &mut t.rows {
                     for cell in &mut row.cells {
-                        cell.properties.get_or_insert_with(Default::default).fill = Some(red());
+                        cell.tc_pr.get_or_insert_with(Default::default).fill = Some(red());
                     }
                 }
             }

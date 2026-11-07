@@ -57,7 +57,7 @@ impl<'a> StyleSource<'a> {
 
 /// Which style a table takes.
 pub fn table_style<'a>(table: &'a Table, list: Option<&'a TableStyleList>) -> StyleSource<'a> {
-    match table.properties.as_ref().and_then(|p| p.style.as_ref()) {
+    match table.tbl_pr.as_ref().and_then(|p| p.style.as_ref()) {
         None => StyleSource::None,
         Some(TableStyleChoice::Inline(style)) => StyleSource::Inline(style),
         Some(TableStyleChoice::Id(id)) => match list.and_then(|l| l.find(id)) {
@@ -94,17 +94,17 @@ fn on(flag: Option<bool>) -> bool {
 /// The part kinds a cell at this grid position belongs to, in the order they apply.
 pub fn part_kinds(table: &Table, row: usize, column: usize) -> Vec<TablePartKind> {
     let default = TableProperties::default();
-    let p = table.properties.as_deref().unwrap_or(&default);
+    let p = table.tbl_pr.as_deref().unwrap_or(&default);
     let rows = table.rows.len();
     let columns = table.column_count();
     let top = on(p.first_row) && row == 0;
     let bottom = on(p.last_row) && rows > 0 && row == rows - 1;
-    let left = on(p.first_column) && column == 0;
-    let right = on(p.last_column) && columns > 0 && column == columns - 1;
+    let left = on(p.first_col) && column == 0;
+    let right = on(p.last_col) && columns > 0 && column == columns - 1;
     let row_band = row.saturating_sub(usize::from(on(p.first_row)));
-    let column_band = column.saturating_sub(usize::from(on(p.first_column)));
+    let column_band = column.saturating_sub(usize::from(on(p.first_col)));
     let band_row = on(p.band_row) && !top && !bottom;
-    let band_column = on(p.band_column) && !left && !right;
+    let band_col = on(p.band_col) && !left && !right;
     TablePartKind::ALL
         .iter()
         .copied()
@@ -112,8 +112,8 @@ pub fn part_kinds(table: &Table, row: usize, column: usize) -> Vec<TablePartKind
             TablePartKind::WholeTable => true,
             TablePartKind::Band1Horizontal => band_row && row_band % 2 == 0,
             TablePartKind::Band2Horizontal => band_row && row_band % 2 == 1,
-            TablePartKind::Band1Vertical => band_column && column_band % 2 == 0,
-            TablePartKind::Band2Vertical => band_column && column_band % 2 == 1,
+            TablePartKind::Band1Vertical => band_col && column_band % 2 == 0,
+            TablePartKind::Band2Vertical => band_col && column_band % 2 == 1,
             TablePartKind::LastColumn => right,
             TablePartKind::FirstColumn => left,
             TablePartKind::LastRow => bottom,
@@ -154,7 +154,7 @@ impl<'a> CellChain<'a> {
             .rows
             .get(at_row)
             .and_then(|r| r.cells.get(at_column))
-            .and_then(|c: &TableCell| c.properties.as_deref());
+            .and_then(|c: &TableCell| c.tc_pr.as_deref());
         let mut parts: Vec<_> = part_kinds(table, row, column)
             .into_iter()
             .filter_map(|kind| style.and_then(|s| s.part(kind)).map(|p| (kind, p)))
@@ -194,50 +194,60 @@ impl<'a> CellChain<'a> {
                 level: CellLevel::Cell,
             });
         }
-        self.part(|p| p.cell.as_ref()?.fill.as_ref().map(CellFill::Style))
+        self.part(|p| p.tc_style.as_ref()?.fill.as_ref().map(CellFill::Style))
     }
 
     /// `tcTxStyle/@b`. `def` says nothing, so the next part answers.
     pub fn bold(&self) -> Option<CellResolved<OnOffStyle>> {
-        self.part(|p| p.text.as_ref()?.bold.filter(|v| *v != OnOffStyle::Def))
+        self.part(|p| {
+            p.tc_tx_style
+                .as_ref()?
+                .bold
+                .filter(|v| *v != OnOffStyle::Def)
+        })
     }
 
     /// `tcTxStyle/@i`. `def` says nothing, so the next part answers.
     pub fn italic(&self) -> Option<CellResolved<OnOffStyle>> {
-        self.part(|p| p.text.as_ref()?.italic.filter(|v| *v != OnOffStyle::Def))
+        self.part(|p| {
+            p.tc_tx_style
+                .as_ref()?
+                .italic
+                .filter(|v| *v != OnOffStyle::Def)
+        })
     }
 
     /// `tcTxStyle`'s colour.
     pub fn text_color(&self) -> Option<CellResolved<&'a Color>> {
-        self.part(|p| p.text.as_ref()?.color.as_ref())
+        self.part(|p| p.tc_tx_style.as_ref()?.color.as_ref())
     }
 
     /// `tcTxStyle`'s font.
     pub fn font(&self) -> Option<CellResolved<&'a ThemeableFont>> {
-        self.part(|p| p.text.as_ref()?.font.as_ref())
+        self.part(|p| p.tc_tx_style.as_ref()?.font.as_ref())
     }
 
     /// `@marL`, in EMU.
     pub fn margin_left(&self) -> CellResolved<i64> {
-        let value = self.cell.and_then(|c| c.margin_left.as_ref());
+        let value = self.cell.and_then(|c| c.mar_l.as_ref());
         self.own(value.map(|m| m.value().0), CELL_MARGIN_HORIZONTAL_DEFAULT)
     }
 
     /// `@marR`, in EMU.
     pub fn margin_right(&self) -> CellResolved<i64> {
-        let value = self.cell.and_then(|c| c.margin_right.as_ref());
+        let value = self.cell.and_then(|c| c.mar_r.as_ref());
         self.own(value.map(|m| m.value().0), CELL_MARGIN_HORIZONTAL_DEFAULT)
     }
 
     /// `@marT`, in EMU.
     pub fn margin_top(&self) -> CellResolved<i64> {
-        let value = self.cell.and_then(|c| c.margin_top.as_ref());
+        let value = self.cell.and_then(|c| c.mar_t.as_ref());
         self.own(value.map(|m| m.value().0), CELL_MARGIN_VERTICAL_DEFAULT)
     }
 
     /// `@marB`, in EMU.
     pub fn margin_bottom(&self) -> CellResolved<i64> {
-        let value = self.cell.and_then(|c| c.margin_bottom.as_ref());
+        let value = self.cell.and_then(|c| c.mar_b.as_ref());
         self.own(
             value.map(|m: &casual_slide_model::text::Written<Coordinate>| m.value().0),
             CELL_MARGIN_VERTICAL_DEFAULT,
@@ -251,18 +261,18 @@ impl<'a> CellChain<'a> {
 
     /// `@vert`.
     pub fn vertical(&self) -> CellResolved<TextVertical> {
-        self.own(self.cell.and_then(|c| c.vertical), TextVertical::Horz)
+        self.own(self.cell.and_then(|c| c.vert), TextVertical::Horz)
     }
 
     /// `@anchorCtr`.
-    pub fn anchor_center(&self) -> CellResolved<bool> {
-        self.own(self.cell.and_then(|c| c.anchor_center), false)
+    pub fn anchor_ctr(&self) -> CellResolved<bool> {
+        self.own(self.cell.and_then(|c| c.anchor_ctr), false)
     }
 
     /// `@horzOverflow`.
-    pub fn horizontal_overflow(&self) -> CellResolved<HorizontalOverflow> {
+    pub fn horz_overflow(&self) -> CellResolved<HorizontalOverflow> {
         self.own(
-            self.cell.and_then(|c| c.horizontal_overflow),
+            self.cell.and_then(|c| c.horz_overflow),
             HorizontalOverflow::Clip,
         )
     }

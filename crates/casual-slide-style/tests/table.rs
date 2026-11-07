@@ -3,9 +3,9 @@
 
 use casual_slide_model::fill::Fill;
 use casual_slide_model::table::{
-    Table, TableCell, TableCellProperties, TableCellStyle, TablePartKind as K, TablePartStyle,
-    TableProperties, TableRow, TableStyle, TableStyleChoice, TableStyleFill, TableStyleList,
-    TableTextStyle,
+    Table, TableCell, TableCellProperties, TablePartKind as K, TablePartStyle, TableProperties,
+    TableRow, TableStyle, TableStyleCellStyle, TableStyleChoice, TableStyleFill, TableStyleList,
+    TableStyleTextStyle,
 };
 use casual_slide_model::theme::{OnOffStyle, StyleMatrixRef};
 use casual_slide_style::table::{
@@ -16,8 +16,10 @@ const ID: &str = "{1C8F3A2E-5B6D-4E7F-8A9B-0C1D2E3F4A5B}";
 
 fn grid(rows: usize, columns: usize, flags: TableProperties) -> Table {
     Table {
-        properties: Some(Box::new(flags)),
-        grid: Some(vec![Default::default(); columns]),
+        tbl_pr: Some(Box::new(flags)),
+        tbl_grid: Some(casual_slide_model::table::TableGrid {
+            grid_col: vec![Default::default(); columns],
+        }),
         rows: vec![
             TableRow {
                 height: None,
@@ -31,11 +33,11 @@ fn grid(rows: usize, columns: usize, flags: TableProperties) -> Table {
 fn all_on() -> TableProperties {
     TableProperties {
         first_row: Some(true),
-        first_column: Some(true),
+        first_col: Some(true),
         last_row: Some(true),
-        last_column: Some(true),
+        last_col: Some(true),
         band_row: Some(true),
-        band_column: Some(true),
+        band_col: Some(true),
         ..TableProperties::default()
     }
 }
@@ -43,18 +45,18 @@ fn all_on() -> TableProperties {
 /// A style whose every part names its kind by a style matrix index.
 fn style() -> TableStyle {
     let mut s = TableStyle {
-        id: Some(ID.to_owned()),
+        style_id: Some(ID.to_owned()),
         ..TableStyle::default()
     };
     for (i, kind) in K::ALL.iter().enumerate() {
         *s.slot_mut(*kind) = Some(Box::new(TablePartStyle {
-            text: None,
-            cell: Some(TableCellStyle {
+            tc_tx_style: None,
+            tc_style: Some(TableStyleCellStyle {
                 fill: Some(TableStyleFill::Ref(StyleMatrixRef {
                     idx: Some(i as u32),
                     color: None,
                 })),
-                ..TableCellStyle::default()
+                ..TableStyleCellStyle::default()
             }),
         }));
     }
@@ -128,7 +130,7 @@ fn the_latest_part_answers_and_the_cells_own_wins_over_all() {
     let nw = CellChain::new(&t, &m, Some(&s), 0, 0).fill().unwrap();
     assert_eq!(nw.level, CellLevel::Part(K::NorthWestCell));
 
-    t.rows[0].cells[0].properties = Some(Box::new(TableCellProperties {
+    t.rows[0].cells[0].tc_pr = Some(Box::new(TableCellProperties {
         fill: Some(Fill::None),
         ..TableCellProperties::default()
     }));
@@ -148,18 +150,18 @@ fn a_part_with_nothing_to_say_passes_to_the_next() {
 
     // `def` says nothing either.
     s.first_row = Some(Box::new(TablePartStyle {
-        text: Some(TableTextStyle {
+        tc_tx_style: Some(TableStyleTextStyle {
             bold: Some(OnOffStyle::Def),
-            ..TableTextStyle::default()
+            ..TableStyleTextStyle::default()
         }),
-        cell: None,
+        tc_style: None,
     }));
-    s.whole_table = Some(Box::new(TablePartStyle {
-        text: Some(TableTextStyle {
+    s.whole_tbl = Some(Box::new(TablePartStyle {
+        tc_tx_style: Some(TableStyleTextStyle {
             bold: Some(OnOffStyle::On),
-            ..TableTextStyle::default()
+            ..TableStyleTextStyle::default()
         }),
-        cell: None,
+        tc_style: None,
     }));
     let bold = CellChain::new(&t, &m, Some(&s), 0, 0).bold().unwrap();
     assert_eq!(bold.level, CellLevel::Part(K::WholeTable));
@@ -170,7 +172,7 @@ fn a_part_with_nothing_to_say_passes_to_the_next() {
 fn a_covered_cell_answers_as_its_origin_does() {
     let mut t = grid(2, 2, TableProperties::default());
     t.rows[0].cells[0].grid_span = Some(2);
-    t.rows[0].cells[0].properties = Some(Box::new(TableCellProperties {
+    t.rows[0].cells[0].tc_pr = Some(Box::new(TableCellProperties {
         fill: Some(Fill::Group),
         ..TableCellProperties::default()
     }));
@@ -191,7 +193,7 @@ fn margins_and_the_rest_default_as_the_schema_says_and_say_so() {
     assert_eq!(c.margin_right().value, 91_440);
     assert_eq!(c.margin_top().value, 45_720);
     assert_eq!(c.margin_bottom().value, 45_720);
-    assert!(!c.anchor_center().value);
+    assert!(!c.anchor_ctr().value);
 }
 
 #[test]
@@ -200,8 +202,8 @@ fn a_style_is_found_inline_listed_or_not_at_all_and_an_unknown_guid_is_an_answer
     assert_eq!(table_style(&t, None), StyleSource::None);
 
     let list = TableStyleList {
-        default_style: None,
-        styles: vec![style()],
+        def: None,
+        tbl_style: vec![style()],
     };
     let by_id = |id: &str| {
         Some(Box::new(TableProperties {
@@ -209,19 +211,19 @@ fn a_style_is_found_inline_listed_or_not_at_all_and_an_unknown_guid_is_an_answer
             ..TableProperties::default()
         }))
     };
-    t.properties = by_id(ID);
+    t.tbl_pr = by_id(ID);
     assert!(matches!(
         table_style(&t, Some(&list)),
         StyleSource::Listed(_)
     ));
     // GUIDs compare by value.
-    t.properties = by_id(&ID.to_ascii_lowercase());
+    t.tbl_pr = by_id(&ID.to_ascii_lowercase());
     assert!(matches!(
         table_style(&t, Some(&list)),
         StyleSource::Listed(_)
     ));
 
-    t.properties = by_id("{00000000-0000-0000-0000-000000000000}");
+    t.tbl_pr = by_id("{00000000-0000-0000-0000-000000000000}");
     let unknown = table_style(&t, Some(&list));
     assert!(matches!(unknown, StyleSource::NotInDeck(_)));
     assert_eq!(unknown.style(), None);
@@ -231,7 +233,7 @@ fn a_style_is_found_inline_listed_or_not_at_all_and_an_unknown_guid_is_an_answer
     let m = t.merges();
     assert_eq!(CellChain::new(&t, &m, unknown.style(), 0, 0).fill(), None);
 
-    t.properties = Some(Box::new(TableProperties {
+    t.tbl_pr = Some(Box::new(TableProperties {
         style: Some(TableStyleChoice::Inline(Box::new(style()))),
         ..TableProperties::default()
     }));
@@ -241,8 +243,8 @@ fn a_style_is_found_inline_listed_or_not_at_all_and_an_unknown_guid_is_an_answer
 #[test]
 fn a_position_with_no_cell_or_a_hostile_shape_never_panics() {
     let t = Table {
-        properties: None,
-        grid: None,
+        tbl_pr: None,
+        tbl_grid: None,
         rows: vec![TableRow {
             height: None,
             cells: vec![TableCell {

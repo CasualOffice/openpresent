@@ -13,9 +13,10 @@ use casual_slide_import::properties::{Elem, Findings, ImportLimits, ns};
 use casual_slide_import::slide::SlideLimits;
 use casual_slide_import::table::{TABLE_STYLES_RELATIONSHIP, import_table_styles};
 use casual_slide_model::table::{
-    Cell3D, GridColumn, Table, TableBackgroundStyle, TableBorder, TableCell, TableCellBorders,
-    TableCellProperties, TableCellStyle, TablePartKind, TablePartStyle, TableProperties, TableRow,
-    TableStyle, TableStyleChoice, TableStyleEffect, TableStyleFill, TableStyleList, TableTextStyle,
+    Cell3D, Headers, Table, TableBackgroundStyle, TableBorder, TableCell, TableCellBorderStyle,
+    TableCellProperties, TableCol, TablePartKind, TablePartStyle, TableProperties, TableRow,
+    TableStyle, TableStyleCellStyle, TableStyleChoice, TableStyleEffect, TableStyleFill,
+    TableStyleList, TableStyleTextStyle,
 };
 use casual_slide_model::theme::{FontCollection, FontRef, StyleMatrixRef, TextFont, ThemeableFont};
 use casual_slide_ooxml::{Conformance, OoxmlLimits, PresentationPackage, Relationship, XmlTree};
@@ -136,34 +137,38 @@ fn malformed(w: &Writer<'_>) -> ExportError {
 
 fn cell3d(c: &Cell3D) -> Node {
     Node::a("cell3D")
-        .lex("prstMaterial", c.material.as_ref())
+        .lex("prstMaterial", c.prst_material.as_ref())
         .opt(c.bevel.as_ref().map(|b| bevel("bevel", b)))
         .opt(c.light_rig.as_ref().map(light_rig))
 }
 
-fn headers(list: &[String]) -> Node {
-    Node::a("headers").list(list.iter().map(|h| Node::a("header").text(Some(h.clone()))))
+fn headers(h: &Headers) -> Node {
+    Node::a("headers").list(
+        h.header
+            .iter()
+            .map(|h| Node::a("header").text(Some(h.clone()))),
+    )
 }
 
 fn tc_pr(p: &TableCellProperties) -> Node {
     let line =
         |local, l: &Option<Box<_>>| l.as_ref().map(|l: &Box<_>| line_node(l, Space::Dml, local));
-    let list = p.headers.as_ref().map(|list| headers(list));
+    let list = p.headers.as_ref().map(headers);
     Node::a("tcPr")
-        .lex("marL", p.margin_left.as_ref())
-        .lex("marR", p.margin_right.as_ref())
-        .lex("marT", p.margin_top.as_ref())
-        .lex("marB", p.margin_bottom.as_ref())
-        .lex("vert", p.vertical.as_ref())
+        .lex("marL", p.mar_l.as_ref())
+        .lex("marR", p.mar_r.as_ref())
+        .lex("marT", p.mar_t.as_ref())
+        .lex("marB", p.mar_b.as_ref())
+        .lex("vert", p.vert.as_ref())
         .lex("anchor", p.anchor.as_ref())
-        .lex("anchorCtr", p.anchor_center.as_ref())
-        .lex("horzOverflow", p.horizontal_overflow.as_ref())
-        .opt(line("lnL", &p.line_left))
-        .opt(line("lnR", &p.line_right))
-        .opt(line("lnT", &p.line_top))
-        .opt(line("lnB", &p.line_bottom))
-        .opt(line("lnTlToBr", &p.line_top_left_to_bottom_right))
-        .opt(line("lnBlToTr", &p.line_bottom_left_to_top_right))
+        .lex("anchorCtr", p.anchor_ctr.as_ref())
+        .lex("horzOverflow", p.horz_overflow.as_ref())
+        .opt(line("lnL", &p.ln_l))
+        .opt(line("lnR", &p.ln_r))
+        .opt(line("lnT", &p.ln_t))
+        .opt(line("lnB", &p.ln_b))
+        .opt(line("lnTlToBr", &p.ln_tl_to_br))
+        .opt(line("lnBlToTr", &p.ln_bl_to_tr))
         .opt(p.cell3d.as_ref().map(cell3d))
         .opt(p.fill.as_ref().map(fill_node))
         .opt(list)
@@ -225,27 +230,27 @@ fn border(local: &'static str, b: &TableBorder) -> Node {
     }
 }
 
-fn tc_bdr(b: &TableCellBorders) -> Node {
+fn tc_bdr(b: &TableCellBorderStyle) -> Node {
     let one = |local, b: &Option<TableBorder>| b.as_ref().map(|b| border(local, b));
     Node::a("tcBdr")
         .opt(one("left", &b.left))
         .opt(one("right", &b.right))
         .opt(one("top", &b.top))
         .opt(one("bottom", &b.bottom))
-        .opt(one("insideH", &b.inside_horizontal))
-        .opt(one("insideV", &b.inside_vertical))
-        .opt(one("tl2br", &b.top_left_to_bottom_right))
-        .opt(one("tr2bl", &b.top_right_to_bottom_left))
+        .opt(one("insideH", &b.inside_h))
+        .opt(one("insideV", &b.inside_v))
+        .opt(one("tl2br", &b.tl2br))
+        .opt(one("tr2bl", &b.tr2bl))
 }
 
-fn tc_style(c: &TableCellStyle) -> Node {
+fn tc_style(c: &TableStyleCellStyle) -> Node {
     Node::a("tcStyle")
-        .opt(c.borders.as_ref().map(tc_bdr))
+        .opt(c.tc_bdr.as_ref().map(tc_bdr))
         .opt(c.fill.as_ref().map(style_fill))
         .opt(c.cell3d.as_ref().map(cell3d))
 }
 
-fn tc_tx_style(t: &TableTextStyle) -> Node {
+fn tc_tx_style(t: &TableStyleTextStyle) -> Node {
     let b = t.bold.map(|v| v.as_xml().to_owned());
     let i = t.italic.map(|v| v.as_xml().to_owned());
     let font = t.font.as_ref().map(|f| match f {
@@ -261,8 +266,8 @@ fn tc_tx_style(t: &TableTextStyle) -> Node {
 
 fn part_style(local: &'static str, p: &TablePartStyle) -> Node {
     Node::a(local)
-        .opt(p.text.as_ref().map(tc_tx_style))
-        .opt(p.cell.as_ref().map(tc_style))
+        .opt(p.tc_tx_style.as_ref().map(tc_tx_style))
+        .opt(p.tc_style.as_ref().map(tc_style))
 }
 
 fn tbl_bg(b: &TableBackgroundStyle) -> Node {
@@ -273,9 +278,9 @@ fn tbl_bg(b: &TableBackgroundStyle) -> Node {
 
 fn tbl_style(local: &'static str, s: &TableStyle) -> Node {
     Node::a(local)
-        .lex("styleId", s.id.as_ref())
-        .lex("styleName", s.name.as_ref())
-        .opt(s.background.as_ref().map(tbl_bg))
+        .lex("styleId", s.style_id.as_ref())
+        .lex("styleName", s.style_name.as_ref())
+        .opt(s.tbl_bg.as_ref().map(tbl_bg))
         .list(
             TablePartKind::ALL
                 .iter()
@@ -291,17 +296,17 @@ fn tbl_pr(p: &TableProperties) -> Node {
     Node::a("tblPr")
         .lex("rtl", p.rtl.as_ref())
         .lex("firstRow", p.first_row.as_ref())
-        .lex("firstCol", p.first_column.as_ref())
+        .lex("firstCol", p.first_col.as_ref())
         .lex("lastRow", p.last_row.as_ref())
-        .lex("lastCol", p.last_column.as_ref())
+        .lex("lastCol", p.last_col.as_ref())
         .lex("bandRow", p.band_row.as_ref())
-        .lex("bandCol", p.band_column.as_ref())
+        .lex("bandCol", p.band_col.as_ref())
         .opt(p.fill.as_ref().map(fill_node))
         .opt(p.effects.as_ref().map(effect_properties_node))
         .opt(style)
 }
 
-fn grid_col(c: &GridColumn) -> Node {
+fn grid_col(c: &TableCol) -> Node {
     Node::a("gridCol").lex("w", c.width.as_ref())
 }
 
@@ -337,8 +342,8 @@ fn patch_cell(w: &mut Writer<'_>, el: &Elem, b: &TableCell, a: &TableCell) -> Re
         "a",
         CELL_ORDER,
         "txBody",
-        b.text.as_ref(),
-        a.text.as_ref(),
+        b.tx_body.as_ref(),
+        a.tx_body.as_ref(),
         |w, el, before, after| patch_text_body(w, el, before.map(|b| &**b), after),
     )?;
     sync_ordered(
@@ -348,8 +353,8 @@ fn patch_cell(w: &mut Writer<'_>, el: &Elem, b: &TableCell, a: &TableCell) -> Re
         "a",
         CELL_ORDER,
         "tcPr",
-        b.properties.as_ref(),
-        a.properties.as_ref(),
+        b.tc_pr.as_ref(),
+        a.tc_pr.as_ref(),
         |w, el, before, after| {
             let before = before.map(|b| tc_pr(b));
             patch(w, el, before.as_ref(), &tc_pr(after))
@@ -397,17 +402,18 @@ fn patch_table(w: &mut Writer<'_>, el: &Elem, b: &Table, a: &Table) -> Result {
         "a",
         TABLE_ORDER,
         "tblPr",
-        b.properties.as_ref(),
-        a.properties.as_ref(),
+        b.tbl_pr.as_ref(),
+        a.tbl_pr.as_ref(),
         |w, el, before, after| {
             let before = before.map(|b| tbl_pr(b));
             patch(w, el, before.as_ref(), &tbl_pr(after))
         },
     )?;
-    if b.grid != a.grid {
-        let (Some(before), Some(after)) = (&b.grid, &a.grid) else {
+    if b.tbl_grid != a.tbl_grid {
+        let (Some(before), Some(after)) = (&b.tbl_grid, &a.tbl_grid) else {
             return Err(unsupported(w, "a table's grid added or removed"));
         };
+        let (before, after) = (&before.grid_col, &after.grid_col);
         if before.len() != after.len() {
             return Err(unsupported(w, "a column added to or removed from a grid"));
         }
@@ -453,8 +459,8 @@ pub(crate) fn patch_frame_table(
 
 fn list_node(l: &TableStyleList) -> Node {
     Node::a("tblStyleLst")
-        .lex("def", l.default_style.as_ref())
-        .list(l.styles.iter().map(|s| tbl_style("tblStyle", s)))
+        .lex("def", l.def.as_ref())
+        .list(l.tbl_style.iter().map(|s| tbl_style("tblStyle", s)))
 }
 
 /// Patch a `tableStyles` tree to say `after`. Returns the nodes changed; with 0, the tree
