@@ -88,6 +88,7 @@ Industry-standard practice applies everywhere, with these specifics.
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
 cargo check --target wasm32-unknown-unknown --workspace --locked
 python3 tools/check-repo.py
 python3 tools/spec-checklist/generate.py --check
