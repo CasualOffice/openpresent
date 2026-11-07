@@ -552,6 +552,18 @@ fn a_replacement_needing_a_new_relationship_saves_and_reopens_with_the_new_image
         .unwrap();
     assert!(rel2.target.ends_with("image1.png"), "{rel2:?}");
     assert!(again.read_part(OLD).is_ok());
+    // The relationship the picture no longer names went with the save.
+    let released = done
+        .released
+        .clone()
+        .expect("the test needs a released relationship");
+    assert!(
+        !again
+            .relationships_of(SLIDE)
+            .iter()
+            .any(|r| r.id == released),
+        "{released} stayed"
+    );
 
     let f4 = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("media-replaced");
     std::fs::create_dir_all(&f4).unwrap();
