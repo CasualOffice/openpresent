@@ -837,7 +837,7 @@ p:CT_GraphicalObjectFrameNonVisual	SHAPE		type	CT_GraphicalObjectFrameNonVisual	
 p:CT_GraphicalObjectFrameNonVisual/cNvPr	SHAPE	CT_GraphicalObjectFrameNonVisual	element	cNvPr	CT_NonVisualDrawingProps				y	y	.	.	.
 p:CT_GraphicalObjectFrameNonVisual/cNvGraphicFramePr	SHAPE	CT_GraphicalObjectFrameNonVisual	element	cNvGraphicFramePr	CT_NonVisualGraphicFrameProperties				y	r	r	.	.
 p:CT_GraphicalObjectFrameNonVisual/nvPr	SHAPE	CT_GraphicalObjectFrameNonVisual	element	nvPr	CT_ApplicationNonVisualDrawingProps				y	y	.	.	.
-p:CT_GraphicalObjectFrame	SHAPE		type	CT_GraphicalObjectFrame					r	r	r	.	.
+p:CT_GraphicalObjectFrame	SHAPE		type	CT_GraphicalObjectFrame					r	r	.	.	.
 p:CT_GraphicalObjectFrame/nvGraphicFramePr	SHAPE	CT_GraphicalObjectFrame	element	nvGraphicFramePr	CT_GraphicalObjectFrameNonVisual				r	r	r	.	.
 p:CT_GraphicalObjectFrame/xfrm	SHAPE	CT_GraphicalObjectFrame	element	xfrm	CT_Transform2D				y	y	y	.	.
 p:CT_GraphicalObjectFrame/a:graphic	SHAPE	CT_GraphicalObjectFrame	element	a:graphic	graphic				y	y	.	.	.

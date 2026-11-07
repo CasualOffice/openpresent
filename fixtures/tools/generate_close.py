@@ -341,9 +341,9 @@ def valid_masters(entries):
 
 def fixtures():
     yield "generated/package-every-variant.pptx", zipped(valid_masters(package_every_variant())), "open"
-    yield "generated/dsig-signed.pptx", zipped(signed_deck()), "open CS-FND-0009"
+    yield "generated/dsig-signed.pptx", zipped(signed_deck()), "open CS-FND-0007 CS-FND-0009"
     yield "generated/mce-preserve.pptx", zipped(mce_preserve_deck()), "open"
     for i in range(len(values("p", "ST_SlideSizeType"))):
         yield f"generated/pres-values-{i + 1:02}.pptx", zipped(valid_masters(pres_values_deck(i))), "open"
     yield "generated/shape-every-construct.pptx", zipped(shape_every_construct()), "open"
-    yield "generated/theme-every-construct.pptx", zipped(theme_every_construct()), "open"
+    yield "generated/theme-every-construct.pptx", zipped(theme_every_construct()), "open CS-FND-0007"

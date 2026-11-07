@@ -891,6 +891,8 @@ def checklist_driven(crate_dir, areas):
 class ModelDeclarations:
     """What the model crate declares, read from its source."""
 
+    noted = frozenset()  # row ids a `spec-audit` comment on a public field declares
+
     def __init__(self, *crate_dirs):
         self.enums = {}    # simple type name -> (enum name, its values)
         self.structs = {}  # normalised struct name -> its public fields, normalised
