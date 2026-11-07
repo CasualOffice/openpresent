@@ -737,7 +737,8 @@ fn patch_object_defaults(
     a: &ObjectDefaults,
 ) -> Result<(), PartError> {
     const ORDER: &[&str] = &["spDef", "lnDef", "txDef", "extLst"];
-    let slots: [(&str, fn(&ObjectDefaults) -> Option<&ShapeDefinition>); 3] = [
+    type Slot = fn(&ObjectDefaults) -> Option<&ShapeDefinition>;
+    let slots: [(&str, Slot); 3] = [
         ("spDef", |d| d.shape.as_ref()),
         ("lnDef", |d| d.line.as_ref()),
         ("txDef", |d| d.text.as_ref()),

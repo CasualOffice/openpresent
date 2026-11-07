@@ -415,18 +415,28 @@ class Module:
         tests = " || ".join(f'attribute == "{a}"' for a in sorted(attrs))
         values = sorted(set(member_values(s, st)))
         extra = open_members(s, st)
+        doc = f"/// What `{st[1]}` admits, on the attributes that hold it.\n"
+        if "any" in extra and not values:
+            # A free member admits every value, so only the attribute decides.
+            return (f"{doc}pub(crate) fn member_{snake(st[1])}(attribute: &str, _value: &str) -> bool {{\n"
+                    f"    {tests}\n}}\n\n")
+        if "any" in extra:
+            # The schema's own values stay named beside the free member, which admits the rest:
+            # tools/spec-audit reads them there as each value's evidence.
+            values_list = " | ".join(f'"{v}"' for v in values)
+            return (f"{doc}#[allow(clippy::overly_complex_bool_expr)] // A free member admits any value; the schema's own stay named, as spec-audit's evidence for each.\n"
+                    f"pub(crate) fn member_{snake(st[1])}(attribute: &str, value: &str) -> bool {{\n"
+                    f"    ({tests}) && (matches!(value, {values_list}) || true)\n}}\n\n")
         checks = []
         if values:
             checks.append("matches!(value, " + " | ".join(f'"{v}"' for v in values) + ")")
         for kind in sorted(extra):
-            if kind == "any":
-                checks.append("true")
-            elif kind == "bool":
+            if kind == "bool":
                 checks.append("bool::parse_lexical(value).is_some()")
             else:
                 checks.append(f"{kind}::parse_lexical(value).is_some()")
         body = " || ".join(checks) or "false"
-        return (f"/// What `{st[1]}` admits, on the attributes that hold it.\n"
+        return (f"{doc}"
                 f"pub(crate) fn member_{snake(st[1])}(attribute: &str, value: &str) -> bool {{\n"
                 f"    ({tests}) && ({body})\n}}\n\n")
 
@@ -439,48 +449,36 @@ class Module:
         if key in CHARGED:
             out.append(f"    c.charge(GraphicBound::{CHARGED[key]})?;\n")
         out.append("    c.enter()?;\n    let mut e = el.clone();\n" if t.attrs else "    c.enter()?;\n    let e = el.clone();\n")
-        out.append(f"    let mut out = m::{name}::default();\n")
-        for a in t.attrs:
-            rust, check, member = st_info(self.names, a.st)
-            f = fields[id(a)]
-            if a.qualified:
-                out.append(f'    let name = c.attr_name(&e, {self.ns_const(t.ns)}, "{a.local}");\n')
-            label = "&name" if a.qualified else f'"{a.name}"'
-            if a.rel:
-                out.append(f'    out.{f} = c.rel_attr(&mut e, "{a.local}");\n')
-            elif member:
-                out.append(f'    out.{f} = c.attr_member(&mut e, {label if a.qualified else chr(34) + a.local + chr(34)}, {"true" if a.required else "false"}, member_{snake(a.st[1])})?;\n')
-            elif check:
-                out.append(f'    out.{f} = c.attr_range(&mut e, {label}, {"true" if a.required else "false"}, {check})?;\n')
-            elif a.required:
-                out.append(f'    out.{f} = c.attr_required(&mut e, {label})?;\n')
-            else:
-                out.append(f'    out.{f} = c.attr(&mut e, {label})?;\n')
-        out.append("    c.finish(&e);\n")
-        if t.text is not None:
-            out.append("    out.text = c.text(&e)?;\n")
         by_ns = {}
         for c in t.children:
             by_ns.setdefault(c.ns, []).append(c)
         overlays = self.overlays(t)
         groups = self.groups(t)
+        # Attributes go in the initializer, in schema order, as they are read. A type of
+        # attributes alone has no other field to default and nothing to change afterwards.
+        filled_later = bool(t.text is not None or by_ns or overlays or groups)
+        if t.attrs:
+            out.append(f"    let {'mut ' if filled_later else ''}out = m::{name} {{\n")
+            for a in t.attrs:
+                out.append(f"        {fields[id(a)]}: {self.read_attr(t, a)},\n")
+            out.append("        ..Default::default()\n    };\n" if filled_later else "    };\n")
+        else:
+            out.append(f"    let {'mut ' if filled_later else ''}out = m::{name}::default();\n")
+        out.append("    c.finish(&e);\n")
+        if t.text is not None:
+            out.append("    out.text = c.text(&e)?;\n")
         if by_ns or overlays or groups or t.text is None:
             if t.text is None:
                 out.append("    for child in c.children(&e)? {\n")
                 for ns, kids in by_ns.items():
                     const = "ns::DML" if ns == DML else self.ns_const(ns)
-                    out.append(f"        if child.in_namespace({const}) {{\n            match child.local.as_str() {{\n")
-                    for ch in kids:
-                        out.append(self.read_arm(t, ch, fields))
+                    arms = [self.read_arm(t, ch, fields) for ch in kids]
                     if ns == DML:
-                        for field, _, local, foreign in overlays:
-                            out.append(self.overlay_arm(field, local, foreign))
-                    out.append("                _ => {}\n            }\n        }\n")
+                        arms += [self.overlay_arm(field, local, foreign) for field, _, local, foreign in overlays]
+                    out.append(self.namespace_block(const, arms))
                 if DML not in by_ns and overlays:
-                    out.append("        if child.in_namespace(ns::DML) {\n            match child.local.as_str() {\n")
-                    for field, _, local, foreign in overlays:
-                        out.append(self.overlay_arm(field, local, foreign))
-                    out.append("                _ => {}\n            }\n        }\n")
+                    arms = [self.overlay_arm(field, local, foreign) for field, _, local, foreign in overlays]
+                    out.append(self.namespace_block("ns::DML", arms))
                 for field, rust, many, test, read, _ in groups:
                     if many:
                         out.append(f"        if {test}(c, &child) {{\n            if let Some(v) = {read}(c, &child)? {{\n                out.{field}.push(v);\n            }}\n            continue;\n        }}\n")
@@ -489,6 +487,35 @@ class Module:
                 out.append("        c.retained(&child);\n    }\n")
         out.append("    c.leave();\n    Ok(out)\n}\n\n")
         return "".join(out)
+
+    def read_attr(self, t, a):
+        """The expression that reads one attribute of `t`."""
+        rust, check, member = st_info(self.names, a.st)
+        label = "&name" if a.qualified else f'"{a.name}"'
+        required = "true" if a.required else "false"
+        if a.rel:
+            read = f'c.rel_attr(&mut e, "{a.local}")'
+        elif member:
+            read = f'c.attr_member(&mut e, {label if a.qualified else chr(34) + a.local + chr(34)}, {required}, member_{snake(a.st[1])})?'
+        elif check:
+            read = f'c.attr_range(&mut e, {label}, {required}, {check})?'
+        elif a.required:
+            read = f'c.attr_required(&mut e, {label})?'
+        else:
+            read = f'c.attr(&mut e, {label})?'
+        if a.qualified:
+            return f'{{ let name = c.attr_name(&e, {self.ns_const(t.ns)}, "{a.local}"); {read} }}'
+        return read
+
+    @staticmethod
+    def namespace_block(const, arms):
+        """The test of a child's namespace and name: one name needs no `match`."""
+        if len(arms) == 1:
+            head, body = arms[0].split("\n", 1)
+            local = re.fullmatch(r'\s*("[^"]+") => \{', head).group(1)
+            return f"        if child.in_namespace({const}) && child.local == {local} {{\n{body}"
+        return (f"        if child.in_namespace({const}) {{\n            match child.local.as_str() {{\n"
+                + "".join(arms) + "                _ => {}\n            }\n        }\n")
 
     def overlay_arm(self, field, local, foreign):
         return (f'                "{local}" => {{\n                    if out.{field}.is_some() {{\n                        c.duplicate(&child);\n                    }} else {{\n'
@@ -533,7 +560,7 @@ class Module:
             call = f"{FOREIGN[typ][1]}(c, el)?" if typ in FOREIGN else f"{self.fn_read(typ)}(c, el)?"
             out.append(f'    if el.is({const}, "{name}") {{\n        return Ok(Some(m::Root::{self.root_variant(ns, name)}(Box::new({call}))));\n    }}\n')
         out.append("    Ok(None)\n}\n\n")
-        out.append(f"/// Whether an element is one that [`read_root`] reads.\npub fn is_root(el: &Elem) -> bool {{\n")
+        out.append(f"/// Whether an element is one that `read_root` reads.\npub fn is_root(el: &Elem) -> bool {{\n")
         tests = " || ".join(f'el.is({self.ns_const(ns)}, "{name}")' for ns, name, _, _ in self.root_rows())
         out.append(f"    {tests or 'false'}\n}}\n")
         return "".join(out)

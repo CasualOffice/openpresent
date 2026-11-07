@@ -12,8 +12,6 @@
 //! Evidence: ECMA-376 Part 1 21.4 and `MS-ODRAWXML` 2.13 (`dsp`, `dgm14`), by the schemas in
 //! `schemas/`. Which part a drawing relationship names follows `dsp:dataModelExt/@relId`.
 
-// Generated: a union with a free member reads `|| true`, which keeps the generator uniform.
-#[allow(clippy::overly_complex_bool_expr)]
 pub mod schema;
 
 use std::fmt;
@@ -55,7 +53,7 @@ pub(crate) mod prelude {
         read_text3d, read_transform,
     };
     pub(crate) use crate::properties::{Elem, ns};
-    pub(crate) use casual_slide_model::properties::{Float64, Lexical};
+    pub(crate) use casual_slide_model::properties::Lexical;
 }
 
 /// The relationship type of a diagram's drawing part.
@@ -630,15 +628,16 @@ pub(crate) fn read_ext_lst(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<Exten
         c.finish(&e);
         let mut known = false;
         for inner in c.children(&e)? {
-            if !known && schema::is_root(&inner) {
-                if let Some(body) = schema::read_root(c, &inner)? {
-                    out.items.push(Extension {
-                        uri: uri.clone(),
-                        body,
-                    });
-                    known = true;
-                    continue;
-                }
+            if !known
+                && schema::is_root(&inner)
+                && let Some(body) = schema::read_root(c, &inner)?
+            {
+                out.items.push(Extension {
+                    uri: uri.clone(),
+                    body,
+                });
+                known = true;
+                continue;
             }
             c.retained(&inner);
         }

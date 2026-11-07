@@ -714,7 +714,7 @@ fn every_damaged_deck_opens_or_is_refused_only_by_the_rules() {
                         ordinal += 1;
                         let file = format!("{name}--{ordinal:05}.pptx");
                         std::fs::write(out.join(&file), bytes).unwrap();
-                        if outcome.repaired.iter().any(|code| *code == KEPT_AS_ARRIVED) {
+                        if outcome.repaired.contains(&KEPT_AS_ARRIVED) {
                             kept_as_arrived.insert(file.clone());
                         }
                         sources.insert(file, label);
