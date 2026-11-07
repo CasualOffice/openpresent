@@ -1,26 +1,31 @@
 #!/usr/bin/env python3
 """`P1X-01`: is Phase 1 closed? Prints docs/06's closing list as MET or NOT MET, with evidence.
 
-    python3 tools/phase1-exit.py          # runs check.py over the corpus, then CLAUDE.md's gates
-    python3 tools/phase1-exit.py --quick  # neither; whatever needs them prints NOT MET: not run
+    python3 tools/phase1-exit.py          # reads the evidence record, then runs CLAUDE.md's gates
+    python3 tools/phase1-exit.py --quick  # without the gates, which then print NOT MET: not run
 
 Runs only what already exists, and reads the list from docs/06, so an item added there and
 unknown here prints NOT MET. Nothing can be met by assertion: what did not run is not met,
-and sign-off is the owner's box. LibreOffice is never started (owner instruction 23), and no
-500-slide budget or damage corpus run exists yet, so those items stay NOT MET until one does.
+and sign-off is the owner's box.
 
-`--tracker` and `--roadmap` let a planted failure be checked.
+The 500-slide budget, the hostile run, the damage corpus and the exports through F4, the SDK
+and LibreOffice are too slow to run here. `tools/phase1-evidence.py` runs each and records it in
+tools/phase1-evidence.json; this reads that record. An item is MET only if its record shows no
+failure and was made from the fixtures as they are now. The commit it was made at is printed:
+an engine change since then is a reason to run it again before sign-off.
+
+`--tracker`, `--roadmap` and `--evidence` let a planted failure be checked.
 Exit: 0 if every item is met, 1 if not, 2 if the list cannot be read.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
 import re
 import subprocess
 import sys
-import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -74,23 +79,93 @@ def tiers(args):
     return not still_open, evidence + ("; open: " + "; ".join(still_open) if still_open else "")
 
 
+def evidence(args, key):
+    path = pathlib.Path(args.evidence)
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf8")).get(key)
+
+
+def digest(paths):
+    """As phase1-evidence.py makes it: names and bytes, so a changed corpus is seen."""
+    fixtures = ROOT / "fixtures"
+    h = hashlib.sha256()
+    for p in sorted(paths, key=lambda p: str(p.relative_to(fixtures))):
+        h.update(str(p.relative_to(fixtures)).encode() + b"\0" + hashlib.sha256(p.read_bytes()).digest())
+    return h.hexdigest()
+
+
+def when(record):
+    return f"run {record.get('date')} at {str(record.get('commit'))[:9]}, load {record.get('load_before')}"
+
+
+DECK_SUFFIXES = {".pptx", ".ppsx", ".potx", ".pptm", ".ppsm", ".potm"}
+
+
 def exports(args):
-    """check.py: engine, F4 and the SDK validator. It validates each input, and compares F4
-    before and after the forced rewrite. LibreOffice's reopen cannot be shown here."""
-    if args.quick:
-        return False, "not run (--quick); LibreOffice reopen not run either (FID-04)"
-    with tempfile.TemporaryDirectory(prefix="phase1-exit-") as tmp:
-        report = pathlib.Path(tmp) / "check.json"
-        subprocess.run([sys.executable, "-I", str(ROOT / "tools/real-decks/check.py"), "--report", str(report),
-                        str(ROOT / "fixtures/real"), str(ROOT / "fixtures/producers")],
-                       capture_output=True, text=True, check=False)
-        if not report.is_file():
-            return False, "check.py wrote no report"
-        results = json.loads(report.read_text(encoding="utf8"))
-    bad = [r["deck"] for r in results if not (r["engine_ok"] and r["f4"] == "pass" and r["sdk"] == "pass"
-                                              and r["f4_same_after_rewrite"])]
-    return False, (f"{len(results) - len(bad)} of {len(results)} committed decks clean, failing: {', '.join(bad[:5]) or 'none'}; "
-                   "LibreOffice reopen not run here (FID-04), so this stays NOT MET")
+    """Every corpus deck written out edited, and the save-as grid, through F4, the SDK and LibreOffice."""
+    record = evidence(args, "export")
+    if not record:
+        return False, "no export run recorded (tools/phase1-evidence.py export)"
+    fixtures = ROOT / "fixtures"
+    decks = [p for d in ("real", "generated") for p in sorted((fixtures / d).iterdir()) if p.suffix in DECK_SUFFIXES]
+    saveas = sorted(p for p in (fixtures / "rr/sa").iterdir() if p.suffix != ".tsv")
+    if record.get("inputs_sha256") != digest(decks + saveas):
+        return False, f"the record is for other decks than fixtures/real, generated and rr/sa now hold; {when(record)}"
+    failures = record.get("failures", [])
+    met = record.get("ok") is True and not failures and record.get("written") == len(decks) \
+        and record.get("libreoffice_checked") == len(decks) + sum(p.suffix in DECK_SUFFIXES for p in saveas)
+    text = (f"{record.get('written')} decks written edited and {len(saveas)} save-as files; F4 and SDK on "
+            f"{record.get('f4_and_sdk_checked')}, LibreOffice ({record.get('libreoffice_image')}) on "
+            f"{record.get('libreoffice_checked')}: {record.get('libreoffice')}; {len(failures)} failures")
+    if failures:
+        text += ": " + "; ".join(failures[:4]) + ("; ..." if len(failures) > 4 else "")
+    return met, f"{text}; {when(record)}"
+
+
+def budget_and_hostile(args):
+    """The 500-slide deck within its budget, and every hostile file opened and edited, or refused,
+    with no panic and none past its bound."""
+    budget, hostile = evidence(args, "budget"), evidence(args, "hostile")
+    notes, met = [], True
+    deck = ROOT / "fixtures/generated/five-hundred-slides.pptx"
+    if not budget:
+        met = False
+        notes.append("no 500-slide run recorded")
+    else:
+        measured, limit = budget.get("measured_ms", {}), budget.get("budget_ms", {})
+        over = [k for k in ("open", "unedited_save", "edit") if k not in measured or measured[k] > limit.get(k, -1)]
+        fresh = budget.get("deck_sha256") == hashlib.sha256(deck.read_bytes()).hexdigest()
+        met &= budget.get("ok") is True and not over and fresh
+        notes.append(f"500 slides, {'optimized' if budget.get('optimized') else 'unoptimized'}, ms measured/budget: "
+                     + ", ".join(f"{k} {measured.get(k)}/{limit.get(k)}" for k in ("open", "unedited_save", "edit"))
+                     + (f", OVER: {', '.join(over)}" if over else "") + ("" if fresh else ", for another deck")
+                     + f" ({when(budget)})")
+    files = sorted(p for p in (ROOT / "fixtures/hostile").iterdir() if p.is_file())
+    if not hostile:
+        met = False
+        notes.append("no hostile run recorded")
+    else:
+        fresh = hostile.get("fixtures_sha256") == digest(files)
+        met &= hostile.get("ok") is True and hostile.get("broken") == 0 and hostile.get("run") == len(files) and fresh
+        notes.append(f"hostile: {hostile.get('run')} of {len(files)} files, {hostile.get('edited')} edited, "
+                     f"{hostile.get('refused')} refused by code, {hostile.get('broken')} crashed or hung, slowest "
+                     f"{hostile.get('slowest_ms')} ms of {hostile.get('bound_ms')}" + ("" if fresh else ", for other files")
+                     + f" ({when(hostile)})")
+    return met, "; ".join(notes)
+
+
+def damage(args):
+    record = evidence(args, "damage")
+    if not record:
+        return False, "no damage corpus run recorded (tools/phase1-evidence.py damage)"
+    decks = sorted(p for p in (ROOT / "fixtures/real").iterdir() if p.suffix == ".pptx")
+    fresh = record.get("decks_sha256") == digest(decks)
+    met = record.get("ok") is True and record.get("exit") == 0 and fresh
+    text = "; ".join(str(record.get(k)) for k in ("corpus", "opened", "f4") if record.get(k))
+    if record.get("failure"):
+        text += "; FAILED: " + record["failure"][:300].replace("\n", " | ")
+    return met, f"DAMAGE_FULL=1: {text}" + ("" if fresh else "; for other decks than fixtures/real holds") + f" ({when(record)})"
 
 
 def corpus(args):
@@ -111,8 +186,8 @@ CHECKS = (
     (r"^All tiers closed", lambda a, ticked: tiers(a)),
     (r"exported corpus deck", lambda a, ticked: exports(a)),
     (r"^Corpus includes", lambda a, ticked: corpus(a)),
-    (r"500-slide", lambda a, ticked: (False, "no 500-slide budget or whole-corpus hostile run exists yet")),
-    (r"damage corpus", lambda a, ticked: (False, "no damage corpus run exists yet (REC-*)")),
+    (r"500-slide", lambda a, ticked: budget_and_hostile(a)),
+    (r"damage corpus", lambda a, ticked: damage(a)),
     (r"^Owner sign-off", lambda a, ticked: (ticked, "the box in docs/06")),
 )
 
@@ -130,6 +205,7 @@ def main(argv):
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--tracker", default=str(ROOT / tracker_rows.TRACKER))
     parser.add_argument("--roadmap", default=str(ROOT / "docs/06-ROADMAP-AND-DELIVERY.md"))
+    parser.add_argument("--evidence", default=str(ROOT / "tools/phase1-evidence.json"))
     args = parser.parse_args(argv[1:])
     items = closing_list(args.roadmap)
     if not items:

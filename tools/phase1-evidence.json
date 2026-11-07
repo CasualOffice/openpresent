@@ -1,0 +1,128 @@
+{
+ "budget": {
+  "budget_ms": {
+   "edit": 10000,
+   "open": 10000,
+   "unedited_save": 100
+  },
+  "commit": "04077dac2d20eb5354ae10a1336556633b574757",
+  "date": "2026-11-07T21:23Z",
+  "deck_sha256": "148bdf32a995ff4e5f906fd55126f3a8ea8b5ece1b04fc7aa719fc65bd4e4be9",
+  "engine_uncommitted": false,
+  "exit": 0,
+  "load_after": [
+   5.7,
+   6.4,
+   8.3
+  ],
+  "load_before": [
+   5.7,
+   6.4,
+   8.3
+  ],
+  "machine": "Darwin arm64, 10 cores",
+  "measured_ms": {
+   "edit": 2201,
+   "open": 498,
+   "unedited_save": 0
+  },
+  "ok": true,
+  "optimized": false
+ },
+ "damage": {
+  "commit": "04077dac2d20eb5354ae10a1336556633b574757",
+  "date": "2026-11-07T21:32Z",
+  "decks": 16,
+  "decks_sha256": "a04efea713bb83c3440c002c1798f947b554717e92816cb106235931a855d86d",
+  "engine_uncommitted": true,
+  "exit": 101,
+  "failure": "\nrunning 1 test\ntest every_damaged_deck_opens_or_is_refused_only_by_the_rules ...    Compiling casual-slide-export v0.0.0 (/Users/sachin/Desktop/melp/services/openslide/.claude/worktrees/agent-a14c767cbad3e2f82/crates/casual-slide-export)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.27s\n     Running tests/damage_corpus.rs (target/debug/deps/damage_corpus-52ce9c85eed981d2)\nerror: test failed, to rerun pass `-p casual-slide-export --test damage_corpus`\n\nCaused by:\n  process didn't exit successfully: `/Users/sachin/Desktop/melp/services/openslide/.claude/worktrees/agent-a14c767cbad3e2f82/target/debug/deps/damage_corpus-52ce9c85eed981d2 every_damaged_deck --nocapture` (signal: 15, SIGTERM: termination signal)\n",
+  "load_after": [
+   3.8,
+   4.7,
+   5.8
+  ],
+  "load_before": [
+   6.7,
+   6.3,
+   7.4
+  ],
+  "machine": "Darwin arm64, 10 cores",
+  "ok": false
+ },
+ "export": {
+  "commit": "9c5239d331f3c81d501bd6825cb251fcc0fcd9d7",
+  "date": "2026-11-07T21:47Z",
+  "decks": 143,
+  "edits_left_out": [],
+  "engine_uncommitted": false,
+  "exit": 0,
+  "f4_and_sdk_checked": 179,
+  "failures": [
+   "SDK edited/graphics-diagram-every-row.pptx: FAIL, input KNOWN; new:  truncated",
+   "LibreOffice edited/chart-every-row-classic.pptx: no-pdf 0, unedited input no-pdf",
+   "LibreOffice edited/rich-properties.pptx: crash 134, unedited input crash",
+   "LibreOffice edited/strict-properties.pptx: crash 134, unedited input crash",
+   "LibreOffice edited/table-unknown-style-with-list.pptx: crash 134, unedited input crash"
+  ],
+  "inputs_sha256": "f9b343b2c0b681ec851ed869b8432a9b7e87e1cded8d465f3032d2e2049e4feb",
+  "libreoffice": {
+   "crash": 3,
+   "no-pdf": 1,
+   "pdf": 175
+  },
+  "libreoffice_checked": 179,
+  "libreoffice_image": "openpresent-lo",
+  "libreoffice_not_decks": {
+   "rr/sa/RR-SA-odp-odp.odp": "no-pdf",
+   "rr/sa/RR-SA-ppam-ppam.ppam": "no-pdf",
+   "rr/sa/RR-SA-thmx-thmx.thmx": "no-pdf"
+  },
+  "load_after": [
+   5.2,
+   4.9,
+   5.7
+  ],
+  "load_before": [
+   4.7,
+   4.8,
+   5.8
+  ],
+  "machine": "Darwin arm64, 10 cores",
+  "ok": false,
+  "saveas": 39,
+  "sdk_known_only": 41,
+  "written": 143
+ },
+ "hostile": {
+  "bound_ms": 60000,
+  "broken": 0,
+  "commit": "04077dac2d20eb5354ae10a1336556633b574757",
+  "date": "2026-11-07T21:23Z",
+  "edited": 175,
+  "engine_uncommitted": false,
+  "exit": 0,
+  "fixtures": 178,
+  "fixtures_sha256": "6fdabf0ddc369dbddb7d28e60965cf1461174007a786af6ebd889ac55af48a1f",
+  "load_after": [
+   5.8,
+   6.1,
+   7.8
+  ],
+  "load_before": [
+   5.7,
+   6.4,
+   8.3
+  ],
+  "machine": "Darwin arm64, 10 cores",
+  "ok": true,
+  "refusals": [
+   "import_slide_parts CS-TBL-0005: 1",
+   "open CS-OPC-0005: 1",
+   "open CS-PKG-0005: 1"
+  ],
+  "refused": 3,
+  "run": 178,
+  "slowest_ms": 29509
+ }
+}
