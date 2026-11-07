@@ -70,6 +70,7 @@ impl Default for TextLimits {
 pub(crate) struct TextCounts {
     pub paragraphs: usize,
     pub runs: usize,
+    pub math_elements: usize,
 }
 
 /// One text body, list style or property being read.
@@ -355,9 +356,14 @@ impl TextReader<'_, '_> {
                 "r" if dml => TextItem::Run(self.run(&child)?),
                 "br" if dml => TextItem::Break(self.line_break(&child)?),
                 "fld" if dml => TextItem::Field(self.field(&child)?),
+                "m" if child.in_namespace(crate::math::A14) => self.inline_math(&child)?,
+                "AlternateContent"
+                    if child.in_namespace(&[casual_slide_ooxml::MARKUP_COMPATIBILITY]) =>
+                {
+                    self.inline_alternate(&child)?
+                }
                 other => {
-                    // Such as `mc:AlternateContent` around an equation. It is left in
-                    // its place, and the model says that something is there.
+                    // It is left in its place, and the model says that something is there.
                     self.r.retained(&child);
                     TextItem::Retained(other.to_owned())
                 }
@@ -368,7 +374,7 @@ impl TextReader<'_, '_> {
     }
 
     // spec-audit: owner=r
-    fn run(&mut self, el: &Elem) -> Result<TextRun, ImportError> {
+    pub(crate) fn run(&mut self, el: &Elem) -> Result<TextRun, ImportError> {
         self.r.finish(el);
         let mut run = TextRun::default();
         let mut seen = HashSet::new();
@@ -397,7 +403,7 @@ impl TextReader<'_, '_> {
     }
 
     // spec-audit: owner=br
-    fn line_break(&mut self, el: &Elem) -> Result<LineBreak, ImportError> {
+    pub(crate) fn line_break(&mut self, el: &Elem) -> Result<LineBreak, ImportError> {
         self.r.finish(el);
         let mut br = LineBreak::default();
         for child in self.r.children(el)? {
@@ -413,7 +419,7 @@ impl TextReader<'_, '_> {
     }
 
     // spec-audit: owner=fld
-    fn field(&mut self, el: &Elem) -> Result<TextField, ImportError> {
+    pub(crate) fn field(&mut self, el: &Elem) -> Result<TextField, ImportError> {
         let mut e = el.clone();
         let mut field = TextField {
             id: self

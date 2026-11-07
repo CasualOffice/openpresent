@@ -194,6 +194,21 @@ Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fi
 
 A table has a fixed depth, and a style's parts follow no input. What is damaged but not over a bound opens and is reported: `hostile/table-bad-structure.bin`.
 
+## Diagrams, equations and ink: `GraphicLimits`
+
+`crates/casual-slide-import/src/diagram.rs`, nested in `ImportLimits` as `graphic`. Over a bound, a part of a diagram or an ink part is set aside and reported, and the deck opens; an equation in a slide's text stays in the tree and is reported (`CS-GFF-0008`). Not yet held by hostile fixtures: `T1K-01` to `T1K-03` are in progress.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Not yet tested |
+| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Not yet tested |
+| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Not yet tested |
+| `max_points` | `262_144` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Not yet tested |
+| `max_connections` | `524_288` | `dgm:cxn` in one part | CS-GFX-0004 | Not yet tested |
+| `max_layout_nodes` | `262_144` | `dgm:layoutNode` in one part | CS-GFX-0005 | Not yet tested |
+| `max_drawing_shapes` | `262_144` | `dsp:sp` in one part | CS-GFX-0006 | Not yet tested |
+| `max_traces` | `1_048_576` | `inkml:trace` in one part | CS-GFX-0007 | Not yet tested |
+
 ## Export
 
 | Limit | Default | Bounds | Code | Status |

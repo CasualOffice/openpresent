@@ -62,6 +62,14 @@ pub enum SlideExportError {
         /// The part.
         part: String,
     },
+    /// An edit whose fallback or drawing nothing here can redraw (`INV-FB-*`). Nothing is
+    /// saved.
+    Blocked {
+        /// What.
+        what: &'static str,
+        /// The part.
+        part: String,
+    },
     /// Two nodes of the part would share a `cNvPr/@id`.
     DuplicateShapeId {
         /// The part.
@@ -81,6 +89,7 @@ impl SlideExportError {
             Self::Export(err) => err.code(),
             Self::Slide(err) => err.code(),
             Self::Unsupported { .. } => "CS-SLE-0001",
+            Self::Blocked { .. } => "CS-SAV-0009",
             Self::StaleAlternate { .. } => "CS-SLE-0002",
             Self::DuplicateShapeId { .. } => "CS-SLE-0003",
             Self::NotInStructure { .. } => "CS-SLE-0004",
@@ -96,6 +105,9 @@ impl fmt::Display for SlideExportError {
             Self::Slide(err) => write!(f, "{err}"),
             Self::Unsupported { what, part } => {
                 write!(f, "[{code}] {part:?}: editing {what} is not supported")
+            }
+            Self::Blocked { what, part } => {
+                write!(f, "[{code}] {part:?}: {what} is blocked")
             }
             Self::StaleAlternate { part } => write!(
                 f,
@@ -386,7 +398,16 @@ impl Patch<'_, '_> {
             || b.rel_id != a.rel_id
             || b.text_body != a.text_body
             || b.table != a.table
+            || b.diagram != a.diagram
             || b.style != a.style;
+        if b.alternates != a.alternates {
+            // `INV-FB-03`, `INV-FB-06`: a branch not taken has no math layout or ink
+            // renderer behind its fallback.
+            return Err(SlideExportError::Blocked {
+                what: "an edit of a branch not taken, whose fallback would go stale",
+                part: self.w.part.to_owned(),
+            });
+        }
         if own_changed {
             let mapped = self
                 .map
@@ -454,6 +475,22 @@ impl Patch<'_, '_> {
                 b.table.as_deref(),
                 a.table.as_deref(),
             )?;
+        }
+        if b.diagram != a.diagram {
+            let (Some(old), Some(new)) = (b.diagram.as_deref(), a.diagram.as_deref()) else {
+                return Err(self.unsupported("adding or removing a diagram"));
+            };
+            let graphic = self.child(el, ns::DML, "graphic")?;
+            let graphic = self.need(graphic, "a graphic")?;
+            let data = self.child(&graphic, ns::DML, "graphicData")?;
+            let data = self.need(data, "graphic data")?;
+            let ids = self.child(
+                &data,
+                casual_slide_import::diagram::schema::NS_DGM,
+                "relIds",
+            )?;
+            let ids = self.need(ids, "a diagram's relIds")?;
+            crate::diagram::schema::patch_rel_ids(&mut self.w, &ids, Some(old), new)?;
         }
         if a.style.is_some()
             && !matches!(
@@ -904,7 +941,7 @@ fn patch_size(
     w.attr(el, "cy", b.map(|b| &b.cy), Some(&a.cy))
 }
 
-fn patch_transform(
+pub(crate) fn patch_transform(
     w: &mut Writer<'_>,
     el: &Elem,
     group: bool,

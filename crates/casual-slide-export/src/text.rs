@@ -875,7 +875,7 @@ fn patch_effects(
 
 /// `a:CT_TextCharacterProperties`.
 // spec-audit: owner=rPr,defRPr,endParaRPr
-fn patch_character(
+pub(crate) fn patch_character(
     w: &mut Writer<'_>,
     el: &Elem,
     b: Option<&CharacterProperties>,
@@ -1147,7 +1147,12 @@ fn patch_paragraph(w: &mut Writer<'_>, el: &Elem, b: Option<&Paragraph>, a: &Par
 }
 
 // spec-audit: owner=p
-fn patch_items(w: &mut Writer<'_>, el: &Elem, before: &[TextItem], after: &[TextItem]) -> Result {
+pub(crate) fn patch_items(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    before: &[TextItem],
+    after: &[TextItem],
+) -> Result {
     let elements: Vec<Elem> = el
         .children(w.tree, w.part)?
         .into_iter()
@@ -1165,18 +1170,24 @@ fn patch_items(w: &mut Writer<'_>, el: &Elem, before: &[TextItem], after: &[Text
                 (TextItem::Break(o), TextItem::Break(n)) => patch_break(w, holder, Some(o), n)?,
                 (TextItem::Field(o), TextItem::Field(n)) => patch_field(w, holder, Some(o), n)?,
                 (TextItem::Retained(o), TextItem::Retained(n)) if o == n => {}
+                (TextItem::Math(o), TextItem::Math(n))
+                    if crate::math::inline_name(o) == crate::math::inline_name(n) =>
+                {
+                    crate::math::patch_inline_math(w, holder, Some(o), n)?;
+                }
                 _ => return Err(unsupported(w, "reordering what a paragraph holds")),
             },
             _ => {
-                let local = match wanted {
-                    TextItem::Run(_) => "r",
-                    TextItem::Break(_) => "br",
-                    TextItem::Field(_) => "fld",
+                let (uris, prefix, local): (&[&str], &str, &str) = match wanted {
+                    TextItem::Run(_) => (ns::DML, "a", "r"),
+                    TextItem::Break(_) => (ns::DML, "a", "br"),
+                    TextItem::Field(_) => (ns::DML, "a", "fld"),
+                    TextItem::Math(m) => crate::math::inline_name(m),
                     TextItem::Retained(_) => {
                         return Err(unsupported(w, "content this tier does not model"));
                     }
                 };
-                let holder = w.new_child(el, ns::DML, "a", local)?;
+                let holder = w.new_child(el, uris, prefix, local)?;
                 // Before `endParaRPr`, which is last.
                 let end = el.first_child(w.tree, w.part, ns::DML, "endParaRPr")?;
                 w.tree.insert_child(el.id, end.map(|e| e.id), holder.id);
@@ -1184,6 +1195,7 @@ fn patch_items(w: &mut Writer<'_>, el: &Elem, before: &[TextItem], after: &[Text
                     TextItem::Run(n) => patch_run(w, &holder, None, n)?,
                     TextItem::Break(n) => patch_break(w, &holder, None, n)?,
                     TextItem::Field(n) => patch_field(w, &holder, None, n)?,
+                    TextItem::Math(n) => crate::math::patch_inline_math(w, &holder, None, n)?,
                     TextItem::Retained(_) => {}
                 }
             }

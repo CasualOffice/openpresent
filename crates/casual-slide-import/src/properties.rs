@@ -97,6 +97,8 @@ pub struct ImportLimits {
     pub max_findings: usize,
     /// Bounds on text bodies and list styles.
     pub text: TextLimits,
+    /// Bounds on diagrams, equations and ink.
+    pub graphic: crate::diagram::GraphicLimits,
 }
 
 impl Default for ImportLimits {
@@ -116,6 +118,7 @@ impl Default for ImportLimits {
             max_value_bytes: 16 << 20,
             max_findings: 10_000,
             text: TextLimits::default(),
+            graphic: crate::diagram::GraphicLimits::default(),
         }
     }
 }
@@ -297,6 +300,8 @@ pub enum ImportFindingKind {
     Table(crate::table::TableFinding),
     /// What the colour reader noticed in a shape's properties, under its own codes.
     Color(crate::color::FindingKind),
+    /// What reading a diagram, an equation or ink noticed, under its own codes.
+    Graphic(crate::diagram::GraphicFinding),
 }
 
 impl ImportFindingKind {
@@ -321,6 +326,7 @@ impl ImportFindingKind {
             Self::Drawing(finding) => finding.code(),
             Self::Table(finding) => finding.code(),
             Self::Color(finding) => finding.code(),
+            Self::Graphic(finding) => finding.code(),
         }
     }
 }

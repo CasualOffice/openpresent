@@ -2,11 +2,14 @@
 
 pub mod color;
 pub mod d3;
+pub mod diagram;
 pub mod drawing;
 pub mod effect;
 pub mod fill;
 pub mod geometry;
+pub mod ink;
 pub mod line;
+pub mod math;
 pub mod presentation;
 pub mod properties;
 pub mod shape;

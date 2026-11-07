@@ -572,10 +572,28 @@ pub struct ShapeNode {
     pub text_body: Option<Box<TextBody>>,
     /// `a:tbl` in the frame's `graphicData`, graphic frames only.
     pub table: Option<Box<crate::table::Table>>,
+    /// `dgm:relIds` in the frame's `graphicData`: which parts its diagram is.
+    pub diagram: Option<Box<crate::diagram::schema::RelIds>>,
+    /// What a group's `mc:AlternateContent` holds in the branches not taken, where it is
+    /// a content part's ink or an equation. The taken branch's nodes are [`Self::children`].
+    pub alternates: Vec<AlternateBranch>,
     /// `p:style` on a shape, connector or picture: references into the theme.
     pub style: Option<Box<crate::theme::ShapeStyle>>,
     /// A group's children, in document order, which is z-order.
     pub children: Vec<ShapeNode>,
+}
+
+/// An `mc:Choice` a reader of this model did not take: PowerPoint's own form of an
+/// equation or of ink, whose `mc:Fallback` is the shape in the group. It stays in the
+/// tree as it was, and reading it is all that is done with it (`INV-FB-03`, `INV-FB-06`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AlternateBranch {
+    /// `mc:Choice/@Requires`, as written.
+    pub requires: Option<String>,
+    /// `r:id` of each `p:contentPart` in the branch.
+    pub content_parts: Vec<String>,
+    /// Each `a14:m` in the text of a `p:sp` in the branch, in document order.
+    pub equations: Vec<crate::math::TextMath>,
 }
 
 impl ShapeNode {
@@ -598,6 +616,8 @@ impl ShapeNode {
             rel_id: None,
             text_body: None,
             table: None,
+            diagram: None,
+            alternates: Vec::new(),
             style: None,
             children: Vec::new(),
         }

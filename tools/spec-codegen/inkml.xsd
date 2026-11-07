@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Input to generate.py, not a vendored schema. Hand-written from the element and
+     attribute tables of W3C InkML 1.0 (REC-InkML-20110920), since schemas/ holds no copy.
+     It is loose where the Recommendation's prose is the only constraint, so a real file's
+     values read as text, and it says what the generated reader and writer model; the
+     checklist has no inkml: rows. -->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.w3.org/2003/InkML"
+  xmlns:msink="http://schemas.microsoft.com/ink/2010/main" targetNamespace="http://www.w3.org/2003/InkML"
+  elementFormDefault="qualified">
+  <xsd:complexType name="CT_Ink">
+    <xsd:choice minOccurs="0" maxOccurs="unbounded">
+      <xsd:element name="annotation" type="CT_Annotation"/>
+      <xsd:element name="annotationXML" type="CT_AnnotationXML"/>
+      <xsd:element name="definitions" type="CT_Definitions"/>
+      <xsd:element name="context" type="CT_Context"/>
+      <xsd:element name="trace" type="CT_Trace"/>
+      <xsd:element name="traceGroup" type="CT_TraceGroup"/>
+      <xsd:element name="traceView" type="CT_TraceView"/>
+    </xsd:choice>
+    <xsd:attribute name="documentID" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Definitions">
+    <xsd:choice minOccurs="0" maxOccurs="unbounded">
+      <xsd:element name="brush" type="CT_Brush"/>
+      <xsd:element name="canvas" type="CT_Canvas"/>
+      <xsd:element name="canvasTransform" type="CT_CanvasTransform"/>
+      <xsd:element name="context" type="CT_Context"/>
+      <xsd:element name="inkSource" type="CT_InkSource"/>
+      <xsd:element name="mapping" type="CT_Mapping"/>
+      <xsd:element name="timestamp" type="CT_Timestamp"/>
+      <xsd:element name="trace" type="CT_Trace"/>
+      <xsd:element name="traceFormat" type="CT_TraceFormat"/>
+      <xsd:element name="traceGroup" type="CT_TraceGroup"/>
+      <xsd:element name="traceView" type="CT_TraceView"/>
+    </xsd:choice>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Context">
+    <xsd:choice minOccurs="0" maxOccurs="unbounded">
+      <xsd:element name="brush" type="CT_Brush"/>
+      <xsd:element name="canvas" type="CT_Canvas"/>
+      <xsd:element name="canvasTransform" type="CT_CanvasTransform"/>
+      <xsd:element name="inkSource" type="CT_InkSource"/>
+      <xsd:element name="timestamp" type="CT_Timestamp"/>
+      <xsd:element name="traceFormat" type="CT_TraceFormat"/>
+    </xsd:choice>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="contextRef" type="xsd:string"/>
+    <xsd:attribute name="canvasRef" type="xsd:string"/>
+    <xsd:attribute name="canvasTransformRef" type="xsd:string"/>
+    <xsd:attribute name="traceFormatRef" type="xsd:string"/>
+    <xsd:attribute name="inkSourceRef" type="xsd:string"/>
+    <xsd:attribute name="brushRef" type="xsd:string"/>
+    <xsd:attribute name="timestampRef" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Brush">
+    <xsd:choice minOccurs="0" maxOccurs="unbounded">
+      <xsd:element name="annotation" type="CT_Annotation"/>
+      <xsd:element name="annotationXML" type="CT_AnnotationXML"/>
+      <xsd:element name="brushProperty" type="CT_BrushProperty"/>
+    </xsd:choice>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="brushRef" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_BrushProperty">
+    <xsd:choice minOccurs="0" maxOccurs="unbounded">
+      <xsd:element name="annotation" type="CT_Annotation"/>
+      <xsd:element name="annotationXML" type="CT_AnnotationXML"/>
+    </xsd:choice>
+    <xsd:attribute name="name" type="xsd:string"/>
+    <xsd:attribute name="value" type="xsd:string"/>
+    <xsd:attribute name="units" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_InkSource">
+    <xsd:sequence>
+      <xsd:element name="traceFormat" type="CT_TraceFormat" minOccurs="0"/>
+      <xsd:element name="sampleRate" type="CT_SampleRate" minOccurs="0"/>
+      <xsd:element name="latency" type="CT_Latency" minOccurs="0"/>
+      <xsd:element name="activeArea" type="CT_ActiveArea" minOccurs="0"/>
+      <xsd:element name="srcProperty" type="CT_SrcProperty" minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="channelProperties" type="CT_ChannelProperties" minOccurs="0"/>
+    </xsd:sequence>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="manufacturer" type="xsd:string"/>
+    <xsd:attribute name="model" type="xsd:string"/>
+    <xsd:attribute name="serialNo" type="xsd:string"/>
+    <xsd:attribute name="specificationRef" type="xsd:string"/>
+    <xsd:attribute name="description" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_TraceFormat">
+    <xsd:sequence>
+      <xsd:element name="channel" type="CT_Channel" minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="intermittentChannels" type="CT_IntermittentChannels" minOccurs="0"/>
+    </xsd:sequence>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="href" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_IntermittentChannels">
+    <xsd:sequence>
+      <xsd:element name="channel" type="CT_Channel" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Channel">
+    <xsd:sequence>
+      <xsd:element name="mapping" type="CT_Mapping" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="name" type="xsd:string"/>
+    <xsd:attribute name="type" type="xsd:string"/>
+    <xsd:attribute name="default" type="xsd:string"/>
+    <xsd:attribute name="min" type="xsd:string"/>
+    <xsd:attribute name="max" type="xsd:string"/>
+    <xsd:attribute name="orientation" type="xsd:string"/>
+    <xsd:attribute name="respectTo" type="xsd:string"/>
+    <xsd:attribute name="units" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_ChannelProperties">
+    <xsd:sequence>
+      <xsd:element name="channelProperty" type="CT_ChannelProperty" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+  <xsd:complexType name="CT_ChannelProperty">
+    <xsd:attribute name="channel" type="xsd:string"/>
+    <xsd:attribute name="name" type="xsd:string"/>
+    <xsd:attribute name="value" type="xsd:string"/>
+    <xsd:attribute name="units" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SampleRate">
+    <xsd:attribute name="uniform" type="xsd:string"/>
+    <xsd:attribute name="value" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Latency">
+    <xsd:attribute name="value" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_ActiveArea">
+    <xsd:attribute name="size" type="xsd:string"/>
+    <xsd:attribute name="height" type="xsd:string"/>
+    <xsd:attribute name="width" type="xsd:string"/>
+    <xsd:attribute name="units" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_SrcProperty">
+    <xsd:attribute name="name" type="xsd:string"/>
+    <xsd:attribute name="value" type="xsd:string"/>
+    <xsd:attribute name="units" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Timestamp">
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="time" type="xsd:string"/>
+    <xsd:attribute name="timestampRef" type="xsd:string"/>
+    <xsd:attribute name="timeString" type="xsd:string"/>
+    <xsd:attribute name="timeOffset" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Mapping">
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="type" type="xsd:string"/>
+    <xsd:attribute name="mappingRef" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Canvas">
+    <xsd:sequence>
+      <xsd:element name="traceFormat" type="CT_TraceFormat" minOccurs="0"/>
+    </xsd:sequence>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="traceFormatRef" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_CanvasTransform">
+    <xsd:sequence>
+      <xsd:element name="mapping" type="CT_Mapping" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="invertible" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Trace">
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string">
+        <xsd:attribute name="xml:id" type="xsd:string"/>
+        <xsd:attribute name="type" type="xsd:string"/>
+        <xsd:attribute name="continuation" type="xsd:string"/>
+        <xsd:attribute name="priorRef" type="xsd:string"/>
+        <xsd:attribute name="contextRef" type="xsd:string"/>
+        <xsd:attribute name="brushRef" type="xsd:string"/>
+        <xsd:attribute name="duration" type="xsd:string"/>
+        <xsd:attribute name="timeOffset" type="xsd:string"/>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+  <xsd:complexType name="CT_TraceGroup">
+    <xsd:choice minOccurs="0" maxOccurs="unbounded">
+      <xsd:element name="annotation" type="CT_Annotation"/>
+      <xsd:element name="annotationXML" type="CT_AnnotationXML"/>
+      <xsd:element name="trace" type="CT_Trace"/>
+      <xsd:element name="traceGroup" type="CT_TraceGroup"/>
+    </xsd:choice>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="contextRef" type="xsd:string"/>
+    <xsd:attribute name="brushRef" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_TraceView">
+    <xsd:choice minOccurs="0" maxOccurs="unbounded">
+      <xsd:element name="annotation" type="CT_Annotation"/>
+      <xsd:element name="annotationXML" type="CT_AnnotationXML"/>
+      <xsd:element name="traceView" type="CT_TraceView"/>
+    </xsd:choice>
+    <xsd:attribute name="xml:id" type="xsd:string"/>
+    <xsd:attribute name="contextRef" type="xsd:string"/>
+    <xsd:attribute name="traceDataRef" type="xsd:string"/>
+    <xsd:attribute name="from" type="xsd:string"/>
+    <xsd:attribute name="to" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Annotation">
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string">
+        <xsd:attribute name="type" type="xsd:string"/>
+        <xsd:attribute name="encoding" type="xsd:string"/>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+  <xsd:complexType name="CT_AnnotationXML">
+    <xsd:sequence>
+      <xsd:element ref="msink:context" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="type" type="xsd:string"/>
+    <xsd:attribute name="encoding" type="xsd:string"/>
+    <xsd:attribute name="href" type="xsd:string"/>
+  </xsd:complexType>
+  <xsd:complexType name="CT_Matrix">
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string">
+        <xsd:attribute name="xml:id" type="xsd:string"/>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+  <xsd:element name="ink" type="CT_Ink"/>
+  <xsd:element name="definitions" type="CT_Definitions"/>
+  <xsd:element name="trace" type="CT_Trace"/>
+  <xsd:element name="traceView" type="CT_TraceView"/>
+</xsd:schema>
