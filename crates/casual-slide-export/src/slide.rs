@@ -31,15 +31,14 @@ use casual_slide_model::slide::{
     DeckStructure, HeaderFooter, MasterTextStyles, SlideKind, SlidePart,
 };
 use casual_slide_model::theme::{ColorMapOverride, ColorMapSlot};
-use casual_slide_ooxml::{
-    Conformance, FindingKind, OoxmlLimits, PresentationPackage, Relationship, XmlTree,
-};
+use casual_slide_ooxml::{Conformance, OoxmlLimits, PresentationPackage, Relationship, XmlTree};
 use casual_slide_package::PartEdits;
 
 use crate::presentation::SaveOutcome;
 use crate::properties::{ExportError, Writer};
 use crate::text::{patch_list_style, patch_text_body};
 use crate::theme::{set_color_map_override, set_color_map_slot};
+use crate::writer::{SavePlan, WriterError, WriterLimits};
 
 /// Why a slide-like part could not be written. Nothing was saved.
 #[derive(Debug)]
@@ -997,19 +996,18 @@ pub fn patch_slide_part(
     Ok(changes)
 }
 
-/// The part edits that bring each given part to its model. Parts not given are
-/// not read. Returns the edits and the names of the parts that changed.
-pub fn slide_part_edits(
+/// The bytes that bring each given part to its model, for parts that changed. Parts
+/// not given are not read.
+pub(crate) fn slide_part_changes(
     package: &mut PresentationPackage,
     structure: &DeckStructure,
     parts: &[&SlidePart],
     limits: &SlideLimits,
     import_limits: &ImportLimits,
-) -> Result<(PartEdits, Vec<String>)> {
+) -> Result<Vec<(String, Vec<u8>)>> {
     let strict = package.conformance() == Conformance::Strict;
     let xml_limits = *package.limits();
-    let mut edits = PartEdits::default();
-    let mut changed = Vec::new();
+    let mut changed: Vec<(String, Vec<u8>)> = Vec::new();
     for after in parts {
         let ordinal = after.id.part;
         let entry = structure
@@ -1037,13 +1035,30 @@ pub fn slide_part_edits(
         if changes > 0 {
             let out = tree.to_bytes();
             if out != bytes {
-                edits.replace(entry.part.clone(), out);
-                changed.push(entry.part.clone());
+                changed.retain(|(name, _)| *name != entry.part);
+                changed.push((entry.part.clone(), out));
             }
         }
     }
-    changed.sort();
-    changed.dedup();
+    changed.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(changed)
+}
+
+/// The part edits that bring each given part to its model. Parts not given are
+/// not read. Returns the edits and the names of the parts that changed.
+pub fn slide_part_edits(
+    package: &mut PresentationPackage,
+    structure: &DeckStructure,
+    parts: &[&SlidePart],
+    limits: &SlideLimits,
+    import_limits: &ImportLimits,
+) -> Result<(PartEdits, Vec<String>)> {
+    let mut edits = PartEdits::default();
+    let mut changed = Vec::new();
+    for (name, bytes) in slide_part_changes(package, structure, parts, limits, import_limits)? {
+        changed.push(name.clone());
+        edits.replace(name, bytes);
+    }
     Ok((edits, changed))
 }
 
@@ -1056,21 +1071,17 @@ pub fn save_slide_parts(
     limits: &SlideLimits,
     import_limits: &ImportLimits,
 ) -> Result<SaveOutcome> {
-    let (edits, changed) = slide_part_edits(package, structure, parts, limits, import_limits)?;
-    if edits.is_empty() {
-        return Ok(SaveOutcome {
-            bytes: package.save_unedited(),
-            changed_parts: changed,
-            signature_invalidated: false,
-        });
-    }
-    let signed = package
-        .findings()
-        .iter()
-        .any(|f| f.kind == FindingKind::Signature);
+    let plan = SavePlan::new()
+        .with_limits(*import_limits, WriterLimits::default())
+        .slide_parts(structure, parts, limits);
+    let outcome = plan.save(package).map_err(|err| match err {
+        WriterError::Slide(err) => err,
+        WriterError::Export(err) => SlideExportError::Export(err),
+        other => SlideExportError::Export(ExportError::Refused(Box::new(other))),
+    })?;
     Ok(SaveOutcome {
-        bytes: package.save_with(&edits)?,
-        changed_parts: changed,
-        signature_invalidated: signed,
+        bytes: outcome.bytes,
+        changed_parts: outcome.changed_parts,
+        signature_invalidated: outcome.signature_invalidated,
     })
 }

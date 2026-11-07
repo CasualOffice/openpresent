@@ -389,9 +389,9 @@ fn hostile_values_are_reported_and_left_out_never_a_panic() {
         assert!(found, "{kind:?} {element} {attribute}: {f:#?}");
     }
     for element in [
-        "unknownThing",
+        // `unknownThing` and `foreign` are names the part made up (`SEC-018`).
+        "(unknown)",
         "blipFill",
-        "foreign",
         "tint",
         "extrusionClr",
     ] {

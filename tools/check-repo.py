@@ -27,6 +27,7 @@ GATES = [
     "check-crate-deps.py",
     "check-fuzz-lock.py",
     "check-parser-limits.py",
+    "check-error-codes.py",
     "check-workflows.py",
 ]
 

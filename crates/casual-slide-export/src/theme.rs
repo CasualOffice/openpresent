@@ -3,7 +3,9 @@
 //! anything changed, so a no-op edit can leave the part out of the save.
 
 use casual_slide_model::color::Color;
-use casual_slide_model::theme::{ColorMapOverride, ColorMapSlot, ColorSchemeIndex};
+use casual_slide_model::theme::{
+    ColorMapOverride, ColorMapSlot, ColorSchemeIndex, FontCollectionIndex,
+};
 use casual_slide_ooxml::{ElementId, XmlTree};
 use casual_slide_package::PartEdits;
 
@@ -257,6 +259,115 @@ pub fn set_supplemental_font(
         &[("script", script), ("typeface", typeface)],
     );
     Ok(true)
+}
+
+/// A `CT_TextFont` of a font scheme, by its place.
+fn font_slot(tree: &XmlTree, role: FontRole, slot: FontSlot) -> Result<ElementId, ExportError> {
+    let scheme = step(tree, theme_elements(tree)?, "fontScheme")?;
+    let collection = step(tree, scheme, role.element())?;
+    step(tree, collection, slot.element())
+}
+
+/// Set an attribute to this text, or take it away. Taken away it is absent: a schema
+/// default is never written.
+fn patch_optional_attribute(
+    tree: &mut XmlTree,
+    el: ElementId,
+    name: &'static str,
+    value: Option<&str>,
+) -> Result<bool, ExportError> {
+    match value {
+        Some(value) => patch_text_attribute(tree, el, name, value),
+        None if tree.plain_attribute(el, name).is_none() => Ok(false),
+        None if tree.attributes_valid(el) && tree.remove_attribute(el, name) => Ok(true),
+        None => Err(ExportError::MalformedNode(name)),
+    }
+}
+
+/// Set a font's `@panose`, ten bytes as hex text, or take it away.
+pub fn set_font_panose(
+    tree: &mut XmlTree,
+    role: FontRole,
+    slot: FontSlot,
+    panose: Option<&str>,
+) -> Result<bool, ExportError> {
+    let font = font_slot(tree, role, slot)?;
+    if panose.is_some_and(|p| p.len() != 20 || !p.bytes().all(|b| b.is_ascii_hexdigit())) {
+        return Err(ExportError::InvalidValue("panose"));
+    }
+    patch_optional_attribute(tree, font, "panose", panose)
+}
+
+/// Set a font's `@pitchFamily`, or take it away. `ST_PitchFamily` lists its values: a
+/// pitch from 0 to 2, with a family from 0 to 5 in the high nibble, spelled in decimal.
+pub fn set_font_pitch_family(
+    tree: &mut XmlTree,
+    role: FontRole,
+    slot: FontSlot,
+    pitch_family: Option<i8>,
+) -> Result<bool, ExportError> {
+    let font = font_slot(tree, role, slot)?;
+    if pitch_family.is_some_and(|v| !(0..=0x52).contains(&v) || v & 0x0F > 2) {
+        return Err(ExportError::InvalidValue("pitchFamily"));
+    }
+    patch_optional_attribute(
+        tree,
+        font,
+        "pitchFamily",
+        pitch_family.map(|v| v.to_string()).as_deref(),
+    )
+}
+
+/// Set a font's `@charset`, an `xsd:byte`, or take it away.
+pub fn set_font_charset(
+    tree: &mut XmlTree,
+    role: FontRole,
+    slot: FontSlot,
+    charset: Option<i8>,
+) -> Result<bool, ExportError> {
+    let font = font_slot(tree, role, slot)?;
+    patch_optional_attribute(
+        tree,
+        font,
+        "charset",
+        charset.map(|v| v.to_string()).as_deref(),
+    )
+}
+
+/// Set `@idx` of a `CT_StyleMatrixReference`: `lnRef`, `fillRef`, `effectRef`.
+pub fn set_style_matrix_index(
+    tree: &mut XmlTree,
+    reference: ElementId,
+    idx: u32,
+) -> Result<bool, ExportError> {
+    patch_text_attribute(tree, reference, "idx", &idx.to_string())
+}
+
+/// Set `@idx` of a `CT_FontReference`.
+pub fn set_font_reference_index(
+    tree: &mut XmlTree,
+    reference: ElementId,
+    idx: FontCollectionIndex,
+) -> Result<bool, ExportError> {
+    patch_text_attribute(tree, reference, "idx", idx.as_xml())
+}
+
+/// Set `@ref` of a `CT_EffectReference`. An `xsd:token`: no empty value, and no leading,
+/// trailing or doubled space, or other white space.
+pub fn set_effect_reference(
+    tree: &mut XmlTree,
+    effect: ElementId,
+    reference: &str,
+) -> Result<bool, ExportError> {
+    let token = !reference.is_empty()
+        && !reference.starts_with(' ')
+        && !reference.ends_with(' ')
+        && !reference.contains("  ")
+        && !reference.contains(['\t', '\n', '\r']);
+    if !token {
+        return Err(ExportError::InvalidValue("ref"));
+    }
+    patch_text_attribute(tree, effect, "ref", reference)
 }
 
 /// Set one attribute of a `CT_ColorMapping` element: `p:clrMap` on a master,

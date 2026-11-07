@@ -43,7 +43,7 @@ the central directory, before anything is inflated.
 | `max_entries` | `50_000` | Entries in the archive | CS-PKG-0002 | Tested |
 | `max_total_uncompressed` | `4u64 << 30` | Declared uncompressed bytes over all entries, 4 GiB; also the budget every read is charged against | CS-PKG-0003 | Tested |
 | `max_expansion_ratio` | `1000` | Uncompressed to compressed, over the archive **and per entry**, since ordinary parts can dilute a bomb (`SEC-013`) | CS-PKG-0003 | Tested; `hostile/zip-bomb.bin` |
-| `max_path_bytes` | `4096` | Bytes in one entry name | CS-PKG-0004 | **Untested**: no test or fixture crosses it |
+| `max_path_bytes` | `4096` | Bytes in one entry name | CS-PKG-0004 | Fixture `path-too-long`, seen red with the cap removed (`SEC-020`) |
 
 ## Reading a part
 
@@ -70,6 +70,7 @@ the central directory, before anything is inflated.
 | `max_total_relationships` | `2_000_000` | Relationships across the package | CS-OPC-0002 | **Untested** (`SEC-016`) |
 | `max_content_types` | `200_000` | Entries in `[Content_Types].xml` | CS-OPC-0003 | **Untested** (`SEC-016`) |
 | `MAX_ENCODING_LAYERS` | `8` | Rounds of percent-decoding a part name or target may need; more is refused (`OPC-01`) | CS-FND-0011 as a finding | Tested |
+| `MAX_REPORTED_ID_BYTES` | `64` | Bytes of a relationship id a finding will repeat, with its form checked as an NCName; longer or otherwise is left out, and still works as an id (`DOC-009`) | none: left out of the finding | Tested |
 
 The walker accepts some malformed attributes (`XML-02`) and some non-XML (`XML-03`). Those
 are correctness defects with security consequences, not missing limits, and are tracked there.
@@ -93,13 +94,16 @@ deck does not import.
 | `max_variant_items` | `1_000_000` | Vector and array items across a part; a `vt:vector/@size` is never believed | CS-IMP-0001 | Tested; `import-limit-variant-items` |
 | `max_variant_depth` | `16` | Nesting of `vt:variant` and `vt:vector` | CS-IMP-0001 | Tested; `import-limit-variant-depth` |
 | `max_value_bytes` | `16 << 20` | Bytes in one attribute or text value | CS-IMP-0002 | Tested; `import-limit-value-bytes` |
-| `max_findings` | `10_000` | Distinct findings kept; one more says the list was cut | none: report capped | Tested; `import-findings-flood` |
+| `max_findings` | `10_000` | Distinct findings kept; one more says the list was cut | none: report capped | Tested with a tightened bound on `import-bad-values`. Made-up names are one finding since `SEC-018`, so `import-findings-flood` no longer nears it |
 
 Colour and theme import is the exception: it never refuses a part. What it cannot believe
 is left absent, reported, and kept as bytes.
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
+| `max_color_transforms` | `64` | Transforms read on one colour; over it, the colour is absent. Applied by `import_theme_limited` and `Findings::with_limits` | CS-CLR-0002 | Tested; fixture `color-too-many-transforms`, seen red with the cap ignored (`COLOR-01`) |
+| `max_theme_list_entries` | `4096` | Entries read from one theme list; the rest is reported and kept in the part | CS-CLR-0010 | Tested; fixture `color-list-capped`, seen red |
+| `max_color_findings` | `1024` | Colour findings kept for one part; the count stays exact | none: report capped | Tested; fixture `color-findings-flood`, seen red |
 | `MAX_LIST_ENTRIES` | `4096` | Entries read from one theme list: custom colours, supplemental fonts, style matrix entries, gradient stops, extensions. The rest is retained, not modelled | CS-CLR-0010 | Tested |
 | `MAX_FINDINGS` | `1024` | Colour findings kept for one part | none: report capped | Tested |
 | `MAX_COLOR_TRANSFORMS` | `64` | Transforms on one colour, in `casual-slide-model`. Over it, the colour is absent | CS-CLR-0002 | Tested |
@@ -115,9 +119,9 @@ These are constants, not fields of `ImportLimits`, so a host cannot tighten them
 | --- | --- | --- | --- | --- |
 | `max_shapes_per_part` | `100_000` | Shape-tree nodes in one part | CS-SLD | Tested; hostile fixture |
 | `max_group_depth` | `64` | Group nesting | CS-SLD | Tested; hostile fixture |
-| `max_slides` | `100_000` | Slides indexed | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
-| `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
-| `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
+| `max_slides` | `100_000` | Slides indexed | CS-SLD-0003 | Tested; fixture `import-limit-structure-slides`, seen red. `ImportLimits::max_slides` holds the same default and refuses first in `import_deck`; a host raising that one reaches this |
+| `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD-0004 | Fixture `slide-limit-parts`, under a tightened bound. **Not reachable at the default**: `max_entries` refuses a package first, which a test holds |
+| `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD-0004 | Tested; fixture `slide-limit-layout-ids`, seen red |
 
 ## Drawing properties: `DrawingLimits`
 
@@ -147,21 +151,17 @@ cap is the generous one.
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `MAX_GUIDES` | `4096` | `av` plus `gd` guides | none yet | Tested; `tests/hostile.rs` |
-| `MAX_PATHS` | `1024` | Paths | none yet | Tested |
-| `MAX_PATH_POINTS` | `262_144` | Points over all paths | none yet | Tested |
-| `MAX_HANDLES` | `256` | Adjust handles | none yet | Tested |
-| `MAX_SITES` | `4096` | Connection sites | none yet | Tested |
-| `MAX_FORMULA_LEN` | `1024` | Bytes in one formula | none yet | Tested |
-| `MAX_NAME_LEN` | `256` | Bytes in one guide name | none yet | Tested |
+| `MAX_GUIDES` | `4096` | `av` plus `gd` guides | CS-GEO-0001 | Tested; `tests/hostile.rs`, fixture `geometry-too-many-guides` |
+| `MAX_PATHS` | `1024` | Paths | CS-GEO-0002 | Tested; fixture `geometry-too-many-paths` |
+| `MAX_PATH_POINTS` | `262_144` | Points over all paths | CS-GEO-0003 | Tested; fixture `geometry-too-many-points` |
+| `MAX_HANDLES` | `256` | Adjust handles | CS-GEO-0004 | Tested; fixture `geometry-too-many-handles` |
+| `MAX_SITES` | `4096` | Connection sites | CS-GEO-0005 | Tested; fixture `geometry-too-many-sites` |
+| `MAX_FORMULA_LEN` | `1024` | Bytes in one formula | CS-GEF-0004, a repair | Tested; fixture `geometry-long-names` |
+| `MAX_NAME_LEN` | `256` | Bytes in one guide name | CS-GEF-0004, a repair | Tested; fixture `geometry-long-names` |
 | `MAX_EXTENT` | `27_273_042_316_900` | Shape extent in EMU, `ST_PositiveCoordinate`'s maximum; larger values are clamped, not refused, in `eval.rs` | none: clamped | Untested by a hostile extent; a compile-time assertion holds it under the arithmetic's limit |
 | `MAX_KEPT` | `32` | Diagnostics kept per compile or evaluation; the count stays exact | none: report capped | Tested |
-| `MAX_SUBJECT` | `64` | Bytes of **file-supplied text** kept in one diagnostic | none | Tested; but see below |
 
-`GeometryError` has messages and no stable codes, against the rule that every refusal
-carries one (`GEO-04`). And a geometry diagnostic carries up to 64 bytes of text from the
-file, which the log contract in [20](20-ERROR-CODE-REGISTRY.md) forbids: the same defect
-as `SEC-015`, in a crate that row does not name.
+A geometry diagnostic holds no text from the file (`SEC-019`), and every refusal and repair has a code (`GEO-04`).
 
 ## Text: `TextLimits`
 
@@ -197,6 +197,10 @@ A table has a fixed depth, and a style's parts follow no input. What is damaged 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
 | `MAX_WRITE_DEPTH` | `16` | Nesting of a variant written back, in `casual-slide-export/src/properties.rs`; the model can hold what import refused only if built by hand | CS-EXP-0008 | Tested |
+| `max_plan_ops` | `4_096` | `WriterLimits`: operations in one save plan, in `casual-slide-export/src/writer/plan.rs` | CS-SAV-0018 | Tested |
+| `max_clone_parts` | `10_000` | `WriterLimits`: parts one deep clone may copy, since a hostile deck can hang any number off one slide | CS-SAV-0018 | Tested |
+| `max_clone_bytes` | `1 << 30` | `WriterLimits`: bytes one deep clone may copy, on top of the package budget | CS-SAV-0018 | Tested |
+| `max_media_bytes` | `1 << 30` | `WriterLimits`: bytes of one new media part | CS-SAV-0018 | Tested |
 
 ## Not yet bounded
 

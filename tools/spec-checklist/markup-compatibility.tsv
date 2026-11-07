@@ -1,0 +1,14 @@
+# SPEC-08: the checklist's rows for markup compatibility, written by hand, since ECMA-376 Part 3 ships
+# no XSD. The generator adds these to docs/spec under area MCE, and keeps their status columns like
+# any other row. Tied to BEH-18 (docs/51). What each does: crates/casual-slide-ooxml/src/mce.rs.
+#
+# Columns, tab-separated: owner, kind, name, type, use, restriction.
+	root	<AlternateContent>		optional	Part 3 9.1. Takes the first Choice whose Requires are understood, else Fallback. Both branches stay in the part
+AlternateContent	element	Choice		1..unbounded	The first that applies is taken. At least one, before any Fallback
+AlternateContent	element	Fallback		0..1	Taken when no Choice applies. At most one, and last
+Choice	attribute	@Requires	prefix list	required	Every prefix must be declared, and must name a namespace this engine understands
+	rootattr	@Ignorable	prefix list	optional	Namespaces a consumer not understanding them may skip. Scoped to the element and its descendants
+	rootattr	@ProcessContent	qname list	optional	Ignorable elements whose content is kept and processed. Must name an ignorable namespace
+	rootattr	@MustUnderstand	prefix list	optional	A namespace not understood here stops processing the part, as CS-MCE-0001
+	rootattr	@PreserveElements	qname list	optional	Named by Part 3 for a consumer that resaves. Accepted; the part's bytes are kept anyway (ADR-013)
+	rootattr	@PreserveAttributes	qname list	optional	As PreserveElements

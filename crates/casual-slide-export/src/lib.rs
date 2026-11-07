@@ -13,3 +13,4 @@ pub mod slide;
 pub mod table;
 pub mod text;
 pub mod theme;
+pub mod writer;
