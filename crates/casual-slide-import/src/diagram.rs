@@ -85,11 +85,11 @@ impl Default for GraphicLimits {
         Self {
             max_depth: 128,
             max_elements: 4_194_304,
-            max_points: 262_144,
-            max_connections: 524_288,
-            max_layout_nodes: 262_144,
-            max_drawing_shapes: 262_144,
-            max_traces: 1_048_576,
+            max_points: 65_536,
+            max_connections: 131_072,
+            max_layout_nodes: 65_536,
+            max_drawing_shapes: 65_536,
+            max_traces: 262_144,
         }
     }
 }

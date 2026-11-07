@@ -234,11 +234,11 @@ Each fixture is seen to read with its bound raised by one (`raising_each_limit_b
 | `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Not yet tested |
 | `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Not yet tested |
 | `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Not yet tested |
-| `max_points` | `262_144` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Not yet tested |
-| `max_connections` | `524_288` | `dgm:cxn` in one part | CS-GFX-0004 | Not yet tested |
-| `max_layout_nodes` | `262_144` | `dgm:layoutNode` in one part | CS-GFX-0005 | Not yet tested |
-| `max_drawing_shapes` | `262_144` | `dsp:sp` in one part | CS-GFX-0006 | Not yet tested |
-| `max_traces` | `1_048_576` | `inkml:trace` in one part | CS-GFX-0007 | Not yet tested |
+| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Not yet tested |
+| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Not yet tested |
+| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Not yet tested |
+| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Not yet tested |
+| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Not yet tested |
 
 ## Export
 
