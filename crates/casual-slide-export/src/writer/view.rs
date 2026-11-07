@@ -106,6 +106,130 @@ pub(crate) struct View {
     pub custom_show_refs: Vec<(String, String)>,
     /// What each notes master lacks.
     pub notes_master_gaps: Vec<(String, &'static str)>,
+    /// `docProps/app.xml`, as the package root names it.
+    pub app: Option<AppFacts>,
+    /// `docProps/core.xml`, as the package root names it.
+    pub core: Option<CoreFacts>,
+    /// `sldIdLst`'s slides, read only when `app` has something to hold them to.
+    pub slides: Vec<SlideFacts>,
+}
+
+/// What `app.xml` says, as written.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct AppFacts {
+    pub part: String,
+    pub slides: Option<String>,
+    pub hidden_slides: Option<String>,
+    pub notes: Option<String>,
+    pub application: Option<String>,
+    pub app_version: Option<String>,
+    pub dig_sig: bool,
+    /// `HeadingPairs`: each group's name and count.
+    pub groups: Option<Vec<(String, Option<usize>)>>,
+    pub heading_size: Option<String>,
+    pub heading_items: usize,
+    pub titles: Option<Vec<String>>,
+    pub titles_size: Option<String>,
+}
+
+/// What `core.xml` says, as written.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct CoreFacts {
+    pub part: String,
+    pub modified: Option<String>,
+    pub modified_type: Option<String>,
+    pub created: Option<String>,
+    pub revision: Option<String>,
+    pub last_modified_by: Option<String>,
+    /// The keywords element, attributes and text, for comparison only.
+    pub keywords: Option<String>,
+}
+
+/// One slide, as the counts and titles read it.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct SlideFacts {
+    pub key: String,
+    pub hidden: bool,
+    pub has_notes: bool,
+    pub title: String,
+}
+
+fn local_child(tree: &XmlTree, parent: ElementId, local: &str) -> Option<ElementId> {
+    tree.child_elements(parent)
+        .into_iter()
+        .find(|&el| tree.local_name(el) == local)
+}
+
+fn app_facts(tree: &XmlTree, part: &str) -> AppFacts {
+    let root = tree.root();
+    let text = |local: &str| local_child(tree, root, local).and_then(|el| tree.text(el));
+    let vector =
+        |local: &str| local_child(tree, root, local).and_then(|el| local_child(tree, el, "vector"));
+    let heading = vector("HeadingPairs");
+    let variants = heading.map(|v| tree.child_elements(v)).unwrap_or_default();
+    let inner = |el: &ElementId| tree.child_elements(*el).first().and_then(|&c| tree.text(c));
+    let groups = heading.map(|_| {
+        variants
+            .chunks(2)
+            .map(|pair| {
+                let name = pair.first().and_then(inner).unwrap_or_default();
+                let count = pair
+                    .get(1)
+                    .and_then(inner)
+                    .and_then(|t| t.trim().parse::<usize>().ok());
+                (name, count)
+            })
+            .collect()
+    });
+    let list = vector("TitlesOfParts");
+    AppFacts {
+        part: part.to_owned(),
+        slides: text("Slides"),
+        hidden_slides: text("HiddenSlides"),
+        notes: text("Notes"),
+        application: text("Application"),
+        app_version: text("AppVersion"),
+        dig_sig: local_child(tree, root, "DigSig").is_some(),
+        groups,
+        heading_size: heading.and_then(|v| tree.plain_attribute(v, "size")),
+        heading_items: variants.len(),
+        titles: list.map(|v| {
+            tree.child_elements(v)
+                .iter()
+                .map(|&el| tree.text(el).unwrap_or_default())
+                .collect()
+        }),
+        titles_size: list.and_then(|v| tree.plain_attribute(v, "size")),
+    }
+}
+
+fn core_facts(tree: &XmlTree, part: &str) -> CoreFacts {
+    let root = tree.root();
+    let text = |local: &str| local_child(tree, root, local).and_then(|el| tree.text(el));
+    let modified = local_child(tree, root, "modified");
+    CoreFacts {
+        part: part.to_owned(),
+        modified: modified.and_then(|el| tree.text(el)),
+        modified_type: modified.and_then(|el| tree.plain_attribute(el, "xsi:type")),
+        created: text("created"),
+        revision: text("revision"),
+        last_modified_by: text("lastModifiedBy"),
+        keywords: local_child(tree, root, "keywords").map(|el| {
+            let mut out = String::new();
+            let mut stack = vec![el];
+            while let Some(here) = stack.pop() {
+                for (name, value) in tree.declared_attributes(here) {
+                    out.push_str(&name);
+                    out.push('=');
+                    out.push_str(&value);
+                    out.push(' ');
+                }
+                out.push_str(&tree.own_text(here).unwrap_or_default());
+                stack.extend(tree.child_elements(here));
+            }
+            out
+        }),
+    }
 }
 
 /// A child in the PresentationML namespace, whichever form the file uses, so a foreign
@@ -284,6 +408,13 @@ fn notes_master_gaps(tree: &XmlTree) -> Vec<&'static str> {
     gaps
 }
 
+fn slide_title_of(tree: Option<&XmlTree>) -> String {
+    tree.map_or_else(
+        || super::bookkeeping::UNTITLED.to_owned(),
+        super::bookkeeping::slide_title,
+    )
+}
+
 impl View {
     /// Read the structure from `parts`. A part that will not parse holds no facts: the
     /// save is not the place a retained part's fault becomes a refusal.
@@ -423,7 +554,71 @@ impl View {
             }
         }
         view.reach = view.reach_of(&[String::new()]);
+        view.read_bookkeeping(parts)?;
         Ok(view)
+    }
+
+    /// `app.xml`, `core.xml`, and each slide only if `app.xml` is there to be judged. A
+    /// part that will not parse holds no facts.
+    fn read_bookkeeping(&mut self, parts: &mut dyn Parts) -> Result<(), WriterError> {
+        let limits = parts.limits();
+        let root: Vec<Relationship> = self
+            .rels
+            .get("")
+            .map(|r| r.items.clone())
+            .unwrap_or_default();
+        let target = |view: &Self, suffix: &str| {
+            root.iter()
+                .find(|r| r.rel_type.ends_with(suffix))
+                .and_then(|r| view.resolved("", r))
+        };
+        let tree_of = |parts: &mut dyn Parts, name: &str| {
+            parts
+                .read_xml(name)
+                .ok()
+                .and_then(|b| XmlTree::parse(&b, name, &limits).ok())
+        };
+        if let Some(part) = target(self, "/metadata/core-properties")
+            && let Some(tree) = tree_of(parts, &part)
+        {
+            self.core = Some(core_facts(&tree, &part));
+        }
+        let Some(part) = target(self, "/extended-properties") else {
+            return Ok(());
+        };
+        let Some(tree) = tree_of(parts, &part) else {
+            return Ok(());
+        };
+        self.app = Some(app_facts(&tree, &part));
+        let entries = self.presentation.slides.clone();
+        for entry in entries {
+            let target = self.target_of(&self.main, &entry.rel_id);
+            let mut slide = SlideFacts {
+                title: slide_title_of(None),
+                ..SlideFacts::default()
+            };
+            if let Some(name) = target {
+                slide.key = key(&name);
+                slide.has_notes = !self.of_kind(&name, "notesSlide").is_empty();
+                if let Some(tree) = tree_of(parts, &name) {
+                    slide.hidden = tree
+                        .plain_attribute(tree.root(), "show")
+                        .is_some_and(|v| v == "0" || v == "false");
+                    slide.title = slide_title_of(Some(&tree));
+                }
+            }
+            self.slides.push(slide);
+        }
+        Ok(())
+    }
+
+    /// Slides, hidden slides, and slides with notes.
+    pub(crate) fn counts(&self) -> (usize, usize, usize) {
+        (
+            self.slides.len(),
+            self.slides.iter().filter(|s| s.hidden).count(),
+            self.slides.iter().filter(|s| s.has_notes).count(),
+        )
     }
 
     /// The part a relationship of `source` lands on.

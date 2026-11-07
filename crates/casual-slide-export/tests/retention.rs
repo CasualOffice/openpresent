@@ -75,11 +75,20 @@ fn every_node_of_every_deck_survives_an_edit() {
         let number = model.presentation.first_slide_num.unwrap_or(1);
         model.presentation.first_slide_num = Some(number.saturating_add(1));
         let saved = save_deck(&mut pkg, &model, &limits).unwrap();
-        assert_eq!(saved.changed_parts, std::slice::from_ref(&main), "{deck}");
+        assert_eq!(asked_for(&saved.changed_parts), [main.clone()], "{deck}");
         let mut after = open(saved.bytes);
         let mut source = open(bytes.clone());
-        assert_eq!(after.part_names(), names, "{deck}: parts lost or invented");
+        let names: Vec<String> = names.into_iter().filter(|n| survives_an_edit(n)).collect();
+        let left: Vec<String> = after
+            .part_names()
+            .into_iter()
+            .filter(|n| survives_an_edit(n))
+            .collect();
+        assert_eq!(left, names, "{deck}: parts lost or invented");
         for name in &names {
+            if saved.changed_parts.contains(name) && *name != main {
+                continue;
+            }
             let (old, new) = (source.read_part(name), after.read_part(name));
             let (old, new) = (old.unwrap(), new.unwrap());
             if name == &main {
@@ -119,12 +128,17 @@ fn every_node_of_every_deck_survives_an_edit() {
             &limits,
         )
         .unwrap_or_else(|e| panic!("{deck}: {}", e.code()));
-        assert_eq!(saved.changed_parts.len(), 1, "{deck}");
+        assert_eq!(asked_for(&saved.changed_parts).len(), 1, "{deck}");
         let mut after = open(saved.bytes);
         for name in &names {
+            // What any edit owes the package is not this edit's to answer for (`T1N-05`).
+            let edited = asked_for(&saved.changed_parts).contains(name);
+            if saved.changed_parts.contains(name) && !edited {
+                continue;
+            }
             let (old, new) = (source.read_part(name), after.read_part(name));
             let (old, new) = (old.unwrap(), new.unwrap());
-            if saved.changed_parts.contains(name) {
+            if edited {
                 assert_same_but_for(&deck, name, &old, &new, "show");
             } else {
                 assert_eq!(old, new, "{deck}: {name} changed");
@@ -133,4 +147,23 @@ fn every_node_of_every_deck_survives_an_edit() {
         edited += 1;
     }
     assert!(edited > 60, "{edited}");
+}
+
+/// What an edit asked for, leaving out what any edit owes the package: `app.xml`, a
+/// thumbnail, a signature set (`T1N-05`).
+fn asked_for(changed: &[String]) -> Vec<String> {
+    changed
+        .iter()
+        .filter(|n| {
+            !n.starts_with("docProps/")
+                && !n.starts_with("_xmlsignatures/")
+                && !matches!(n.as_str(), "_rels/.rels" | "[Content_Types].xml")
+        })
+        .cloned()
+        .collect()
+}
+
+/// Whether an edit keeps this part. A signature set and a thumbnail go (`T1N-05`).
+fn survives_an_edit(name: &str) -> bool {
+    !name.starts_with("_xmlsignatures/") && !name.starts_with("docProps/thumbnail")
 }

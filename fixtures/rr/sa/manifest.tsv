@@ -1,0 +1,122 @@
+id	open	save	cell	outcome	file
+RR-SA-pptx-pptx	pptx	pptx	=	written	RR-SA-pptx-pptx.pptx
+RR-SA-pptx-pptm	pptx	pptm	T	written	RR-SA-pptx-pptm.pptm
+RR-SA-pptx-ppsx	pptx	ppsx	T	written	RR-SA-pptx-ppsx.ppsx
+RR-SA-pptx-ppsm	pptx	ppsm	T	written	RR-SA-pptx-ppsm.ppsm
+RR-SA-pptx-potx	pptx	potx	T	written	RR-SA-pptx-potx.potx
+RR-SA-pptx-potm	pptx	potm	T	written	RR-SA-pptx-potm.potm
+RR-SA-pptx-thmx	pptx	thmx	X	refused CS-SAV-0013	-
+RR-SA-pptx-ppam	pptx	ppam	X	refused CS-SAV-0013	-
+RR-SA-pptx-odp	pptx	odp	C	refused CS-SAV-0013	-
+RR-SA-pptx-pdf	pptx	pdf	R	refused CS-SAV-0013	-
+RR-SA-pptx-ppt	pptx	ppt	X	refused CS-SAV-0013	-
+RR-SA-pptm-pptx	pptm	pptx	V	written	RR-SA-pptm-pptx.pptx
+RR-SA-pptm-pptm	pptm	pptm	=	written	RR-SA-pptm-pptm.pptm
+RR-SA-pptm-ppsx	pptm	ppsx	V	written	RR-SA-pptm-ppsx.ppsx
+RR-SA-pptm-ppsm	pptm	ppsm	K	written	RR-SA-pptm-ppsm.ppsm
+RR-SA-pptm-potx	pptm	potx	V	written	RR-SA-pptm-potx.potx
+RR-SA-pptm-potm	pptm	potm	K	written	RR-SA-pptm-potm.potm
+RR-SA-pptm-thmx	pptm	thmx	X	refused CS-SAV-0013	-
+RR-SA-pptm-ppam	pptm	ppam	X	refused CS-SAV-0013	-
+RR-SA-pptm-odp	pptm	odp	CV	refused CS-SAV-0013	-
+RR-SA-pptm-pdf	pptm	pdf	R	refused CS-SAV-0013	-
+RR-SA-pptm-ppt	pptm	ppt	X	refused CS-SAV-0013	-
+RR-SA-ppsx-pptx	ppsx	pptx	T	written	RR-SA-ppsx-pptx.pptx
+RR-SA-ppsx-pptm	ppsx	pptm	T	written	RR-SA-ppsx-pptm.pptm
+RR-SA-ppsx-ppsx	ppsx	ppsx	=	written	RR-SA-ppsx-ppsx.ppsx
+RR-SA-ppsx-ppsm	ppsx	ppsm	T	written	RR-SA-ppsx-ppsm.ppsm
+RR-SA-ppsx-potx	ppsx	potx	T	written	RR-SA-ppsx-potx.potx
+RR-SA-ppsx-potm	ppsx	potm	T	written	RR-SA-ppsx-potm.potm
+RR-SA-ppsx-thmx	ppsx	thmx	X	refused CS-SAV-0013	-
+RR-SA-ppsx-ppam	ppsx	ppam	X	refused CS-SAV-0013	-
+RR-SA-ppsx-odp	ppsx	odp	C	refused CS-SAV-0013	-
+RR-SA-ppsx-pdf	ppsx	pdf	R	refused CS-SAV-0013	-
+RR-SA-ppsx-ppt	ppsx	ppt	X	refused CS-SAV-0013	-
+RR-SA-ppsm-pptx	ppsm	pptx	V	written	RR-SA-ppsm-pptx.pptx
+RR-SA-ppsm-pptm	ppsm	pptm	K	written	RR-SA-ppsm-pptm.pptm
+RR-SA-ppsm-ppsx	ppsm	ppsx	V	written	RR-SA-ppsm-ppsx.ppsx
+RR-SA-ppsm-ppsm	ppsm	ppsm	=	written	RR-SA-ppsm-ppsm.ppsm
+RR-SA-ppsm-potx	ppsm	potx	V	written	RR-SA-ppsm-potx.potx
+RR-SA-ppsm-potm	ppsm	potm	K	written	RR-SA-ppsm-potm.potm
+RR-SA-ppsm-thmx	ppsm	thmx	X	refused CS-SAV-0013	-
+RR-SA-ppsm-ppam	ppsm	ppam	X	refused CS-SAV-0013	-
+RR-SA-ppsm-odp	ppsm	odp	CV	refused CS-SAV-0013	-
+RR-SA-ppsm-pdf	ppsm	pdf	R	refused CS-SAV-0013	-
+RR-SA-ppsm-ppt	ppsm	ppt	X	refused CS-SAV-0013	-
+RR-SA-potx-pptx	potx	pptx	T	written	RR-SA-potx-pptx.pptx
+RR-SA-potx-pptm	potx	pptm	T	written	RR-SA-potx-pptm.pptm
+RR-SA-potx-ppsx	potx	ppsx	T	written	RR-SA-potx-ppsx.ppsx
+RR-SA-potx-ppsm	potx	ppsm	T	written	RR-SA-potx-ppsm.ppsm
+RR-SA-potx-potx	potx	potx	=	written	RR-SA-potx-potx.potx
+RR-SA-potx-potm	potx	potm	T	written	RR-SA-potx-potm.potm
+RR-SA-potx-thmx	potx	thmx	X	refused CS-SAV-0013	-
+RR-SA-potx-ppam	potx	ppam	X	refused CS-SAV-0013	-
+RR-SA-potx-odp	potx	odp	C	refused CS-SAV-0013	-
+RR-SA-potx-pdf	potx	pdf	R	refused CS-SAV-0013	-
+RR-SA-potx-ppt	potx	ppt	X	refused CS-SAV-0013	-
+RR-SA-potm-pptx	potm	pptx	V	written	RR-SA-potm-pptx.pptx
+RR-SA-potm-pptm	potm	pptm	K	written	RR-SA-potm-pptm.pptm
+RR-SA-potm-ppsx	potm	ppsx	V	written	RR-SA-potm-ppsx.ppsx
+RR-SA-potm-ppsm	potm	ppsm	K	written	RR-SA-potm-ppsm.ppsm
+RR-SA-potm-potx	potm	potx	V	written	RR-SA-potm-potx.potx
+RR-SA-potm-potm	potm	potm	=	written	RR-SA-potm-potm.potm
+RR-SA-potm-thmx	potm	thmx	X	refused CS-SAV-0013	-
+RR-SA-potm-ppam	potm	ppam	X	refused CS-SAV-0013	-
+RR-SA-potm-odp	potm	odp	CV	refused CS-SAV-0013	-
+RR-SA-potm-pdf	potm	pdf	R	refused CS-SAV-0013	-
+RR-SA-potm-ppt	potm	ppt	X	refused CS-SAV-0013	-
+RR-SA-thmx-pptx	thmx	pptx	N	refused CS-SAV-0013	-
+RR-SA-thmx-pptm	thmx	pptm	N	refused CS-SAV-0013	-
+RR-SA-thmx-ppsx	thmx	ppsx	N	refused CS-SAV-0013	-
+RR-SA-thmx-ppsm	thmx	ppsm	N	refused CS-SAV-0013	-
+RR-SA-thmx-potx	thmx	potx	N	refused CS-SAV-0013	-
+RR-SA-thmx-potm	thmx	potm	N	refused CS-SAV-0013	-
+RR-SA-thmx-thmx	thmx	thmx	=	written	RR-SA-thmx-thmx.thmx
+RR-SA-thmx-ppam	thmx	ppam	X	refused CS-SAV-0013	-
+RR-SA-thmx-odp	thmx	odp	C	refused CS-SAV-0013	-
+RR-SA-thmx-pdf	thmx	pdf	R	refused CS-SAV-0013	-
+RR-SA-thmx-ppt	thmx	ppt	X	refused CS-SAV-0013	-
+RR-SA-ppam-pptx	ppam	pptx	X	refused CS-SAV-0013	-
+RR-SA-ppam-pptm	ppam	pptm	X	refused CS-SAV-0013	-
+RR-SA-ppam-ppsx	ppam	ppsx	X	refused CS-SAV-0013	-
+RR-SA-ppam-ppsm	ppam	ppsm	X	refused CS-SAV-0013	-
+RR-SA-ppam-potx	ppam	potx	X	refused CS-SAV-0013	-
+RR-SA-ppam-potm	ppam	potm	X	refused CS-SAV-0013	-
+RR-SA-ppam-thmx	ppam	thmx	X	refused CS-SAV-0013	-
+RR-SA-ppam-ppam	ppam	ppam	=	written	RR-SA-ppam-ppam.ppam
+RR-SA-ppam-odp	ppam	odp	X	refused CS-SAV-0013	-
+RR-SA-ppam-pdf	ppam	pdf	X	refused CS-SAV-0013	-
+RR-SA-ppam-ppt	ppam	ppt	X	refused CS-SAV-0013	-
+RR-SA-odp-pptx	odp	pptx	C	refused CS-SAV-0013	-
+RR-SA-odp-pptm	odp	pptm	C	refused CS-SAV-0013	-
+RR-SA-odp-ppsx	odp	ppsx	C	refused CS-SAV-0013	-
+RR-SA-odp-ppsm	odp	ppsm	C	refused CS-SAV-0013	-
+RR-SA-odp-potx	odp	potx	C	refused CS-SAV-0013	-
+RR-SA-odp-potm	odp	potm	C	refused CS-SAV-0013	-
+RR-SA-odp-thmx	odp	thmx	X	refused CS-SAV-0013	-
+RR-SA-odp-ppam	odp	ppam	X	refused CS-SAV-0013	-
+RR-SA-odp-odp	odp	odp	=	written	RR-SA-odp-odp.odp
+RR-SA-odp-pdf	odp	pdf	R	refused CS-SAV-0013	-
+RR-SA-odp-ppt	odp	ppt	X	refused CS-SAV-0013	-
+RR-SA-pdf-pptx	pdf	pptx	X	refused CS-SAV-0013	-
+RR-SA-pdf-pptm	pdf	pptm	X	refused CS-SAV-0013	-
+RR-SA-pdf-ppsx	pdf	ppsx	X	refused CS-SAV-0013	-
+RR-SA-pdf-ppsm	pdf	ppsm	X	refused CS-SAV-0013	-
+RR-SA-pdf-potx	pdf	potx	X	refused CS-SAV-0013	-
+RR-SA-pdf-potm	pdf	potm	X	refused CS-SAV-0013	-
+RR-SA-pdf-thmx	pdf	thmx	X	refused CS-SAV-0013	-
+RR-SA-pdf-ppam	pdf	ppam	X	refused CS-SAV-0013	-
+RR-SA-pdf-odp	pdf	odp	X	refused CS-SAV-0013	-
+RR-SA-pdf-pdf	pdf	pdf	X	refused CS-SAV-0013	-
+RR-SA-pdf-ppt	pdf	ppt	X	refused CS-SAV-0013	-
+RR-SA-ppt-pptx	ppt	pptx	C	refused CS-OPC-0005	-
+RR-SA-ppt-pptm	ppt	pptm	X	refused CS-SAV-0013	-
+RR-SA-ppt-ppsx	ppt	ppsx	C	refused CS-OPC-0005	-
+RR-SA-ppt-ppsm	ppt	ppsm	X	refused CS-SAV-0013	-
+RR-SA-ppt-potx	ppt	potx	C	refused CS-OPC-0005	-
+RR-SA-ppt-potm	ppt	potm	X	refused CS-SAV-0013	-
+RR-SA-ppt-thmx	ppt	thmx	X	refused CS-SAV-0013	-
+RR-SA-ppt-ppam	ppt	ppam	X	refused CS-SAV-0013	-
+RR-SA-ppt-odp	ppt	odp	C	refused CS-OPC-0005	-
+RR-SA-ppt-pdf	ppt	pdf	R	refused CS-SAV-0013	-
+RR-SA-ppt-ppt	ppt	ppt	X	refused CS-SAV-0013	-

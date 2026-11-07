@@ -1,63 +1,91 @@
 id	invariant	base	good	seeded
 RR-PN-01	INV-PN-01	generated/three-slides.pptx	good/RR-PN-01.pptx	cannot be written: CS-PKG-0004
-RR-PN-02	INV-PN-02	generated/three-slides.pptx	good/RR-PN-02.pptx	opens and saves
-RR-PN-03	INV-PN-03	generated/case-differs.pptx	good/RR-PN-03.pptx	seeded in the ZIP; open refused CS-PKG-0007
-RR-PN-04	INV-PN-04	generated/three-slides.pptx	good/RR-PN-04.pptx	opens and saves
-RR-PN-05	INV-PN-05	generated/three-slides.pptx	good/RR-PN-05.pptx	opens and saves
-RR-PN-06	INV-PN-06	generated/three-slides.pptx	good/RR-PN-06.pptx	opens and saves
-RR-PN-07	INV-PN-07	generated/three-slides.pptx	good/RR-PN-07.pptx	opens and saves
-RR-PN-08	INV-PN-08	generated/percent-encoded-names.pptx	good/RR-PN-08.pptx	seeded in the ZIP; opens
-RR-PN-09	INV-PN-09	generated/stored-not-deflated.pptx	good/RR-PN-09.pptx	seeded in the ZIP; opens
-RR-PN-10	INV-PN-10	generated/three-slides.pptx	good/RR-PN-10.pptx	seeded in the ZIP; opens
-RR-PN-11	INV-PN-11	generated/three-slides.pptx	good/RR-PN-11.pptx	seeded in the ZIP; opens
-RR-RI-01	INV-RI-01	generated/three-slides.pptx	good/RR-RI-01.pptx	open refused CS-XML-0004
-RR-RI-02	INV-RI-02	generated/rr-rich-clone.pptx	good/RR-RI-02.pptx	opens and saves
-RR-RI-03	INV-RI-03	generated/rr-unknown-rel.pptx	good/RR-RI-03.pptx	opens and saves
-RR-RI-04	INV-RI-04	generated/rr-shared-media.pptx	good/RR-RI-04.pptx	opens and saves
-RR-RI-05	INV-RI-05	generated/rr-unknown-rel.pptx	good/RR-RI-05.pptx	opens and saves
-RR-RI-06	INV-RI-06	generated/three-slides.pptx	good/RR-RI-06.pptx	opens and saves
-RR-RI-07	INV-RI-07	generated/rr-absolute-targets.pptx	good/RR-RI-07.pptx	opens and saves
-RR-RI-08	INV-RI-08	generated/three-slides.pptx	good/RR-RI-08.pptx	opens and saves
-RR-RI-09	INV-RI-09	generated/slides-strict.pptx	good/RR-RI-09.pptx	opens and saves
-RR-RI-10	INV-RI-10	generated/three-slides.pptx	good/RR-RI-10.pptx	opens and saves
-RR-CT-01	INV-CT-01	generated/three-slides.pptx	good/RR-CT-01.pptx	opens and saves
-RR-CT-02	INV-CT-02	generated/three-slides.pptx	good/RR-CT-02.pptx	opens and saves
-RR-CT-03	INV-CT-03	generated/rr-conflicting-default.pptx	good/RR-CT-03.pptx	opens and saves
-RR-CT-04	INV-CT-04	generated/three-slides.pptx	good/RR-CT-04.pptx	opens and saves
-RR-CT-05	INV-CT-05	generated/three-slides.pptx	good/RR-CT-05.pptx	opens and saves
-RR-CT-06	INV-CT-06	generated/rr-vba.pptm	good/RR-CT-06.pptx	opens and saves
-RR-CT-07	INV-CT-07	generated/three-slides.pptx	good/RR-CT-07.pptx	opens and saves
-RR-CT-08	INV-CT-08	generated/three-slides.pptx	good/RR-CT-08.pptx	opens and saves
-RR-CT-10	INV-CT-10	generated/three-slides.pptx	good/RR-CT-10.pptx	opens and saves
-RR-CT-09	INV-CT-09	generated/three-slides.pptx	good/RR-CT-09.pptx	opens and saves
-RR-SP-01	INV-SP-01	generated/rr-orphan.pptx	good/RR-SP-01.pptx	opens and saves
-RR-SP-02	INV-SP-02	generated/rr-shared-media.pptx	good/RR-SP-02.pptx	opens and saves
-RR-SP-03	INV-SP-03	generated/rr-shared-media.pptx	good/RR-SP-03.pptx	opens and saves
-RR-SP-04	INV-SP-04	generated/rr-shared-media.pptx	good/RR-SP-04.pptx	opens and saves
-RR-SP-05	INV-SP-05	generated/three-slides.pptx	good/RR-SP-05.pptx	opens and saves
-RR-SP-06	INV-SP-06	generated/rr-two-masters.pptx	good/RR-SP-06.pptx	opens and saves
-RR-SP-07	INV-SP-07	generated/three-slides.pptx	good/RR-SP-07.pptx	opens and saves
-RR-SP-08	INV-SP-08	generated/rr-two-masters.pptx	good/RR-SP-08.pptx	opens and saves
-RR-SP-09	INV-SP-09	generated/rr-notes.pptx	good/RR-SP-09.pptx	opens and saves
-RR-SP-10	INV-SP-10	generated/rr-rich-clone.pptx	good/RR-SP-10.pptx	opens and saves
-RR-ID-01	INV-ID-01	generated/three-slides.pptx	good/RR-ID-01.pptx	opens and saves
-RR-ID-02	INV-ID-02	generated/rr-high-ids.pptx	good/RR-ID-02.pptx	opens and saves
-RR-ID-03	INV-ID-03	generated/three-slides.pptx	good/RR-ID-03.pptx	opens and saves
-RR-ID-04	INV-ID-04	generated/rr-high-ids.pptx	good/RR-ID-04.pptx	opens and saves
-RR-ID-05	INV-ID-05	generated/rr-sections.pptx	good/RR-ID-05.pptx	opens and saves
-RR-ID-06	INV-ID-06	generated/rr-animated.pptx	good/RR-ID-06.pptx	opens and saves
-RR-ID-07	INV-ID-07	generated/rr-notes.pptx	good/RR-ID-07.pptx	opens and saves
-RR-ID-08	INV-ID-08	generated/three-slides.pptx	good/RR-ID-08.pptx	opens and saves
-RR-ID-09	INV-ID-09	generated/three-slides.pptx	good/RR-ID-09.pptx	opens and saves
-RR-SL-01	INV-SL-01	generated/three-slides.pptx	good/RR-SL-01.pptx	opens and saves
-RR-SL-02	INV-SL-02	generated/rr-one-section.pptx	good/RR-SL-02.pptx	opens and saves
-RR-SL-03	INV-SL-03	generated/rr-sections.pptx	good/RR-SL-03.pptx	opens and saves
-RR-SL-04	INV-SL-04	generated/rr-sections.pptx	good/RR-SL-04.pptx	opens and saves
-RR-SL-05	INV-SL-05	generated/rr-sections.pptx	good/RR-SL-05.pptx	opens and saves
-RR-SL-06	INV-SL-06	generated/rr-sections.pptx	good/RR-SL-06.pptx	opens and saves
-RR-SL-07	INV-SL-07	generated/rr-sections.pptx	good/RR-SL-07.pptx	opens and saves
-RR-NM-01	INV-NM-01	generated/rr-notes.pptx	good/RR-NM-01.pptx	opens and saves
-RR-NM-02	INV-NM-02	generated/three-slides.pptx	good/RR-NM-02.pptx	opens and saves
-RR-NM-03	INV-NM-03	generated/rr-four-three.pptx	good/RR-NM-03.pptx	opens and saves
-RR-NM-04	INV-NM-04	generated/three-slides.pptx	good/RR-NM-04.pptx	opens and saves
-RR-NM-05	INV-NM-05	generated/rr-notes.pptx	good/RR-NM-05.pptx	opens and saves
+RR-PN-02	INV-PN-02	generated/three-slides.pptx	good/RR-PN-02.pptx	opens, saves, reports
+RR-PN-03	INV-PN-03	generated/case-differs.pptx	good/RR-PN-03.pptx	seeded in the ZIP; opens by repair, saves, reports
+RR-PN-04	INV-PN-04	generated/three-slides.pptx	good/RR-PN-04.pptx	opens, saves, reports
+RR-PN-05	INV-PN-05	generated/three-slides.pptx	good/RR-PN-05.pptx	opens and saves; one package does not show it
+RR-PN-06	INV-PN-06	generated/three-slides.pptx	good/RR-PN-06.pptx	opens by repair, saves, reports
+RR-PN-07	INV-PN-07	generated/three-slides.pptx	good/RR-PN-07.pptx	opens, saves, reports
+RR-PN-08	INV-PN-08	generated/percent-encoded-names.pptx	good/RR-PN-08.pptx	seeded in the ZIP; opens, saves, reports
+RR-PN-09	INV-PN-09	generated/stored-not-deflated.pptx	good/RR-PN-09.pptx	seeded in the ZIP; opens, saves, reports
+RR-PN-10	INV-PN-10	generated/three-slides.pptx	good/RR-PN-10.pptx	seeded in the ZIP; opens, saves, reports
+RR-PN-11	INV-PN-11	generated/three-slides.pptx	good/RR-PN-11.pptx	seeded in the ZIP; opens, saves, reports
+RR-RI-01	INV-RI-01	generated/three-slides.pptx	good/RR-RI-01.pptx	opens, saves, reports
+RR-RI-02	INV-RI-02	generated/rr-rich-clone.pptx	good/RR-RI-02.pptx	opens and saves; one package does not show it
+RR-RI-03	INV-RI-03	generated/rr-unknown-rel.pptx	good/RR-RI-03.pptx	opens and saves; one package does not show it
+RR-RI-04	INV-RI-04	generated/rr-shared-media.pptx	good/RR-RI-04.pptx	opens and saves; one package does not show it
+RR-RI-05	INV-RI-05	generated/rr-unknown-rel.pptx	good/RR-RI-05.pptx	opens and saves; one package does not show it
+RR-RI-06	INV-RI-06	generated/three-slides.pptx	good/RR-RI-06.pptx	opens, saves, reports
+RR-RI-07	INV-RI-07	generated/rr-absolute-targets.pptx	good/RR-RI-07.pptx	opens and saves; one package does not show it
+RR-RI-08	INV-RI-08	generated/three-slides.pptx	good/RR-RI-08.pptx	opens, saves, reports
+RR-RI-09	INV-RI-09	generated/slides-strict.pptx	good/RR-RI-09.pptx	opens and saves; one package does not show it
+RR-RI-10	INV-RI-10	generated/three-slides.pptx	good/RR-RI-10.pptx	opens and saves; one package does not show it
+RR-CT-01	INV-CT-01	generated/three-slides.pptx	good/RR-CT-01.pptx	opens, saves, reports
+RR-CT-02	INV-CT-02	generated/three-slides.pptx	good/RR-CT-02.pptx	opens, saves, reports
+RR-CT-03	INV-CT-03	generated/rr-conflicting-default.pptx	good/RR-CT-03.pptx	opens and saves; one package does not show it
+RR-CT-04	INV-CT-04	generated/three-slides.pptx	good/RR-CT-04.pptx	opens and saves; one package does not show it
+RR-CT-05	INV-CT-05	generated/three-slides.pptx	good/RR-CT-05.pptx	opens, saves, reports
+RR-CT-06	INV-CT-06	generated/rr-vba.pptm	good/RR-CT-06.pptx	opens and saves; one package does not show it
+RR-CT-07	INV-CT-07	generated/three-slides.pptx	good/RR-CT-07.pptx	opens, saves, reports
+RR-CT-08	INV-CT-08	generated/three-slides.pptx	good/RR-CT-08.pptx	opens by repair, saves, reports
+RR-CT-10	INV-CT-10	generated/three-slides.pptx	good/RR-CT-10.pptx	opens and saves; one package does not show it
+RR-CT-09	INV-CT-09	generated/three-slides.pptx	good/RR-CT-09.pptx	opens and saves; one package does not show it
+RR-SP-01	INV-SP-01	generated/rr-orphan.pptx	good/RR-SP-01.pptx	opens and saves; one package does not show it
+RR-SP-02	INV-SP-02	generated/rr-shared-media.pptx	good/RR-SP-02.pptx	opens and saves; one package does not show it
+RR-SP-03	INV-SP-03	generated/rr-shared-media.pptx	good/RR-SP-03.pptx	opens and saves; one package does not show it
+RR-SP-04	INV-SP-04	generated/rr-shared-media.pptx	good/RR-SP-04.pptx	opens and saves; one package does not show it
+RR-SP-05	INV-SP-05	generated/three-slides.pptx	good/RR-SP-05.pptx	opens by repair, saves, reports
+RR-SP-06	INV-SP-06	generated/rr-two-masters.pptx	good/RR-SP-06.pptx	opens, saves, reports
+RR-SP-07	INV-SP-07	generated/three-slides.pptx	good/RR-SP-07.pptx	opens, saves, reports
+RR-SP-08	INV-SP-08	generated/rr-two-masters.pptx	good/RR-SP-08.pptx	opens, saves, reports
+RR-SP-09	INV-SP-09	generated/rr-notes.pptx	good/RR-SP-09.pptx	opens and saves; one package does not show it
+RR-SP-10	INV-SP-10	generated/rr-rich-clone.pptx	good/RR-SP-10.pptx	opens and saves; one package does not show it
+RR-ID-01	INV-ID-01	generated/three-slides.pptx	good/RR-ID-01.pptx	opens, saves, reports
+RR-ID-02	INV-ID-02	generated/rr-high-ids.pptx	good/RR-ID-02.pptx	opens and saves; one package does not show it
+RR-ID-03	INV-ID-03	generated/three-slides.pptx	good/RR-ID-03.pptx	opens, saves, reports
+RR-ID-04	INV-ID-04	generated/rr-high-ids.pptx	good/RR-ID-04.pptx	opens and saves; one package does not show it
+RR-ID-05	INV-ID-05	generated/rr-sections.pptx	good/RR-ID-05.pptx	opens, saves, reports
+RR-ID-06	INV-ID-06	generated/rr-animated.pptx	good/RR-ID-06.pptx	opens and saves; one package does not show it
+RR-ID-07	INV-ID-07	generated/rr-notes.pptx	good/RR-ID-07.pptx	opens, saves, reports
+RR-ID-08	INV-ID-08	generated/three-slides.pptx	good/RR-ID-08.pptx	opens, saves, reports
+RR-ID-09	INV-ID-09	generated/three-slides.pptx	good/RR-ID-09.pptx	opens, saves, reports
+RR-AP-01	INV-AP-01	generated/rr-app.pptx	good/RR-AP-01.pptx	opens, saves, reports
+RR-AP-02	INV-AP-02	generated/rr-app.pptx	good/RR-AP-02.pptx	opens, saves, reports
+RR-AP-03	INV-AP-03	generated/rr-app-unknown-groups.pptx	good/RR-AP-03.pptx	opens, saves, reports
+RR-AP-04	INV-AP-04	generated/rr-app.pptx	good/RR-AP-04.pptx	opens, saves, reports
+RR-AP-05	INV-AP-05	generated/rr-app.pptx	good/RR-AP-05.pptx	opens and saves; one package does not show it
+RR-AP-06	INV-AP-06	generated/rr-signed.pptx	good/RR-AP-06.pptx	opens and saves; one package does not show it
+RR-AP-07	INV-AP-07	generated/rr-app.pptx	good/RR-AP-07.pptx	opens, saves, reports
+RR-AP-08	INV-AP-08	generated/rr-app.pptx	good/RR-AP-08.pptx	opens and saves; one package does not show it
+RR-AP-09	INV-AP-09	generated/rr-core-text-revision.pptx	good/RR-AP-09.pptx	opens and saves; one package does not show it
+RR-AP-10	INV-AP-10	generated/rr-app.pptx	good/RR-AP-10.pptx	opens and saves; one package does not show it
+RR-TH-01	INV-TH-01	generated/rr-thumbnail.pptx	good/RR-TH-01.pptx	opens and saves; one package does not show it
+RR-TH-02	INV-TH-02	generated/rr-thumbnail.pptx	good/RR-TH-02.pptx	opens and saves; one package does not show it
+RR-TH-03	INV-TH-03	generated/rr-thumbnail.pptx	good/RR-TH-03.pptx	opens and saves; one package does not show it
+RR-SG-01	INV-SG-01	generated/rr-signed.pptx	good/RR-SG-01.pptx	opens, saves, reports
+RR-SG-02	INV-SG-02	generated/rr-signed.pptx	good/RR-SG-02.pptx	opens and saves; one package does not show it
+RR-SG-03	INV-SG-03	generated/rr-signed.pptx	good/RR-SG-03.pptx	opens and saves; one package does not show it
+RR-SG-04	INV-SG-04	generated/rr-signed.pptx	good/RR-SG-04.pptx	opens and saves; one package does not show it
+RR-SG-05	INV-SG-05	generated/rr-signed.pptx	good/RR-SG-05.pptx	opens and saves; one package does not show it
+RR-SG-06	INV-SG-06	generated/rr-signed.pptx	good/RR-SG-06.pptx	no seed: nothing dirty means the input bytes; a_signed_deck_with_its_edit_undone_keeps_its_bytes
+RR-SG-07	INV-SG-07	generated/rr-signed.pptx	good/RR-SG-07.pptx	opens and saves; one package does not show it
+RR-SG-08	INV-SG-08	generated/rr-signed-vba.pptm	good/RR-SG-08.pptx	opens and saves; one package does not show it
+RR-SA-01	INV-SA-01	generated/three-slides.pptx	good/RR-SA-01.pptx	opens by repair, saves, reports
+RR-SA-02	INV-SA-02	generated/three-slides.pptx	good/RR-SA-02.pptx	opens and saves; one package does not show it
+RR-SA-03	INV-SA-03	generated/rr-vba.pptm	good/RR-SA-03.pptx	opens, saves, reports
+RR-SA-04	INV-SA-04	generated/rr-macro-action.pptm	good/RR-SA-04.pptx	opens and saves; one package does not show it
+RR-SA-05	INV-SA-05	generated/three-slides.pptx	good/RR-SA-05.pptx	opens and saves; one package does not show it
+RR-SA-06	INV-SA-06	generated/rr-activex.pptx	good/RR-SA-06.pptx	opens and saves; one package does not show it
+RR-SA-14	INV-SA-14	generated/slides-strict.pptx	good/RR-SA-14.pptx	opens and saves; one package does not show it
+RR-SL-01	INV-SL-01	generated/three-slides.pptx	good/RR-SL-01.pptx	opens and saves; one package does not show it
+RR-SL-02	INV-SL-02	generated/rr-one-section.pptx	good/RR-SL-02.pptx	opens, saves, reports
+RR-SL-03	INV-SL-03	generated/rr-sections.pptx	good/RR-SL-03.pptx	opens and saves; one package does not show it
+RR-SL-04	INV-SL-04	generated/rr-sections.pptx	good/RR-SL-04.pptx	opens, saves, reports
+RR-SL-05	INV-SL-05	generated/rr-sections.pptx	good/RR-SL-05.pptx	opens, saves, reports
+RR-SL-06	INV-SL-06	generated/rr-sections.pptx	good/RR-SL-06.pptx	opens and saves; one package does not show it
+RR-SL-07	INV-SL-07	generated/rr-sections.pptx	good/RR-SL-07.pptx	opens, saves, reports
+RR-NM-01	INV-NM-01	generated/rr-notes.pptx	good/RR-NM-01.pptx	opens, saves, reports
+RR-NM-02	INV-NM-02	generated/three-slides.pptx	good/RR-NM-02.pptx	opens and saves; one package does not show it
+RR-NM-03	INV-NM-03	generated/rr-four-three.pptx	good/RR-NM-03.pptx	opens, saves, reports
+RR-NM-04	INV-NM-04	generated/three-slides.pptx	good/RR-NM-04.pptx	opens, saves, reports
+RR-NM-05	INV-NM-05	generated/rr-notes.pptx	good/RR-NM-05.pptx	opens and saves; one package does not show it

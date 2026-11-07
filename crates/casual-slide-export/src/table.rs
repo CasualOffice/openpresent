@@ -20,7 +20,6 @@ use casual_slide_model::table::{
 };
 use casual_slide_model::theme::{FontCollection, FontRef, StyleMatrixRef, TextFont, ThemeableFont};
 use casual_slide_ooxml::{Conformance, OoxmlLimits, PresentationPackage, Relationship, XmlTree};
-use casual_slide_package::PartEdits;
 
 use casual_slide_import::presentation::{PartLocation, locate_part};
 
@@ -575,15 +574,18 @@ pub fn save_table_styles(
             signature_invalidated: false,
         });
     }
-    let mut edits = PartEdits::default();
-    edits.replace(part.clone(), out);
-    let signed = package
-        .findings()
-        .iter()
-        .any(|f| f.kind == casual_slide_ooxml::FindingKind::Signature);
+    // Through the writer, so a signature, a thumbnail and a count are what any edit leaves.
+    let outcome = crate::writer::SavePlan::new()
+        .acknowledge_signature()
+        .replace_part(part, out)
+        .save(package)
+        .map_err(|err| match err {
+            crate::writer::WriterError::Export(err) => err,
+            other => ExportError::Refused(Box::new(other)),
+        })?;
     Ok(SaveOutcome {
-        bytes: package.save_with(&edits).map_err(ExportError::from)?,
-        changed_parts: vec![part],
-        signature_invalidated: signed,
+        bytes: outcome.bytes,
+        changed_parts: outcome.changed_parts,
+        signature_invalidated: outcome.signature_invalidated,
     })
 }

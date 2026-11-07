@@ -1617,6 +1617,7 @@ pub fn save_deck(
 ) -> Result<SaveOutcome, ExportError> {
     let plan = SavePlan::new()
         .with_limits(*limits, WriterLimits::default())
+        .acknowledge_signature()
         .deck(after);
     let outcome = plan.save(package).map_err(|err| match err {
         WriterError::Export(err) => err,

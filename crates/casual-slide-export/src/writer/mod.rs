@@ -18,6 +18,7 @@
 //! comments are those of `docs/36`, kept as they stand there: a rule marked Inferred or
 //! Unverified is implemented, and `PV-01` is what confirms or overturns it.
 
+mod bookkeeping;
 mod clone;
 mod draft;
 mod error;
@@ -27,16 +28,19 @@ mod notes;
 mod ops;
 mod plan;
 mod preflight;
+mod saveas;
 mod shapes;
 mod structure;
 mod view;
 mod zipcheck;
 
+pub use bookkeeping::HostInputs;
 pub use draft::{Disposition, Draft, ReportEntry, WriterOutcome};
 pub use error::WriterError;
-pub use ops::{Op, SlideRef};
+pub use ops::{MediaBytes, Op, SlideRef, media_replacement_op, new_media_for};
 pub use plan::{SavePlan, WriterLimits, repair_deck};
 pub use preflight::{Preflight, Violation};
+pub use saveas::{FileFormat, SaveAsCell, new_from_template, save_as, save_as_cell};
 pub use zipcheck::check_zip;
 
 pub(crate) use draft::read_relationships;

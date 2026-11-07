@@ -24,6 +24,8 @@ use super::view::{View, prefix_is_relationships};
 use crate::presentation::PRESENTATION_ORDER;
 
 const POOL_MAX: u64 = 4_294_967_295;
+/// What a `Deck` patch states for itself, and so answers for (`Draft::model_owns_app`).
+const APP_COUNT_RULES: &[&str] = &["INV-AP-01", "INV-AP-02", "INV-AP-03"];
 
 /// One broken rule. Details hold ids and counts, never document content.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -43,9 +45,9 @@ pub struct Preflight {
     pub arrived: Vec<Violation>,
 }
 
-type Found = BTreeSet<Violation>;
+pub(crate) type Found = BTreeSet<Violation>;
 
-fn add(found: &mut Found, rule: &'static str, part: &str, detail: impl Into<String>) {
+pub(crate) fn add(found: &mut Found, rule: &'static str, part: &str, detail: impl Into<String>) {
     found.insert(Violation {
         rule,
         part: part.to_owned(),
@@ -648,6 +650,7 @@ pub(crate) fn state_rules(view: &View) -> Found {
     rule_set_ids(view, &mut found);
     rule_set_sections(view, &mut found);
     rule_set_notes(view, &mut found);
+    super::bookkeeping::state_rules(view, &mut found);
     found
 }
 
@@ -1676,6 +1679,9 @@ fn change_rules(draft: &mut Draft<'_>, before: &View, after: &View) -> Result<Fo
     id_rules(draft, before, after, &mut found);
     section_rules(draft, before, after, &mut found);
     notes_rules(draft, before, after, &mut found);
+    super::bookkeeping::change_rules(draft, before, after, &mut found);
+    super::bookkeeping::retype_rules(draft, before, after, &mut found);
+    super::format::macro_action_rules(draft, &mut found)?;
     Ok(found)
 }
 
@@ -1700,6 +1706,11 @@ pub(crate) fn run(
     introduced.extend(changes);
     introduced.sort();
     introduced.dedup();
+    if let Some(app) = &after.app
+        && draft.model_owns_app(&app.part)
+    {
+        introduced.retain(|v| !APP_COUNT_RULES.contains(&v.rule));
+    }
     if !introduced.is_empty() {
         return Err(WriterError::Preflight {
             violations: introduced,

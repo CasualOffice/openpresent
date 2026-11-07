@@ -598,13 +598,17 @@ fn edit_one(source: &[u8], label: &str) -> Option<Vec<u8>> {
         wanted,
         "{label}: reads back as asked"
     );
-    assert_eq!(outcome.changed_parts.len(), 1, "{label}");
+    assert_eq!(asked_for(&outcome.changed_parts).len(), 1, "{label}");
 
     // Every other part byte for byte.
     let (old, new) = (parts(source), parts(&outcome.bytes));
     assert_eq!(
-        old.keys().collect::<Vec<_>>(),
-        new.keys().collect::<Vec<_>>(),
+        old.keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
+        new.keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
         "{label}"
     );
     for (name, bytes) in &old {
@@ -717,8 +721,14 @@ fn f4_validates(source: &[u8], edited: &[u8], label: &str) {
         return;
     };
     assert_eq!(
-        before.keys().collect::<Vec<_>>(),
-        after.keys().collect::<Vec<_>>(),
+        before
+            .keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
+        after
+            .keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
         "{label}"
     );
     for (part, (status, errors)) in &after {
@@ -1848,4 +1858,23 @@ fn every_row_of_the_areas_is_in_what_the_writer_writes() {
         checked += 1;
     }
     assert!(checked > 300, "{checked}");
+}
+
+/// What an edit asked for, leaving out what any edit owes the package: `app.xml`, a
+/// thumbnail, a signature set (`T1N-05`).
+fn asked_for(changed: &[String]) -> Vec<String> {
+    changed
+        .iter()
+        .filter(|n| {
+            !n.starts_with("docProps/")
+                && !n.starts_with("_xmlsignatures/")
+                && !matches!(n.as_str(), "_rels/.rels" | "[Content_Types].xml")
+        })
+        .cloned()
+        .collect()
+}
+
+/// Whether an edit keeps this part. A signature set and a thumbnail go (`T1N-05`).
+fn survives_an_edit(name: &str) -> bool {
+    !name.starts_with("_xmlsignatures/") && !name.starts_with("docProps/thumbnail")
 }

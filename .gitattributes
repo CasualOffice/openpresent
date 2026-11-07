@@ -3,4 +3,12 @@
 *.pptx binary
 *.ppsx binary
 *.potx binary
+*.pptm binary
+*.ppsm binary
+*.potm binary
+*.thmx binary
+*.ppam binary
+*.odp binary
+*.pdf binary
+*.ppt binary
 *.bin binary

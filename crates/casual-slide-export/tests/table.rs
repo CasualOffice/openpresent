@@ -1128,7 +1128,7 @@ fn every_deck_with_a_table_takes_a_cell_edit_and_stays_as_valid_as_it_was() {
             Err(e) => panic!("{path}: {e}"),
         };
         assert_eq!(model(&outcome.bytes), wanted, "{path}");
-        assert_eq!(outcome.changed_parts.len(), 1, "{path}");
+        assert_eq!(edited_parts(&outcome.changed_parts), 1, "{path}");
         let (old, new) = (parts(&source), parts(&outcome.bytes));
         for (name, bytes) in &old {
             if !outcome.changed_parts.contains(name) {
@@ -1201,8 +1201,25 @@ fn real_decks_take_a_fill_on_every_cell_and_stay_valid() {
             &ImportLimits::default(),
         )
         .unwrap_or_else(|e| panic!("{path}: {e}"));
-        assert_eq!(outcome.changed_parts.len(), touched.len(), "{path}");
+        assert_eq!(
+            edited_parts(&outcome.changed_parts),
+            touched.len(),
+            "{path}"
+        );
         assert_eq!(model(&outcome.bytes), wanted, "{path}");
         assert_eq!(f4_failures(&outcome.bytes), f4_failures(&source), "{path}");
     }
+}
+
+/// What an edit asked for, leaving out what any edit owes the package: `app.xml`, a
+/// thumbnail, a signature set (`T1N-05`).
+fn edited_parts(changed: &[String]) -> usize {
+    changed
+        .iter()
+        .filter(|n| {
+            !n.starts_with("docProps/")
+                && !n.starts_with("_xmlsignatures/")
+                && !matches!(n.as_str(), "_rels/.rels" | "[Content_Types].xml")
+        })
+        .count()
 }

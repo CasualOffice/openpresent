@@ -226,15 +226,19 @@ fn check_edit(
     change(&mut wanted);
     assert_ne!(&wanted, original.get(ordinal).unwrap(), "{label}: no edit");
     let (bytes, changed) = save(source, &wanted).unwrap_or_else(|e| panic!("{label}: {e}"));
-    assert_eq!(changed.as_slice(), std::slice::from_ref(&name), "{label}");
+    assert_eq!(asked_for(&changed), std::slice::from_ref(&name), "{label}");
     let (old, new) = (parts(source), parts(&bytes));
     assert_eq!(
-        old.keys().collect::<Vec<_>>(),
-        new.keys().collect::<Vec<_>>(),
+        old.keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
+        new.keys()
+            .filter(|n| survives_an_edit(n))
+            .collect::<Vec<_>>(),
         "{label}"
     );
     for (part, b) in &old {
-        if *part != name {
+        if !changed.contains(part) {
             assert_eq!(new.get(part), Some(b), "{label}: {part} changed");
         }
     }
@@ -1712,4 +1716,23 @@ fn a_blip_fill_on_a_shape_holds_the_same_things_as_a_picture() {
         },
         "shape fill",
     );
+}
+
+/// What an edit asked for, leaving out what any edit owes the package: `app.xml`, a
+/// thumbnail, a signature set (`T1N-05`).
+fn asked_for(changed: &[String]) -> Vec<String> {
+    changed
+        .iter()
+        .filter(|n| {
+            !n.starts_with("docProps/")
+                && !n.starts_with("_xmlsignatures/")
+                && !matches!(n.as_str(), "_rels/.rels" | "[Content_Types].xml")
+        })
+        .cloned()
+        .collect()
+}
+
+/// Whether an edit keeps this part. A signature set and a thumbnail go (`T1N-05`).
+fn survives_an_edit(name: &str) -> bool {
+    !name.starts_with("_xmlsignatures/") && !name.starts_with("docProps/thumbnail")
 }

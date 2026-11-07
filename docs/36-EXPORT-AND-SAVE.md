@@ -1,7 +1,7 @@
 # 36 — Export and save (Tier 1N)
 
 The design for the writer: tracker rows `WR-02`, `WR-03`, `WR-04` and `WR-05`. Owning crate: `casual-slide-export`, with
-render-on-save hosted in `casual-slide-sdk`. Status: the `PN`, `RI`, `CT`, `SP`, `ID`, `SL` and `NM` families are built, in `crates/casual-slide-export/src/writer/` (`T1N-01` to `T1N-04`), see [Implementation status](#implementation-status); the rest is design. The fidelity contract it
+render-on-save hosted in `casual-slide-sdk`. Status: the `PN`, `RI`, `CT`, `SP`, `ID`, `SL`, `NM`, `AP`, `TH`, `SG` and `SA` families are built, in `crates/casual-slide-export/src/writer/` (`T1N-01` to `T1N-07`), see [Implementation status](#implementation-status); `PE` and `FB` are not. The fidelity contract it
 delivers is in [22](22-NORMALIZED-SCHEMA.md); the edit mechanism is ADR-013 and `ARC-01` in
 [28](28-PACKAGE-AND-PART-GRAPH.md); the ladder and `PV-01` are in [51](51-SPEC-CHECKLIST-AND-FIDELITY.md). The shape follows
 OpenCalc's `36-EXPORT-AND-ROUNDTRIP-DESIGN.md`.
@@ -483,7 +483,7 @@ Plus the 121 grid fixtures `RR-SA-<open>-<save>`, which use the same `INV-SA-*` 
 
 ## Implementation status
 
-Tier 1N's core, `T1N-01` to `T1N-04`. **Nothing here was observed in PowerPoint; the marks above stand as written.** "Built" means the rule runs in preflight or at emission, a good deck passes it, and a seeded break was seen refused, with the rule also seen to fail when disabled.
+Tier 1N, `T1N-01` to `T1N-08`. **Nothing here was observed in PowerPoint; the marks above stand as written.** "Built" means the rule runs in preflight or at emission, a good deck passes it, and a seeded break was seen refused, with the rule also seen to fail when disabled.
 
 **The writer.** A `SavePlan` holds model patches, replaced parts and `Op`s. `SavePlan::stage` applies them to a `Draft` beside the untouched input; `Draft::preflight` runs every rule on both, so what the save added is the difference; `Draft::emit` writes, then reads the ZIP back. `save_deck` and `save_slide_parts` are plans of one kind of change. Model patches run first, on the deck as it arrived; then replaced parts; then operations in order; then the sweep.
 
@@ -492,11 +492,18 @@ Tier 1N's core, `T1N-01` to `T1N-04`. **Nothing here was observed in PowerPoint;
 - **A clone keeps its relationship ids.** `INV-SP-10` says the clone's `relId` is rewritten. Its rels part is a copy with the same ids, so `relId` needs no rewriting and the slide stays a byte copy; preflight checks that it lands on the clone's own drawing. Same outcome, fewer edits.
 - **A model may renumber on purpose.** `INV-ID-02` and `-04` judge what the writer allocates. When a `Deck` patch rewrites the main part they stand aside, since an existing test asks for exactly that, and `INV-SL-04` is what stops one that orphans a section entry.
 - **`INV-RI-04`, `INV-ID-06` and `INV-ID-07` read bodies only of parts the save wrote**, or a save would parse every slide. So a seeded deck with one of these breaks is reported when that part is next written, not on any save.
+- **Recovery decides what a seeded deck does, where this page and [29](29-RECOVERY.md) differ.** "Given as an input deck, it must open and save with a report entry" is read under instruction 24, and every seeded deck meets it: it opens, saves, and reports through the writer or, for what the reader repaired, in the recovery report. `fixtures/rr/manifest.tsv` says which. `RR-PN-01`'s names cannot be written by `Package::rewrite`, so no seeded file is committed, and a test builds them in a ZIP by hand. A break that needs two packages to see, such as a renumbered id, opens and saves with no entry, since one package does not show it.
+- **Bookkeeping follows the save, not the arrival.** `INV-AP-01` is held to what this save changed: a count that arrived stale, with nothing here changing it, stays and is reported, because correcting it would touch a part no one edited (F2). A change in the count brings the field to the truth.
+- **A `Deck` patch answers for `app.xml`.** Like `INV-ID-02`, `INV-AP-01` to `-03` stand aside when a model patch rewrites the main part or `app.xml`: the model states both. Operations are what the counts follow, so a slide removed by a `Deck` patch alone leaves the counts as that model has them.
+- **`core.xml` moves only with host inputs.** `INV-AP-09` reads as if `revision` rises on any edited save. A plan with no `HostInputs` is a library patch and leaves `core.xml` alone, so model round trips stay fixed points. The SDK supplies them.
+- **`save_deck`, `save_slide_parts` and the table-styles save acknowledge for their caller.** `INV-SG-02`'s refusal is on `SavePlan`; these three are whole edits already asked for, and return `signature_invalidated`. Each still drops the set.
 - **An `RR-*` deck comes from the writer, not `generate.py`.** Python builds the inputs (`fixtures/tools/generate_rr.py`), and `tests/writer_rr.rs` writes `fixtures/rr/good` and `fixtures/rr/seeded`, with `RR_WRITE=1`. `fixtures/rr/manifest.tsv` says what became of each seeded deck: a name `Package::rewrite` refuses cannot be written, and two entries naming one part cannot be opened, which are second lines of defence.
 
 **Not run: F7.** The owner stopped LibreOffice while it was crashing on their machine, so results of this writer are validated with F4 and `F-006` only until told otherwise. A partial earlier run is no evidence of a pass.
 
-**Not built, and not in these rows:** a zoom naming a deleted slide is refused (`CS-SAV-0009`) rather than replaced by its fallback, which is `INV-FB-05`. Macro actions are not removed on dropping VBA, `INV-SA-04`. `app.xml` counts are stale after an add or delete until `T1N-05` (`INV-AP-01`), and so are thumbnails (`INV-TH-02`). The format grid is `T1N-06`; `Op::Retype` is the one edit it rests on.
+**Not built, and not in these rows:** a zoom naming a deleted slide is refused (`CS-SAV-0009`) rather than replaced by its fallback, which is `INV-FB-05`. The `PE` and `FB` families have no rows here, and no `RR-PE-*` or `RR-FB-*` fixtures: stale fallbacks wait on `WR-03` in Phase 6. The thumbnail's regenerate path takes a PNG from the host, and nothing can make one until Tier 2G; so today every edit takes the drop path, and one dropped does not return (`INV-TH-03` allows it). What a signature line is found by, `signatureline` in a VML part, is Unverified.
+
+**The save-as grid (`T1N-06`).** `save_as` follows the grid above, and `tests/writer_saveas.rs` reads the grid from this page, so the two cannot drift. All 121 pairs have a row in `fixtures/rr/sa/manifest.tsv`. **39 are written and pass F4; the other 82 are refusals,** and a refusal's fixture is its row and its input in `fixtures/rr/inputs`. Of those, `N`, `C`, `CV` and `R` are verbs not built: conversion waits for Phase 10, render for Tier 2G, and a deck from a theme for a PowerPoint-written `.thmx` (`F-007`). They answer `CS-SAV-0013` saying which, and `.ppt` answers `CS-OPC-0005`. So the grid is defined and held, not implemented in every cell. `.ppam`, `.thmx` and `.odp` inputs are synthetic.
 
 | Invariant | Status | Fixture | Evidence mark, for `PV-01` |
 | --- | --- | --- | --- |
@@ -562,6 +569,41 @@ Tier 1N's core, `T1N-01` to `T1N-04`. **Nothing here was observed in PowerPoint;
 | `INV-NM-03` | Built | `RR-NM-03` | Documented, Inferred, Unverified |
 | `INV-NM-04` | Built | `RR-NM-04` | Documented |
 | `INV-NM-05` | Built | `RR-NM-05` | Inferred |
+| `INV-AP-01` | Built | `RR-AP-01` | Documented, Unverified |
+| `INV-AP-02` | Built | `RR-AP-02` | Documented |
+| `INV-AP-03` | Built | `RR-AP-03` | Inferred, Unverified |
+| `INV-AP-04` | Built | `RR-AP-04` | Documented |
+| `INV-AP-05` | Built | `RR-AP-05` | Inferred, Unverified |
+| `INV-AP-06` | Built | `RR-AP-06` | Documented, Inferred |
+| `INV-AP-07` | Built | `RR-AP-07` | Documented |
+| `INV-AP-08` | Built | `RR-AP-08` | Documented, Inferred |
+| `INV-AP-09` | Built, with host inputs | `RR-AP-09` | Documented, Inferred |
+| `INV-AP-10` | Built | `RR-AP-10` | Documented |
+| `INV-TH-01` | Built | `RR-TH-01` | Documented |
+| `INV-TH-02` | Built | `RR-TH-02` | Inferred |
+| `INV-TH-03` | Built, with no renderer to call it | `RR-TH-03` | Documented, Unverified |
+| `INV-SG-01` | Built | `RR-SG-01` | Documented |
+| `INV-SG-02` | Built | `RR-SG-02` | Documented, Inferred |
+| `INV-SG-03` | Built | `RR-SG-03` | Documented, Inferred |
+| `INV-SG-04` | Built | `RR-SG-04` | Inferred |
+| `INV-SG-05` | Built | `RR-SG-05` | Inferred |
+| `INV-SG-06` | Built, no seed: nothing dirty is the input bytes | `RR-SG-06` | Inferred |
+| `INV-SG-07` | Built | `RR-SG-07` | Documented, Inferred |
+| `INV-SG-08` | Built | `RR-SG-08` | Unverified |
+| `INV-SA-01` | Built | `RR-SA-01` | Documented |
+| `INV-SA-02` | Built | `RR-SA-02` | Documented, Inferred |
+| `INV-SA-03` | Built | `RR-SA-03` | Documented, Unverified |
+| `INV-SA-04` | Built | `RR-SA-04` | Documented, Inferred, Unverified |
+| `INV-SA-05` | Built | `RR-SA-05` | Inferred, Unverified |
+| `INV-SA-06` | Built | `RR-SA-06` | Inferred, Unverified |
+| `INV-SA-07` | Built | `writer_saveas.rs` | Documented, Inferred |
+| `INV-SA-08` | Built | `RR-SA-ppam-*` | Documented, Inferred |
+| `INV-SA-09` | Refused until `F-007` has a `.thmx` | `RR-SA-thmx-*` | Unverified |
+| `INV-SA-10` | Refused until Phase 10 | `RR-SA-ppt-*` | Inferred, Unverified |
+| `INV-SA-11` | Refused until Phase 10 | `RR-SA-odp-*` | Documented, Inferred |
+| `INV-SA-12` | Built | `RR-SA-pdf-*` | Inferred |
+| `INV-SA-13` | Built: nothing here starts a show | `writer_saveas.rs` | Inferred |
+| `INV-SA-14` | Built | `RR-SA-14` | Inferred |
 
 **For `PV-01`:** open both decks of each of these, each marked Inferred or Unverified above: `INV-PN-02`, `INV-PN-05`, `INV-PN-06`, `INV-PN-07`, `INV-PN-11`, `INV-RI-02`, `INV-RI-03`, `INV-RI-04`, `INV-RI-05`, `INV-RI-07`, `INV-RI-09`, `INV-RI-10`, `INV-CT-04`, `INV-CT-05`, `INV-CT-06`, `INV-CT-08`, `INV-CT-09`, `INV-CT-10`, `INV-SP-01`, `INV-SP-02`, `INV-SP-03`, `INV-SP-04`, `INV-SP-05`, `INV-SP-06`, `INV-SP-07`, `INV-SP-08`, `INV-SP-09`, `INV-SP-10`, `INV-ID-01`, `INV-ID-02`, `INV-ID-03`, `INV-ID-04`, `INV-ID-06`, `INV-SL-04`, `INV-SL-05`, `INV-SL-06`, `INV-NM-02`, `INV-NM-03`, `INV-NM-05`. Also unsourced and in the code, so also to observe: the placeholder copies a new slide gets from its layout, `sldIdLst` left empty when the last slide goes, a duplicated slide keeping its `p14:creationId` and `a16:creationId`s, and a 3D model shared rather than copied by a clone.
 
@@ -579,7 +621,7 @@ This page owns only itself. The session merging it should carry these, since eac
 - **`F-007` needs samples for what this page could not read:** a `.thmx`, the slide-level ChartEx and 3D `AlternateContent`, PowerPoint's own notes master, and `app.xml` groups.
 - **`PV-01` should run the seeded fixtures,** not only exports.
 
-**New codes for [20](20-ERROR-CODE-REGISTRY.md):** `CS-SAV-0001` signature dropped; `0002` VBA dropped; `0003` VBA drop needs confirmation; `0004` thumbnail dropped; `0005` thumbnail regenerated; `0006` fallback regenerated; `0007` fallback kept stale; `0008` fallback dropped; `0009` edit blocked on a construct; `0010` notes master created; `0011` `app.xml` lists omitted; `0012` invariant failed, save refused; `0013` format pair refused; `0014` macro actions removed; `0015` signature acknowledgement needed; `0016` conversion loss. A finding for SmartArt with no drawing.
+**New codes for [20](20-ERROR-CODE-REGISTRY.md), those not issued yet:** `0006` fallback regenerated; `0007` fallback kept stale; `0008` fallback dropped; `0010` notes master created; `0016` conversion loss. A finding for SmartArt with no drawing.
 
 **[07](07-SECURITY-THREAT-MODEL.md), `SEC-014`:** the stale-thumbnail and stale-fallback rules here answer part of that row.
 

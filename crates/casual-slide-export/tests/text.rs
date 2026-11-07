@@ -1087,7 +1087,7 @@ fn every_deck_takes_a_text_edit_and_stays_as_valid_as_it_was() {
         };
         assert_eq!(model(&outcome.bytes), wanted, "{path}");
         let (old, new) = (parts(&source), parts(&outcome.bytes));
-        assert_eq!(outcome.changed_parts.len(), 1, "{path}");
+        assert_eq!(edited_parts(&outcome.changed_parts), 1, "{path}");
         for (name, bytes) in &old {
             if !outcome.changed_parts.contains(name) {
                 assert_eq!(new.get(name), Some(bytes), "{path}: {name} changed");
@@ -1310,4 +1310,17 @@ fn nothing_from_a_body_reaches_an_export_message() {
     .unwrap_err();
     let message = format!("{err} {err:?}");
     assert!(!message.contains("QzMarkerQz"), "{message}");
+}
+
+/// What an edit asked for, leaving out what any edit owes the package: `app.xml`, a
+/// thumbnail, a signature set (`T1N-05`).
+fn edited_parts(changed: &[String]) -> usize {
+    changed
+        .iter()
+        .filter(|n| {
+            !n.starts_with("docProps/")
+                && !n.starts_with("_xmlsignatures/")
+                && !matches!(n.as_str(), "_rels/.rels" | "[Content_Types].xml")
+        })
+        .count()
 }

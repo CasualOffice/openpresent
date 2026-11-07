@@ -5,6 +5,9 @@
 use super::draft::{CONTENT_TYPES_PART, Draft, rel_kind, set_attr};
 use super::error::WriterError;
 use super::names::key;
+use super::ops::all_elements;
+use super::preflight::{Found, add};
+use casual_slide_ooxml::XmlTree;
 
 /// The main part's type for a file's extension (`INV-SA-01`). `None` for an extension
 /// this writer does not retype to.
@@ -22,7 +25,94 @@ pub(crate) fn main_type_for(extension: &str) -> Option<&'static str> {
     })
 }
 
+/// Whether this is a main part's type, of the seven (`INV-SA-01`).
+pub(crate) fn is_main_type(content_type: &str) -> bool {
+    ["pptx", "ppsx", "potx", "pptm", "ppsm", "potm"]
+        .iter()
+        .filter_map(|e| main_type_for(e))
+        .any(|t| t.eq_ignore_ascii_case(content_type))
+        || content_type
+            .eq_ignore_ascii_case("application/vnd.ms-powerpoint.addin.macroEnabled.main+xml")
+}
+
+const MACRO_ACTION: &[u8] = b"ppaction://macro";
+
+fn holds_macro_action(bytes: &[u8]) -> bool {
+    bytes
+        .windows(MACRO_ACTION.len())
+        .any(|w| w.eq_ignore_ascii_case(MACRO_ACTION))
+}
+
+fn slide_like(name_key: &str) -> bool {
+    !name_key.contains("/_rels/")
+        && (name_key.starts_with("ppt/slides/")
+            || name_key.starts_with("ppt/slidelayouts/")
+            || name_key.starts_with("ppt/slidemasters/"))
+}
+
+/// `INV-SA-04`: with the project gone, no action names a macro.
+pub(crate) fn macro_action_rules(
+    draft: &mut Draft<'_>,
+    found: &mut Found,
+) -> Result<(), WriterError> {
+    if !draft.log.vba_dropped {
+        return Ok(());
+    }
+    let names: Vec<String> = draft
+        .names
+        .iter()
+        .filter(|(k, _)| slide_like(k))
+        .map(|(_, n)| n.clone())
+        .collect();
+    for name in names {
+        if draft.xml_bytes(&name).is_ok_and(|b| holds_macro_action(&b)) {
+            add(found, "INV-SA-04", &name, "an action still names a macro");
+        }
+    }
+    Ok(())
+}
+
 impl Draft<'_> {
+    /// `INV-SA-04` (how a macro action is spelled is Unverified): take out each link whose
+    /// action names a macro, and say how many. A part that will not parse is left.
+    fn remove_macro_actions(&mut self) -> Result<(), WriterError> {
+        let names: Vec<String> = self
+            .names
+            .iter()
+            .filter(|(k, _)| slide_like(k))
+            .map(|(_, n)| n.clone())
+            .collect();
+        let mut count = 0usize;
+        for name in names {
+            let Ok(bytes) = self.xml_bytes(&name) else {
+                continue;
+            };
+            if !holds_macro_action(&bytes) || XmlTree::parse(&bytes, &name, &self.xml).is_err() {
+                continue;
+            }
+            let tree = self.tree(&name)?;
+            for el in all_elements(tree) {
+                let is_macro = tree
+                    .plain_attribute(el, "action")
+                    .is_some_and(|a| holds_macro_action(a.as_bytes()));
+                if is_macro && let Some(parent) = tree.parent_element(el) {
+                    tree.remove_child(parent, el);
+                    count = count.saturating_add(1);
+                }
+            }
+        }
+        if count > 0 {
+            let main = self.main.clone();
+            self.note(
+                "CS-SAV-0014",
+                "INV-SA-04",
+                &main,
+                &format!("{count} actions naming a macro removed"),
+            );
+        }
+        Ok(())
+    }
+
     fn vba_relationships(&mut self) -> Result<Vec<String>, WriterError> {
         let main = self.main.clone();
         Ok(self
@@ -81,6 +171,7 @@ impl Draft<'_> {
             self.remove_relationship(&main, id)?;
         }
         self.log.vba_dropped = true;
+        self.remove_macro_actions()?;
         self.note(
             "CS-SAV-0002",
             "INV-CT-06",

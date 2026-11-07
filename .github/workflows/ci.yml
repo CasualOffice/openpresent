@@ -63,7 +63,7 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - run: python3 tools/ooxml-sdk/validate.py --self-test
-      - run: python3 tools/ooxml-sdk/validate.py fixtures/generated fixtures/producers fixtures/real
+      - run: python3 tools/ooxml-sdk/validate.py fixtures/generated fixtures/producers fixtures/real fixtures/rr/good fixtures/rr/sa
 
   test:
     strategy:
