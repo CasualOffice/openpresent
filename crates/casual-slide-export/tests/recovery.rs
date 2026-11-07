@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use casual_slide_export::presentation::save_deck;
-use casual_slide_export::slide::save_slide_parts;
+use casual_slide_export::slide::{patch_slide_part, save_slide_parts};
 use casual_slide_export::writer::{SavePlan, WriterLimits, repair_deck};
 use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::ImportLimits;
@@ -495,4 +495,175 @@ fn an_edited_deck_found_by_name_states_its_main_part() {
         "{rels}"
     );
     assert!(!rels.contains("example.com/evil"), "{rels}");
+}
+
+/// The recovered decks 1R's gate is checked on (`REC-08`): every hostile fixture the manifest
+/// says recovers under default limits, and a real deck with a layout's local header broken.
+fn recovered_decks() -> Vec<(String, Vec<u8>)> {
+    let manifest = std::fs::read_to_string(root().join("fixtures/manifest.tsv")).unwrap();
+    let mut out: Vec<(String, Vec<u8>)> = manifest
+        .lines()
+        .skip(1)
+        .filter_map(|line| {
+            let cols: Vec<&str> = line.split('\t').collect();
+            (cols.len() == 3 && cols[2].starts_with("recover:"))
+                .then(|| (cols[0].to_owned(), read(cols[0])))
+        })
+        .collect();
+    let mut layout = read("real/z17310490-vierfelder-de.pptx");
+    for b in layout.iter_mut().skip(9948).take(32) {
+        *b ^= 0xA5;
+    }
+    out.push(("layout-local-header".to_owned(), layout));
+    assert!(out.len() >= 26, "{}", out.len());
+    out
+}
+
+/// What a deck reads as: its model and every slide-like part.
+fn models(bytes: Vec<u8>) -> (Deck, Vec<Option<SlidePart>>) {
+    let mut pkg = open(bytes);
+    let (deck, slides) = read_all(&mut pkg);
+    (deck, slides.parts.parts)
+}
+
+/// `REC-08`, 1R gate item 4: a recovered deck is a fixed point. What the repair writes reads
+/// as the recovered deck did, and saving that unedited gives it back.
+#[test]
+#[ignore = "finding REC-08: repair_deck refuses layout-local-header, INV-TH-02 stale thumbnail"]
+fn a_recovered_deck_is_a_fixed_point() {
+    for (name, bytes) in recovered_decks() {
+        let before = models(bytes.clone());
+        let mut pkg = open(bytes);
+        let repaired = repair_deck(&mut pkg, WriterLimits::default())
+            .unwrap_or_else(|e| panic!("{name}: {e:?}"))
+            .bytes;
+        let after = models(repaired.clone());
+        assert!(before.0 == after.0, "{name}: the deck model changed");
+        assert!(before.1 == after.1, "{name}: a slide-like part changed");
+        let mut again = open(repaired.clone());
+        let (deck, _) = read_all(&mut again);
+        let saved = save_deck(&mut again, &deck, &ImportLimits::default()).unwrap();
+        assert_eq!(saved.bytes, repaired, "{name}");
+    }
+}
+
+/// `REC-08`, 1R gate item 3: a forced rewrite of a recovered deck. Every slide-like part,
+/// emptied to its root and written again from its model alone, and the deck so written
+/// passes F4.
+#[test]
+#[ignore = "finding REC-08: the writer cannot add a master colour map back (CS-SLE-0001); the forced rewrite must keep it"]
+fn a_forced_rewrite_of_a_recovered_deck_is_valid() {
+    let dir = scratch("forced");
+    let xml = OoxmlLimits::default();
+    for (name, bytes) in recovered_decks() {
+        let mut pkg = open(bytes);
+        let (_, slides) = read_all(&mut pkg);
+        let base = repair_deck(&mut pkg, WriterLimits::default())
+            .unwrap()
+            .bytes;
+        let strict = pkg.conformance() == casual_slide_ooxml::Conformance::Strict;
+        let mut edits = PartEdits::default();
+        for (entry, part) in slides.parts.structure.parts.iter().zip(&slides.parts.parts) {
+            let Some(part) = part else { continue };
+            let (tree, _) = pkg.read_resolved(&entry.part).unwrap();
+            let rels = pkg.relationships_of(&entry.part).to_vec();
+            let mut blank = tree.clone();
+            let root = blank.root();
+            // A master's layout list is not the writer's to edit (`CS-SLE-0001`): it stays.
+            for kid in blank.child_elements(root) {
+                if blank.local_name(kid) == "sldLayoutIdLst" {
+                    continue;
+                }
+                blank.remove_child(root, kid);
+            }
+            patch_slide_part(
+                &mut blank,
+                &entry.part,
+                strict,
+                &rels,
+                part,
+                &SlideLimits::default(),
+                &ImportLimits::default(),
+                &xml,
+            )
+            .unwrap_or_else(|e| panic!("{name} {}: {e}", entry.part));
+            edits.replace(entry.part.clone(), blank.to_bytes());
+        }
+        let written = Package::open(base, Default::default())
+            .unwrap()
+            .rewrite(&edits)
+            .unwrap();
+        let file = format!("{}.pptx", name.replace('/', "_").trim_end_matches(".bin"));
+        std::fs::write(dir.join(file), written).unwrap();
+    }
+    assert_f4_passes(&dir);
+}
+
+/// `REC-08`, 1R gate item 6: nothing a repair takes out is lost silently. Each XML part of a
+/// recovered deck whose elements differ from what arrived, where what arrived parses, is
+/// named by a repair finding.
+#[test]
+#[ignore = "finding REC-08: main-part-missing loses a Relationship from presentation.xml.rels with no repair naming the part"]
+fn a_recovered_part_that_lost_an_element_is_reported() {
+    let xml = OoxmlLimits::default();
+    let names = |bytes: &[u8], part: &str| -> Option<Vec<String>> {
+        let tree = XmlTree::parse(bytes, part, &xml).ok()?;
+        let mut out = Vec::new();
+        let mut stack = vec![tree.root()];
+        while let Some(el) = stack.pop() {
+            out.push(tree.local_name(el).to_owned());
+            stack.extend(tree.child_elements(el));
+        }
+        out.sort();
+        Some(out)
+    };
+    let mut checked = 0;
+    for (name, bytes) in recovered_decks() {
+        let mut arrived = Package::open(bytes.clone(), Default::default()).unwrap();
+        let mut pkg = open(bytes);
+        let _ = read_all(&mut pkg);
+        pkg.prepare_for_edit().unwrap();
+        let reported: std::collections::BTreeSet<String> = pkg
+            .findings()
+            .iter()
+            .filter(|f| matches!(f.kind, FindingKind::Repaired(_)))
+            .map(|f| f.part.trim_start_matches('/').to_owned())
+            .collect();
+        for part in pkg.part_names() {
+            if !(part.ends_with(".xml") || part.ends_with(".rels"))
+                || part.starts_with(RETAINED_DIR)
+            {
+                continue;
+            }
+            let Ok(original) = arrived.read_part(&part) else {
+                continue;
+            };
+            let Some(was) = names(&original, &part) else {
+                continue;
+            };
+            let now = pkg.read_xml_part(&part).unwrap();
+            let Some(is) = names(&now, &part) else {
+                continue;
+            };
+            checked += 1;
+            // Lost: an element name that arrived more often than it is now. What a repair
+            // adds, such as a content type for a part it made, is no loss.
+            let mut left = is.clone();
+            let lost: Vec<&String> = was
+                .iter()
+                .filter(|n| match left.iter().position(|m| m == *n) {
+                    Some(i) => {
+                        left.remove(i);
+                        false
+                    }
+                    None => true,
+                })
+                .collect();
+            assert!(
+                lost.is_empty() || reported.contains(&part),
+                "{name} {part}: lost {lost:?} and no repair names the part"
+            );
+        }
+    }
+    assert!(checked > 100, "{checked}");
 }
