@@ -560,7 +560,7 @@ class Module:
             call = f"{FOREIGN[typ][1]}(c, el)?" if typ in FOREIGN else f"{self.fn_read(typ)}(c, el)?"
             out.append(f'    if el.is({const}, "{name}") {{\n        return Ok(Some(m::Root::{self.root_variant(ns, name)}(Box::new({call}))));\n    }}\n')
         out.append("    Ok(None)\n}\n\n")
-        out.append(f"/// Whether an element is one that [`read_root`] reads.\npub fn is_root(el: &Elem) -> bool {{\n")
+        out.append(f"/// Whether an element is one that `read_root` reads.\npub fn is_root(el: &Elem) -> bool {{\n")
         tests = " || ".join(f'el.is({self.ns_const(ns)}, "{name}")' for ns, name, _, _ in self.root_rows())
         out.append(f"    {tests or 'false'}\n}}\n")
         return "".join(out)

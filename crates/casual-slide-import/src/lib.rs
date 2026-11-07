@@ -1,5 +1,9 @@
 //! `casual-slide-import`. See docs/19 and docs/28 (ADR-013).
 
+// rustdoc proves auto traits through the generated equation types, which nest deeper than the
+// default limit of 128 allows (E0275 on `math::schema`). Compilation itself never needs it.
+#![recursion_limit = "256"]
+
 pub mod chart;
 pub mod color;
 pub mod comment;

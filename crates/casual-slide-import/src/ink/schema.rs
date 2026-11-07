@@ -1206,7 +1206,7 @@ pub(crate) fn read_root(c: &mut SchemaReader<'_, '_>, el: &Elem) -> Res<Option<m
     Ok(None)
 }
 
-/// Whether an element is one that [`read_root`] reads.
+/// Whether an element is one that `read_root` reads.
 pub fn is_root(el: &Elem) -> bool {
     el.is(NS_INKML, "ink")
         || el.is(NS_INKML, "definitions")
