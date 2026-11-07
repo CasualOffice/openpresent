@@ -27,7 +27,9 @@ use casual_slide_model::color::Color;
 use casual_slide_model::drawing::ShapeProperties;
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::text::TextBody;
-use casual_slide_ooxml::{Conformance, OoxmlLimits, PresentationPackage, Relationship, XmlTree};
+use casual_slide_ooxml::{
+    Conformance, ElementId, OoxmlLimits, PresentationPackage, Relationship, XmlTree,
+};
 use casual_slide_package::PartEdits;
 
 use crate::drawing::{color_node, patch as patch_drawing, properties_node};
@@ -423,13 +425,40 @@ impl Patch<'_, '_> {
         self.kids(el, before.map_or(&[], |b| &b.kids), after)
     }
 
+    /// What a child goes before, when nothing that stays says so: by the schema, or straight
+    /// after what came before it in the model, where a repeated choice runs against the schema's
+    /// order and that is the order the file asked for.
+    fn anchor(
+        &self,
+        parent: &Elem,
+        order_of: &N,
+        local: &str,
+        prev: Option<&Elem>,
+    ) -> Result<Option<ElementId>, ExportError> {
+        let kids = parent.children(self.w.tree, self.w.part)?;
+        let mine = order_of.rank(local);
+        if let (Some(prev), Some(mine)) = (prev, mine)
+            && order_of.rank(&prev.local).is_some_and(|theirs| theirs > mine)
+        {
+            let at = kids.iter().position(|k| k.id == prev.id);
+            return Ok(at.and_then(|at| kids.get(at + 1)).map(|k| k.id));
+        }
+        Ok(mine.and_then(|mine| {
+            kids.iter()
+                .find(|k| order_of.rank(&k.local).is_some_and(|theirs| theirs > mine))
+                .map(|k| k.id)
+        }))
+    }
+
+    /// A new child, placed. Returns it.
     fn insert(
         &mut self,
         parent: &Elem,
         anchor: Option<&Elem>,
+        prev: Option<&Elem>,
         order_of: &N,
         n: &N,
-    ) -> Result<(), ExportError> {
+    ) -> Result<Elem, ExportError> {
         if matches!(n.payload, Payload::Retained(_)) && self.new_retained == NewRetained::Refuse {
             return Err(ExportError::UnsupportedEdit {
                 what: "a chart element only named in the model",
@@ -447,21 +476,13 @@ impl Patch<'_, '_> {
         let el = self.w.new_child(parent, uris, prefix, &n.local)?;
         let anchor = match anchor {
             Some(a) => Some(a.id),
-            None => {
-                let mine = order_of.rank(&n.local);
-                let kids = parent.children(self.w.tree, self.w.part)?;
-                mine.and_then(|mine| {
-                    kids.iter()
-                        .find(|k| order_of.rank(&k.local).is_some_and(|theirs| theirs > mine))
-                        .map(|k| k.id)
-                })
-            }
+            None => self.anchor(parent, order_of, &n.local, prev)?,
         };
         self.w.tree.insert_child(parent.id, anchor, el.id);
         if !matches!(n.payload, Payload::Retained(_)) {
             self.node(&el, None, n)?;
         }
-        Ok(())
+        Ok(el)
     }
 
     fn kids(&mut self, el: &Elem, before: &[N], parent: &N) -> Result<(), ExportError> {
@@ -507,23 +528,31 @@ impl Patch<'_, '_> {
             }
             paired.push(found);
         }
-        // An order the edit changed is rebuilt: its order is what the edit named.
-        let order: Vec<usize> = paired
-            .iter()
-            .flatten()
-            .filter_map(|i| element_of.get(*i).copied().flatten())
-            .collect();
+        // An order the edit changed: the children move, each keeping what the model cannot see.
+        // Judged against the model's own order, so a file holding its children out of the
+        // schema's order is not rebuilt by an edit elsewhere.
+        let order: Vec<usize> = paired.iter().flatten().copied().collect();
         if order.windows(2).any(|w| matches!(w, [x, y] if x > y)) {
-            for kid in element_of
-                .iter()
-                .flatten()
-                .filter_map(|i| tree_kids.get(*i))
-            {
+            for kid in element_of.iter().flatten().filter_map(|i| tree_kids.get(*i)) {
                 self.w.tree.remove_child(el.id, kid.id);
                 self.w.changes += 1;
             }
-            for n in after {
-                self.insert(el, None, parent, n)?;
+            let mut prev: Option<Elem> = None;
+            for (j, n) in after.iter().enumerate() {
+                let paired_kid = paired.get(j).copied().flatten().and_then(|i| {
+                    let o = element_of.get(i).copied().flatten()?;
+                    Some((tree_kids.get(o)?, before.get(i)?))
+                });
+                let placed = match paired_kid {
+                    Some((kid, b)) => {
+                        let anchor = self.anchor(el, parent, &n.local, prev.as_ref())?;
+                        self.w.tree.insert_child(el.id, anchor, kid.id);
+                        self.node(kid, Some(b), n)?;
+                        kid.clone()
+                    }
+                    None => self.insert(el, None, prev.as_ref(), parent, n)?,
+                };
+                prev = Some(placed);
             }
             return Ok(());
         }
@@ -569,6 +598,7 @@ impl Patch<'_, '_> {
         }
         let owned: HashSet<usize> = element_of.iter().flatten().copied().collect();
         let mut adopted: HashSet<usize> = HashSet::new();
+        let mut prev: Option<Elem> = None;
         for (j, n) in after.iter().enumerate() {
             if let Some(i) = paired.get(j).copied().flatten() {
                 let kid = element_of
@@ -578,6 +608,7 @@ impl Patch<'_, '_> {
                     .and_then(|o| tree_kids.get(o));
                 if let (Some(kid), Some(b)) = (kid, before.get(i)) {
                     self.node(kid, Some(b), n)?;
+                    prev = Some(kid.clone());
                 }
                 continue;
             }
@@ -589,6 +620,7 @@ impl Patch<'_, '_> {
             if let Some((i, kid)) = unseen {
                 adopted.insert(i);
                 self.node(kid, None, n)?;
+                prev = Some(kid.clone());
                 continue;
             }
             let anchor = following
@@ -596,7 +628,7 @@ impl Patch<'_, '_> {
                 .copied()
                 .flatten()
                 .and_then(|o| tree_kids.get(o));
-            self.insert(el, anchor, parent, n)?;
+            prev = Some(self.insert(el, anchor, prev.as_ref(), parent, n)?);
         }
         Ok(())
     }

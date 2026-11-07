@@ -29,6 +29,7 @@ GATES = [
     "check-parser-limits.py",
     "check-error-codes.py",
     "check-workflows.py",
+    "check-chart-codegen.py",
 ]
 
 

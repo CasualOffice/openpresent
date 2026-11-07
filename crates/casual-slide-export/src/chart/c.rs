@@ -2508,6 +2508,9 @@ pub(crate) fn c_chart_space(v: &ChartSpace, name: &'static str, space: Space) ->
     if let Some(x) = &v.rounded_corners {
         n.push(super::c::c_boolean(x, "roundedCorners", C));
     }
+    if let Some(x) = &v.alternate_style {
+        n.push(super::alternate_style(x));
+    }
     if let Some(x) = &v.style {
         n.push(super::c::c_style(x, "style", C));
     }
@@ -2540,9 +2543,6 @@ pub(crate) fn c_chart_space(v: &ChartSpace, name: &'static str, space: Space) ->
     }
     if let Some(x) = &v.ext_lst {
         n.push(super::c::c_extension_list(x, "extLst", C));
-    }
-    if let Some(x) = &v.alternate_style {
-        n.push(super::alternate_style(x));
     }
     n
 }

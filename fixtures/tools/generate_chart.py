@@ -96,7 +96,7 @@ class Xsd:
         self.elements = {n.get("name"): n for n in root if n.tag == XS + "element"}
 
     def q(self, text):
-        pfx, _, local = text.rpartition(":")
+        pfx, _, local = text.strip().rpartition(":")  # MS-ODRAWXML spells one type with a space.
         return self.ns.get(pfx, ""), local
 
 
@@ -188,6 +188,7 @@ class Instance:
         self.stack = []
         self.idx = 0
         self.root_exts = root_exts
+        self.shape_id = 100
 
     def attributes(self, x, tnode, element_local):
         out = []
@@ -211,7 +212,8 @@ class Instance:
             if name == "idx" and element_local == "pt":
                 value = str(self.idx)
                 self.idx += 1
-            out.append(f'{x.prefix + ":" if x.attr_qualified else ""}{name}="{value}"')
+            qualified = x.attr_qualified or (x.prefix, name) == ("cx", "autoUpdate")
+            out.append(f'{x.prefix + ":" if qualified else ""}{name}="{value}"')
         return " ".join(out)
 
     def element(self, x, local, qtype, optional=False):
@@ -221,6 +223,9 @@ class Instance:
         owner = BY_URI.get(uri)
         if uri == DML or uri == A14_NS:
             attrs = FOREIGN_ATTRS.get(tname, "")
+            if tname == "CT_NonVisualDrawingProps":
+                self.shape_id += 1
+                attrs = f'id="{self.shape_id}" name="x"'
             return f'<{tag}{" " + attrs if attrs else ""}>{FOREIGN.get(tname, "")}</{tag}>'
         if owner is not None and tname in owner.complex:
             if self.stack.count((owner.prefix, tname)) >= 2:  # a group in a group, and no further
@@ -290,7 +295,7 @@ class Instance:
 
     def extension_list(self, x, owner):
         """Extension items at the root alone: a list everywhere would hold them all, everywhere."""
-        if x.prefix == "cx" and self.root_exts:
+        if x.prefix == "cx" and owner == "CT_ChartSpace" and self.root_exts:
             uri = "{C3380CC4-5D6E-409C-BE32-E72D297353CC}"
             return f'<cx:extLst><cx:ext uri="{uri}"><c16:uniqueId val="{{00000000-0000-4000-8000-000000000000}}"/></cx:ext></cx:extLst>'
         if owner != "CT_ChartSpace" or x.prefix != "c" or not self.root_exts:

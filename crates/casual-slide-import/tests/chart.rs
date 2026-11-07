@@ -117,7 +117,6 @@ fn unreachable_owner(owner: &str) -> bool {
             | "CT_MultiLvlStrFilteredLiteralCache"
             | "CT_LiteralDataChart"
             | "CT_FeatureExtension"
-            | "CT_GeoHierarchyEntity"
     )
 }
 

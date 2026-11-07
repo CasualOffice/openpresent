@@ -74,7 +74,7 @@ pub(crate) fn cx_value_colors(v: &ValueColors, name: &'static str, space: Space)
 pub(crate) fn cx_external_data(v: &ExternalData, name: &'static str, space: Space) -> N {
     let mut n = N::new(space, name, &[]);
     n.rel_attr("id", v.id.as_ref());
-    n.attr("autoUpdate", v.auto_update.as_ref());
+    n.qualified_attr(CX, "autoUpdate", v.auto_update.as_ref());
     n
 }
 
@@ -642,7 +642,7 @@ pub(crate) fn cx_geo_child_entities_query(v: &GeoChildEntitiesQuery, name: &'sta
     n
 }
 
-#[allow(dead_code)] // No element in these schemas holds this type, or a hand-written writer writes it.
+// spec-audit: owner=geoHierarchyEntity
 pub(crate) fn cx_geo_hierarchy_entity(v: &GeoHierarchyEntity, name: &'static str, space: Space) -> N {
     let mut n = N::new(space, name, &[]);
     n.attr("entityName", v.entity_name.as_ref());
@@ -655,7 +655,7 @@ pub(crate) fn cx_geo_hierarchy_entity(v: &GeoHierarchyEntity, name: &'static str
 pub(crate) fn cx_geo_child_entities(v: &GeoChildEntities, name: &'static str, space: Space) -> N {
     let mut n = N::new(space, name, &["geoHierarchyEntity"]);
     for x in &v.geo_hierarchy_entity {
-        n.push(N::text_element(CX, "geoHierarchyEntity", x));
+        n.push(super::cx::cx_geo_hierarchy_entity(x, "geoHierarchyEntity", CX));
     }
     n
 }

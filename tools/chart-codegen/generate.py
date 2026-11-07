@@ -140,8 +140,9 @@ class Mod:
                 self.attrs[name] = node
 
     def q(self, text):
-        """(uri, local) of a QName as this schema spells it."""
-        pfx, _, local = text.rpartition(":")
+        """(uri, local) of a QName as this schema spells it. `CT_GeoChildEntities` in the vendored
+        MS-ODRAWXML spells a type with a trailing space."""
+        pfx, _, local = text.strip().rpartition(":")
         return (self.prefixes.get(pfx, ""), local)
 
 
@@ -520,7 +521,10 @@ class Builder:
             inner = node.find(XS + "simpleType")
             f.payload = ("simple", self.w.simple_node(mod, local, inner) if inner is not None else Simple("String"))
         f.required = node.get("use") == "required"
-        if mod.attr_qualified:
+        if mod.attr_qualified or (mod.name, local) == ("cx", "autoUpdate"):
+            # The schema leaves `cx:externalData/@autoUpdate` unqualified, and PowerPoint writes
+            # it qualified, as Microsoft's validator wants it. Either is read; a new one is written
+            # as PowerPoint writes it.
             f.qualified = mod.name
         return f
 
@@ -666,7 +670,7 @@ def emit_model(builder, mod):
 # element, except `cx:CT_RelId`, which a graphic frame's `cx:chart` holds and `read_chart_reference` reads.
 UNREACHED = {("c14", "CT_BooleanTrue"), ("c16", "CT_NumFilteredLiteralCache"), ("c16", "CT_StrFilteredLiteralCache"),
              ("c16", "CT_MultiLvlStrFilteredLiteralCache"), ("c16", "CT_LiteralDataChart"), ("cx", "CT_FeatureExtension"),
-             ("cx", "CT_RelId"), ("cx", "CT_GeoHierarchyEntity")}
+             ("cx", "CT_RelId")}
 
 # Checks run once a type is read, each in the import crate's src/chart.rs.
 HOOKS = {
@@ -988,7 +992,7 @@ def emit_write_fn(t, builder, mod):
         # `mc:AlternateContent` is where `style` would be.
         order = order.replace('"style"', '"AlternateContent", "style"')
     if (t.mod, t.name) == ("cdr", "CT_RelSizeAnchor") or (t.mod, t.name) == ("cdr", "CT_AbsSizeAnchor"):
-        order = order.replace('"clientData"', '"AlternateContent", "clientData"')
+        order = order + ', "AlternateContent"'
     # A list is a reference to a slice of a value whose elements are read by `.iter()`.
     if (t.mod, t.name) in UNREACHED:
         lines.append("#[allow(dead_code)] // No element in these schemas holds this type, or a hand-written writer writes it.\n")
@@ -1006,6 +1010,8 @@ def emit_write_fn(t, builder, mod):
     if (t.mod, t.name) == ("c", "CT_NumVal"):
         lines.append('    n.qualified_attr(C16R2, "formatcode2", v.formatcode2.as_ref());\n')
     for f in t.fields:
+        if (t.mod, t.name) == ("c", "CT_ChartSpace") and f.local == "style":
+            lines.append("    if let Some(x) = &v.alternate_style {\n        n.push(super::alternate_style(x));\n    }\n")
         if f.kind == "value":
             lines.append("    n.set_text(v.value.as_ref());\n")
         elif f.kind == "items":
@@ -1023,8 +1029,6 @@ def emit_write_fn(t, builder, mod):
             for b in f.variants:
                 lines.append(f"            {f.enum}::{b.variant}(x) => {write_expr(b, 'x')},\n")
             lines.append("        });\n    }\n")
-    if (t.mod, t.name) == ("c", "CT_ChartSpace"):
-        lines.append("    if let Some(x) = &v.alternate_style {\n        n.push(super::alternate_style(x));\n    }\n")
     if (t.mod, t.name) in (("cdr", "CT_RelSizeAnchor"), ("cdr", "CT_AbsSizeAnchor")):
         lines.append("    for x in &v.alternate_content_part {\n        n.push(super::alternate_content_part(x));\n    }\n")
     lines.append("    n\n}\n\n")

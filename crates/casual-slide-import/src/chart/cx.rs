@@ -131,7 +131,7 @@ impl ChartReader<'_, '_> {
         let mut e = el.clone();
         let mut out = ExternalData::default();
         out.id = self.rel(&mut e, "id", true)?;
-        out.auto_update = self.r.attr::<bool>(&mut e, "autoUpdate")?;
+        out.auto_update = self.qualified_attr::<bool>(&mut e, NS_CX, "autoUpdate", false)?;
         self.r.finish(&e);
         for child in self.r.children(el)? {
             match child.local.as_str() {
@@ -1257,7 +1257,7 @@ impl ChartReader<'_, '_> {
         Ok(out)
     }
 
-    #[allow(dead_code)] // No element in these schemas holds this type, or a hand-written reader reads it.
+    // spec-audit: owner=geoHierarchyEntity
     pub(crate) fn cx_geo_hierarchy_entity(&mut self, el: &Elem) -> Res<GeoHierarchyEntity> {
         let mut e = el.clone();
         let mut out = GeoHierarchyEntity::default();
@@ -1281,7 +1281,7 @@ impl ChartReader<'_, '_> {
         for child in self.r.children(el)? {
             match child.local.as_str() {
                 "geoHierarchyEntity" if child.in_namespace(NS_CX) => {
-                    out.geo_hierarchy_entity.extend(self.r.text(&child)?);
+                    out.geo_hierarchy_entity.push(self.cx_geo_hierarchy_entity(&child)?);
                 }
                 _ => self.other(&child),
             }

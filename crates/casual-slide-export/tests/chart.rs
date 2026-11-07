@@ -24,7 +24,9 @@ use casual_slide_import::slide::{ImportedSlides, SlideLimits, import_slide_parts
 use casual_slide_model::chart::{ChartPart, ExtItem, Retained, c};
 use casual_slide_model::color::{Color, ColorValue, Rgb};
 use casual_slide_model::fill::Fill;
-use casual_slide_ooxml::{Conformance, ElementId, OoxmlLimits, PresentationPackage, XmlTree};
+use casual_slide_ooxml::{
+    Conformance, ElementId, OoxmlLimits, PresentationPackage, Relationship, TargetMode, XmlTree,
+};
 
 const CLASSIC: &str = "generated/chart-every-row-classic.pptx";
 const EX: &str = "generated/chart-every-row-ex.pptx";
@@ -85,12 +87,25 @@ fn read_part(tree: &XmlTree, part: &str) -> ChartPart {
     .unwrap()
 }
 
+/// The ids the every-row parts name, so a node holding one can be put back.
+fn known_rels() -> Vec<Relationship> {
+    ["rId1", "rId2", "rId5"]
+        .iter()
+        .map(|id| Relationship {
+            id: (*id).to_owned(),
+            rel_type: String::new(),
+            target: "x".to_owned(),
+            mode: TargetMode::Internal,
+        })
+        .collect()
+}
+
 fn patch(tree: &mut XmlTree, part: &str, after: &ChartPart) -> Result<usize, ExportError> {
     patch_chart_part(
         tree,
         part,
         false,
-        &[],
+        &known_rels(),
         after,
         &ChartLimits::default(),
         &ImportLimits::default(),
@@ -99,7 +114,7 @@ fn patch(tree: &mut XmlTree, part: &str, after: &ChartPart) -> Result<usize, Exp
 }
 
 fn parts_of(bytes: &[u8]) -> BTreeMap<String, Vec<u8>> {
-    let mut pkg = casual_slide_package::Package::open(bytes.to_vec(), Default::default()).unwrap();
+    let mut pkg = open(bytes.to_vec());
     pkg.part_names()
         .into_iter()
         .map(|n| {
@@ -482,6 +497,22 @@ fn canon(tree: &XmlTree, part: &str) -> String {
     out
 }
 
+/// An element the model only names: its removal is a change, and what it holds is not read.
+fn is_named_only(qualified: &str) -> bool {
+    let (prefix, local) = qualified.split_once(':').unwrap_or(("", qualified));
+    match prefix {
+        "c" => local == "clrMapOvr",
+        "cdr" | "cdr14" => matches!(
+            local,
+            "cNvPr" | "cNvSpPr" | "cNvCxnSpPr" | "cNvPicPr" | "cNvGraphicFramePr" | "cNvGrpSpPr"
+                | "cNvContentPartPr" | "style" | "blipFill" | "xfrm" | "grpSpPr" | "ext" | "extLst"
+        ),
+        "cs" => matches!(local, "defRPr" | "bodyPr" | "extLst"),
+        "cx" => matches!(local, "maxColor" | "minColor" | "midColor"),
+        _ => false,
+    }
+}
+
 fn is_dml(tree: &XmlTree, id: ElementId) -> bool {
     tree.namespace(id).is_some_and(|n| ns::DML.contains(&n.as_str()))
 }
@@ -527,6 +558,9 @@ fn every_chart_row_comes_out_and_goes_back_as_the_only_change() {
             while let Some(parent) = stack.pop() {
                 let parent_name = whole.qualified_name(parent).to_owned();
                 let parent_dml = is_dml(&whole, parent);
+                if is_named_only(&parent_name) {
+                    continue;
+                }
                 // The drawing writers hold DrawingML, in their own tiers.
                 for (attr, _) in whole.attributes(parent, part).unwrap() {
                     if parent_dml || attr.starts_with("xmlns") || attr == "mc:Ignorable" {

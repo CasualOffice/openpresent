@@ -180,7 +180,7 @@ pub(crate) fn cdr_marker(v: &Marker, name: &'static str, space: Space) -> N {
 
 // spec-audit: owner=relSizeAnchor
 pub(crate) fn cdr_rel_size_anchor(v: &RelSizeAnchor, name: &'static str, space: Space) -> N {
-    let mut n = N::new(space, name, &["from", "to", "sp", "grpSp", "graphicFrame", "cxnSp", "pic"]);
+    let mut n = N::new(space, name, &["from", "to", "sp", "grpSp", "graphicFrame", "cxnSp", "pic", "AlternateContent"]);
     if let Some(x) = &v.from {
         n.push(super::cdr::cdr_marker(x, "from", CDR));
     }
@@ -210,7 +210,7 @@ pub(crate) fn cdr_rel_size_anchor(v: &RelSizeAnchor, name: &'static str, space: 
 
 // spec-audit: owner=absSizeAnchor
 pub(crate) fn cdr_abs_size_anchor(v: &AbsSizeAnchor, name: &'static str, space: Space) -> N {
-    let mut n = N::new(space, name, &["from", "ext", "sp", "grpSp", "graphicFrame", "cxnSp", "pic"]);
+    let mut n = N::new(space, name, &["from", "ext", "sp", "grpSp", "graphicFrame", "cxnSp", "pic", "AlternateContent"]);
     if let Some(x) = &v.from {
         n.push(super::cdr::cdr_marker(x, "from", CDR));
     }

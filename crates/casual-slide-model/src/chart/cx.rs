@@ -819,7 +819,7 @@ pub struct GeoHierarchyEntity {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GeoChildEntities {
     /// `geoHierarchyEntity`.
-    pub geo_hierarchy_entity: Vec<String>,
+    pub geo_hierarchy_entity: Vec<GeoHierarchyEntity>,
 }
 
 /// `cx:CT_GeoChildEntitiesQueryResult`.
