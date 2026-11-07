@@ -110,6 +110,13 @@ UNDERSTOOD = {MC, XML_NS, *OTHER_UNDERSTOOD, *(n for row in NAMESPACES for n in 
 
 # Root namespace to schema. Roots with no entry are reported as no-schema.
 SCHEMA_FOR_ROOT = {OPC_RELS: "opc/opc-relationships.xsd", OPC_TYPES: "opc/opc-contentTypes.xsd", OPC_CORE: "../tools/f4/coreProperties.xsd"}
+# VML (F4-04). vml-main.xsd imports wml.xsd and three more, vendored unmodified for this.
+VML = "urn:schemas-microsoft-com:vml"
+VML_OFFICE = "urn:schemas-microsoft-com:office:office"
+VML_POWERPOINT = "urn:schemas-microsoft-com:office:powerpoint"
+SCHEMA_FOR_ROOT[VML] = "ooxml/vml-main.xsd"
+SCHEMA_FOR_ROOT[VML_OFFICE] = "ooxml/vml-officeDrawing.xsd"
+SCHEMA_FOR_ROOT[VML_POWERPOINT] = "ooxml/vml-presentationDrawing.xsd"
 for _strict, _transitional, _file in NAMESPACES:
     if _file:
         SCHEMA_FOR_ROOT[_strict] = f"ooxml-strict/{_file}"
@@ -118,6 +125,9 @@ for _strict, _transitional, _file in NAMESPACES:
 # OPC forbids markup compatibility in these parts, so it is not resolved in them, and
 # the schema rejects it if it is there.
 NO_COMPATIBILITY = {OPC_RELS, OPC_TYPES, OPC_CORE}
+
+# Verdicts from least to most serious, for a part checked as several fragments.
+SEVERITY = ["", "valid", "recorded", "invalid", "schema-error"]
 
 LIST_SEPARATOR = re.compile(r"[ \t\n\r\f]+")
 
@@ -157,6 +167,9 @@ def apply_allowances(texts, rows):
     return texts
 
 
+XML_IMPORT = '<xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>'
+
+
 class Schemas:
     """Where each schema is read from. Transitional is a private copy with the allowances."""
 
@@ -165,18 +178,25 @@ class Schemas:
 
     @classmethod
     def path(cls, schema):
-        if not schema.startswith("ooxml/") or not cls.use_allowances:
+        if not schema.startswith("ooxml/"):
             return SCHEMAS / schema
         if cls._overlay is None:
-            cls._overlay = cls._build()
+            cls._overlay = cls._build(cls.use_allowances)
         return cls._overlay / schema
 
     @staticmethod
-    def _build():
+    def _build(use_allowances):
         work = pathlib.Path(tempfile.mkdtemp(prefix="f4-schemas-"))
         atexit.register(shutil.rmtree, work, ignore_errors=True)
         texts = {p.name: p.read_bytes().decode("utf8") for p in (SCHEMAS / "ooxml").glob("*.xsd")}
-        apply_allowances(texts, allowances())
+        # Not an allowance: wml.xsd and shared-math.xsd import the xml: namespace with no
+        # location, and xmllint will not compile them without one. The W3C's own xml.xsd
+        # is given, through catalog.xml, and nothing is relaxed (F4-04).
+        apply_allowances(texts, [{"id": "xml-namespace-location", "file": name, "count": "1", "old": XML_IMPORT,
+                                  "new": XML_IMPORT[:-2] + ' schemaLocation="http://www.w3.org/2001/xml.xsd"/>'}
+                                 for name in ("wml.xsd", "shared-math.xsd")])
+        if use_allowances:
+            apply_allowances(texts, allowances())
         target = work / "ooxml"
         target.mkdir()
         for name, text in texts.items():
@@ -605,7 +625,25 @@ def run_xmllint(schema, jobs, workdir):
 
 def is_xml_part(name):
     lower = name.lower()
-    return lower.endswith(".xml") or lower.endswith(".rels")
+    return lower.endswith(".xml") or lower.endswith(".rels") or lower.endswith(".vml")
+
+
+def vml_fragments(top):
+    """A VML drawing part is a bare `<xml>` wrapper that no schema defines, holding VML
+    elements. Each element is checked on its own, carrying the wrapper's declarations;
+    text between them is whitespace or nothing a schema could judge. None if `top` is not
+    such a wrapper."""
+    if top.name != "xml" or root_namespace(top) is not None:
+        return None
+    declared = [(n, v) for n, v in top.attrs if n.startswith("xmlns:")]
+    return [_rooted(child, declared)
+            for child in top.children if isinstance(child, Node)]
+
+
+def _rooted(child, declared):
+    copy = Node(child.name, with_inherited(child.attrs, dict(declared)))
+    copy.children = child.children
+    return copy
 
 
 def read_parts(path):
@@ -673,17 +711,24 @@ def validate_deck(path, recorded=()):
             if len(tops) != 1:
                 entry.update(status="invalid", errors=[f"{len(tops)} root elements after markup compatibility"], error_count=1)
                 continue
-            schema = SCHEMA_FOR_ROOT.get(root_namespace(tops[0]))
-            if schema is None:
+            fragments = vml_fragments(tops[0])
+            if fragments is None:
+                fragments = tops
+            elif not fragments:
                 entry.update(status="no-schema")
                 continue
-            entry["schema"] = schema
-            text = []
-            serialize(tops[0], text)
-            target = pathlib.Path(workdir) / f"p{number:06}.xml"
-            target.write_text('<?xml version="1.0" encoding="UTF-8"?>\n' + "".join(text), encoding="utf8")
-            jobs.setdefault(schema, []).append(target)
-            by_file[str(target)] = entry
+            schemas = [SCHEMA_FOR_ROOT.get(root_namespace(f)) for f in fragments]
+            if None in schemas:
+                entry.update(status="no-schema")
+                continue
+            entry["schema"] = ",".join(sorted(set(schemas)))
+            for index, (fragment, schema) in enumerate(zip(fragments, schemas)):
+                text = []
+                serialize(fragment, text)
+                target = pathlib.Path(workdir) / f"p{number:06}-{index:04}.xml"
+                target.write_text('<?xml version="1.0" encoding="UTF-8"?>\n' + "".join(text), encoding="utf8")
+                jobs.setdefault(schema, []).append(target)
+                by_file[str(target)] = entry
         for schema, files in sorted(jobs.items()):
             for target, (status, messages) in run_xmllint(schema, files, workdir).items():
                 entry = by_file[target]
@@ -691,7 +736,14 @@ def validate_deck(path, recorded=()):
                 if status == "invalid" and messages and all(
                         explained_by(recorded, deck, entry["part"], m) for m in messages):
                     status = "recorded"
+                # A VML part is several fragments: the worst verdict stands, messages add up.
+                if entry["status"]:
+                    status = max(entry["status"], status, key=SEVERITY.index)
+                    messages = entry.setdefault("_all", []) + messages
+                entry["_all"] = messages
                 entry.update(status=status, errors=messages[:MAX_REPORTED_ERRORS], error_count=len(messages))
+        for entry in results:
+            entry.pop("_all", None)
     failed = any(e["status"] not in ("valid", "no-schema", "recorded") for e in results)
     return {"deck": deck, "status": "fail" if failed else "pass", "refused": None, "parts": results, "not_xml": other}
 

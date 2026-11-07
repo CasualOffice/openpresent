@@ -54,6 +54,27 @@ pub struct Package {
     consumed: u64,
     /// The entries already charged, by index.
     charged: HashSet<usize>,
+    /// The host's time budget (`SEC-P10`): asked between reads while a part decompresses,
+    /// and a part read stops when it answers `true`. The package never samples a clock.
+    cancel: Option<Cancel>,
+}
+
+/// A host-supplied predicate that says when to stop: a deadline passed, or the user gave up.
+pub type Cancel = Arc<dyn Fn() -> bool + Send + Sync>;
+
+/// A reader that asks [`Cancel`] before every read and stops with `TimedOut` when told to.
+struct Cancellable<'a, R> {
+    inner: R,
+    cancel: Option<&'a Cancel>,
+}
+
+impl<R: Read> Read for Cancellable<'_, R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.cancel.is_some_and(|cancel| cancel()) {
+            return Err(std::io::ErrorKind::TimedOut.into());
+        }
+        self.inner.read(buf)
+    }
 }
 
 impl fmt::Debug for Package {
@@ -159,6 +180,22 @@ impl Package {
             }
 
             directory = directory.min(entry.central_header_start());
+            // The local header names the entry the directory names: a raw copy writes one
+            // name from the other, and a file whose two disagree cannot be read back.
+            if local_name(&source, entry.header_start()) != Some(entry.name_raw()) {
+                return Err(PackageError::NotAPackage);
+            }
+            // And the sizes it declares, unless they are deferred to a data descriptor or to
+            // a ZIP64 field: a reader trusting the local header would otherwise stop at a
+            // different byte from one trusting the directory (`SEC-P11`).
+            if !local_sizes_agree(
+                &source,
+                entry.header_start(),
+                entry.compressed_size(),
+                entry.size(),
+            ) {
+                return Err(PackageError::NotAPackage);
+            }
             // Opening the entry read its local header, so where its data starts is known.
             if let Some(start) = entry.data_start() {
                 let data_end = start
@@ -205,7 +242,16 @@ impl Package {
             limits,
             consumed: 0,
             charged: HashSet::new(),
+            cancel: None,
         })
+    }
+
+    /// Set the host's time budget (`SEC-P10`). Decompression is bounded in bytes, not in
+    /// time, so a deck inside every size cap can still be slow to inflate; `cancel` is asked
+    /// between reads, and a part read it stops fails with [`PackageError::Cancelled`]. Time is
+    /// supplied, never sampled: the predicate is the host's, whatever clock it keeps.
+    pub fn set_cancel(&mut self, cancel: Option<Cancel>) {
+        self.cancel = cancel;
     }
 
     /// The package's bytes exactly as they arrived.
@@ -441,31 +487,38 @@ impl Package {
         // One byte past the cap, so exceeding it is detectable rather than
         // silently truncated — a truncated part is a corrupt document that
         // reports success.
-        entry
-            .by_ref()
-            .take(cap.saturating_add(1))
-            .read_to_end(&mut buf)
-            .map_err(|e| {
-                // zip 9 enforces the declared size itself and stops the read
-                // with this error, before our own `take` would see the byte
-                // past it. It is the same defect as `produced > cap` below — a
-                // part producing more than it declared — so it is reported as
-                // that, not as a damaged package. Matched on zip's message:
-                // if a release rewords it,
-                // `a_part_that_produces_more_than_it_declared_is_refused` turns
-                // red rather than the code quietly changing.
-                if e.kind() == std::io::ErrorKind::InvalidData
-                    && e.to_string()
-                        .contains("larger than its declared uncompressed size")
-                {
-                    PackageError::ExpansionTooLarge {
-                        total: self.consumed.saturating_add(cap.saturating_add(1)),
-                        limit: total_cap,
-                    }
-                } else {
-                    PackageError::NotAPackage
+        Cancellable {
+            inner: entry.by_ref(),
+            cancel: self.cancel.as_ref(),
+        }
+        .take(cap.saturating_add(1))
+        .read_to_end(&mut buf)
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::TimedOut {
+                return PackageError::Cancelled {
+                    name: name.to_owned(),
+                };
+            }
+            // zip 9 enforces the declared size itself and stops the read
+            // with this error, before our own `take` would see the byte
+            // past it. It is the same defect as `produced > cap` below — a
+            // part producing more than it declared — so it is reported as
+            // that, not as a damaged package. Matched on zip's message:
+            // if a release rewords it,
+            // `a_part_that_produces_more_than_it_declared_is_refused` turns
+            // red rather than the code quietly changing.
+            if e.kind() == std::io::ErrorKind::InvalidData
+                && e.to_string()
+                    .contains("larger than its declared uncompressed size")
+            {
+                PackageError::ExpansionTooLarge {
+                    total: self.consumed.saturating_add(cap.saturating_add(1)),
+                    limit: total_cap,
                 }
-            })?;
+            } else {
+                PackageError::NotAPackage
+            }
+        })?;
 
         let produced = buf.len() as u64;
         if produced > cap {
@@ -536,4 +589,51 @@ thread_local! {
 pub(crate) fn initial_capacity(declared: u64) -> usize {
     const MAX_UP_FRONT: u64 = 1 << 20;
     declared.min(MAX_UP_FRONT) as usize
+}
+
+/// The name a local header at `at` gives its entry, if the header is there and whole.
+fn local_name(source: &[u8], at: u64) -> Option<&[u8]> {
+    let at = usize::try_from(at).ok()?;
+    let fixed = source.get(at..at.checked_add(30)?)?;
+    if fixed.get(..4)? != b"PK\x03\x04" {
+        return None;
+    }
+    let len = usize::from(u16::from_le_bytes([*fixed.get(26)?, *fixed.get(27)?]));
+    let start = at.checked_add(30)?;
+    source.get(start..start.checked_add(len)?)
+}
+
+/// Whether the local header at `at` declares the sizes the central directory does. A header
+/// whose general-purpose flag bit 3 is set defers its sizes to a data descriptor, and one
+/// holding `0xFFFF_FFFF` defers them to a ZIP64 extra field; neither is compared here.
+fn local_sizes_agree(source: &[u8], at: u64, compressed: u64, uncompressed: u64) -> bool {
+    let Some(fixed) = usize::try_from(at)
+        .ok()
+        .and_then(|at| source.get(at..at.checked_add(30)?))
+    else {
+        return false;
+    };
+    let word = |i: usize| -> Option<u32> {
+        let b = fixed.get(i..i.checked_add(4)?)?;
+        Some(u32::from_le_bytes([
+            *b.first()?,
+            *b.get(1)?,
+            *b.get(2)?,
+            *b.get(3)?,
+        ]))
+    };
+    let (Some(flags), Some(local_compressed), Some(local_uncompressed)) = (
+        fixed
+            .get(6..8)
+            .and_then(|b| Some(u16::from_le_bytes([*b.first()?, *b.get(1)?]))),
+        word(18),
+        word(22),
+    ) else {
+        return false;
+    };
+    if flags & 0x0008 != 0 {
+        return true;
+    }
+    let agrees = |local: u32, central: u64| local == u32::MAX || u64::from(local) == central;
+    agrees(local_compressed, compressed) && agrees(local_uncompressed, uncompressed)
 }

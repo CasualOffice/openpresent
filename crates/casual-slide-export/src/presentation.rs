@@ -1397,6 +1397,9 @@ struct Save<'a> {
     edits: BTreeMap<String, Vec<u8>>,
     rels: BTreeMap<String, XmlTree>,
     content_types: Option<XmlTree>,
+    /// Relationships taken out with a whole part, as (source part, id), so the writer
+    /// knows the drop was asked for (`INV-RI-05`).
+    removed: Vec<(String, String)>,
 }
 
 /// A part the model may hold a value for.
@@ -1527,6 +1530,40 @@ impl Save<'_> {
         Ok(())
     }
 
+    /// Take a whole part out (`T1B-02`): the model holds none, so its relationships from
+    /// `role.source` go, and the writer's sweep removes the part, its own relationships and
+    /// its content type once nothing else reaches it. A part something else still names
+    /// stays, unread by this role.
+    fn remove_part(&mut self, role: &Role<'_>) -> Result<(), ExportError> {
+        let rels_name = rels_part_for(role.source);
+        let actual = self
+            .package
+            .part_names()
+            .into_iter()
+            .find(|n| part_names_equivalent(n, &rels_name));
+        let mut tree = match self.rels.remove(&rels_name) {
+            Some(tree) => tree,
+            None => match actual {
+                Some(name) => self.parse_structural(&name)?,
+                None => return Ok(()),
+            },
+        };
+        let root = tree.root();
+        for el in tree.child_elements(root) {
+            if tree
+                .plain_attribute(el, "Type")
+                .is_some_and(|t| role.rel_types.contains(&t.as_str()))
+            {
+                if let Some(id) = tree.plain_attribute(el, "Id") {
+                    self.removed.push((role.source.to_owned(), id));
+                }
+                tree.remove_child(root, el);
+            }
+        }
+        self.rels.insert(rels_name, tree);
+        Ok(())
+    }
+
     /// Bring one optional part to its wanted state.
     fn sync_part<T: PartialEq + Clone>(
         &mut self,
@@ -1589,7 +1626,7 @@ impl Save<'_> {
             Err(err) => return Err(err.into()),
         };
         let Some(wanted) = after else {
-            return Err(ExportError::PartRemovalUnsupported { part });
+            return self.remove_part(role);
         };
         let changes = patch(&mut tree, &part, self.strict, &rels, wanted, &self.limits)?;
         if changes > 0 {
@@ -1636,7 +1673,7 @@ pub(crate) fn deck_changes(
     package: &mut PresentationPackage,
     after: &Deck,
     limits: &ImportLimits,
-) -> Result<Vec<(String, Vec<u8>)>, ExportError> {
+) -> Result<DeckChanges, ExportError> {
     let xml_limits = *package.limits();
     let strict = package.conformance() == Conformance::Strict;
     let main = package.main_part().to_owned();
@@ -1694,6 +1731,7 @@ pub(crate) fn deck_changes(
         edits,
         rels: BTreeMap::new(),
         content_types: None,
+        removed: Vec::new(),
     };
 
     let quietly = |limits: &ImportLimits| Findings::new(limits.max_findings);
@@ -1770,6 +1808,7 @@ pub(crate) fn deck_changes(
         mut edits,
         rels,
         content_types,
+        removed,
         ..
     } = save;
     for (name, tree) in rels {
@@ -1778,5 +1817,16 @@ pub(crate) fn deck_changes(
     if let Some(tree) = content_types {
         edits.insert("[Content_Types].xml".to_owned(), tree.to_bytes());
     }
-    Ok(edits.into_iter().collect())
+    Ok(DeckChanges {
+        parts: edits.into_iter().collect(),
+        removed_rels: removed,
+    })
+}
+
+/// What [`deck_changes`] asks of the writer.
+pub(crate) struct DeckChanges {
+    /// Parts with their new bytes.
+    pub(crate) parts: Vec<(String, Vec<u8>)>,
+    /// Relationships removed on purpose, with a part the model dropped, as (source, id).
+    pub(crate) removed_rels: Vec<(String, String)>,
 }
