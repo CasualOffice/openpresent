@@ -63,6 +63,7 @@ the central directory, before anything is inflated.
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
 | `MAX_SCRUBBED_NAME` | `200` | Characters of a damaged entry's name repeated in a report or a retained name | none: text only | Tested by `an_unsafe_name_never_becomes_a_part` |
+| `MAX_CHOOSING_BYTES` | `256 << 20` | The most of one entry inflated into memory to choose between entries naming one part | none: that entry is not chosen on its content | Untested |
 | `MAX_REFERENCE` | `32` | How far the recovering XML reader looks for a reference's `;`. Past it, the `&` is literal text | none: text only | Tested by `broken_nesting_is_closed` |
 
 The recovering XML reader, `crates/casual-slide-ooxml/src/recover_xml.rs` (`REC-03`), holds to `OoxmlLimits` as `walk` does, with one difference: `max_xml_elements`, `max_xml_depth` and `max_xml_attributes` stop the reading of that part and keep what was read (`CS-REC-0307`), and a reading over `max_xml_part_bytes` is given up, so the part is set aside. `max_part_relationships`, `max_total_relationships` and `max_content_types` keep what fits.

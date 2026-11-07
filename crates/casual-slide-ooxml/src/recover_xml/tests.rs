@@ -245,6 +245,30 @@ fn deep_nesting_uses_no_stack() {
     assert_eq!(out.root_local.as_deref(), Some("a"));
 }
 
+/// Each of these is a part made of openers with no closer. Rescanning for the closer at
+/// each costs its length squared, which at this size is minutes where this is milliseconds.
+#[test]
+fn a_flood_of_openers_costs_no_more_than_its_length() {
+    for opener in [
+        "<!--",
+        "<?a ",
+        "<!DOCTYPE a ",
+        "<![CDATA[",
+        "<a b=\"",
+        "<a b='",
+        "</",
+        "<",
+    ] {
+        let mut input = b"<r>".to_vec();
+        input.extend(opener.as_bytes().repeat((1 << 22) / opener.len()));
+        let started = std::time::Instant::now();
+        let out = recover_xml(&input, &limits(), Prune::Nothing);
+        assert_admitted(&out, &limits());
+        let took = started.elapsed();
+        assert!(took.as_secs() < 60, "{opener}: {took:?}");
+    }
+}
+
 /// What is outside any text the part holds does not appear in a repair.
 #[test]
 fn a_repair_holds_no_document_text() {

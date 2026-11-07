@@ -17,7 +17,7 @@ fn fixtures() -> PathBuf {
 
 fn open(path: &str) -> PresentationPackage {
     let bytes = std::fs::read(fixtures().join(path)).unwrap();
-    PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap()
+    PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap()
 }
 
 fn import(path: &str) -> Result<ImportedDeck, ImportError> {
@@ -49,13 +49,63 @@ fn a_count_past_its_bound_refuses_with_its_code() {
     }
 }
 
+/// Without `strict`, each of those bounds stops work on its part, and the deck opens.
+#[test]
+fn a_count_past_its_bound_stops_only_that_part() {
+    for name in [
+        "slides",
+        "masters",
+        "custom-shows",
+        "show-slides",
+        "fonts",
+        "customer-data",
+        "guides",
+        "custom-properties",
+        "keywords",
+        "variant-items",
+        "variant-depth",
+        "value-bytes",
+    ] {
+        let path = format!("hostile/import-limit-{name}.bin");
+        let bytes = std::fs::read(fixtures().join(&path)).unwrap();
+        let mut pkg = PresentationPackage::open(bytes.clone(), OoxmlLimits::default()).unwrap();
+        let read = import_deck(&mut pkg, &ImportLimits::default())
+            .unwrap_or_else(|err| panic!("{name}: {err}"));
+        assert!(
+            read.findings.iter().any(|f| f.kind == K::UnreadablePart),
+            "{name}"
+        );
+        assert!(pkg.was_repaired(), "{name}");
+        assert_eq!(pkg.save_unedited(), bytes, "{name}");
+    }
+}
+
+/// Without `strict`, what is unreadable is set aside, and a clean one stands in for it.
+#[test]
+fn an_unreadable_optional_part_is_replaced_without_strict() {
+    let mut pkg = open("generated/rich-properties.pptx");
+    let mut edits = casual_slide_package::PartEdits::default();
+    edits.replace("docProps/core.xml", b"<workbook/>".to_vec());
+    edits.replace("ppt/viewProps.xml", b"not xml <".to_vec());
+    edits.replace("docProps/app.xml", b"<!DOCTYPE a><a/>".to_vec());
+    let bytes = pkg.save_with(&edits).unwrap();
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let d = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
+    assert!(d.deck.properties.core.is_some());
+    assert!(d.deck.view_properties.is_some());
+    assert!(pkg.is_damaged("docProps/core.xml"));
+    assert!(pkg.is_damaged("ppt/viewProps.xml"));
+    assert!(pkg.is_damaged("docProps/app.xml"));
+    assert!(d.deck.properties.custom.is_some(), "the rest is as it was");
+}
+
 /// `PKG-02`: a target percent-encoded, as Part 2 allows, is the part it names. Compared
 /// with ASCII case alone, this deck's properties were dropped as unusable.
 #[test]
 fn a_percent_encoded_target_reaches_its_part() {
     const RELS: &str = "ppt/_rels/presentation.xml.rels";
     let bytes = std::fs::read(fixtures().join("generated/rich-properties.pptx")).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let plain = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
     assert!(plain.deck.presentation_properties.is_some());
 
@@ -66,7 +116,7 @@ fn a_percent_encoded_target_reaches_its_part() {
     edits.replace(RELS, encoded.into_bytes());
     let saved = pkg.save_with(&edits).unwrap();
 
-    let mut pkg = PresentationPackage::open(saved, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(saved, OoxmlLimits::default()).unwrap();
     let imported = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
     assert_eq!(
         imported.deck.presentation_properties,
@@ -280,7 +330,7 @@ fn an_unreadable_optional_part_is_reported_and_the_deck_opens() {
     );
     edits.replace("ppt/viewProps.xml", b"not xml <".to_vec());
     let bytes = pkg.save_with(&edits).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let d = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
     assert_eq!(d.deck.properties.core, None);
     assert_eq!(d.deck.view_properties, None);
@@ -303,7 +353,7 @@ fn a_document_type_in_an_optional_part_still_refuses_the_deck() {
     let mut edits = casual_slide_package::PartEdits::default();
     edits.replace("docProps/core.xml", b"<!DOCTYPE a><a/>".to_vec());
     let bytes = pkg.save_with(&edits).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let err = import_deck(&mut pkg, &ImportLimits::default()).unwrap_err();
     assert_eq!(err.code(), "CS-XML-0005");
 }

@@ -391,6 +391,12 @@ struct Reader<'t, 'l> {
     strict_namespaces: bool,
     left_out: usize,
     stopped: bool,
+    /// A search for a closer found none, so none is ahead of any later opener either.
+    /// Without these, a part of nothing but `<!--` costs its length squared.
+    no_comment_end: bool,
+    no_instruction_end: bool,
+    /// As those, for a document type that ran to the end of the part.
+    doctype_unclosed: bool,
 }
 
 impl Reader<'_, '_> {
@@ -503,7 +509,13 @@ impl Reader<'_, '_> {
 
     fn comment(&mut self) {
         let body_at = self.at + 4;
-        let Some(end) = self.text.get(body_at..).and_then(|r| r.find("-->")) else {
+        let found = if self.no_comment_end {
+            None
+        } else {
+            self.text.get(body_at..).and_then(|r| r.find("-->"))
+        };
+        let Some(end) = found else {
+            self.no_comment_end = true;
             self.repair(XmlRepair::NestingClosed);
             let next = self.text.get(body_at..).and_then(|r| r.find('<'));
             self.at = next.map_or(self.text.len(), |i| body_at + i);
@@ -554,6 +566,11 @@ impl Reader<'_, '_> {
     /// brackets and quotes that show where it ends are read.
     fn doctype(&mut self) {
         self.repairs.insert(XmlRepair::DoctypeSkipped);
+        if self.doctype_unclosed {
+            let rest = self.text.get(self.at + 2..).unwrap_or_default();
+            self.at = rest.find('<').map_or(self.text.len(), |i| self.at + 2 + i);
+            return;
+        }
         let mut depth = 0usize;
         let mut quote = None;
         let bytes = self.bytes();
@@ -575,6 +592,7 @@ impl Reader<'_, '_> {
             i += 1;
         }
         // Never closed: it took the rest of the part with it. Try again from the root.
+        self.doctype_unclosed = end.is_none();
         self.at = end.unwrap_or_else(|| {
             let rest = self.text.get(self.at + 2..).unwrap_or_default();
             rest.find('<').map_or(self.text.len(), |i| self.at + 2 + i)
@@ -583,7 +601,13 @@ impl Reader<'_, '_> {
 
     fn instruction(&mut self) {
         let body_at = self.at + 2;
-        let Some(end) = self.text.get(body_at..).and_then(|r| r.find("?>")) else {
+        let found = if self.no_instruction_end {
+            None
+        } else {
+            self.text.get(body_at..).and_then(|r| r.find("?>"))
+        };
+        let Some(end) = found else {
+            self.no_instruction_end = true;
             self.repair(XmlRepair::NestingClosed);
             let next = self.text.get(body_at..).and_then(|r| r.find('<'));
             self.at = next.map_or(self.text.len(), |i| body_at + i);
@@ -703,11 +727,9 @@ impl Reader<'_, '_> {
         if let Some(q @ (b'"' | b'\'')) = quote {
             let start = self.at + 1;
             let rest = self.text.get(start..).unwrap_or_default();
-            let closing = rest.as_bytes().iter().position(|b| *b == q);
-            let lt = rest.as_bytes().iter().position(|b| *b == b'<');
-            if let Some(close) = closing
-                && lt.is_none_or(|l| close < l)
-            {
+            // Up to the first of them, so a value costs only what it consumes.
+            let first = rest.as_bytes().iter().position(|b| *b == q || *b == b'<');
+            if let Some(close) = first.filter(|at| rest.as_bytes().get(*at) == Some(&q)) {
                 self.at = start + close + 1;
                 return self.text.get(start..start + close).unwrap_or_default();
             }
@@ -1084,6 +1106,9 @@ pub fn recover_xml(bytes: &[u8], limits: &OoxmlLimits, prune: Prune) -> Recovere
         strict_namespaces: false,
         left_out: 0,
         stopped: false,
+        no_comment_end: false,
+        no_instruction_end: false,
+        doctype_unclosed: false,
     };
     reader.run();
     let Reader {

@@ -467,6 +467,47 @@ fn a_deck_is_built_from_whatever_slides_exist() {
     assert_eq!(tree.local_name(tree.root()), "presentation");
 }
 
+/// Entries on a list that name nothing, in a number no real deck has. Taken off one at a time,
+/// that is a search of the list for each: its length squared, which here is minutes.
+#[test]
+fn a_flood_of_list_entries_costs_no_more_than_its_length() {
+    let entries = "<p:sldId id=\"256\" r:id=\"rId999999\"/>".repeat(200_000);
+    let main = format!(
+        "<p:presentation xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" \
+         xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">\
+         <p:sldIdLst>{entries}</p:sldIdLst><p:notesSz cx=\"1\" cy=\"1\"/></p:presentation>"
+    );
+    // The part is whole. What starts the repair is the relationships gone from the package.
+    let deck = with(
+        &without(&minimal(), &["_rels/.rels"]),
+        &[("ppt/presentation.xml", main.as_bytes())],
+    );
+    let started = std::time::Instant::now();
+    let mut pkg = open(deck);
+    pkg.save_repaired().unwrap();
+    let took = started.elapsed();
+    assert!(took.as_secs() < 60, "{took:?}");
+    assert!(repaired(&pkg).contains(&Repair::ListEntryDropped));
+}
+
+/// Building edits, and writing them over as many entries: a search of the edits for each,
+/// in either place, is a product. Seen to run past an hour with `PartEdits::replace` searching.
+#[test]
+fn many_edits_over_many_entries_cost_their_sum() {
+    let names: Vec<String> = (0..20_000).map(|i| format!("ppt/x{i}.bin")).collect();
+    let started = std::time::Instant::now();
+    let parts: Vec<(&str, &[u8])> = names.iter().map(|n| (n.as_str(), &b"x"[..])).collect();
+    let deck = with(&minimal(), &parts);
+    let mut package = Package::open(deck, Default::default()).unwrap();
+    let mut edits = PartEdits::default();
+    for name in &names {
+        edits.replace(name.clone(), b"y".to_vec());
+    }
+    package.rewrite(&edits).unwrap();
+    let took = started.elapsed();
+    assert!(took.as_secs() < 60, "{took:?}");
+}
+
 #[test]
 fn opening_twice_gives_one_image() {
     let deck = without(&read("generated/three-slides.pptx"), &["_rels/.rels"]);

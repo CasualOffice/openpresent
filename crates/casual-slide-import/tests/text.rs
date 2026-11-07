@@ -82,7 +82,7 @@ fn deck_with(
     limits: &ImportLimits,
 ) -> Result<ImportedSlides, casual_slide_import::slide::SlideError> {
     let bytes = std::fs::read(fixtures().join(path)).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let presentation = import_deck(&mut pkg, limits).unwrap().deck.presentation;
     import_slide_parts(&mut pkg, &presentation, &SlideLimits::default(), limits)
 }
@@ -409,7 +409,7 @@ fn every_property_deck_reads_as_written() {
 
     assert!(s.parts.get(0).is_some());
     let bytes = std::fs::read(fixtures().join("generated/text-every-property.pptx")).unwrap();
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(bytes, OoxmlLimits::default()).unwrap();
     let imported = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
     let default = imported.deck.presentation.default_text_style.unwrap();
     assert!(default.default.is_some());
@@ -873,7 +873,7 @@ fn every_paragraph_and_run_in_a_shapes_text_reaches_the_model() {
         let name = format!("real/{}", path.file_name().unwrap().to_string_lossy());
         let s = deck(&name);
         let mut pkg =
-            PresentationPackage::open(std::fs::read(&path).unwrap(), OoxmlLimits::default())
+            PresentationPackage::open_strict(std::fs::read(&path).unwrap(), OoxmlLimits::default())
                 .unwrap();
         for entry in &s.parts.structure.parts {
             let Some(part) = s.parts.get(entry.id.part) else {

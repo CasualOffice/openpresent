@@ -60,6 +60,29 @@ Recovering parsers are a classic attack surface, so:
 - **Scanner differential (`SEC-P05`).** Two readers can still disagree about a duplicate entry. We cannot prevent that for other software, so we report it, and on save we write only one.
 - A host can set `strict: true` to refuse instead, for deployments that prefer rejection to recovery, such as mail gateways. Default is recovery.
 
+## How it is built
+
+**One clean image.** The whole design is that readers and the writer never meet damage. `PresentationPackage::open` runs strict admission first. On any fault it repairs the package into a clean ZIP in memory that strict admission then accepts, and everything above reads that. The bytes as they arrived are kept apart, so an unedited save returns them, and a part made in the repair exists only until an edit writes it. A healthy deck takes the old path, and a part found damaged only when it is read starts the same repair then (`read_xml_part`). Before a save writes anything, every stream and XML part is seen to be sound (`prepare_for_edit`), so damage no reader reached is not carried into a new file; this is the cost of a first save, and it reads media. `open_strict` is the old refusal, with the old codes.
+
+| Layer | Where | What it does |
+|---|---|---|
+| Container | `casual-slide-package/src/salvage.rs` | Its own bounded reader, since `zip` merges duplicate names and refuses damage. Directory if whole, local headers otherwise, forward only. Deflate through `flate2`, on one budget |
+| Package and model | `casual-slide-ooxml/src/repair.rs` | Content types, relationships, the main part, and the chain from slide to layout to master to theme |
+| XML | `casual-slide-ooxml/src/recover_xml.rs` | One loop, no recursion, and its output is what `walk` admits. `XmlTree::parse_recovering` keeps a tree byte-faithful: untouched, it writes back what arrived |
+| Report | `casual-slide-ooxml/src/recovery.rs` | `recovery_report()`, codes `CS-REC-*` in [20](20-ERROR-CODE-REGISTRY.md), and sentences with no document text |
+
+**A damaged part's bytes are never lost.** They go to a retained entry, `recovered/NNNNN-name.retained`, declared `application/octet-stream`, that no relationship reaches. Duplicate, colliding, unsafe, encrypted and over-limit entries go there too, by their compressed bytes, not decompressed. So "a part we could only partly read is rewritten only if the user edits it" holds like this: an unedited save returns it in place, and an edit keeps its bytes under `recovered/` while a valid form stands where it was.
+
+**What stands in its place is what can be trusted.** A repair marks the elements it is inside. In a slide-like part, a shape or an optional child holding a mark is left out whole, and the rest is what arrived. So a slide with one broken shape keeps the others; a slide with none left, or none readable, is an empty slide marked damaged (`ImportedPart::damaged`, `ImportedSlides::damaged`). Other parts with a known role get an empty valid stand-in. A part with neither a role nor a readable reading outside a schema-bound namespace is removed with its links, and retained.
+
+**A limit in a reader above is a repair too.** Import's limits, under `strict` a refusal with their own codes, set the part aside by default (`set_part_aside`).
+
+### What a repair cannot see
+
+- **Well-formed and merely wrong.** A value changed to another legal character, with a valid checksum, is not damage anyone can detect without validating against the schema, which the engine does not do. Such a part reads and is retained, as any third-party deck that breaks a rule is ([36](36-EXPORT-AND-SAVE.md)), and F4 reports it. The corpus's broken XML is what `walk` refuses, for this reason.
+- **A checksum that fails on a part that still parses.** The bytes are kept and it is reported (`CS-REC-0104`), as the table above says. They may be wrong in a way that is schema-invalid. See the corpus's counts below for how often F4 sees it.
+- **A relationship in a kept shape whose target is gone.** The `r:id` stays in the shape, and the link is reported. Rebuilt relationships cannot say what an old id meant.
+
 ## Evidence
 
 The gate is a **damage corpus** generated from real decks: truncations, flipped bytes, removed parts, broken XML at many offsets. Every deck must open or be refused by one of the rules above, never panic or hang, and output valid files after an edit. Tracked as `REC-*` in [14](14-EXECUTION-TRACKER.md).

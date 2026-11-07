@@ -511,6 +511,7 @@ fn keep_in_order(tree: &mut XmlTree, parent: ElementId, order: &[(&str, u8)]) {
     let mut seen: BTreeSet<String> = BTreeSet::new();
     // Rank 2 under spTree is the one that repeats; elsewhere each name is once.
     let repeats = order.iter().filter(|(_, r)| *r == 2).count() > 3;
+    let mut gone = Vec::new();
     for child in tree.child_elements(parent) {
         let local = tree.local_name(child).to_owned();
         let rank = order.iter().find(|(n, _)| *n == local).map(|(_, r)| *r);
@@ -521,25 +522,28 @@ fn keep_in_order(tree: &mut XmlTree, parent: ElementId, order: &[(&str, u8)]) {
         if keep {
             last_rank = rank;
         } else {
-            tree.remove_child(parent, child);
+            gone.push(child);
         }
     }
+    tree.remove_children(parent, &gone);
 }
 
 /// Take every element in one of `namespaces` out of the tree. No recursion on the input.
 fn remove_elements_in(tree: &mut XmlTree, namespaces: &BTreeSet<String>) {
     let mut stack = vec![tree.root()];
     while let Some(id) = stack.pop() {
+        let mut gone = Vec::new();
         for child in tree.child_elements(id) {
             let inside = tree
                 .namespace(child)
                 .is_some_and(|n| namespaces.contains(&n));
             if inside {
-                tree.remove_child(id, child);
+                gone.push(child);
             } else {
                 stack.push(child);
             }
         }
+        tree.remove_children(id, &gone);
     }
 }
 
@@ -803,6 +807,7 @@ pub(crate) fn repair_package(
         total_rels: 0,
         next_master_id: FIRST_MASTER_ID,
         list_cap,
+        link_index: BTreeMap::new(),
     };
     work.run(aside)
 }
@@ -833,6 +838,44 @@ struct Work<'p> {
     next_master_id: u64,
     /// The most a rebuilt list of slides or masters may hold.
     list_cap: usize,
+    /// Each source's relationships by kind and target, once it has been linked from.
+    link_index: BTreeMap<String, LinkIndex>,
+}
+
+/// What [`Work::link_new`] needs to know of a source's relationships.
+#[derive(Debug, Default)]
+struct LinkIndex {
+    by_target: std::collections::HashMap<(String, String), String>,
+    /// One above the highest `rIdN`, so a new id is free without looking.
+    next: u64,
+}
+
+impl LinkIndex {
+    fn of(source: &str, list: &[Relationship]) -> Self {
+        let mut index = Self {
+            by_target: std::collections::HashMap::with_capacity(list.len()),
+            next: 1,
+        };
+        for r in list {
+            if let Some(n) = r.id.strip_prefix("rId").and_then(|n| n.parse::<u64>().ok()) {
+                index.next = index.next.max(n.saturating_add(1));
+            }
+            if r.mode != TargetMode::Internal {
+                continue;
+            }
+            let (Some(kind), Some(key)) = (
+                rel_kind(&r.rel_type),
+                resolve_internal(source, &r.target).and_then(|t| part_name_key(&t)),
+            ) else {
+                continue;
+            };
+            index
+                .by_target
+                .entry((kind.to_owned(), key))
+                .or_insert_with(|| r.id.clone());
+        }
+        index
+    }
 }
 
 impl Work<'_> {
@@ -1209,6 +1252,7 @@ impl Work<'_> {
     }
 
     fn set_main_rel(&mut self, main: &str) {
+        self.link_index.remove("");
         let spelled = self.rel_type("officeDocument");
         let mut list = self.rels.remove("").unwrap_or_default();
         list.retain(|r| rel_kind(&r.rel_type) != Some("officeDocument"));
@@ -1353,6 +1397,7 @@ impl Work<'_> {
 
     /// Take a part out of the image, with its `.rels` and every link to it.
     fn remove_part(&mut self, name: &str) {
+        self.link_index.clear();
         self.gone.insert(name.to_owned());
         self.out.remove(name);
         let key = entry_key(name);
@@ -1415,32 +1460,46 @@ impl Work<'_> {
 
     /// Add a relationship unless one of this kind to this part is there. Its id.
     fn link(&mut self, source: &str, kind: &str, part: &str) -> String {
-        let mut list = self.rels.remove(source).unwrap_or_default();
-        let existing = list.iter().find(|r| {
-            rel_kind(&r.rel_type) == Some(kind)
-                && r.mode == TargetMode::Internal
-                && resolve_internal(source, &r.target).and_then(|t| part_name_key(&t))
-                    == part_name_key(part)
-        });
-        let id = match existing {
-            Some(r) => r.id.clone(),
-            None => {
-                let id = next_rel_id(&list);
-                if let (Some(role), Some(key)) = (Role::of_rel_kind(kind), part_name_key(part)) {
-                    self.link_roles.entry(key).or_insert(role);
-                }
-                list.push(Relationship {
-                    id: id.clone(),
-                    rel_type: self.rel_type(kind),
-                    target: relative_target(source, part),
-                    mode: TargetMode::Internal,
-                });
-                self.rels_dirty.insert(source.to_owned());
-                id
-            }
+        self.link_new(source, kind, part).0
+    }
+
+    /// [`Work::link`], and whether the link is new. Through an index, so that linking every
+    /// part of a large deck to its main part costs its length and not its square.
+    fn link_new(&mut self, source: &str, kind: &str, part: &str) -> (String, bool) {
+        if !self.link_index.contains_key(source) {
+            let built = LinkIndex::of(source, self.rels.get(source).map_or(&[], Vec::as_slice));
+            self.link_index.insert(source.to_owned(), built);
+        }
+        let key = part_name_key(part);
+        let wanted = (kind.to_owned(), key.clone().unwrap_or_default());
+        if let Some(id) = self
+            .link_index
+            .get(source)
+            .and_then(|index| index.by_target.get(&wanted))
+        {
+            return (id.clone(), false);
+        }
+        let rel_type = self.rel_type(kind);
+        let Some(index) = self.link_index.get_mut(source) else {
+            return (String::new(), false);
         };
-        self.rels.insert(source.to_owned(), list);
-        id
+        let id = format!("rId{}", index.next);
+        index.next = index.next.saturating_add(1);
+        index.by_target.insert(wanted, id.clone());
+        if let (Some(role), Some(key)) = (Role::of_rel_kind(kind), key) {
+            self.link_roles.entry(key).or_insert(role);
+        }
+        self.rels
+            .entry(source.to_owned())
+            .or_default()
+            .push(Relationship {
+                id: id.clone(),
+                rel_type,
+                target: relative_target(source, part),
+                mode: TargetMode::Internal,
+            });
+        self.rels_dirty.insert(source.to_owned());
+        (id, true)
     }
 
     /// Make a new part from its role's stand-in.
@@ -1512,7 +1571,11 @@ impl Work<'_> {
 
     /// `r:id`s on the lists with no relationship.
     fn unresolved_list_entries(&self, tree: &XmlTree, main: &str) -> Vec<ElementId> {
-        let rels = self.rels_of(main);
+        let rels: std::collections::HashSet<&str> = self
+            .rels
+            .get(main)
+            .map(|list| list.iter().map(|r| r.id.as_str()).collect())
+            .unwrap_or_default();
         let mut out = Vec::new();
         for (list, entry) in [
             ("sldMasterIdLst", "sldMasterId"),
@@ -1528,7 +1591,7 @@ impl Work<'_> {
                     continue;
                 }
                 let id = rel_id_of(tree, el);
-                if !id.is_some_and(|id| rels.iter().any(|r| r.id == id)) {
+                if !id.is_some_and(|id| rels.contains(id.as_str())) {
                     out.push(el);
                 }
             }
@@ -1537,10 +1600,19 @@ impl Work<'_> {
     }
 
     fn drop_list_entries(&mut self, mut tree: XmlTree, main: &str, entries: &[ElementId]) {
+        // Every entry is on one of four lists, so this is a few passes however many there are.
+        let mut by_list: Vec<(ElementId, Vec<ElementId>)> = Vec::new();
         for &el in entries {
-            if let Some(parent) = tree.parent_element(el) {
-                tree.remove_child(parent, el);
+            let Some(parent) = tree.parent_element(el) else {
+                continue;
+            };
+            match by_list.iter_mut().find(|(list, _)| *list == parent) {
+                Some((_, gone)) => gone.push(el),
+                None => by_list.push((parent, vec![el])),
             }
+        }
+        for (list, gone) in by_list {
+            tree.remove_children(list, &gone);
         }
         self.note(Repair::ListEntryDropped, main);
         self.out.insert(main.to_owned(), tree.to_bytes());
@@ -1553,12 +1625,11 @@ impl Work<'_> {
         let masters = self.discover(Role::Master, main);
         let mut slides = self.discover(Role::Slide, main);
         // The order the old list held, where the part still says.
-        let position = |name: &String| {
-            order
-                .iter()
-                .position(|o| entry_key(o) == entry_key(name))
-                .unwrap_or(usize::MAX)
-        };
+        let mut places = std::collections::HashMap::with_capacity(order.len());
+        for (at, name) in order.iter().enumerate() {
+            places.entry(entry_key(name)).or_insert(at);
+        }
+        let position = |name: &String| places.get(&entry_key(name)).copied().unwrap_or(usize::MAX);
         slides.sort_by_key(|n| (position(n), natural_key(n)));
         slides.truncate(self.list_cap);
         let masters: Vec<String> = masters.into_iter().take(self.list_cap).collect();
@@ -1578,12 +1649,15 @@ impl Work<'_> {
         ] {
             // The theme a master has is the master's. Only one with no owner is the deck's.
             let parts = self.discover(role.0, main);
-            let free = parts.iter().find(|p| {
-                role.0 != Role::Theme
-                    || !masters
-                        .iter()
-                        .any(|m| self.targets(m, "theme").iter().any(|t| t == *p))
-            });
+            let owned: BTreeSet<String> = if role.0 == Role::Theme {
+                masters
+                    .iter()
+                    .flat_map(|m| self.targets(m, "theme"))
+                    .collect()
+            } else {
+                BTreeSet::new()
+            };
+            let free = parts.iter().find(|p| !owned.contains(*p));
             if let Some(part) = free.cloned() {
                 self.link(main, role.1, &part);
             }
@@ -1657,14 +1731,16 @@ impl Work<'_> {
     }
 
     fn old_slide_order(&self, tree: &XmlTree, main: &str) -> Vec<String> {
-        let rels = self.rels_of(main);
+        let rels = self.rels.get(main).map_or(&[][..], Vec::as_slice);
+        let by_id: std::collections::HashMap<&str, &Relationship> =
+            rels.iter().map(|r| (r.id.as_str(), r)).collect();
         let Some(list) = tree.child(tree.root(), "sldIdLst") else {
             return Vec::new();
         };
         tree.child_elements(list)
             .into_iter()
             .filter_map(|el| rel_id_of(tree, el))
-            .filter_map(|id| rels.iter().find(|r| r.id == id))
+            .filter_map(|id| by_id.get(id.as_str()).copied())
             .filter_map(|r| self.target_of(main, r))
             .collect()
     }
@@ -1681,11 +1757,15 @@ impl Work<'_> {
         }
         // Notes and handout masters have no id to mend them with.
         for local in ["notesMasterIdLst", "handoutMasterIdLst"] {
+            let ids: std::collections::HashSet<&str> = self
+                .rels
+                .get(main)
+                .map(|list| list.iter().map(|r| r.id.as_str()).collect())
+                .unwrap_or_default();
             let dangling = tree.child(root, local).is_some_and(|list| {
-                tree.child_elements(list).iter().any(|el| {
-                    !rel_id_of(&tree, *el)
-                        .is_some_and(|id| self.rels_of(main).iter().any(|r| r.id == id))
-                })
+                tree.child_elements(list)
+                    .iter()
+                    .any(|el| !rel_id_of(&tree, *el).is_some_and(|id| ids.contains(id.as_str())))
             });
             if dangling && let Some(list) = tree.child(root, local) {
                 tree.remove_child(root, list);
@@ -1756,7 +1836,18 @@ impl Work<'_> {
     }
 
     fn add_master_to_main(&mut self, main: &str, master: &str) {
-        let id = self.link(main, "slideMaster", master);
+        self.add_masters_to_main(main, std::slice::from_ref(&master.to_owned()));
+    }
+
+    /// Put masters on the main part's list, in one parse however many there are.
+    fn add_masters_to_main(&mut self, main: &str, masters: &[String]) {
+        if masters.is_empty() {
+            return;
+        }
+        let ids: Vec<String> = masters
+            .iter()
+            .map(|master| self.link(main, "slideMaster", master))
+            .collect();
         let Some(bytes) = self.read(main) else { return };
         let Ok(mut tree) = XmlTree::parse(&bytes, main, self.limits) else {
             return;
@@ -1784,13 +1875,21 @@ impl Work<'_> {
                 tree.insert_element(root, first, &format!("{prefix}:sldMasterIdLst"), &[])
             }
         };
-        let n = self.fresh_master_id(&tree, list);
-        tree.insert_element(
-            list,
-            None,
-            &format!("{prefix}:sldMasterId"),
-            &[("id", &n), (&format!("{r}:id"), &id)],
-        );
+        let mut n: u64 = self
+            .fresh_master_id(&tree, list)
+            .parse()
+            .unwrap_or(FIRST_MASTER_ID);
+        for id in &ids {
+            let number = n.to_string();
+            n = n.saturating_add(1);
+            tree.insert_element(
+                list,
+                None,
+                &format!("{prefix}:sldMasterId"),
+                &[("id", &number), (&format!("{r}:id"), id)],
+            );
+        }
+        self.next_master_id = self.next_master_id.max(n);
         self.out.insert(main.to_owned(), tree.to_bytes());
     }
 
@@ -1878,10 +1977,11 @@ impl Work<'_> {
         let slides = self.targets(main, "slide");
         let mut orphans = Vec::new();
         let mut layouts: Vec<String> = Vec::new();
+        let mut layouts_seen: BTreeSet<String> = BTreeSet::new();
         for slide in &slides {
             match self.linked_or_made(slide, "slideLayout", Role::Layout, Repair::LayoutSupplied) {
                 Some(layout) => {
-                    if !layouts.contains(&layout) {
+                    if layouts_seen.insert(layout.clone()) {
                         layouts.push(layout);
                     }
                 }
@@ -1890,55 +1990,73 @@ impl Work<'_> {
         }
         for master in self.targets(main, "slideMaster") {
             for layout in self.targets(&master, "slideLayout") {
-                if !layouts.contains(&layout) {
+                if layouts_seen.insert(layout.clone()) {
                     layouts.push(layout);
                 }
             }
         }
-        // The layouts each master holds, against a fresh look after anything was added.
+        // Looked at once, and kept up to date: a deck may have any number of layouts.
+        let mut listed: BTreeSet<String> = self.targets(main, "slideMaster").into_iter().collect();
+        let mut unlisted: Vec<String> = Vec::new();
+        let mut first: Option<String> = None;
         let mut touched_masters: BTreeSet<String> = BTreeSet::new();
         for layout in &layouts {
             let has =
                 self.linked_or_made(layout, "slideMaster", Role::Master, Repair::MasterSupplied);
             let master = match has {
                 Some(master) => {
-                    if !self.targets(main, "slideMaster").contains(&master) {
-                        self.add_master_to_main(main, &master);
+                    if listed.insert(master.clone()) {
+                        unlisted.push(master.clone());
                     }
                     master
                 }
                 None => {
-                    let master = self.first_master(main);
+                    let master = match &first {
+                        Some(master) => master.clone(),
+                        None => self.first_master(main),
+                    };
+                    first = Some(master.clone());
+                    listed.insert(master.clone());
                     self.link(layout, "slideMaster", &master);
                     self.note(Repair::MasterSupplied, layout);
                     master
                 }
             };
-            if !self.targets(&master, "slideLayout").contains(layout) {
-                self.link(&master, "slideLayout", layout);
+            if self.link_new(&master, "slideLayout", layout).1 {
                 touched_masters.insert(master);
             }
         }
+        self.add_masters_to_main(main, &unlisted);
+        let mut nearest: Option<String> = None;
         for slide in orphans {
-            let master = self.first_master(main);
-            let existing = self.targets(&master, "slideLayout").into_iter().next();
-            let layout = match existing {
-                Some(layout) => layout,
+            let layout = match &nearest {
+                Some(layout) => layout.clone(),
                 None => {
-                    let name = self.numbered_name("ppt/slideLayouts/slideLayout", "xml");
-                    self.create_part(&name, Role::Layout);
-                    self.link(&name, "slideMaster", &master);
-                    self.link(&master, "slideLayout", &name);
-                    touched_masters.insert(master.clone());
-                    name
+                    let master = match &first {
+                        Some(master) => master.clone(),
+                        None => self.first_master(main),
+                    };
+                    first = Some(master.clone());
+                    let existing = self.targets(&master, "slideLayout").into_iter().next();
+                    existing.unwrap_or_else(|| {
+                        let name = self.numbered_name("ppt/slideLayouts/slideLayout", "xml");
+                        self.create_part(&name, Role::Layout);
+                        self.link(&name, "slideMaster", &master);
+                        self.link(&master, "slideLayout", &name);
+                        touched_masters.insert(master.clone());
+                        name
+                    })
                 }
             };
+            nearest = Some(layout.clone());
             self.link(&slide, "slideLayout", &layout);
             self.note(Repair::LayoutSupplied, &slide);
         }
-        for master in self.targets(main, "slideMaster") {
-            self.fix_theme(&master, main);
-            self.sync_master_list(&master, touched_masters.contains(&master));
+        let masters = self.targets(main, "slideMaster");
+        let mut free_themes: Option<Vec<String>> = None;
+        for master in &masters {
+            self.fix_theme(master, main, &masters, &mut free_themes);
+            self.sync_master_list(master, touched_masters.contains(master));
         }
     }
 
@@ -1972,6 +2090,7 @@ impl Work<'_> {
                 continue;
             }
             if let Some(part) = self.discover(role, main).into_iter().next() {
+                self.link_index.remove("");
                 let mut list = self.rels.remove("").unwrap_or_default();
                 let id = next_rel_id(&list);
                 list.push(Relationship {
@@ -1991,35 +2110,57 @@ impl Work<'_> {
         let rels = self.rels_of("");
         let suffix = format!("/{kind}");
         for r in rels.iter().filter(|r| r.rel_type.ends_with(&suffix)) {
-            if self.target_of("", r).is_none()
-                && r.mode == TargetMode::Internal
-                && let Some(target) = resolve_internal("", &r.target)
-                && is_safe_new_name(&target)
-            {
-                self.create_part(&target, role);
-                self.note(Repair::PartSupplied, &target);
+            if self.target_of("", r).is_some() {
+                continue;
+            }
+            match resolve_internal("", &r.target).filter(|t| is_safe_new_name(t)) {
+                Some(target) if r.mode == TargetMode::Internal => {
+                    self.create_part(&target, role);
+                    self.note(Repair::PartSupplied, &target);
+                }
+                // A link to nowhere anything could be: ignored, and reported. A part of this
+                // role that exists can then be linked, and an edit has somewhere to go.
+                _ => {
+                    self.link_index.remove("");
+                    if let Some(list) = self.rels.get_mut("") {
+                        list.retain(|x| x.id != r.id);
+                    }
+                    self.rels_dirty.insert(String::new());
+                    self.note(Repair::RelationshipsRebuilt, "_rels/.rels");
+                }
             }
         }
     }
 
-    fn fix_theme(&mut self, master: &str, main: &str) {
+    fn fix_theme(
+        &mut self,
+        master: &str,
+        main: &str,
+        masters: &[String],
+        free_themes: &mut Option<Vec<String>>,
+    ) {
         if self
             .linked_or_made(master, "theme", Role::Theme, Repair::ThemeSupplied)
             .is_some()
         {
             return;
         }
-        // A theme belongs to one master, so one no master has is the only one to take.
-        let masters = self.targets(main, "slideMaster");
-        let taken: Vec<String> = masters
-            .iter()
-            .flat_map(|m| self.targets(m, "theme"))
-            .collect();
-        let free = self
-            .discover(Role::Theme, main)
-            .into_iter()
-            .find(|t| !taken.contains(t));
-        let theme = free.unwrap_or_else(|| {
+        // A theme belongs to one master, so one no master has is the only one to take. Found
+        // once, for however many masters have none.
+        let free = free_themes.get_or_insert_with(|| {
+            let taken: BTreeSet<String> = masters
+                .iter()
+                .flat_map(|m| self.targets(m, "theme"))
+                .collect();
+            let mut free: Vec<String> = self
+                .discover(Role::Theme, main)
+                .into_iter()
+                .filter(|t| !taken.contains(t))
+                .collect();
+            free.reverse();
+            free
+        });
+        let theme = free.pop().unwrap_or_else(|| {
             let name = self.numbered_name("ppt/theme/theme", "xml");
             self.create_part(&name, Role::Theme);
             name
@@ -2054,8 +2195,10 @@ impl Work<'_> {
                     .collect()
             })
             .unwrap_or_default();
-        let dangling = listed.iter().any(|id| !layout_ids.contains(id));
-        let unlisted = layout_ids.iter().any(|id| !listed.contains(id));
+        let wanted: BTreeSet<&String> = layout_ids.iter().collect();
+        let present: BTreeSet<&String> = listed.iter().collect();
+        let dangling = listed.iter().any(|id| !wanted.contains(id));
+        let unlisted = layout_ids.iter().any(|id| !present.contains(id));
         let was_mended = self.damaged.contains(master)
             || self.out.contains_key(master)
             || self.rels_dirty.contains(master);
@@ -2088,22 +2231,30 @@ impl Work<'_> {
         let r = tree
             .prefix_for_namespace(root, self.conformance.spell(R_NS))
             .unwrap_or_else(|| "r".to_owned());
-        for el in tree.child_elements(list) {
-            if !rel_id_of(&tree, el).is_some_and(|id| layout_ids.contains(&id)) {
-                tree.remove_child(list, el);
-            }
-        }
+        let gone: Vec<ElementId> = tree
+            .child_elements(list)
+            .into_iter()
+            .filter(|el| !rel_id_of(&tree, *el).is_some_and(|id| wanted.contains(&id)))
+            .collect();
+        tree.remove_children(list, &gone);
+        // Past every id on this list, once, and counted up from there.
+        let mut n: u64 = self
+            .fresh_master_id(&tree, list)
+            .parse()
+            .unwrap_or(FIRST_MASTER_ID);
         for id in &layout_ids {
-            if !listed.contains(id) {
-                let n = self.fresh_master_id(&tree, list);
+            if !present.contains(id) {
+                let number = n.to_string();
+                n = n.saturating_add(1);
                 tree.insert_element(
                     list,
                     None,
                     &format!("{prefix}:sldLayoutId"),
-                    &[("id", &n), (&format!("{r}:id"), id)],
+                    &[("id", &number), (&format!("{r}:id"), id)],
                 );
             }
         }
+        self.next_master_id = self.next_master_id.max(n);
         self.out.insert(master.to_owned(), tree.to_bytes());
     }
 

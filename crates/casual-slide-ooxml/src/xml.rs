@@ -1397,6 +1397,15 @@ impl XmlTree {
         false
     }
 
+    /// Take several children out of `parent` in one pass, so a hostile part with many costs
+    /// its length and not its square.
+    pub(crate) fn remove_children(&mut self, parent: ElementId, gone: &[ElementId]) {
+        let gone: std::collections::HashSet<usize> = gone.iter().map(|e| e.0).collect();
+        if let Node::Element { children, .. } = &mut self.nodes[parent.0] {
+            children.retain(|c| !gone.contains(c));
+        }
+    }
+
     /// Replace the run of elements `old` with `new`, slot by slot, so anything
     /// between them stays where it is. Spare slots close up; extra elements follow
     /// the last slot, or the last child element when there were no slots.

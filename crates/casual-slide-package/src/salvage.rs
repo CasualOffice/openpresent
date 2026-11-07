@@ -51,6 +51,9 @@ const RATIO_FLOOR: u64 = 1 << 20;
 pub const RETAINED_DIR: &str = "recovered/";
 /// The extension of a retained entry, so one `Default` declares them all.
 pub const RETAINED_EXTENSION: &str = "retained";
+/// The most of an entry inflated into memory to choose between entries naming one part. A
+/// part over this is not one of the parts that choice is for.
+const MAX_CHOOSING_BYTES: u64 = 256 << 20;
 /// The longest part of a name repeated in a retained entry's name or in a report.
 const MAX_SCRUBBED_NAME: usize = 200;
 
@@ -523,6 +526,8 @@ fn measure(b: &[u8], candidate: Candidate, limits: &PackageLimits, budget: &mut 
     if flags & FLAG_ENCRYPTED != 0 || (method != STORED && method != DEFLATED) {
         read.unreadable = true;
         read.span = start..claimed.map_or_else(|| next_record_after(b, start), |c| start + c);
+        // Looking costs what it looked at, or many records could each look at the whole file.
+        *budget = budget.saturating_sub(read.span.len() as u64);
         return read;
     }
     // Refused on the declaration, with nothing inflated. A stored entry cannot expand, so
@@ -541,10 +546,15 @@ fn measure(b: &[u8], candidate: Candidate, limits: &PackageLimits, budget: &mut 
         }
     }
     if method == STORED {
+        if *budget == 0 {
+            read.over_limit = true;
+            return read;
+        }
         let end = claimed.map_or_else(|| next_record_after(b, start), |c| start + c);
         let data = b.get(start..end).unwrap_or_default();
         read.span = start..end;
         if data.len() as u64 > *budget {
+            *budget = 0;
             read.over_limit = true;
             return read;
         }
@@ -571,10 +581,14 @@ fn measure(b: &[u8], candidate: Candidate, limits: &PackageLimits, budget: &mut 
     let cap = ratio_cap.min(*budget);
     let input = available.get(..input_len).unwrap_or(available);
     let mut seen = inflate(input, cap, |_| {});
+    // Input read costs as output does: a stream of empty blocks produces nothing, and many
+    // records can point at one.
+    let mut spent = seen.produced.max(seen.consumed);
     // A declared compressed size that was damaged can cut the stream short, when the rest
     // of the file carries on: try without the claim.
     if !seen.complete && !seen.over_cap && claimed.is_some() {
         let again = inflate(available, cap, |_| {});
+        spent = spent.saturating_add(again.produced.max(again.consumed));
         if again.complete {
             seen = again;
         }
@@ -582,7 +596,7 @@ fn measure(b: &[u8], candidate: Candidate, limits: &PackageLimits, budget: &mut 
     read.crc = seen.crc;
     read.produced = seen.produced;
     let used = usize::try_from(seen.consumed).unwrap_or(usize::MAX);
-    *budget = budget.saturating_sub(seen.produced);
+    *budget = budget.saturating_sub(spent);
     if seen.over_cap {
         read.span = start..start.saturating_add(input_len);
         read.over_limit = true;
@@ -852,6 +866,7 @@ pub fn salvage(
         }
     }
     let mut chosen = BTreeSet::new();
+    let choosing_budget = std::cell::Cell::new(limits.max_total_uncompressed);
     for group in groups.values() {
         let best = group.iter().rev().copied().find(|&i| {
             reads.get(i).is_some_and(|r| {
@@ -862,6 +877,10 @@ pub fn salvage(
                 if group.len() == 1 {
                     return true;
                 }
+                if r.produced > MAX_CHOOSING_BYTES || choosing_budget.get() < r.produced {
+                    return false;
+                }
+                choosing_budget.set(choosing_budget.get() - r.produced);
                 let name = names.get(i).and_then(Option::as_deref).unwrap_or_default();
                 accepts(name, &inflate_all(bytes, r, r.produced))
             })

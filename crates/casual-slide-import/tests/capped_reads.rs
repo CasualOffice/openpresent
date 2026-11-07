@@ -16,7 +16,7 @@ fn fixtures() -> PathBuf {
 #[test]
 fn an_oversized_optional_part_is_not_decompressed() {
     let source = std::fs::read(fixtures().join("generated/rich-properties.pptx")).unwrap();
-    let mut pkg = PresentationPackage::open(source, OoxmlLimits::default()).unwrap();
+    let mut pkg = PresentationPackage::open_strict(source, OoxmlLimits::default()).unwrap();
     // Valid, and large: the size is the only thing wrong with it.
     let padding = "<p:extLst/>".repeat(10_000);
     let big = format!(
@@ -31,7 +31,7 @@ fn an_oversized_optional_part_is_not_decompressed() {
         ..OoxmlLimits::default()
     };
     assert!(big.len() > limits.max_xml_part_bytes);
-    let mut pkg = PresentationPackage::open(deck, limits).unwrap();
+    let mut pkg = PresentationPackage::open_strict(deck.clone(), limits).unwrap();
     let before = pkg.consumed();
     let err = import_deck(&mut pkg, &ImportLimits::default()).unwrap_err();
     assert_eq!(err.code(), "CS-PKG-0009", "{err}");
@@ -39,5 +39,15 @@ fn an_oversized_optional_part_is_not_decompressed() {
     assert!(
         spent < big.len() as u64,
         "{spent} bytes read; the oversized part was decompressed"
+    );
+
+    // Without `strict` the deck opens, and the part is still not decompressed.
+    let mut pkg = PresentationPackage::open(deck, limits).unwrap();
+    import_deck(&mut pkg, &ImportLimits::default()).unwrap();
+    assert!(pkg.is_damaged("ppt/presProps.xml"));
+    assert!(
+        pkg.consumed() < big.len() as u64,
+        "{} bytes read; the oversized part was decompressed",
+        pkg.consumed()
     );
 }
