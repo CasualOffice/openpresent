@@ -842,10 +842,7 @@ fn patch_character(
             name,
             before,
             after,
-            |w, el, before, after| {
-                let empty = Hyperlink::default();
-                patch_hyperlink(w, el, before.map_or(&empty, |b| &**b), after)
-            },
+            patch_run_hyperlink,
         )?;
     }
     sync_ordered(
@@ -866,6 +863,31 @@ fn patch_character(
             )
         },
     )
+}
+
+// `sync_ordered`'s value type is the field's own, `Box` included.
+#[allow(clippy::borrowed_box)]
+fn patch_run_hyperlink(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&Box<Hyperlink>>,
+    a: &Box<Hyperlink>,
+) -> Result {
+    if let Some(before) = b {
+        return patch_hyperlink(w, el, before, a);
+    }
+    // New: the schema requires `r:id`, and an action with no target states it empty.
+    let mut stated = Hyperlink::default();
+    match a.rel_id.as_deref() {
+        None => return Err(unsupported(w, "a hyperlink with no r:id")),
+        Some("") => {
+            let prefix = w.declared_prefix(el, ns::REL, "r")?;
+            w.attr(el, &format!("{prefix}:id"), None, Some(&String::new()))?;
+            stated.rel_id = Some(String::new());
+        }
+        Some(_) => {}
+    }
+    patch_hyperlink(w, el, &stated, a)
 }
 
 fn patch_highlight(

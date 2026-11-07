@@ -43,9 +43,10 @@ struct Levels {
 
 fn body_placeholder(part: u32, node: u32, ph: Placeholder) -> ShapeNode {
     let mut n = ShapeNode::new(ObjectId { part, node }, NodeKind::Shape);
-    let mut app = casual_slide_model::shape::AppNonVisual::default();
-    app.placeholder = Some(ph);
-    n.app = Some(app);
+    n.app = Some(casual_slide_model::shape::AppNonVisual {
+        placeholder: Some(ph),
+        ..Default::default()
+    });
     n.text_body = Some(Box::new(TextBody {
         properties: Some(BodyProperties::default()),
         list_style: Some(TextListStyle::default()),
@@ -437,7 +438,8 @@ fn body_families() -> Vec<BodyFamily> {
 
 #[test]
 fn every_body_family_comes_from_the_shape_or_its_placeholders() {
-    let places: [(L, fn(&mut Levels) -> &mut SlidePart); 3] = [
+    type PartOf = fn(&mut Levels) -> &mut SlidePart;
+    let places: [(L, PartOf); 3] = [
         (L::ShapeBody, |l| &mut l.slide),
         (L::LayoutPlaceholder, |l| &mut l.layout),
         (L::MasterPlaceholder, |l| &mut l.master),

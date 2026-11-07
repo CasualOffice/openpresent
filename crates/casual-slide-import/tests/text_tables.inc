@@ -173,7 +173,8 @@ struct Row {
     base: String,
     with: String,
     outcome: Outcome,
-    /// Local name of the element a retained finding names.
+    /// Local name of the element a retained finding names. Import's test reads it.
+    #[allow(dead_code)]
     element: &'static str,
 }
 
@@ -414,6 +415,8 @@ fn text_row(id: &str) -> Option<Row> {
     })
 }
 
+// Import's test uses it, and export's does not.
+#[allow(dead_code)]
 fn percent_value(v: &casual_slide_model::text::Written<Percentage>) -> i32 {
     v.value().0
 }

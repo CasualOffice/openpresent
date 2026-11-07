@@ -164,10 +164,7 @@ fn every_row_of_the_text_area_is_modelled_or_reported() {
             Outcome::Stated => {
                 assert_ne!(base, with, "{id}: that it is stated is not in the model");
                 assert!(
-                    findings
-                        .iter()
-                        .any(|f| f.kind == K::RetainedElement && f.element != "")
-                        || row.element == "buBlip",
+                    findings.has(K::RetainedElement, row.element) || row.element == "buBlip",
                     "{id}: {findings:?}"
                 );
             }
@@ -828,5 +825,109 @@ fn a_run_costs_what_the_limits_page_says() {
         size_of::<ParagraphProperties>() <= 360,
         "{}",
         size_of::<ParagraphProperties>()
+    );
+}
+
+/// Nothing a shape's text holds is dropped on the way to the model: each part's runs,
+/// breaks, fields and paragraphs, counted in the tree without the importer, are all there.
+/// A part with an `mc:AlternateContent` among its shapes is skipped, since only one
+/// branch's shapes are read.
+#[test]
+fn every_paragraph_and_run_in_a_shapes_text_reaches_the_model() {
+    use casual_slide_ooxml::ElementId;
+    use std::collections::HashMap;
+    fn count(
+        tree: &XmlTree,
+        at: ElementId,
+        in_body: bool,
+        totals: &mut HashMap<&'static str, usize>,
+    ) -> bool {
+        let name = tree.qualified_name(at).to_owned();
+        let local = tree.local_name(at).to_owned();
+        if local == "AlternateContent" && !in_body {
+            return false;
+        }
+        if local == "graphicFrame"
+            || local == "timing"
+            || local == "txStyles"
+            || local == "notesStyle"
+        {
+            return true;
+        }
+        let body = in_body || (local == "txBody" && name.starts_with("p:"));
+        if in_body {
+            match local.as_str() {
+                "p" => *totals.entry("p").or_default() += 1,
+                "r" | "br" | "fld" => *totals.entry("r").or_default() += 1,
+                "AlternateContent" => {
+                    *totals.entry("r").or_default() += 1;
+                    return true;
+                }
+                _ => {}
+            }
+        }
+        tree.child_elements(at)
+            .into_iter()
+            .all(|c| count(tree, c, body, totals))
+    }
+    let mut compared = 0usize;
+    for entry in std::fs::read_dir(fixtures().join("real")).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|e| e != "pptx") {
+            continue;
+        }
+        let name = format!("real/{}", path.file_name().unwrap().to_string_lossy());
+        let s = deck(&name);
+        let mut pkg =
+            PresentationPackage::open(std::fs::read(&path).unwrap(), OoxmlLimits::default())
+                .unwrap();
+        for entry in &s.parts.structure.parts {
+            let Some(part) = s.parts.get(entry.id.part) else {
+                continue;
+            };
+            let bytes = pkg.read_part(&entry.part).unwrap();
+            let tree = XmlTree::parse(&bytes, &entry.part, &OoxmlLimits::default()).unwrap();
+            let mut raw = HashMap::new();
+            if !count(&tree, tree.root(), false, &mut raw) {
+                continue;
+            }
+            let (mut paragraphs, mut runs) = (0, 0);
+            for node in part
+                .shape_tree()
+                .into_iter()
+                .flat_map(ShapeNode::descendants)
+            {
+                for p in node.text_body.iter().flat_map(|b| &b.paragraphs) {
+                    paragraphs += 1;
+                    runs += p.items.len();
+                }
+            }
+            assert_eq!(
+                raw.get("p").copied().unwrap_or(0),
+                paragraphs,
+                "{name} {}",
+                entry.part
+            );
+            assert_eq!(
+                raw.get("r").copied().unwrap_or(0),
+                runs,
+                "{name} {}",
+                entry.part
+            );
+            compared += runs;
+        }
+    }
+    assert!(compared > 2000, "{compared}");
+}
+
+#[test]
+fn a_universal_measure_on_spc_keeps_its_unit() {
+    let (body, findings, _) =
+        read(r#"<a:bodyPr/><a:p><a:r><a:rPr spc="-1.5pt"/><a:t>x</a:t></a:r></a:p>"#);
+    assert!(findings.is_empty(), "{findings:?}");
+    let spacing = first_run(&body).spacing.as_ref().unwrap();
+    assert_eq!(
+        (spacing.value().0, spacing.written()),
+        (-150, Some("-1.5pt"))
     );
 }

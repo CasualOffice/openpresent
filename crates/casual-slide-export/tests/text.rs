@@ -463,6 +463,16 @@ fn property_edits_stay_valid_to_the_schema() {
                 ..Default::default()
             })),
             rtl: Some(Default::default()),
+            hyperlink_click: Some(Box::new(casual_slide_model::shape::Hyperlink {
+                rel_id: Some("rId2".to_owned()),
+                tooltip: Some("t".to_owned()),
+                ..Default::default()
+            })),
+            hyperlink_mouse_over: Some(Box::new(casual_slide_model::shape::Hyperlink {
+                rel_id: Some(String::new()),
+                action: Some("ppaction://noaction".to_owned()),
+                ..Default::default()
+            })),
             ..CharacterProperties::default()
         }));
 
@@ -802,6 +812,16 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
     })
     .unwrap_err();
     assert_eq!(code, "CS-EXP-0001");
+    // A new hyperlink with no `r:id`, which the schema requires.
+    let code = edit_slide(&source, |s| {
+        first_run_of_mut(named_mut(s, "No Autofit")).properties =
+            Some(Box::new(CharacterProperties {
+                hyperlink_click: Some(Box::default()),
+                ..CharacterProperties::default()
+            }));
+    })
+    .unwrap_err();
+    assert_eq!(code, "CS-EXP-0009");
     // A relationship the part does not have.
     let code = edit_slide(&source, |s| {
         first_run_of_mut(named_mut(s, "No Autofit")).properties =
