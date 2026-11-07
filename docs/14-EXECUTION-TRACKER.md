@@ -99,7 +99,7 @@ Each tier and phase in [06](06-ROADMAP-AND-DELIVERY.md) is one row, split when o
 | T-1B | Presentation part, view state | In progress | P0 | Built and merged, with fuzz target. Removing a whole part refused; `defaultTextStyle`, `penClr`, `clrMru`, `extLst` retained, not modelled; app counts not recalculated | Per-tier gate |
 | T-1C | Colour and theme | In progress | P0 | Model, import and export built and merged; 236 workspace tests pass. Audit: code references 314 COLOR and 159 THEME rows partly. Remaining: `COLOR-01`, `COLOR-02`, `COLOR-03`, effect reference, format scheme internals, object defaults, `themeManager` | Per-tier gate in 06 |
 | T-1D | Slides, masters, layouts, shape tree, `-style` | In progress | P0 | Built and merged. All 12 committed real decks import through slide import. Open: `T1D-03`. Most spec rows still lack fixtures, so the tier gate is not met | Per-tier gate in 06 |
-| T-1E | Geometry, fills, lines, effects, 3D | Open | P0 | 1082 rows | Per-tier gate |
+| T-1E | Geometry, fills, lines, effects, 3D | In progress | P0 | Built and merged: 362 tests, 13 hostile decks, fuzz target, 12 real decks clean. No shape-level gradient or pattern in the real decks, only generated ones. Status marks need the audit to see `token_enum!` values (`STAT-01`) | Per-tier gate in 06 |
 | T-1F | Text model | Open | P0 | 317 rows | Per-tier gate |
 | T-1G | Tables | Open | P0 | 113 rows | Per-tier gate |
 | T-1H | Pictures and media | Open | P0 | 116 rows | Per-tier gate |
@@ -189,6 +189,8 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | DOC-010 | Register missing codes | Open | P1 | `CS-IMP`, `CS-IMF`, `CS-EXP` not in docs/20; `GeometryError` has no stable codes; `GEO-06` cited with no row | In docs/20 |
 | F-009 | Clear rights on a Morph deck, and find Zoom and equation decks | Open | P1 | The only Morph deck stays local; Zoom and equations have no deck | Committed decks |
 | GEO-06 | Geometry defect labels mismatch | Open | P2 | The generator labels its corrections `GEO-02` to `GEO-06`, which do not mean what this tracker's rows of those ids mean. Relabel in code to match `GEO-02` | One meaning per id |
+| T1E-06 | Tier 1E leftovers | Open | P1 | `prstTxWarp` reader not called, `CT_FlatText`, `CT_Connection`, `DrawingLimits` not threaded through `SlideLimits`, colour findings lose `CS-CLR` on slide parts, older `2007/7/7` namespace reported not modelled | Per-tier gate |
+| DRAW-01 | `ST_PositiveCoordinate` wider than PowerPoint accepts | Open | P1 | MS-OI29500 2.1.1330: PowerPoint stops at 2147483647. We keep the schema's range, so a huge bevel could be written that it may reject | Writer refuses or clamps; test |
 | GOV-01 | Governance and gates | Done | P1 | SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, GOVERNANCE, CHANGELOG, NOTICE; docs 15 and 21; 7 repo gates with 22 seeded violations; post-merge and scheduled fuzz workflows | `check-gate-selftest.py` |
 | FIT-01 | Fit-gap for every PowerPoint feature | Done | P1 | [96](96-POWERPOINT-FIT-GAP.md): 318 rows; Edit 230, Host seam 49, Refuse 23, Retain 14, Render 2. 252 from read pages, 41 from index titles only, 15 inferred; none from running PowerPoint | Every non-Edit row has a reason |
 | ASSET-01 | Blank deck, default theme and templates | Open | P1 | File New needs an authored master and layouts. Our own; rights recorded | Before Phase 4 |
@@ -219,11 +221,11 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1C-02 | Close Tier 1C | Open | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
 | T1D-02 | Merge Tier 1D | Done | P0 | Merged onto the parser fixes; 372 tests pass | Gates pass |
 | SKEL-02 | Skeleton: minimal layout and PNG | Blocked | P1 | Waits with `SKEL-01` | Phase 1 closed |
-| T1E-01 | Geometry binding | Open | P0 | `prstGeom`, `custGeom`, `avLst` into the model; calls `-geometry`; `GEO-04` | All 187 presets round-trip |
-| T1E-02 | Fills | Open | P0 | Solid, gradient, pattern, blip, group, none; rotate-with-shape | Every `ST_PresetPatternVal`; fixed point |
-| T1E-03 | Lines | Open | P1 | Width, cap, compound, dash, join, arrowheads, sketch extension | Every enum value |
-| T1E-04 | Effects | Open | P1 | Effect lists and DAGs, blip effects, `a14` picture effects | Retained verbatim where unmodelled |
-| T1E-05 | 3D properties | Open | P2 | `scene3d`, `sp3d`, bevels, materials, cameras, light rigs. BEH-27 | Never flattened on save |
+| T1E-01 | Geometry binding | Done | P0 | `prstGeom`, `custGeom`, `avLst`; compiled, not evaluated. `GEO-04` is separate | Enum values read from the checklist; edits change only named nodes |
+| T1E-02 | Fills | Done | P0 | All kinds. `read_fill` ready for `T1C-02` | Enum values read from the checklist; edits change only named nodes |
+| T1E-03 | Lines | Done | P0 | All properties; sketch extension `uri` Inferred | Enum values read from the checklist; edits change only named nodes |
+| T1E-04 | Effects | Done | P0 | Lists, DAGs, blip and `a14` picture effects; `imgProps` cannot be added | Enum values read from the checklist; edits change only named nodes |
+| T1E-05 | 3D properties | Done | P0 | `scene3d`, `sp3d`. `CT_FlatText` type only | Enum values read from the checklist; edits change only named nodes |
 | T1F-01 | Text structure | Open | P0 | `txBody`, `bodyPr`, `lstStyle`, paragraphs, runs, breaks, fields; `defaultTextStyle`, master text styles | Fixed point; BEH-02 resolver cases |
 | T1F-02 | Text properties | Open | P0 | Every run and paragraph property, spacing, tabs, bullets, 41 autonumber schemes, fonts, hyperlinks. BEH-28 | Every enum value |
 | T1F-03 | Autofit properties | Open | P0 | `normAutofit` scale stored as written; `spAutoFit`; recomputation is 2D6 | Stored values round-trip |

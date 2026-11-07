@@ -7,7 +7,7 @@
 //!
 //! What this tier writes: a node's transform, `cNvPr` attributes, hyperlink
 //! attributes, locks, `txBox`, placeholder attributes, `isPhoto`, `userDrawn`,
-//! `useBgFill`, `bwMode`, and through [`crate::drawing`] its geometry, fill, line,
+//! `useBgFill`, `bwMode`, and through `crate::drawing` its geometry, fill, line,
 //! effects and 3D; a part's root attributes, `cSld/@name`, `clrMap`
 //! slots, `clrMapOvr` and `hf`. Anything else that differs (a node added, removed
 //! or reordered, a background, a layout list) is refused as `CS-SLE-0001`, and
