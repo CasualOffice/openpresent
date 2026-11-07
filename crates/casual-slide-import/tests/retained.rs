@@ -176,6 +176,56 @@ fn the_report_names_every_retained_part() {
     );
 }
 
+/// `SEC-C07`: a `.pptm` opens, its macro project is never run or read, and the report
+/// names it, which is what the notice shows.
+#[test]
+fn a_macro_deck_opens_and_the_report_names_its_project() {
+    let mut package = open("generated/rr-vba.pptm");
+    let deck = import_deck(&mut package, &ImportLimits::default())
+        .unwrap()
+        .deck;
+    import_slide_parts(
+        &mut package,
+        &deck.presentation,
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    let report = retained_report(&package);
+    let project = part(&report, "ppt/vbaProject.bin");
+    assert_eq!(project.kind, K::Macro);
+    assert_eq!(project.source, "ppt/presentation.xml");
+    assert_eq!(project.status, RetainedStatus::Kept);
+    // A deck with no project has no notice.
+    assert!(
+        !retained_report(&open("generated/area-ole.pptx"))
+            .iter()
+            .any(|p| p.kind == K::Macro)
+    );
+}
+
+/// A project nothing refers to is still a project in the file, and still named.
+#[test]
+fn a_macro_project_nothing_refers_to_is_named() {
+    let mut package = open("generated/rr-vba.pptm");
+    let rels = String::from_utf8(
+        package
+            .read_part("ppt/_rels/presentation.xml.rels")
+            .unwrap(),
+    )
+    .unwrap();
+    let (head, tail) = rels.split_once("<Relationship Id=\"rId4\"").unwrap();
+    let unlinked = format!("{head}{}", tail.split_once("/>").unwrap().1);
+    let mut edits = casual_slide_package::PartEdits::default();
+    edits.replace("ppt/_rels/presentation.xml.rels", unlinked.into_bytes());
+    let saved = package.save_with(&edits).unwrap();
+    let package = PresentationPackage::open(saved, OoxmlLimits::default()).unwrap();
+    let report = retained_report(&package);
+    let project = part(&report, "ppt/vbaProject.bin");
+    assert_eq!(project.kind, K::Macro);
+    assert_eq!(project.source, "");
+}
+
 #[test]
 fn the_report_charges_nothing_to_the_deck_s_read_budget() {
     let package = open("generated/area-ole.pptx");
@@ -190,6 +240,7 @@ fn importing_a_whole_deck_opens_no_retained_part() {
         ("generated/area-vml.pptx", "ppt/drawings/vmlDrawing1.vml"),
         ("generated/area-model3d.pptx", "ppt/media/model3d1.glb"),
         ("generated/area-ole.pptx", "ppt/embeddings/oleObject1.bin"),
+        ("generated/rr-vba.pptm", "ppt/vbaProject.bin"),
     ] {
         let mut sized = open(path);
         let size = sized.read_part(retained).unwrap().len() as u64;
