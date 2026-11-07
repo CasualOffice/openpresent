@@ -561,31 +561,31 @@ def one_chart(xml, own=(), extra_parts=(), extra_types=()):
 def hostile():
     # Each just past its default, so the part is set aside under that bound's code.
     ser = seeded('<c:ser><c:idx val="0"/><c:order val="0"/></c:ser>', 4_097)
-    yield "hostile/chart-limit-series.bin", one_chart(bare_chart(f"<c:barChart>{ser}</c:barChart>")), "open"
+    yield "hostile/chart-limit-series.bin", one_chart(bare_chart(f"<c:barChart>{ser}</c:barChart>")), "open CS-FND-0010"
     pts = seeded('<c:pt idx="0"><c:v>0</c:v></c:pt>', 1_048_577)
     yield "hostile/chart-limit-points.bin", one_chart(bare_chart(
-        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/><c:val><c:numLit>{pts}</c:numLit></c:val></c:ser></c:barChart>')), "open"
+        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/><c:val><c:numLit>{pts}</c:numLit></c:val></c:ser></c:barChart>')), "open CS-FND-0010"
     points = seeded('<c:dPt><c:idx val="0"/></c:dPt>', 262_145)
     yield "hostile/chart-limit-data-points.bin", one_chart(bare_chart(
-        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/>{points}</c:ser></c:barChart>')), "open"
+        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/>{points}</c:ser></c:barChart>')), "open CS-FND-0010"
     labels = seeded('<c:dLbl><c:idx val="0"/></c:dLbl>', 262_145)
     yield "hostile/chart-limit-data-labels.bin", one_chart(bare_chart(
-        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/><c:dLbls>{labels}</c:dLbls></c:ser></c:barChart>')), "open"
+        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/><c:dLbls>{labels}</c:dLbls></c:ser></c:barChart>')), "open CS-FND-0010"
     levels = seeded('<c:lvl/>', 4_097)
     yield "hostile/chart-limit-levels.bin", one_chart(bare_chart(
-        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/><c:cat><c:multiLvlStrRef><c:f>a</c:f><c:multiLvlStrCache>{levels}</c:multiLvlStrCache></c:multiLvlStrRef></c:cat></c:ser></c:barChart>')), "open"
+        f'<c:barChart><c:ser><c:idx val="0"/><c:order val="0"/><c:cat><c:multiLvlStrRef><c:f>a</c:f><c:multiLvlStrCache>{levels}</c:multiLvlStrCache></c:multiLvlStrRef></c:cat></c:ser></c:barChart>')), "open CS-FND-0010"
     exts = seeded('<c:ext uri="x"/>', 262_145)
     yield "hostile/chart-limit-extensions.bin", one_chart(
-        f'{DECL}<c:chartSpace xmlns:c="{C_NS}"><c:chart/><c:extLst>{exts}</c:extLst></c:chartSpace>'), "open"
+        f'{DECL}<c:chartSpace xmlns:c="{C_NS}"><c:chart/><c:extLst>{exts}</c:extLst></c:chartSpace>'), "open CS-FND-0010"
 
     def with_drawing(xml):
         return one_chart(bare_chart(""), [(SHAPES_REL, "../drawings/drawing1.xml")],
                          [("ppt/drawings/drawing1.xml", xml)], [("/ppt/drawings/drawing1.xml", SHAPES_TYPE)])
     anchors = seeded('<cdr:relSizeAnchor/>', 65_537)
-    yield "hostile/chart-limit-anchors.bin", with_drawing(f'{DECL}<c:userShapes xmlns:c="{C_NS}" xmlns:cdr="{CDR_NS}">{anchors}</c:userShapes>'), "open"
+    yield "hostile/chart-limit-anchors.bin", with_drawing(f'{DECL}<c:userShapes xmlns:c="{C_NS}" xmlns:cdr="{CDR_NS}">{anchors}</c:userShapes>'), "open CS-FND-0010"
     deep = '<cdr:grpSp>' * 65 + '</cdr:grpSp>' * 65
     yield "hostile/chart-limit-group-depth.bin", with_drawing(
-        f'{DECL}<c:userShapes xmlns:c="{C_NS}" xmlns:cdr="{CDR_NS}"><cdr:relSizeAnchor>{deep}</cdr:relSizeAnchor></c:userShapes>'), "open"
+        f'{DECL}<c:userShapes xmlns:c="{C_NS}" xmlns:cdr="{CDR_NS}"><cdr:relSizeAnchor>{deep}</cdr:relSizeAnchor></c:userShapes>'), "open CS-FND-0010"
 
     # Everything reported, nothing refused. The marker must reach no finding.
     mark = "QzMarkerQz"
@@ -596,12 +596,12 @@ def hostile():
            f'<c:ser><c:idx val="0"/></c:ser><c:ser><c:idx val="0"/></c:ser><c:gapWidth val="99999"/><c:overlap val="{mark}"/><c:axId val="9"/><c:axId val="{mark}"/><c:axId val="99999999999"/></c:barChart>'
            f'<c:catAx><c:axId val="-5"/><c:crossAx val="8"/><c:axPos val="{mark}"/></c:catAx><c:unknown/></c:plotArea></c:chart>'
            f'<c:externalData r:id="rIdNone"/><c:userShapes/></c:chartSpace>')
-    yield "hostile/chart-bad-structure.bin", one_chart(bad), "open"
+    yield "hostile/chart-bad-structure.bin", one_chart(bad), "open CS-FND-0010"
     # A chart-family relationship to a part that holds something else: set aside.
-    yield "hostile/chart-wrong-root.bin", one_chart(f'{DECL}<c:notAChart xmlns:c="{C_NS}"/>'), "open"
+    yield "hostile/chart-wrong-root.bin", one_chart(f'{DECL}<c:notAChart xmlns:c="{C_NS}"/>'), "open CS-FND-0010"
     # A workbook that a reader would fail on: it is never read.
     yield "hostile/chart-workbook-corrupt.bin", zipped(chart_deck(
-        [("chart1.xml", chart_part(*next((f, a, v) for _, f, a, v in families())), [])], workbook_bytes=b"\x00" * 4096)), "open"
+        [("chart1.xml", chart_part(*next((f, a, v) for _, f, a, v in families())), [])], workbook_bytes=b"\x00" * 4096)), "open CS-FND-0010"
 
 
 def strict_chart(entries):
@@ -627,9 +627,9 @@ def signed_axis_deck():
 
 def fixtures():
     yield "generated/chart-families.pptx", zipped(families_deck()), "open CS-FND-0010"
-    yield "generated/chart-strict.pptx", zipped(strict_chart(families_deck())), "open"
-    yield "generated/chart-ex-layouts.pptx", zipped(chart_ex_deck()), "open"
-    yield "generated/chart-signed-axis.pptx", zipped(signed_axis_deck()), "open"
+    yield "generated/chart-strict.pptx", zipped(strict_chart(families_deck())), "open CS-FND-0010"
+    yield "generated/chart-ex-layouts.pptx", zipped(chart_ex_deck()), "open CS-FND-0007 CS-FND-0010"
+    yield "generated/chart-signed-axis.pptx", zipped(signed_axis_deck()), "open CS-FND-0010"
     for name, entries in every_row_decks():
-        yield name, zipped(entries), "open"
+        yield name, zipped(entries), "open CS-FND-0007 CS-FND-0010"
     yield from hostile()

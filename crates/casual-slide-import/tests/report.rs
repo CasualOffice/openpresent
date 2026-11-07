@@ -177,12 +177,12 @@ fn with_part(bytes: &[u8], part: &str, text: String) -> Vec<u8> {
 }
 
 /// Findings are distinct, and every name no schema has is one name, `(unknown)` (`SEC-018`).
-/// So a stranger the deck already holds in a part would hide the one added here: take the
-/// deck's own out of `rich-properties`, and each added stranger has to change the report.
+/// So `x:kept`, the stranger `rich-properties` holds, already gives the line a stranger added
+/// to its main part would: take it out, and each one added has to change the report.
 fn without_made_up_names(bytes: Vec<u8>) -> Vec<u8> {
     let part = "ppt/presentation.xml";
     let text = String::from_utf8(open(bytes.clone()).read_part(part).unwrap()).unwrap();
-    let plain = text.replace("<x:y/>", "").replace("<x:kept a=\"1\"/>", "");
+    let plain = text.replace("<x:kept a=\"1\"/>", "");
     if plain == text {
         return bytes;
     }
