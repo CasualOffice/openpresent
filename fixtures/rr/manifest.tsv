@@ -49,6 +49,34 @@ RR-ID-06	INV-ID-06	generated/rr-animated.pptx	good/RR-ID-06.pptx	opens and saves
 RR-ID-07	INV-ID-07	generated/rr-notes.pptx	good/RR-ID-07.pptx	opens, saves, reports
 RR-ID-08	INV-ID-08	generated/three-slides.pptx	good/RR-ID-08.pptx	opens, saves, reports
 RR-ID-09	INV-ID-09	generated/three-slides.pptx	good/RR-ID-09.pptx	opens, saves, reports
+RR-AP-01	INV-AP-01	generated/rr-app.pptx	good/RR-AP-01.pptx	opens, saves, reports
+RR-AP-02	INV-AP-02	generated/rr-app.pptx	good/RR-AP-02.pptx	opens, saves, reports
+RR-AP-03	INV-AP-03	generated/rr-app-unknown-groups.pptx	good/RR-AP-03.pptx	opens, saves, reports
+RR-AP-04	INV-AP-04	generated/rr-app.pptx	good/RR-AP-04.pptx	opens, saves, reports
+RR-AP-05	INV-AP-05	generated/rr-app.pptx	good/RR-AP-05.pptx	opens and saves; one package does not show it
+RR-AP-06	INV-AP-06	generated/rr-signed.pptx	good/RR-AP-06.pptx	opens and saves; one package does not show it
+RR-AP-07	INV-AP-07	generated/rr-app.pptx	good/RR-AP-07.pptx	opens, saves, reports
+RR-AP-08	INV-AP-08	generated/rr-app.pptx	good/RR-AP-08.pptx	opens and saves; one package does not show it
+RR-AP-09	INV-AP-09	generated/rr-core-text-revision.pptx	good/RR-AP-09.pptx	opens and saves; one package does not show it
+RR-AP-10	INV-AP-10	generated/rr-app.pptx	good/RR-AP-10.pptx	opens and saves; one package does not show it
+RR-TH-01	INV-TH-01	generated/rr-thumbnail.pptx	good/RR-TH-01.pptx	opens and saves; one package does not show it
+RR-TH-02	INV-TH-02	generated/rr-thumbnail.pptx	good/RR-TH-02.pptx	opens and saves; one package does not show it
+RR-TH-03	INV-TH-03	generated/rr-thumbnail.pptx	good/RR-TH-03.pptx	opens and saves; one package does not show it
+RR-SG-01	INV-SG-01	generated/rr-signed.pptx	good/RR-SG-01.pptx	opens, saves, reports
+RR-SG-02	INV-SG-02	generated/rr-signed.pptx	good/RR-SG-02.pptx	opens and saves; one package does not show it
+RR-SG-03	INV-SG-03	generated/rr-signed.pptx	good/RR-SG-03.pptx	opens and saves; one package does not show it
+RR-SG-04	INV-SG-04	generated/rr-signed.pptx	good/RR-SG-04.pptx	opens and saves; one package does not show it
+RR-SG-05	INV-SG-05	generated/rr-signed.pptx	good/RR-SG-05.pptx	opens and saves; one package does not show it
+RR-SG-06	INV-SG-06	generated/rr-signed.pptx	good/RR-SG-06.pptx	no seed: nothing dirty means the input bytes; a_signed_deck_with_its_edit_undone_keeps_its_bytes
+RR-SG-07	INV-SG-07	generated/rr-signed.pptx	good/RR-SG-07.pptx	opens and saves; one package does not show it
+RR-SG-08	INV-SG-08	generated/rr-signed-vba.pptm	good/RR-SG-08.pptx	opens and saves; one package does not show it
+RR-SA-01	INV-SA-01	generated/three-slides.pptx	good/RR-SA-01.pptx	strict open refused CS-OPC-0004; waits for REC-02
+RR-SA-02	INV-SA-02	generated/three-slides.pptx	good/RR-SA-02.pptx	opens and saves; one package does not show it
+RR-SA-03	INV-SA-03	generated/rr-vba.pptm	good/RR-SA-03.pptx	opens, saves, reports
+RR-SA-04	INV-SA-04	generated/rr-macro-action.pptm	good/RR-SA-04.pptx	opens and saves; one package does not show it
+RR-SA-05	INV-SA-05	generated/three-slides.pptx	good/RR-SA-05.pptx	opens and saves; one package does not show it
+RR-SA-06	INV-SA-06	generated/rr-activex.pptx	good/RR-SA-06.pptx	opens and saves; one package does not show it
+RR-SA-14	INV-SA-14	generated/slides-strict.pptx	good/RR-SA-14.pptx	opens and saves; one package does not show it
 RR-SL-01	INV-SL-01	generated/three-slides.pptx	good/RR-SL-01.pptx	opens and saves; one package does not show it
 RR-SL-02	INV-SL-02	generated/rr-one-section.pptx	good/RR-SL-02.pptx	opens, saves, reports
 RR-SL-03	INV-SL-03	generated/rr-sections.pptx	good/RR-SL-03.pptx	opens and saves; one package does not show it

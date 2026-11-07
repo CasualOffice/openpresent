@@ -110,7 +110,7 @@ python3 tools/check-repo.py
 python3 tools/spec-checklist/generate.py --check
 python3 fixtures/tools/generate.py --check
 python3 tools/spec-audit/audit.py --check
-python3 tools/ooxml-sdk/validate.py fixtures/generated   # when dotnet is present; CI always runs it
+python3 tools/ooxml-sdk/validate.py fixtures/generated fixtures/producers fixtures/real fixtures/rr/good fixtures/rr/sa   # when dotnet is present; CI always runs it
 ```
 
 ## Working in parallel

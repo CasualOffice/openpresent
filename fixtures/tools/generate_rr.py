@@ -335,7 +335,168 @@ def vba():
         ("http://schemas.microsoft.com/office/2006/relationships/vbaProject", "vbaProject.bin")))
 
 
+CORE_REL = f"{PKG_RELS}/metadata/core-properties"
+THUMB_REL = f"{PKG_RELS}/metadata/thumbnail"
+ORIGIN_REL = f"{PKG_RELS}/digital-signature/origin"
+SIGNATURE_REL = f"{PKG_RELS}/digital-signature/signature"
+CERT_REL = f"{PKG_RELS}/digital-signature/certificate"
+VBA_REL = "http://schemas.microsoft.com/office/2006/relationships/vbaProject"
+VBA_SIG_REL = "http://schemas.microsoft.com/office/2006/relationships/vbaProjectSignature"
+UI_REL = "http://schemas.microsoft.com/office/2006/relationships/ui/extensibility"
+EP = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+VT = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"
+MACRO_MAIN = "application/vnd.ms-powerpoint.presentation.macroEnabled.main+xml"
+
+
+def app_xml(group="Slide Titles", extra=""):
+    """Shaped as `MS-OI29500` describes. Nothing here was saved by PowerPoint."""
+    return (f'{DECL}<Properties xmlns="{EP}" xmlns:vt="{VT}"><TotalTime>5</TotalTime><Application>Microsoft Office PowerPoint</Application>'
+            '<Slides>3</Slides><Notes>1</Notes><HiddenSlides>1</HiddenSlides>'
+            '<HeadingPairs><vt:vector size="4" baseType="variant">'
+            '<vt:variant><vt:lpstr>Theme</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant>'
+            f'<vt:variant><vt:lpstr>{group}</vt:lpstr></vt:variant><vt:variant><vt:i4>3</vt:i4></vt:variant>'
+            '</vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="4" baseType="lpstr">'
+            '<vt:lpstr>Fixture</vt:lpstr><vt:lpstr>Fixture 1</vt:lpstr><vt:lpstr>Fixture 2</vt:lpstr><vt:lpstr>Fixture 3</vt:lpstr>'
+            f'</vt:vector></TitlesOfParts>{extra}<AppVersion>16.0000</AppVersion></Properties>')
+
+
+def core_xml(revision="7"):
+    return (f'{DECL}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+            'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
+            'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+            '<cp:keywords xml:lang="en-US">one<cp:value xml:lang="fr-FR">deux</cp:value></cp:keywords>'
+            '<cp:lastModifiedBy>Earlier</cp:lastModifiedBy>'
+            f'<cp:revision>{revision}</cp:revision>'
+            '<dcterms:created xsi:type="dcterms:W3CDTF">2020-01-01T00:00:00Z</dcterms:created>'
+            '<dcterms:modified xsi:type="dcterms:W3CDTF">2020-01-02T00:00:00Z</dcterms:modified>'
+            '</cp:coreProperties>')
+
+
+PROPS = (("/docProps/app.xml", "application/vnd.openxmlformats-officedocument.extended-properties+xml"),
+         ("/docProps/core.xml", "application/vnd.openxmlformats-package.core-properties+xml"))
+
+
+def with_properties(app, core, slides=3, root_extra=(), parts=(), types_extra=(), main_type=None):
+    """A deck with `app.xml` and `core.xml`: slide 2 hidden, and notes on slide 1."""
+    entries = deck(slides, root_extra=(("extended-properties", "docProps/app.xml"), (CORE_REL, "docProps/core.xml"), *root_extra),
+                   types_extra=list(PROPS) + list(types_extra), parts=[("docProps/app.xml", app), ("docProps/core.xml", core), *parts],
+                   main_type=main_type)
+    entries = replace(entries, "ppt/slides/slide2.xml",
+                      dict(entries)["ppt/slides/slide2.xml"].replace("<p:sld ", '<p:sld show="0" ', 1))
+    main = dict(entries)["ppt/presentation.xml"].replace(
+        "<p:sldIdLst>", '<p:notesMasterIdLst><p:notesMasterId r:id="rId90"/></p:notesMasterIdLst><p:sldIdLst>', 1)
+    entries = replace(entries, "ppt/presentation.xml", main)
+    entries = replace(entries, "ppt/_rels/presentation.xml.rels",
+                      dict(entries)["ppt/_rels/presentation.xml.rels"].replace(
+                          "</Relationships>",
+                          f'<Relationship Id="rId90" Type="{T}/notesMaster" Target="notesMasters/notesMaster1.xml"/></Relationships>'))
+    entries = replace(entries, "ppt/slides/_rels/slide1.xml.rels",
+                      rels(("slideLayout", "../slideLayouts/slideLayout1.xml"), ("notesSlide", "../notesSlides/notesSlide1.xml")))
+    entries += [("ppt/notesMasters/notesMaster1.xml", NOTES_MASTER),
+                ("ppt/notesMasters/_rels/notesMaster1.xml.rels", rels(("theme", "../theme/theme2.xml"))),
+                ("ppt/theme/theme2.xml", THEME),
+                ("ppt/notesSlides/notesSlide1.xml", NOTES),
+                ("ppt/notesSlides/_rels/notesSlide1.xml.rels",
+                 rels(("notesMaster", "../notesMasters/notesMaster1.xml"), ("slide", "../slides/slide1.xml")))]
+    return with_override(entries,
+                         ("/ppt/notesMasters/notesMaster1.xml", f"{PML}.notesMaster+xml"),
+                         ("/ppt/theme/theme2.xml", THEME_TYPE),
+                         ("/ppt/notesSlides/notesSlide1.xml", f"{PML}.notesSlide+xml"))
+
+
+SIGNATURE_PARTS = [("_xmlsignatures/origin.sigs", b""),
+                   ("_xmlsignatures/_rels/origin.sigs.rels", rels((SIGNATURE_REL, "sig1.xml"))),
+                   ("_xmlsignatures/sig1.xml", f'{DECL}<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"/>'),
+                   ("_xmlsignatures/_rels/sig1.xml.rels", rels((CERT_REL, "certs/cert1.cer"))),
+                   ("_xmlsignatures/certs/cert1.cer", b"not a certificate")]
+SIGNATURE_TYPES = [("/_xmlsignatures/origin.sigs", "application/vnd.openxmlformats-package.digital-signature-origin"),
+                   ("/_xmlsignatures/sig1.xml", "application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml"),
+                   ("/_xmlsignatures/certs/cert1.cer", "application/vnd.openxmlformats-package.digital-signature-certificate")]
+
+
+def signed():
+    return with_properties(app_xml(extra="<DigSig><vt:blob>AAAA</vt:blob></DigSig>"), core_xml(), root_extra=((ORIGIN_REL, "_xmlsignatures/origin.sigs"),),
+                           parts=SIGNATURE_PARTS, types_extra=SIGNATURE_TYPES)
+
+
+def signed_vba():
+    entries = deck(main_type=MACRO_MAIN, root_extra=((ORIGIN_REL, "_xmlsignatures/origin.sigs"),),
+                   parts=SIGNATURE_PARTS + [("ppt/vbaProject.bin", b"x"), ("ppt/vbaProjectSignature.bin", b"y"),
+                                            ("ppt/_rels/vbaProject.bin.rels", rels((VBA_SIG_REL, "vbaProjectSignature.bin")))],
+                   types_extra=SIGNATURE_TYPES + [("/ppt/vbaProject.bin", "application/vnd.ms-office.vbaProject"),
+                                                  ("/ppt/vbaProjectSignature.bin", "application/vnd.ms-office.vbaProjectSignature")])
+    return replace(entries, "ppt/_rels/presentation.xml.rels", rels(
+        ("slideMaster", "slideMasters/slideMaster1.xml"), ("theme", "theme/theme1.xml"), ("slide", "slides/slide1.xml"), (VBA_REL, "vbaProject.bin")))
+
+
+def thumbnail():
+    return with_override(with_default(deck(root_extra=((THUMB_REL, "docProps/thumbnail.jpeg"),),
+                                           parts=[("docProps/thumbnail.jpeg", b"\xff\xd8\xff\xd9")]), "jpeg", "image/jpeg"))
+
+
+def macro_action():
+    entries = vba()
+    slide = dict(entries)["ppt/slides/slide1.xml"].replace(
+        '<p:cNvPr id="2" name="Title 1"/>',
+        '<p:cNvPr id="2" name="Title 1"><a:hlinkClick r:id="" action="ppaction://macro?name=Run"/></p:cNvPr>', 1)
+    return replace(entries, "ppt/slides/slide1.xml", slide)
+
+
+def active_x():
+    """ActiveX and custom UI, retained as bytes and never run."""
+    entries = deck(root_extra=((UI_REL, "customUI/customUI.xml"),),
+                   slide_rels=[("control", "../activeX/activeX1.xml")],
+                   parts=[("customUI/customUI.xml", '<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui"/>'),
+                          ("ppt/activeX/activeX1.xml", f'{DECL}<ax:ocx xmlns:ax="http://schemas.microsoft.com/office/2006/activeX" ax:classid="{{00000000-0000-0000-0000-000000000000}}"/>')],
+                   types_extra=[("/ppt/activeX/activeX1.xml", "application/vnd.ms-office.activeX+xml")])
+    return entries
+
+
+def sa_deck(extension):
+    """One input per row of the save-as grid. The macro types hold a project."""
+    main = {"pptx": f"{PML}.presentation.main+xml", "ppsx": f"{PML}.slideshow.main+xml", "potx": f"{PML}.template.main+xml",
+            "pptm": MACRO_MAIN, "ppsm": "application/vnd.ms-powerpoint.slideshow.macroEnabled.main+xml",
+            "potm": "application/vnd.ms-powerpoint.template.macroEnabled.main+xml",
+            "ppam": "application/vnd.ms-powerpoint.addin.macroEnabled.main+xml"}[extension]
+    if extension in ("pptx", "ppsx", "potx"):
+        return zipped(deck(2, main_type=main))
+    entries = deck(2, main_type=main, parts=[("ppt/vbaProject.bin", b"x")])
+    entries = with_default(entries, "bin", "application/vnd.ms-office.vbaProject")
+    return zipped(replace(entries, "ppt/_rels/presentation.xml.rels", rels(
+        ("slideMaster", "slideMasters/slideMaster1.xml"), ("theme", "theme/theme1.xml"),
+        ("slide", "slides/slide1.xml"), ("slide", "slides/slide2.xml"), (VBA_REL, "vbaProject.bin"))))
+
+
+def sa_inputs():
+    """Rows that are not presentations here. **Synthetic:** `.thmx` follows PRONOM's
+    signature only, and `.ppt` and `.pdf` are their magic numbers, since nothing reads them
+    yet. Each says only what is refused (`INV-SA-08` to `-12`)."""
+    yield "rr/inputs/sa.ppam", sa_deck("ppam"), "refuse:CS-OPC-0004"
+    thmx = [("[Content_Types].xml", f'{DECL}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+             '<Default Extension="xml" ContentType="application/vnd.openxmlformats-officedocument.themeManager+xml"/></Types>'),
+            ("_rels/.rels", rels(("officeDocument", "theme/theme/themeManager.xml"))),
+            ("theme/theme/themeManager.xml", f'{DECL}<a:themeManager xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"/>')]
+    yield "rr/inputs/sa.thmx", zipped(thmx), "refuse:CS-OPC-0004"
+    odp = [("mimetype", "application/vnd.oasis.opendocument.presentation"), ("content.xml", f"{DECL}<office:document-content xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\"/>")]
+    yield "rr/inputs/sa.odp", zipped(odp), "refuse:CS-OPC-0001"
+    yield "rr/inputs/sa.pdf", b"%PDF-1.7\n%%EOF\n", "refuse:CS-PKG-0005"
+    yield "rr/inputs/sa.ppt", bytes.fromhex("d0cf11e0a1b11ae1") + bytes(504), "refuse:CS-OPC-0005"
+
+
 def fixtures():
+    yield "generated/rr-app.pptx", zipped(with_properties(app_xml(), core_xml())), "open"
+    yield "generated/rr-app-unknown-groups.pptx", zipped(with_properties(app_xml("Titres des diapositives"), core_xml())), "open"
+    yield "generated/rr-core-text-revision.pptx", zipped(with_properties(app_xml(), core_xml("draft"))), "open"
+    yield "generated/rr-signed.pptx", zipped(signed()), "open CS-FND-0009"
+    yield "generated/rr-signed-vba.pptm", zipped(signed_vba()), "open CS-FND-0008 CS-FND-0009"
+    yield "generated/rr-thumbnail.pptx", zipped(thumbnail()), "open"
+    yield "generated/rr-macro-action.pptm", zipped(macro_action()), "open CS-FND-0008"
+    yield "generated/rr-activex.pptx", zipped(active_x()), "open"
+    for extension in ("pptx", "pptm", "ppsx", "ppsm", "potx", "potm"):
+        expect = "open CS-FND-0008" if extension.endswith("m") else "open"
+        yield f"generated/rr-sa.{extension}", sa_deck(extension), expect
+    yield from sa_inputs()
     yield "generated/rr-vba.pptm", zipped(vba()), "open CS-FND-0008"
     yield "generated/rr-animated.pptx", zipped(animated()), "open"
     yield "generated/rr-sections.pptx", zipped(sectioned()), "open"

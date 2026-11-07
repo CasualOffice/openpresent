@@ -10,6 +10,7 @@ use casual_slide_ooxml::{
 };
 use casual_slide_package::PartEdits;
 
+use super::bookkeeping::Bookkeeping;
 use super::error::WriterError;
 use super::names::{Families, is_rels_part, key, next_rel_id, rels_part_for, target_for};
 use super::plan::WriterLimits;
@@ -129,6 +130,12 @@ pub(crate) struct Changes {
     pub authored: BTreeSet<String>,
     /// Slides new in this save, by id.
     pub new_slide_ids: BTreeSet<String>,
+    /// Parts a model patch rewrote, by key.
+    pub model_patched: BTreeSet<String>,
+    /// The plan only changes the format.
+    pub retype_only: bool,
+    /// What [`Draft::bookkeep`] did.
+    pub books: Bookkeeping,
 }
 
 /// A plan being applied. Reached through [`super::SavePlan::stage`].
@@ -213,6 +220,21 @@ fn is_usual_binary_extension(ext: &str) -> bool {
         "docx", "pptx", "vml",
     ];
     USUAL.contains(&ext.to_ascii_lowercase().as_str())
+}
+
+impl WriterOutcome {
+    /// The input bytes, with nothing done (F1).
+    pub(crate) fn unedited(bytes: Vec<u8>) -> Self {
+        Self {
+            bytes,
+            changed_parts: Vec::new(),
+            dispositions: BTreeMap::new(),
+            report: Vec::new(),
+            signature_invalidated: false,
+            clones: BTreeMap::new(),
+            new_slides: Vec::new(),
+        }
+    }
 }
 
 impl<'p> Draft<'p> {
@@ -766,10 +788,53 @@ impl<'p> Draft<'p> {
     /// this save introduced, and reports one that arrived.
     pub fn preflight(&mut self) -> Result<Preflight, WriterError> {
         self.settle()?;
+        let (before, after) = self.build_views()?;
+        preflight::run(self, &before, &after)
+    }
+
+    /// The input and the draft, as the rules read them.
+    pub(crate) fn build_views(&mut self) -> Result<(View, View), WriterError> {
         let main = self.main.clone();
         let before = View::build(&mut InputParts { draft: self }, &main)?;
         let after = View::build(&mut DraftParts { draft: self }, &main)?;
-        preflight::run(self, &before, &after)
+        Ok((before, after))
+    }
+
+    /// Forget a report entry, as a save that lost it would. A way to seed a break.
+    pub fn forget_report(&mut self, code: &str) {
+        self.report.retain(|e| e.code != code);
+    }
+
+    /// Forget the signature acknowledgement. A way to seed a break.
+    pub fn forget_acknowledgement(&mut self) {
+        self.log.books.acknowledged = false;
+    }
+
+    /// Add a relationship with its id and form as given: a part already names the id.
+    pub(crate) fn add_relationship_exact(
+        &mut self,
+        source: &str,
+        rel: &Relationship,
+        written: &str,
+    ) -> Result<(), WriterError> {
+        if self.relationships(source)?.iter().any(|r| r.id == rel.id) {
+            return Err(WriterError::BadOperation {
+                what: "the relationship id is taken",
+                subject: rel.id.clone(),
+            });
+        }
+        let (rels_part, tree) = self.rels_tree(source)?;
+        let root = tree.root();
+        let name = sibling_name(tree, root, "Relationship");
+        let new = tree.new_element(&name);
+        set_attr(tree, new, "Id", &rel.id, &rels_part)?;
+        set_attr(tree, new, "Type", &rel.rel_type, &rels_part)?;
+        set_attr(tree, new, "Target", written, &rels_part)?;
+        if rel.mode == TargetMode::External {
+            set_attr(tree, new, "TargetMode", "External", &rels_part)?;
+        }
+        tree.insert_child(root, None, new);
+        Ok(())
     }
 
     /// The edits this draft stands for, with no check at all. The way a fixture writes a
@@ -855,12 +920,16 @@ impl<'p> Draft<'p> {
         let new_slides = std::mem::take(&mut self.new_slides);
         let source = self.package.save_unedited();
         // What only the ZIP can show arrived with the input, and goes in the report too.
-        report.extend(zipcheck::arrivals(&source).into_iter().map(|v| ReportEntry {
-            code: "CS-SAV-0021",
-            rule: v.rule,
-            part: v.part,
-            detail: v.detail,
-        }));
+        report.extend(
+            zipcheck::arrivals(&source)
+                .into_iter()
+                .map(|v| ReportEntry {
+                    code: "CS-SAV-0021",
+                    rule: v.rule,
+                    part: v.part,
+                    detail: v.detail,
+                }),
+        );
         report.sort();
         report.dedup();
 
@@ -919,6 +988,7 @@ impl<'p> Draft<'p> {
         if key(name) == key(&self.main) {
             self.log.model_edited_main = true;
         }
+        self.log.model_patched.insert(key(name));
         self.set_part_bytes(name, bytes);
     }
 }

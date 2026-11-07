@@ -119,12 +119,17 @@ fn every_node_of_every_deck_survives_an_edit() {
             &limits,
         )
         .unwrap_or_else(|e| panic!("{deck}: {}", e.code()));
-        assert_eq!(saved.changed_parts.len(), 1, "{deck}");
+        assert_eq!(asked_for(&saved.changed_parts).len(), 1, "{deck}");
         let mut after = open(saved.bytes);
         for name in &names {
+            // What any edit owes the package is not this edit's to answer for (`T1N-05`).
+            let edited = asked_for(&saved.changed_parts).contains(name);
+            if saved.changed_parts.contains(name) && !edited {
+                continue;
+            }
             let (old, new) = (source.read_part(name), after.read_part(name));
             let (old, new) = (old.unwrap(), new.unwrap());
-            if saved.changed_parts.contains(name) {
+            if edited {
                 assert_same_but_for(&deck, name, &old, &new, "show");
             } else {
                 assert_eq!(old, new, "{deck}: {name} changed");
@@ -133,4 +138,18 @@ fn every_node_of_every_deck_survives_an_edit() {
         edited += 1;
     }
     assert!(edited > 60, "{edited}");
+}
+
+/// What an edit asked for, leaving out what any edit owes the package: `app.xml`, a
+/// thumbnail, a signature set (`T1N-05`).
+fn asked_for(changed: &[String]) -> Vec<String> {
+    changed
+        .iter()
+        .filter(|n| {
+            !n.starts_with("docProps/")
+                && !n.starts_with("_xmlsignatures/")
+                && !matches!(n.as_str(), "_rels/.rels" | "[Content_Types].xml")
+        })
+        .cloned()
+        .collect()
 }

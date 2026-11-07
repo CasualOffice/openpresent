@@ -105,7 +105,15 @@ fn try_edit(
     assert!(second.changed_parts.is_empty());
 
     let (old, new) = (parts(source), parts(&outcome.bytes));
-    assert_eq!(old.len(), new.len(), "parts were lost or invented");
+    // A signature set and a thumbnail are what an edit removes (`T1N-05`), and nothing else.
+    let kept = |name: &String| {
+        !name.starts_with("_xmlsignatures/") && !name.starts_with("docProps/thumbnail")
+    };
+    assert_eq!(
+        old.keys().filter(|n| kept(n)).count(),
+        new.keys().filter(|n| kept(n)).count(),
+        "parts were lost or invented"
+    );
     for (name, bytes) in &old {
         if !outcome.changed_parts.contains(name) {
             assert_eq!(new.get(name), Some(bytes), "{name} changed");

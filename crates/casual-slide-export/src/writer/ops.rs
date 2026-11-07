@@ -2,15 +2,17 @@
 
 use std::collections::BTreeSet;
 
-use casual_slide_ooxml::{ElementId, XmlTree};
+use casual_slide_ooxml::{ElementId, PresentationPackage, Relationship, TargetMode, XmlTree};
 
 use super::clone::ClonePolicy;
 use super::draft::{Draft, rel_kind, set_attr, sibling_name};
 use super::error::WriterError;
-use super::names::key;
+use super::names::{key, target_for};
 use super::notes::{check_text, new_slide_xml};
+use super::plan::SavePlan;
 use super::preflight::is_section_guid;
 use super::view::{pml_child, pml_children, prefix_is_relationships, rel_attribute};
+use crate::media::{MediaReplacement, NewMedia};
 
 const PML: &str = "application/vnd.openxmlformats-officedocument.presentationml.";
 const AUTHORS_TYPE: &str =
@@ -101,6 +103,21 @@ pub enum Op {
         extension: String,
         /// Their media type.
         content_type: String,
+    },
+    /// Save what [`crate::media::replace_media`] planned for one node: the part's new
+    /// XML, the relationship it names, and the media behind it. The new id is the one the
+    /// XML already holds. Build with [`media_replacement_op`].
+    ApplyMediaReplacement {
+        /// The part the node is in.
+        part: String,
+        /// That part's bytes after the replacement.
+        xml: Vec<u8>,
+        /// The relationship to add, if none reached the media.
+        added: Option<Relationship>,
+        /// The relationship nothing in the part names any more.
+        released: Option<String>,
+        /// The media's bytes. None for a link, or for a relationship already there.
+        media: Option<MediaBytes>,
     },
     /// Add a layout to a master, as a copy of a layout.
     AddLayout {
@@ -209,6 +226,77 @@ pub enum Op {
     },
 }
 
+/// New media, for [`Op::ApplyMediaReplacement`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MediaBytes {
+    /// The bytes.
+    pub bytes: Vec<u8>,
+    /// Their extension, with no dot.
+    pub extension: String,
+    /// Their media type.
+    pub content_type: String,
+}
+
+/// The operation that saves a planned replacement. `tree_bytes` is the part's XML after
+/// [`crate::media::replace_media`] patched it; `media` is what [`new_media_for`] was given.
+pub fn media_replacement_op(
+    part: &str,
+    replacement: &MediaReplacement,
+    tree_bytes: Vec<u8>,
+    media: Option<MediaBytes>,
+) -> Op {
+    Op::ApplyMediaReplacement {
+        part: part.to_owned(),
+        xml: tree_bytes,
+        added: replacement.added.clone(),
+        released: replacement.released.clone(),
+        media,
+    }
+}
+
+/// Where these bytes will live, for [`crate::media::replace_media`] to plan with: the media
+/// part that already holds them (`INV-SP-03`), or the name a new one would take.
+pub fn new_media_for(
+    package: &mut PresentationPackage,
+    part: &str,
+    media: &MediaBytes,
+) -> Result<NewMedia, WriterError> {
+    let mut draft = SavePlan::new().stage(package)?;
+    let existing = draft.existing_media(&media.bytes)?;
+    let name = match existing {
+        Some(name) => name,
+        None => draft.families.mint(
+            "ppt/media",
+            media_stem(&media.content_type),
+            &media.extension,
+        )?,
+    };
+    Ok(NewMedia {
+        rel_type: draft.rel_type(media_kind(&media.content_type)),
+        target: target_for(part, &name, false),
+        mode: TargetMode::Internal,
+    })
+}
+
+fn media_stem(content_type: &str) -> &'static str {
+    if is_image(content_type) {
+        "image"
+    } else {
+        "media"
+    }
+}
+
+fn media_kind(content_type: &str) -> &'static str {
+    let lower = content_type.to_ascii_lowercase();
+    if lower.starts_with("audio/") {
+        "audio"
+    } else if lower.starts_with("video/") {
+        "video"
+    } else {
+        "image"
+    }
+}
+
 fn bad(what: &'static str, subject: impl Into<String>) -> WriterError {
     WriterError::BadOperation {
         what,
@@ -271,6 +359,19 @@ impl Draft<'_> {
                 extension,
                 content_type,
             } => self.replace_media(slide, rel_id, bytes, extension, content_type),
+            Op::ApplyMediaReplacement {
+                part,
+                xml,
+                added,
+                released,
+                media,
+            } => self.apply_media_replacement(
+                part,
+                xml,
+                added.as_ref(),
+                released.as_deref(),
+                media.as_ref(),
+            ),
             Op::AddLayout { master, copy_of } => self.add_layout(master, copy_of),
             Op::RemoveLayout { layout } => self.remove_layout(layout),
             Op::AddMaster { copy_of } => self.add_master(copy_of),
@@ -576,6 +677,18 @@ impl Draft<'_> {
                 limit: self.limits.max_media_bytes,
             });
         }
+        if let Some(existing) = self.existing_media(bytes)? {
+            return Ok(existing);
+        }
+        let name = self
+            .families
+            .mint("ppt/media", media_stem(content_type), extension)?;
+        self.add_part(&name, Some(content_type), bytes.to_vec())?;
+        Ok(name)
+    }
+
+    /// The media part already holding these bytes.
+    fn existing_media(&mut self, bytes: &[u8]) -> Result<Option<String>, WriterError> {
         let media: Vec<String> = self
             .names
             .iter()
@@ -584,17 +697,46 @@ impl Draft<'_> {
             .collect();
         for existing in media {
             if self.part_bytes(&existing)? == bytes {
-                return Ok(existing);
+                return Ok(Some(existing));
             }
         }
-        let stem = if is_image(content_type) {
-            "image"
-        } else {
-            "media"
+        Ok(None)
+    }
+
+    /// What [`Op::ApplyMediaReplacement`] does: the media part comes first, so the
+    /// relationship can name it; the old relationship goes, and the sweep takes the old
+    /// part only if nothing else in the deck reaches it (`INV-SP-02`, `INV-SP-04`).
+    fn apply_media_replacement(
+        &mut self,
+        part: &str,
+        xml: &[u8],
+        added: Option<&Relationship>,
+        released: Option<&str>,
+        media: Option<&MediaBytes>,
+    ) -> Result<(), WriterError> {
+        let actual = self.actual(part).ok_or_else(|| bad("no such part", part))?;
+        let new = XmlTree::parse(xml, &actual, &self.xml)?;
+        let old = self.tree(&actual)?;
+        if old.local_name(old.root()) != new.local_name(new.root()) {
+            return Err(bad("a replacement with another root element", actual));
+        }
+        self.set_part_bytes(&actual, xml.to_vec());
+        let name = match media {
+            Some(m) => Some(self.media_part(&m.bytes, &m.extension, &m.content_type)?),
+            None => None,
         };
-        let name = self.families.mint("ppt/media", stem, extension)?;
-        self.add_part(&name, Some(content_type), bytes.to_vec())?;
-        Ok(name)
+        if let Some(rel) = added {
+            let written = match (&name, rel.mode) {
+                (Some(name), TargetMode::Internal) => target_for(&actual, name, false),
+                (None, TargetMode::External) => rel.target.clone(),
+                _ => return Err(bad("a new relationship with no media", rel.id.clone())),
+            };
+            self.add_relationship_exact(&actual, rel, &written)?;
+        }
+        if let Some(id) = released {
+            self.remove_relationship(&actual, id)?;
+        }
+        Ok(())
     }
 
     fn add_picture(

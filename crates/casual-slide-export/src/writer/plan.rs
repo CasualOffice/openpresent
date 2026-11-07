@@ -6,6 +6,7 @@ use casual_slide_model::presentation::Deck;
 use casual_slide_model::slide::{DeckStructure, SlidePart};
 use casual_slide_ooxml::{PresentationPackage, XmlTree};
 
+use super::bookkeeping::HostInputs;
 use super::draft::{Draft, WriterOutcome};
 use super::error::WriterError;
 use super::ops::Op;
@@ -57,6 +58,9 @@ pub struct SavePlan<'a> {
     ops: Vec<Op>,
     import_limits: ImportLimits,
     limits: WriterLimits,
+    host: Option<HostInputs>,
+    signature_acknowledged: bool,
+    new_created: bool,
 }
 
 impl<'a> SavePlan<'a> {
@@ -106,6 +110,34 @@ impl<'a> SavePlan<'a> {
         self
     }
 
+    /// What only the host knows: the time, the user, the application and a fresh
+    /// thumbnail. With none given, `core.xml` is left alone (`docs/36`).
+    pub fn host(mut self, host: HostInputs) -> Self {
+        self.host = Some(host);
+        self
+    }
+
+    /// The host has told the user that editing removes the deck's signatures
+    /// (`INV-SG-02`). Without this, an edit of a signed deck is `CS-SAV-0015`.
+    pub fn acknowledge_signature(mut self) -> Self {
+        self.signature_acknowledged = true;
+        self
+    }
+
+    /// `created` takes the supplied time too: a new deck from a template (`INV-SA-07`).
+    pub(crate) fn new_created(mut self) -> Self {
+        self.new_created = true;
+        self
+    }
+
+    /// Whether the plan asks for nothing.
+    pub(crate) fn is_unchanged(&self) -> bool {
+        self.deck.is_none()
+            && self.slides.is_none()
+            && self.replacements.is_empty()
+            && self.ops.is_empty()
+    }
+
     /// Apply the plan to a draft, with nothing written. This is where a test hook can
     /// reach in, and what [`SavePlan::save`] is made of.
     pub fn stage<'p>(
@@ -153,8 +185,21 @@ impl<'a> SavePlan<'a> {
         for op in &self.ops {
             draft.apply(op)?;
         }
+        draft.log.retype_only = self.deck.is_none()
+            && self.slides.is_none()
+            && self.replacements.is_empty()
+            && !self.ops.is_empty()
+            && self
+                .ops
+                .iter()
+                .all(|op| matches!(op, Op::Retype { .. } | Op::DropVba));
         draft.sweep()?;
         draft.settle_vba()?;
+        draft.bookkeep(
+            self.host.as_ref(),
+            self.signature_acknowledged,
+            self.new_created,
+        )?;
         Ok(draft)
     }
 

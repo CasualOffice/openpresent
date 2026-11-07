@@ -30,6 +30,20 @@ pub enum WriterError {
         /// The main part.
         part: String,
     },
+    /// `CS-SAV-0013`: this pair of formats is not offered, or needs a tier not built yet.
+    FormatPair {
+        /// The format opened, by extension.
+        open: &'static str,
+        /// The format asked for, by extension.
+        save: &'static str,
+        /// Why, a fixed phrase.
+        why: &'static str,
+    },
+    /// `CS-SAV-0015`: an edit of a signed deck the host has not acknowledged (`INV-SG-02`).
+    SignatureNeedsAcknowledgement {
+        /// The origin part.
+        part: String,
+    },
     /// `CS-SAV-0009`: an edit is blocked on a construct that has no safe form yet.
     Blocked {
         /// The construct, a fixed word.
@@ -75,6 +89,8 @@ impl WriterError {
             Self::Ooxml(err) => err.code(),
             Self::Preflight { .. } => "CS-SAV-0012",
             Self::VbaNeedsConfirmation { .. } => "CS-SAV-0003",
+            Self::FormatPair { .. } => "CS-SAV-0013",
+            Self::SignatureNeedsAcknowledgement { .. } => "CS-SAV-0015",
             Self::Blocked { .. } => "CS-SAV-0009",
             Self::BadOperation { .. } => "CS-SAV-0017",
             Self::TooLarge { .. } => "CS-SAV-0018",
@@ -113,6 +129,15 @@ impl fmt::Display for WriterError {
             }
             Self::VbaNeedsConfirmation { part } => {
                 write!(f, "[{code}] {part:?}: dropping VBA needs confirmation")
+            }
+            Self::FormatPair { open, save, why } => {
+                write!(f, "[{code}] .{open} to .{save}: {why}")
+            }
+            Self::SignatureNeedsAcknowledgement { part } => {
+                write!(
+                    f,
+                    "[{code}] {part:?}: editing removes the signatures, unacknowledged"
+                )
             }
             Self::Blocked { construct, part } => {
                 write!(f, "[{code}] {part:?}: blocked on {construct}")

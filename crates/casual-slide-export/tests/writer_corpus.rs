@@ -147,7 +147,7 @@ fn add_duplicate_and_delete_reopen_on_every_deck() {
         let old = parts(&source);
         for (variant, want, ops) in plans(slides) {
             let mut pkg = open(&source);
-            let mut plan = SavePlan::new();
+            let mut plan = SavePlan::new().acknowledge_signature();
             for op in &ops {
                 plan = plan.op(op.clone());
             }

@@ -16,7 +16,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use casual_slide_export::theme::set_theme_name;
-use casual_slide_export::writer::{Draft, Op, SavePlan, SlideRef, WriterError, check_zip};
+use casual_slide_export::writer::{
+    Draft, HostInputs, Op, SavePlan, SlideRef, WriterError, check_zip,
+};
 use casual_slide_ooxml::{ElementId, OoxmlLimits, PresentationPackage, XmlTree};
 
 const THREE: &str = "generated/three-slides.pptx";
@@ -34,6 +36,7 @@ const VALID_XML: &[u8] = b"<thing xmlns=\"urn:example:seed\"/>";
 type Seed = fn(&mut Draft<'_>);
 type ByteSeed = fn(&[u8], &[u8]) -> (Vec<u8>, Vec<u8>, BTreeSet<String>);
 type Check = fn(&BTreeMap<String, Vec<u8>>, &[String]);
+type Prepare = fn(SavePlan<'static>) -> SavePlan<'static>;
 
 /// One fixture. `seeds` is what must be refused; `arrives` says a rule can see the first
 /// seed in a deck on its own, so it must be reported when given as input.
@@ -47,6 +50,8 @@ struct Case {
     bytes: Option<(&'static str, ByteSeed)>,
     arrives: bool,
     check: Option<Check>,
+    prepare: Option<Prepare>,
+    no_seed: Option<&'static str>,
 }
 
 fn case(id: &'static str, rule: &'static str, base: &'static str, plan: Vec<Op>) -> Case {
@@ -60,6 +65,8 @@ fn case(id: &'static str, rule: &'static str, base: &'static str, plan: Vec<Op>)
         bytes: None,
         arrives: false,
         check: None,
+        prepare: None,
+        no_seed: None,
     }
 }
 
@@ -74,6 +81,15 @@ impl Case {
     }
     fn reported(mut self) -> Self {
         self.arrives = true;
+        self
+    }
+    fn prepare(mut self, prepare: Prepare) -> Self {
+        self.prepare = Some(prepare);
+        self
+    }
+    /// No draft can hold this break; the check on the good deck is the test.
+    fn no_seed(mut self, why: &'static str) -> Self {
+        self.no_seed = Some(why);
         self
     }
     fn check(mut self, check: Check) -> Self {
@@ -503,28 +519,27 @@ fn cases() -> Vec<Case> {
         .reported(),
     );
     all.push(
-        case("RR-PN-10", "INV-PN-10", THREE, vec![add_slide()]).bytes(
-            "INV-PN-10",
-            |input, output| {
+        case("RR-PN-10", "INV-PN-10", THREE, vec![add_slide()])
+            .bytes("INV-PN-10", |input, output| {
                 let mut bytes = output.to_vec();
                 // The first local header's compressed size.
                 bytes[18] = bytes[18].wrapping_add(1);
                 (input.to_vec(), bytes, BTreeSet::new())
-            },
-        )
-        .reported(),
+            })
+            .reported(),
     );
     all.push(
-        case("RR-PN-11", "INV-PN-11", THREE, vec![add_slide()]).bytes("INV-PN-11", |input, _| {
-            let entries = stored_copy(input);
-            let stored = stored_zip(&as_refs(&entries));
-            let mut moved = entries.clone();
-            let at = moved.iter().position(|(n, _)| n == TYPES).unwrap();
-            let types = moved.remove(at);
-            moved.push(types);
-            (stored, stored_zip(&as_refs(&moved)), BTreeSet::new())
-        })
-        .reported(),
+        case("RR-PN-11", "INV-PN-11", THREE, vec![add_slide()])
+            .bytes("INV-PN-11", |input, _| {
+                let entries = stored_copy(input);
+                let stored = stored_zip(&as_refs(&entries));
+                let mut moved = entries.clone();
+                let at = moved.iter().position(|(n, _)| n == TYPES).unwrap();
+                let types = moved.remove(at);
+                moved.push(types);
+                (stored, stored_zip(&as_refs(&moved)), BTreeSet::new())
+            })
+            .reported(),
     );
 
     // Relationship ids.
@@ -1413,6 +1428,7 @@ fn cases() -> Vec<Case> {
             .reported(),
     );
     all.push(first_slide_num_case());
+    all.extend(bookkeeping_cases());
 
     // Sections.
     all.push(
@@ -1698,6 +1714,397 @@ fn cases() -> Vec<Case> {
 }
 
 /// `INV-ID-09`, through a replaced main part, as a model patch would reach it.
+const APP: &str = "docProps/app.xml";
+const CORE: &str = "docProps/core.xml";
+const RR_APP: &str = "generated/rr-app.pptx";
+const RR_SIGNED: &str = "generated/rr-signed.pptx";
+const RR_THUMB: &str = "generated/rr-thumbnail.pptx";
+const WHEN: &str = "2026-11-07T10:00:00Z";
+const CERT: &str = "_xmlsignatures/certs/cert1.cer";
+const ORIGIN: &str =
+    "http://schemas.openxmlformats.org/package/2006/relationships/digital-signature/origin";
+const THUMB: &str =
+    "http://schemas.openxmlformats.org/package/2006/relationships/metadata/thumbnail";
+const CORE_REL: &str =
+    "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
+
+fn host() -> HostInputs {
+    HostInputs {
+        modified: Some(WHEN.to_owned()),
+        user: Some("Editor".to_owned()),
+        application: Some("OpenPresent".to_owned()),
+        thumbnail: None,
+    }
+}
+
+fn with_host(plan: SavePlan<'static>) -> SavePlan<'static> {
+    plan.host(host())
+}
+
+fn with_png(plan: SavePlan<'static>) -> SavePlan<'static> {
+    plan.host(HostInputs {
+        thumbnail: Some(PNG.to_vec()),
+        ..host()
+    })
+}
+
+fn ack(plan: SavePlan<'static>) -> SavePlan<'static> {
+    plan.acknowledge_signature()
+}
+
+fn retype(extension: &str) -> Op {
+    Op::Retype {
+        extension: extension.to_owned(),
+    }
+}
+
+fn author() -> Op {
+    Op::AddCommentAuthor {
+        name: "Editor".to_owned(),
+        initials: "E".to_owned(),
+    }
+}
+
+/// Set the text of a child of `part`'s root.
+fn set_root_text(d: &mut Draft<'_>, part: &str, local: &str, value: &str) {
+    d.edit_part(part, |tree| {
+        let el = tree.child(tree.root(), local).unwrap();
+        tree.set_text(el, value);
+    })
+    .unwrap();
+}
+
+/// Add a child of `part`'s root.
+fn add_root_child(d: &mut Draft<'_>, part: &str, name: &str) {
+    d.edit_part(part, |tree| {
+        let root = tree.root();
+        let el = tree.new_element(name);
+        tree.insert_child(root, None, el);
+    })
+    .unwrap();
+}
+
+fn main_type_is(parts: &BTreeMap<String, Vec<u8>>, wanted: &str) {
+    let types = text(parts, TYPES);
+    let found = format!("PartName=\"/ppt/presentation.xml\" ContentType=\"{wanted}\"");
+    assert!(types.contains(&found), "{types}");
+}
+
+fn bookkeeping_cases() -> Vec<Case> {
+    const POTX: &str =
+        "application/vnd.openxmlformats-officedocument.presentationml.template.main+xml";
+    const PPSX: &str =
+        "application/vnd.openxmlformats-officedocument.presentationml.slideshow.main+xml";
+
+    vec![
+        case("RR-AP-01", "INV-AP-01", RR_APP, vec![add_slide(), add_slide(), delete(0)])
+            .check(|parts, _| {
+                let app = text(parts, APP);
+                assert!(app.contains("<Slides>4</Slides>"), "{app}");
+                assert!(app.contains("<Notes>0</Notes>"), "{app}");
+                assert!(app.contains("<HiddenSlides>1</HiddenSlides>"), "{app}");
+            })
+            .seed("INV-AP-01", |d| set_root_text(d, APP, "Slides", "9"))
+            .reported(),
+        case("RR-AP-02", "INV-AP-02", RR_APP, vec![add_slide()])
+            .check(|parts, _| {
+                let app = text(parts, APP);
+                assert!(app.contains("<vt:i4>4</vt:i4>"), "{app}");
+                assert!(app.contains("size=\"5\""), "{app}");
+                assert_eq!(app.matches("<vt:lpstr>Fixture").count(), 4, "{app}");
+                assert!(app.contains("PowerPoint Presentation"), "{app}");
+            })
+            .seed("INV-AP-02", |d| {
+                d.edit_part(APP, |tree| {
+                    let list = tree.child(tree.root(), "TitlesOfParts").unwrap();
+                    let vector = tree.child(list, "vector").unwrap();
+                    let el = tree.new_element("vt:lpstr");
+                    tree.insert_child(vector, None, el);
+                })
+                .unwrap();
+            })
+            .reported(),
+        case(
+            "RR-AP-03",
+            "INV-AP-03",
+            "generated/rr-app-unknown-groups.pptx",
+            vec![add_slide()],
+        )
+        .check(|parts, _| {
+            let app = text(parts, APP);
+            assert!(!app.contains("HeadingPairs"), "{app}");
+            assert!(!app.contains("TitlesOfParts"), "{app}");
+        })
+        .seed("INV-AP-03", |d| {
+            d.edit_part(APP, |tree| {
+                let root = tree.root();
+                let held = tree.new_element("HeadingPairs");
+                let vector = tree.new_element("vt:vector");
+                tree.insert_child(held, None, vector);
+                tree.insert_child(root, None, held);
+            })
+            .unwrap();
+        }),
+        case("RR-AP-04", "INV-AP-04", RR_APP, vec![author()])
+            .seed("INV-AP-04", |d| set_root_text(d, APP, "AppVersion", "1.2.3"))
+            .reported(),
+        case("RR-AP-05", "INV-AP-05", RR_APP, vec![author()])
+            .prepare(with_host)
+            .check(|parts, _| {
+                let app = text(parts, APP);
+                assert!(app.contains("<Application>OpenPresent</Application>"), "{app}");
+                assert!(app.contains("<TotalTime>5</TotalTime>"), "{app}");
+            })
+            .seed("INV-AP-05", |d| {
+                set_root_text(d, APP, "Application", "Microsoft Office PowerPoint");
+            }),
+        case("RR-AP-06", "INV-AP-06", RR_SIGNED, vec![author()])
+            .prepare(ack)
+            .check(|parts, _| assert!(!text(parts, APP).contains("DigSig")))
+            .seed("INV-AP-06", |d| add_root_child(d, APP, "DigSig")),
+        case("RR-AP-07", "INV-AP-07", RR_APP, vec![author()])
+            .seed("INV-AP-07", |d| {
+                raw_rel(d, "_rels/.rels", "rId90", CORE_REL, "docProps/core.xml");
+            }),
+        case("RR-AP-08", "INV-AP-08", RR_APP, vec![author()])
+            .prepare(with_host)
+            .check(|parts, _| {
+                let core = text(parts, CORE);
+                assert!(core.contains(WHEN), "{core}");
+                assert!(core.contains("2020-01-01T00:00:00Z"), "created stays: {core}");
+            })
+            .seed("INV-AP-08", |d| {
+                d.edit_part(CORE, |tree| {
+                    let el = tree.child(tree.root(), "modified").unwrap();
+                    assert!(tree.remove_attribute(el, "xsi:type"));
+                })
+                .unwrap();
+            })
+            .seed("INV-AP-08", |d| set_root_text(d, CORE, "created", WHEN)),
+        case(
+            "RR-AP-09",
+            "INV-AP-09",
+            "generated/rr-core-text-revision.pptx",
+            vec![author()],
+        )
+        .prepare(with_host)
+        .check(|parts, _| {
+            let core = text(parts, CORE);
+            assert!(core.contains(">draft<"), "text stays: {core}");
+            assert!(core.contains(">Editor<"), "{core}");
+        })
+        .seed("INV-AP-09", |d| set_root_text(d, CORE, "revision", "1")),
+        case("RR-AP-10", "INV-AP-10", RR_APP, vec![author()])
+            .prepare(with_host)
+            .check(|parts, _| {
+                let core = text(parts, CORE);
+                assert!(core.contains("<cp:value xml:lang=\"fr-FR\">deux</cp:value>"), "{core}");
+                assert!(core.contains("<cp:revision>8</cp:revision>"), "{core}");
+            })
+            .seed("INV-AP-10", |d| set_root_text(d, CORE, "keywords", "flat")),
+        case("RR-TH-01", "INV-TH-01", RR_THUMB, vec![author()])
+            .prepare(with_png)
+            .seed("INV-TH-01", |d| {
+                raw_rel(d, "_rels/.rels", "rId90", THUMB, "docProps/thumbnail.png");
+            }),
+        case("RR-TH-02", "INV-TH-02", RR_THUMB, vec![author()])
+            .check(|parts, _| {
+                assert!(!parts.contains_key("docProps/thumbnail.jpeg"));
+                assert!(!text(parts, "_rels/.rels").contains("thumbnail"));
+            })
+            .seed("INV-TH-02", |d| {
+                d.set_part_bytes("docProps/thumbnail.jpeg", b"\xff\xd8\xff\xd9".to_vec());
+                raw_rel(d, "_rels/.rels", "rId90", THUMB, "docProps/thumbnail.jpeg");
+            }),
+        case("RR-TH-03", "INV-TH-03", RR_THUMB, vec![author()])
+            .prepare(with_png)
+            .check(|parts, _| {
+                assert_eq!(parts["docProps/thumbnail.png"], PNG);
+                assert!(!parts.contains_key("docProps/thumbnail.jpeg"));
+            })
+            .seed("INV-TH-03", |d| {
+                d.set_part_bytes("docProps/thumbnail.jpeg", b"\xff\xd8\xff\xd9".to_vec());
+            }),
+        case("RR-SG-01", "INV-SG-01", RR_SIGNED, vec![author()])
+            .prepare(ack)
+            .seed("INV-SG-01", |d| {
+                d.set_part_bytes("_xmlsignatures/sig1.xml", b"<Signature/>".to_vec());
+                add_type_entry(
+                    d,
+                    "Override",
+                    &[
+                        ("PartName", "/_xmlsignatures/sig1.xml"),
+                        (
+                            "ContentType",
+                            "application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml",
+                        ),
+                    ],
+                );
+            })
+            .reported(),
+        case("RR-SG-02", "INV-SG-02", RR_SIGNED, vec![author()])
+            .prepare(ack)
+            .seed("INV-SG-02", |d| d.forget_acknowledgement()),
+        case("RR-SG-03", "INV-SG-03", RR_SIGNED, vec![author()])
+            .prepare(ack)
+            .check(|parts, _| {
+                assert!(!parts.keys().any(|k| k.starts_with("_xmlsignatures")));
+                assert!(!text(parts, "_rels/.rels").contains("digital-signature"));
+                assert!(!text(parts, TYPES).contains("digital-signature"));
+            })
+            .seed("INV-SG-03", |d| d.set_part_bytes(CERT, b"x".to_vec())),
+        case("RR-SG-04", "INV-SG-04", RR_SIGNED, vec![author()])
+            .prepare(ack)
+            .seed("INV-SG-04", |d| d.forget_report("CS-SAV-0001")),
+        case("RR-SG-05", "INV-SG-05", RR_SIGNED, vec![author()])
+            .prepare(ack)
+            .seed("INV-SG-05", |d| {
+                raw_rel(d, "_rels/.rels", "rId90", ORIGIN, "_xmlsignatures/origin.sigs");
+            }),
+        case("RR-SG-06", "INV-SG-06", RR_SIGNED, vec![])
+            .check(|parts, _| {
+                assert!(parts.contains_key(CERT), "nothing edited, nothing dropped");
+            })
+            .no_seed("nothing dirty means the input bytes; a_signed_deck_with_its_edit_undone_keeps_its_bytes"),
+        case("RR-SG-07", "INV-SG-07", RR_SIGNED, vec![retype("potx")])
+            .prepare(ack)
+            .check(|parts, _| {
+                main_type_is(parts, POTX);
+                assert!(!parts.contains_key(CERT));
+            })
+            .seed("INV-SG-05", |d| {
+                raw_rel(d, "_rels/.rels", "rId90", ORIGIN, "_xmlsignatures/origin.sigs");
+            }),
+        case("RR-SG-08", "INV-SG-08", "generated/rr-signed-vba.pptm", vec![author()])
+            .prepare(ack)
+            .check(|parts, _| {
+                assert!(parts.contains_key("ppt/vbaProjectSignature.bin"));
+                assert!(!parts.contains_key(CERT));
+            })
+            .seed("INV-SG-08", |d| d.drop_entry("ppt/vbaProjectSignature.bin")),
+        case("RR-SA-01", "INV-SA-01", THREE, vec![retype("ppsx")])
+            .check(|parts, _| main_type_is(parts, PPSX))
+            .seed("INV-SA-01", |d| {
+                d.edit_part(TYPES, |tree| {
+                    for el in tree.child_elements(tree.root()) {
+                        if tree.plain_attribute(el, "PartName").as_deref()
+                            == Some("/ppt/presentation.xml")
+                        {
+                            assert!(tree.set_attribute(el, "ContentType", "application/wrong"));
+                        }
+                    }
+                })
+                .unwrap();
+            }),
+        case("RR-SA-02", "INV-SA-02", THREE, vec![retype("potx")])
+            .seed("INV-SA-02", |d| {
+                set_first(d, "ppt/slides/slide1.xml", "cNvPr", "name", "Changed");
+            }),
+        case("RR-SA-03", "INV-SA-03", "generated/rr-vba.pptm", vec![Op::DropVba, retype("pptx")])
+            .check(|parts, _| assert!(!parts.contains_key("ppt/vbaProject.bin")))
+            .seed("INV-SA-03", |d| {
+                d.set_part_bytes("ppt/vbaProject.bin", b"x".to_vec());
+                raw_rel(
+                    d,
+                    MAIN_RELS,
+                    "rId90",
+                    "http://schemas.microsoft.com/office/2006/relationships/vbaProject",
+                    "vbaProject.bin",
+                );
+            })
+            .reported(),
+        case(
+            "RR-SA-04",
+            "INV-SA-04",
+            "generated/rr-macro-action.pptm",
+            vec![Op::DropVba, retype("pptx")],
+        )
+        .check(|parts, _| {
+            assert!(!text(parts, "ppt/slides/slide1.xml").contains("ppaction"));
+        })
+        .seed("INV-SA-04", |d| {
+            set_first(
+                d,
+                "ppt/slides/slide1.xml",
+                "cNvPr",
+                "descr",
+                "ppaction://macro?name=Run",
+            );
+        }),
+        case("RR-SA-05", "INV-SA-05", THREE, vec![retype("pptm")])
+            .check(|parts, _| assert!(!parts.contains_key("ppt/vbaProject.bin")))
+            .seed("INV-SA-05", |d| {
+                d.set_part_bytes("ppt/custom/extra.xml", VALID_XML.to_vec());
+            }),
+        case("RR-SA-06", "INV-SA-06", "generated/rr-activex.pptx", vec![retype("ppsx")])
+            .check(|parts, _| {
+                assert!(parts.contains_key("customUI/customUI.xml"));
+                assert!(parts.contains_key("ppt/activeX/activeX1.xml"));
+            })
+            .seed("INV-SA-06", |d| d.drop_entry("customUI/customUI.xml")),
+        case("RR-SA-14", "INV-SA-14", "generated/slides-strict.pptx", vec![retype("potx")])
+            .check(|parts, _| {
+                assert!(text(parts, MAIN_RELS).contains("purl.oclc.org"));
+            })
+            .seed("INV-RI-09", |d| {
+                raw_rel(d, MAIN_RELS, "rId90", &format!("{T}/tags"), "tags/t.xml");
+                d.set_part_bytes("ppt/tags/t.xml", VALID_XML.to_vec());
+            }),
+    ]
+}
+
+/// `INV-SG-06`: an edit undone is nothing dirty, so the signature stands.
+#[test]
+fn a_signed_deck_with_its_edit_undone_keeps_its_bytes() {
+    let source = std::fs::read(fixtures().join(RR_SIGNED)).unwrap();
+    let mut pkg = open(&source);
+    let same = pkg.read_part("ppt/slides/slide1.xml").unwrap();
+    let outcome = SavePlan::new()
+        .replace_part("ppt/slides/slide1.xml", same)
+        .save(&mut pkg)
+        .unwrap();
+    assert_eq!(outcome.bytes, source);
+}
+
+/// `INV-SG-02`: an edit is refused until the host has told the user, and leaves no trace.
+#[test]
+fn an_edit_of_a_signed_deck_needs_an_acknowledgement() {
+    let source = std::fs::read(fixtures().join(RR_SIGNED)).unwrap();
+    let mut pkg = open(&source);
+    let err = SavePlan::new().op(author()).save(&mut pkg).unwrap_err();
+    assert_eq!(err.code(), "CS-SAV-0015", "{err}");
+    let outcome = SavePlan::new()
+        .acknowledge_signature()
+        .op(author())
+        .save(&mut pkg)
+        .unwrap();
+    assert!(outcome.signature_invalidated);
+    let entry = outcome
+        .report
+        .iter()
+        .find(|e| e.code == "CS-SAV-0001")
+        .unwrap();
+    assert_eq!(entry.detail, "1 signatures removed");
+}
+
+/// A stale count that arrived, with nothing here changing it, is reported and left (F2).
+#[test]
+fn a_count_that_arrived_stale_stays_until_the_slides_change() {
+    let source = std::fs::read(fixtures().join(RR_APP)).unwrap();
+    let mut pkg = open(&source);
+    let app = String::from_utf8(pkg.read_part(APP).unwrap()).unwrap();
+    let mut seeded = casual_slide_package::PartEdits::default();
+    seeded.replace(APP, app.replace("<Slides>3<", "<Slides>9<").into_bytes());
+    let stale = pkg.save_with(&seeded).unwrap();
+    let mut pkg = open(&stale);
+    let kept = SavePlan::new().op(author()).save(&mut pkg).unwrap();
+    assert!(text(&parts_of(&kept.bytes), APP).contains("<Slides>9<"));
+    assert!(kept.report.iter().any(|e| e.rule == "INV-AP-01"));
+    let mut pkg = open(&stale);
+    let fixed = SavePlan::new().op(add_slide()).save(&mut pkg).unwrap();
+    assert!(text(&parts_of(&fixed.bytes), APP).contains("<Slides>4<"));
+}
+
 fn first_slide_num_case() -> Case {
     let bytes = std::fs::read(fixtures().join(THREE)).unwrap();
     let main = String::from_utf8(parts_of(&bytes)[MAIN].clone()).unwrap();
@@ -1730,6 +2137,9 @@ fn plan_of(case: &Case) -> SavePlan<'static> {
     for op in &case.plan {
         plan = plan.op(op.clone());
     }
+    if let Some(prepare) = case.prepare {
+        plan = prepare(plan);
+    }
     plan
 }
 
@@ -1755,7 +2165,7 @@ fn write_seeded(source: &[u8], case: &Case, seed: Seed) -> Result<Vec<u8>, Strin
 
 /// Seeded decks the strict reader refuses, each waiting on the recovering reader of
 /// `docs/29`, which is not the writer's. Any other refusal fails the test.
-const WAITS_FOR_RECOVERY: &[(&str, &str)] = &[("RR-PN-03", "REC-01")];
+const WAITS_FOR_RECOVERY: &[(&str, &str)] = &[("RR-PN-03", "REC-01"), ("RR-SA-01", "REC-02")];
 
 /// Given as an input deck, a seeded file opens, saves after an unrelated edit, and reports
 /// the break where one package can show it (`docs/36`, `docs/29`). What became of it.
@@ -1769,6 +2179,7 @@ fn benign_save(seeded: &[u8], case: &Case) -> String {
         }
     };
     let outcome = SavePlan::new()
+        .acknowledge_signature()
         .op(Op::AddCommentAuthor {
             name: "Editor".to_owned(),
             initials: "E".to_owned(),
@@ -1803,6 +2214,9 @@ fn no_invariant_in_these_rows_is_left_without_a_fixture() {
         ("ID", 9),
         ("SL", 7),
         ("NM", 5),
+        ("AP", 10),
+        ("TH", 3),
+        ("SG", 8),
     ];
     let have: BTreeSet<String> = cases().iter().map(|c| c.id.to_owned()).collect();
     for (family, count) in families {
@@ -1868,8 +2282,11 @@ fn every_fixture_saves_its_good_deck_and_refuses_its_seed() {
             seeded_note = format!("seeded in the ZIP; {}", benign_save(&output, &case));
             seeded_file = Some(output);
         }
+        if let Some(why) = case.no_seed {
+            seeded_note = format!("no seed: {why}");
+        }
         assert!(
-            !case.seeds.is_empty() || case.bytes.is_some(),
+            !case.seeds.is_empty() || case.bytes.is_some() || case.no_seed.is_some(),
             "{} has no seed",
             case.id
         );

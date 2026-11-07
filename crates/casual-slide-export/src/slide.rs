@@ -1258,6 +1258,7 @@ pub fn save_slide_parts(
 ) -> Result<SaveOutcome> {
     let plan = SavePlan::new()
         .with_limits(*import_limits, WriterLimits::default())
+        .acknowledge_signature()
         .slide_parts(structure, parts, limits);
     let outcome = plan.save(package).map_err(|err| match err {
         WriterError::Slide(err) => err,
