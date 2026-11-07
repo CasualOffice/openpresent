@@ -507,8 +507,13 @@ pub fn walk(
     Ok(())
 }
 
-/// An attribute's value by local name, normalized as XML requires. Duplicate and
+/// An unprefixed attribute's value, normalized as XML requires. Duplicate and
 /// malformed attributes are refused.
+///
+/// Exact, since `.rels` and content types declare their attributes with no namespace:
+/// a foreign `x:Target` is not `Target`, and `xmlns:Target` is a declaration
+/// (`XML-04`, the same flaw as `XML-01`). Attributes have no default namespace, so an
+/// unprefixed name is the only spelling of these.
 pub(crate) fn attr(
     e: &BytesStart<'_>,
     local: &[u8],
@@ -517,7 +522,7 @@ pub(crate) fn attr(
     let mut found = None;
     for a in e.attributes() {
         let a = a.map_err(|_| malformed(part, "a malformed attribute"))?;
-        if a.key.local_name().as_ref() == local {
+        if a.key.as_ref() == local {
             let value = a
                 .normalized_value(quick_xml::XmlVersion::Implicit1_0)
                 .map_err(|_| malformed(part, "an invalid reference"))?;

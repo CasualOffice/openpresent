@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use crate::def::{
     Arg, AxisDef, Cmd, FillMode, GeometryDef, GuideDef, HandleDef, Op, PathDef, PtDef,
 };
-use crate::diagnostic::{Diagnostic, Diagnostics, clip};
+use crate::diagnostic::{Diagnostic, Diagnostics};
 use crate::generated::BUILTIN_ORDER;
 use crate::math::{COORD_LIMIT, TURN, atan2, coordinate, saturate, sin_cos, unit_vector};
 use crate::{compile, limits};
@@ -819,7 +819,7 @@ impl GeometryDef {
             if self.av.iter().any(|g| g.name == adjust.name) {
                 overrides.insert(adjust.name, adjust.value);
             } else {
-                diagnostics.push(Diagnostic::UnknownAdjust(clip(adjust.name)));
+                diagnostics.push(Diagnostic::UnknownAdjust);
             }
         }
         overrides

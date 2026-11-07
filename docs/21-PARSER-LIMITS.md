@@ -43,7 +43,7 @@ the central directory, before anything is inflated.
 | `max_entries` | `50_000` | Entries in the archive | CS-PKG-0002 | Tested |
 | `max_total_uncompressed` | `4u64 << 30` | Declared uncompressed bytes over all entries, 4 GiB; also the budget every read is charged against | CS-PKG-0003 | Tested |
 | `max_expansion_ratio` | `1000` | Uncompressed to compressed, over the archive **and per entry**, since ordinary parts can dilute a bomb (`SEC-013`) | CS-PKG-0003 | Tested; `hostile/zip-bomb.bin` |
-| `max_path_bytes` | `4096` | Bytes in one entry name | CS-PKG-0004 | **Untested**: no test or fixture crosses it |
+| `max_path_bytes` | `4096` | Bytes in one entry name | CS-PKG-0004 | Fixture `path-too-long`, seen red with the cap removed (`SEC-020`) |
 
 ## Reading a part
 
@@ -70,6 +70,7 @@ the central directory, before anything is inflated.
 | `max_total_relationships` | `2_000_000` | Relationships across the package | CS-OPC-0002 | **Untested** (`SEC-016`) |
 | `max_content_types` | `200_000` | Entries in `[Content_Types].xml` | CS-OPC-0003 | **Untested** (`SEC-016`) |
 | `MAX_ENCODING_LAYERS` | `8` | Rounds of percent-decoding a part name or target may need; more is refused (`OPC-01`) | CS-FND-0011 as a finding | Tested |
+| `MAX_REPORTED_ID_BYTES` | `64` | Bytes of a relationship id a finding will repeat, with its form checked as an NCName; longer or otherwise is left out, and still works as an id (`DOC-009`) | none: left out of the finding | Tested |
 
 The walker accepts some malformed attributes (`XML-02`) and some non-XML (`XML-03`). Those
 are correctness defects with security consequences, not missing limits, and are tracked there.
@@ -93,13 +94,16 @@ deck does not import.
 | `max_variant_items` | `1_000_000` | Vector and array items across a part; a `vt:vector/@size` is never believed | CS-IMP-0001 | Tested; `import-limit-variant-items` |
 | `max_variant_depth` | `16` | Nesting of `vt:variant` and `vt:vector` | CS-IMP-0001 | Tested; `import-limit-variant-depth` |
 | `max_value_bytes` | `16 << 20` | Bytes in one attribute or text value | CS-IMP-0002 | Tested; `import-limit-value-bytes` |
-| `max_findings` | `10_000` | Distinct findings kept; one more says the list was cut | none: report capped | Tested; `import-findings-flood` |
+| `max_findings` | `10_000` | Distinct findings kept; one more says the list was cut | none: report capped | Tested with a tightened bound on `import-bad-values`. Made-up names are one finding since `SEC-018`, so `import-findings-flood` no longer nears it |
 
 Colour and theme import is the exception: it never refuses a part. What it cannot believe
 is left absent, reported, and kept as bytes.
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
+| `max_color_transforms` | `64` | Transforms read on one colour; over it, the colour is absent. Applied by `import_theme_limited` and `Findings::with_limits` | CS-CLR-0002 | Tested; fixture `color-too-many-transforms`, seen red with the cap ignored (`COLOR-01`) |
+| `max_theme_list_entries` | `4096` | Entries read from one theme list; the rest is reported and kept in the part | CS-CLR-0010 | Tested; fixture `color-list-capped`, seen red |
+| `max_color_findings` | `1024` | Colour findings kept for one part; the count stays exact | none: report capped | Tested; fixture `color-findings-flood`, seen red |
 | `MAX_LIST_ENTRIES` | `4096` | Entries read from one theme list: custom colours, supplemental fonts, style matrix entries, gradient stops, extensions. The rest is retained, not modelled | CS-CLR-0010 | Tested |
 | `MAX_FINDINGS` | `1024` | Colour findings kept for one part | none: report capped | Tested |
 | `MAX_COLOR_TRANSFORMS` | `64` | Transforms on one colour, in `casual-slide-model`. Over it, the colour is absent | CS-CLR-0002 | Tested |
@@ -115,9 +119,29 @@ These are constants, not fields of `ImportLimits`, so a host cannot tighten them
 | --- | --- | --- | --- | --- |
 | `max_shapes_per_part` | `100_000` | Shape-tree nodes in one part | CS-SLD | Tested; hostile fixture |
 | `max_group_depth` | `64` | Group nesting | CS-SLD | Tested; hostile fixture |
-| `max_slides` | `100_000` | Slides indexed | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
-| `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
-| `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
+| `max_slides` | `100_000` | Slides indexed | CS-SLD-0003 | Tested; fixture `import-limit-structure-slides`, seen red. `ImportLimits::max_slides` holds the same default and refuses first in `import_deck`; a host raising that one reaches this |
+| `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD-0004 | Fixture `slide-limit-parts`, under a tightened bound. **Not reachable at the default**: `max_entries` refuses a package first, which a test holds |
+| `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD-0004 | Tested; fixture `slide-limit-layout-ids`, seen red |
+
+## Drawing properties: `DrawingLimits`
+
+`crates/casual-slide-import/src/drawing.rs`. Geometry, fills, lines, effects and 3D on one shape. Over a limit, the **whole property** is left out of the model and reported as `CS-DRW-0001`; the tree keeps it, so the deck opens and saves as it was. A part of a gradient would be a wrong gradient, which is why the list is not cut. The caps from `casual-slide-geometry` below apply again, on compile.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_gradient_stops` | `1_024` | `gs` in one `gsLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_dash_stops` | `1_024` | `ds` in one `custDash` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_effects` | `1_024` | Effects in one list, blip or container | CS-DRW-0001 | Tested; hostile fixture |
+| `max_effect_depth` | `32` | Nesting of containers, and of fills in effects in blips, which the schema does not bound | CS-DRW-0001 | Tested; two hostile fixtures |
+| `max_picture_effects` | `4_096` | `imgEffect` in one layer, marks in one `backgroundRemoval` | CS-DRW-0001 | Bound by the same check as `max_effects`; no hostile fixture |
+| `max_guides` | `4_096` | `gd` in one `avLst` or `gdLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_handles` | `256` | Children of one `ahLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_sites` | `4_096` | `cxn` in one `cxnLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_paths` | `1_024` | `path` in one `pathLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_path_commands` | `262_144` | Commands in one path | CS-DRW-0001 | Tested; hostile fixture |
+| `max_items_per_property` | `1_000_000` | Elements read for one property, whatever its shape | CS-DRW-0001 | Bound by the same check as the lists; no hostile fixture, as `max_elements` reaches first by default |
+
+A shape path uses `DrawingLimits::default()`. `read_fill`, `read_line`, `read_effects`, `read_blip_fill` and `read_preset_text_shape` take limits, which is how `one_under_each_limit_is_read` tightens one.
 
 ## Geometry
 
@@ -127,21 +151,31 @@ cap is the generous one.
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `MAX_GUIDES` | `4096` | `av` plus `gd` guides | none yet | Tested; `tests/hostile.rs` |
-| `MAX_PATHS` | `1024` | Paths | none yet | Tested |
-| `MAX_PATH_POINTS` | `262_144` | Points over all paths | none yet | Tested |
-| `MAX_HANDLES` | `256` | Adjust handles | none yet | Tested |
-| `MAX_SITES` | `4096` | Connection sites | none yet | Tested |
-| `MAX_FORMULA_LEN` | `1024` | Bytes in one formula | none yet | Tested |
-| `MAX_NAME_LEN` | `256` | Bytes in one guide name | none yet | Tested |
+| `MAX_GUIDES` | `4096` | `av` plus `gd` guides | CS-GEO-0001 | Tested; `tests/hostile.rs`, fixture `geometry-too-many-guides` |
+| `MAX_PATHS` | `1024` | Paths | CS-GEO-0002 | Tested; fixture `geometry-too-many-paths` |
+| `MAX_PATH_POINTS` | `262_144` | Points over all paths | CS-GEO-0003 | Tested; fixture `geometry-too-many-points` |
+| `MAX_HANDLES` | `256` | Adjust handles | CS-GEO-0004 | Tested; fixture `geometry-too-many-handles` |
+| `MAX_SITES` | `4096` | Connection sites | CS-GEO-0005 | Tested; fixture `geometry-too-many-sites` |
+| `MAX_FORMULA_LEN` | `1024` | Bytes in one formula | CS-GEF-0004, a repair | Tested; fixture `geometry-long-names` |
+| `MAX_NAME_LEN` | `256` | Bytes in one guide name | CS-GEF-0004, a repair | Tested; fixture `geometry-long-names` |
 | `MAX_EXTENT` | `27_273_042_316_900` | Shape extent in EMU, `ST_PositiveCoordinate`'s maximum; larger values are clamped, not refused, in `eval.rs` | none: clamped | Untested by a hostile extent; a compile-time assertion holds it under the arithmetic's limit |
 | `MAX_KEPT` | `32` | Diagnostics kept per compile or evaluation; the count stays exact | none: report capped | Tested |
-| `MAX_SUBJECT` | `64` | Bytes of **file-supplied text** kept in one diagnostic | none | Tested; but see below |
 
-`GeometryError` has messages and no stable codes, against the rule that every refusal
-carries one (`GEO-04`). And a geometry diagnostic carries up to 64 bytes of text from the
-file, which the log contract in [20](20-ERROR-CODE-REGISTRY.md) forbids: the same defect
-as `SEC-015`, in a crate that row does not name.
+A geometry diagnostic holds no text from the file (`SEC-019`), and every refusal and repair has a code (`GEO-04`).
+
+## Text: `TextLimits`
+
+`crates/casual-slide-import/src/text.rs`, nested in `ImportLimits` as `text`. Each is well beyond any real deck; the largest committed real deck is well under one percent of each. The part bounds below `max_runs_per_part` set what a text-heavy part can cost in the model: a run holds at most about 400 bytes of model before its strings, and each string is bounded by `max_value_bytes` and by the part. A size test holds that figure, so at the defaults text in one part stays near 400 MiB plus its characters. A run's fill, line and effects are boxed and sized by what the file holds, each under `DrawingLimits`, as on a shape.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_paragraphs_per_body` | `100_000` | Paragraphs in one text body | CS-TXT-0001 | Tested; `hostile/text-limit-paragraphs-in-body.bin` |
+| `max_runs_per_paragraph` | `100_000` | Runs, breaks, fields and retained children in one paragraph | CS-TXT-0002 | Tested; `hostile/text-limit-runs-in-paragraph.bin` |
+| `max_paragraphs_per_part` | `250_000` | Paragraphs across one part's shapes | CS-TXT-0003 | Tested; `hostile/text-limit-paragraphs-in-part.bin` |
+| `max_runs_per_part` | `1_000_000` | Runs, breaks, fields and retained children across one part | CS-TXT-0004 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_tab_stops` | `1_024` | Tab stops in one `tabLst`. Between the schema's 32 and this, they are kept and reported as `CS-IMF-0002` | CS-TXT-0005 | Tested; `hostile/text-limit-tab-stops.bin` |
+
+Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fixed shape, and a colour's transforms have their own bound. `a:t` is bounded by `max_value_bytes`.
 
 ## Export
 
@@ -160,8 +194,8 @@ Each of these is a known gap with an owner, not an oversight:
 - **Time.** No limit bounds the time a deck can take within its byte budgets (`SEC-P10`, Tier 1A).
 - **Embedded packages.** An embedded deck or workbook is retained, never opened; opening one
   will be a separate admission with an inherited budget (`SEC-P09`).
-- **Text, layout and rendering** limits arrive with Tiers 1F and 2D: runs per paragraph, glyphs
-  per frame, image pixel dimensions before decode.
+- **Layout and rendering** limits arrive with Tier 2D: glyphs per frame, image pixel dimensions
+  before decode.
 - **Legacy `.ppt`** has no reader; a Compound File is refused as `CS-OPC-0005` (`CFB-01`, `PPT-01`).
 
 ## Tools

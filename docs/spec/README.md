@@ -7,13 +7,15 @@ Every tag, property and enum value in the vendored schemas, each assigned to a r
 tier. A phase cannot close while a row in its scope is unaccounted for.
 
 Status letters: `M` model, `I` import, `E` export, `R` render, `U` UI. Values: `.` not started,
-`y` done with a test, `r` retained verbatim, `n/a` does not apply.
+`y` done with a test, `r` retained verbatim, `n/a` does not apply. `tools/spec-audit/audit.py --check`
+holds every `y` to code, a test and a fixture, and `--propose` says what the evidence earns (`STAT-01`).
 
-**Rows: 8730.** element 2371, value 2256, attribute 1740, type 1208, simple 499, root 301, group 142, attrgroup 103, rootattr 74, any 25, base 11.
+**Rows: 8739.** element 2373, value 2256, attribute 1741, type 1208, simple 499, root 302, group 142, attrgroup 103, rootattr 79, any 25, base 11.
 
 | Area | What | Rows | Import, export, model | Render | Edit UI | Level |
 | --- | --- | ---: | --- | --- | --- | --- |
 | [DSIG](DSIG.md) | Digital signatures | 14 | Tier 1A | - | 10 | Retain |
+| [MCE](MCE.md) | Markup compatibility (ECMA-376 Part 3) | 9 | Tier 1A | - | - | Retain |
 | [PKG](PKG.md) | Package, relationships, properties | 285 | Tier 1A | - | 10 | Edit |
 | [SIMPLE](SIMPLE.md) | Shared value types | 93 | Tier 1A | - | - | Edit |
 | [PRES](PRES.md) | Presentation part and its properties | 216 | Tier 1B | 2A | 4 | Edit |
@@ -130,3 +132,5 @@ Status letters: `M` model, `I` import, `E` export, `R` render, `U` UI. Values: `
 | `schemas/ms-extensions/ms-odrawxml-42.xsd` | `x:drawing/2015/06/chart` |
 
 Excluded on purpose: these MS-ODRAWXML namespaces belong to Word and Excel parts: `excel/2010/spreadsheetDrawing`, `word/2010/wordml`, `word/2010/wordprocessingCanvas`, `word/2010/wordprocessingDrawing`, `word/2010/wordprocessingGroup`, `word/2010/wordprocessingShape`, `word/2012/wordprocessingDrawing`.
+
+Not from a schema: [MCE](MCE.md). Written by hand, since ECMA-376 Part 3 ships no XSD: `tools/spec-checklist/markup-compatibility.tsv`. Tied to `BEH-18` in [51](../51-SPEC-CHECKLIST-AND-FIDELITY.md). Built in `crates/casual-slide-ooxml/src/mce.rs`.

@@ -103,7 +103,8 @@ static class Program
         catch (Exception ex) when (ex is OpenXmlPackageException or InvalidDataException
                                        or System.Xml.XmlException or IOException
                                        or InvalidOperationException or NotSupportedException
-                                       or FileFormatException or ArgumentException)
+                                       or FileFormatException or ArgumentException
+                                       or NamespaceNotUnderstandException)
         {
             // The type, never the message: a message can carry text from the file.
             result["status"] = "refused";

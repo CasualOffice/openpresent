@@ -1,0 +1,21 @@
+# F4-02, F4-03: where F4 accepts what ECMA-376's Transitional XSD refuses, because PowerPoint
+# writes it. Read by validate.py, which makes each edit in a private copy of schemas/ooxml
+# and stops if an edit does not apply exactly `count` times. schemas/ is never changed, and
+# Strict is never relaxed. --no-allowances shows the result without any of this.
+#
+# Each allowance is as narrow as the evidence: it widens one attribute or one content
+# model, and a seeded case in crates/casual-slide-ooxml/tests/corpus.rs
+# (f4_allowance_*) shows it needed and shows the real error next to it still refused.
+#
+# Evidence is the 66 decks of fixtures/real/README.md, on 2026-11-07. The writer named is
+# each file's app.xml, which is evidence and can be false. None of this shows PowerPoint
+# requires the form, only that it writes it (PV-01).
+#
+# Columns, tab-separated: id, file in schemas/ooxml, count, exact old text, new text
+# (\n is a CRLF, as these files have), evidence, reason.
+F4A-1	dml-main.xsd	1	<xsd:attribute name="val" type="ST_TextBulletSizePercent" use="required"/>	<xsd:attribute name="val" type="ST_TextBulletSize" use="required"/>	6 decks (z21157343 130000; z15052513 25000, 80000; sdk-presentation 115000; z17310490 100000; z20089741 80000), and LibreOffice's export; no deck wrote a percent string	CT_TextBulletSizePercent names only the percent form, though the same XSD defines the union ST_TextBulletSize of percent and ST_TextBulletSizeDecimal for it. The union keeps both bounds, 25% to 400%, so 24999, 400001 and text stay refused
+F4A-2	dml-chart.xsd	1	  <xsd:complexType name="CT_UnsignedInt">	  <xsd:simpleType name="ST_AxisIdAsWritten">\n    <xsd:union memberTypes="xsd:unsignedInt xsd:int"/>\n  </xsd:simpleType>\n  <xsd:complexType name="CT_AxisIdAsWritten">\n    <xsd:attribute name="val" type="ST_AxisIdAsWritten" use="required"/>\n  </xsd:complexType>\n  <xsd:complexType name="CT_UnsignedInt">	support for F4A-3 and F4A-4: the type they use	Mac PowerPoint writes signed axis ids. Declared separately so that no other CT_UnsignedInt element (idx, order, ptCount) is widened
+F4A-3	dml-chart.xsd	13	<xsd:element name="axId" type="CT_UnsignedInt"	<xsd:element name="axId" type="CT_AxisIdAsWritten"	poi-bar-chart-mac and pypptx-chart-type-mac, both Microsoft Macintosh PowerPoint, write axId val="-1884094432"	Signed 32-bit ids, from Mac PowerPoint. Still refused: a value outside 32 bits, or not an integer
+F4A-4	dml-chart.xsd	1	<xsd:element name="crossAx" type="CT_UnsignedInt"	<xsd:element name="crossAx" type="CT_AxisIdAsWritten"	the same two decks	crossAx refers to an axId, so it has the same range
+F4A-5	dml-chart.xsd	1	      <xsd:any processContents="lax"/>	      <xsd:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>	Empty c:ext in nhs-nda-dpp-1718, z22114038, z5089075; two children (c15:layout, c15:showLeaderLines) in z21627523	Chart CT_Extension alone takes exactly one child, where pml.xsd and dml-main.xsd take any number; this gives it their form. c:ext's uri and its parent stay checked
+F4A-6	dml-chart.xsd	1	      <xsd:element name="showDLblsOverMax" type="CT_Boolean" minOccurs="0" maxOccurs="1"/>\n      <xsd:element name="extLst" type="CT_ExtensionList" minOccurs="0" maxOccurs="1"/>\n    </xsd:sequence>\n  </xsd:complexType>\n  <xsd:simpleType name="ST_Style">	      <xsd:choice minOccurs="0" maxOccurs="1">\n        <xsd:sequence>\n          <xsd:element name="showDLblsOverMax" type="CT_Boolean"/>\n          <xsd:element name="extLst" type="CT_ExtensionList" minOccurs="0" maxOccurs="1"/>\n        </xsd:sequence>\n        <xsd:sequence>\n          <xsd:element name="extLst" type="CT_ExtensionList"/>\n          <xsd:element name="showDLblsOverMax" type="CT_Boolean" minOccurs="0" maxOccurs="1"/>\n        </xsd:sequence>\n      </xsd:choice>\n    </xsd:sequence>\n  </xsd:complexType>\n  <xsd:simpleType name="ST_Style">	nhs-nda-dpp-1718 writes c:showDLblsOverMax after c:extLst in c:chart	PowerPoint's chart writer puts it after the extension list. Either order, once each. Written as a choice so the content model stays deterministic; a second showDLblsOverMax is still refused

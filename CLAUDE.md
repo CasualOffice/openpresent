@@ -18,6 +18,7 @@ An **enterprise-grade** PowerPoint-compatible engine and editor, on **web and de
 - **No work without a tracker row.** Read the id space first; ids are never reused.
 - **[docs/05](docs/05-PHASES-AND-TASKS.md) defines phases, tiers, tasks, and how each opens and closes.** Only the owner closes a phase. Starting early needs a recorded waiver, and exit criteria are never bent to fit what was built.
 - **Findings become rows immediately,** including those out of scope.
+- **Built is not done (owner instruction 22).** A tier counts only when every item of its exit gate in docs/06 is met. Do not move on and leave a tier at "built": finish its leftovers, its fixtures and its status marks.
 
 ## Update every document
 
@@ -75,6 +76,8 @@ Industry-standard practice applies everywhere, with these specifics.
 
 **JavaScript** (`webapp/`): ES modules, no framework or bundler, as OpenCalc. `textContent` for document strings. Strict CSP. Every verb is a registered command.
 
+**Do not start LibreOffice** on this machine (owner instruction 23, `FID-04`). Tools refuse without `OPENPRESENT_ALLOW_SOFFICE=1`; do not set it.
+
 **Python** (`tools/`): standard library where possible; tools fail non-zero and name the problem. Parse untrusted XML only after refusing a DOCTYPE.
 
 **Git**
@@ -88,10 +91,13 @@ Industry-standard practice applies everywhere, with these specifics.
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
 cargo check --target wasm32-unknown-unknown --workspace --locked
 python3 tools/check-repo.py
 python3 tools/spec-checklist/generate.py --check
 python3 fixtures/tools/generate.py --check
+python3 tools/spec-audit/audit.py --check
+python3 tools/ooxml-sdk/validate.py fixtures/generated   # when dotnet is present; CI always runs it
 ```
 
 ## Working in parallel

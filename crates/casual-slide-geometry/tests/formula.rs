@@ -265,15 +265,12 @@ fn short_side_follows_the_shape() {
 #[test]
 fn malformed_formulas_are_zero_and_reported() {
     for (fmla, expect) in [
-        ("", Diagnostic::UnknownOperator(String::new())),
-        ("   ", Diagnostic::UnknownOperator("   ".to_owned())),
-        (
-            "nope 1 2",
-            Diagnostic::UnknownOperator("nope 1 2".to_owned()),
-        ),
-        ("VAL 1", Diagnostic::UnknownOperator("VAL 1".to_owned())),
-        ("*/ 1 2", Diagnostic::WrongOperandCount("*/ 1 2".to_owned())),
-        ("val", Diagnostic::WrongOperandCount("val".to_owned())),
+        ("", Diagnostic::UnknownOperator),
+        ("   ", Diagnostic::UnknownOperator),
+        ("nope 1 2", Diagnostic::UnknownOperator),
+        ("VAL 1", Diagnostic::UnknownOperator),
+        ("*/ 1 2", Diagnostic::WrongOperandCount),
+        ("val", Diagnostic::WrongOperandCount),
     ] {
         let raw = RawGeometry {
             gd: vec![guide("x", fmla)],
@@ -286,7 +283,7 @@ fn malformed_formulas_are_zero_and_reported() {
     }
 }
 
-/// Eight formulas in the shipped presets have one operand too many (GEO-04), so the
+/// Eight formulas in the shipped presets have one operand too many (GEO-02c), so the
 /// surplus has to be tolerated; it is reported for files.
 #[test]
 fn surplus_operands_are_ignored_and_reported() {
@@ -315,10 +312,7 @@ fn self_and_forward_references_read_zero() {
     let compiled = raw.compile().unwrap();
     assert_eq!(
         compiled.diagnostics.kept(),
-        &[
-            Diagnostic::UnknownGuide("a".to_owned()),
-            Diagnostic::UnknownGuide("c".to_owned()),
-        ]
+        &[Diagnostic::UnknownGuide, Diagnostic::UnknownGuide]
     );
     let out = compiled.def.evaluate(Extents::new(10, 10), &[]);
     assert_eq!(out.guide("b"), Some(1.0));

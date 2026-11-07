@@ -30,6 +30,19 @@ pub enum ExportError {
     NoNamespace,
 }
 
+impl ExportError {
+    /// The stable diagnostic code, in `docs/20`.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::InvalidValue(_) => "CS-CLE-0001",
+            Self::TooManyTransforms => "CS-CLE-0002",
+            Self::NodeMissing(_) => "CS-CLE-0003",
+            Self::MalformedNode(_) => "CS-CLE-0004",
+            Self::NoNamespace => "CS-CLE-0005",
+        }
+    }
+}
+
 impl core::fmt::Display for ExportError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {

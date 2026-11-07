@@ -104,6 +104,8 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 - Real decks may refuse under the stricter XML reader, or exercise constructs not yet planned. That is why `F-007` comes first.
 - Throughput from 1A to 1D sizes the rest. Dates follow once 1D has merged, not before.
 
+**Built is not done (owner instruction 22).** Each tier stays with its session until its gate below is met, item by item.
+
 **The foundation comes first (owner instruction 20).** Phase 1 is import, export and modelling. Nothing is drawn, and no font work happens, until it closes. `SKEL-01` waits for Phase 2.
 
 **A tier closes when:**

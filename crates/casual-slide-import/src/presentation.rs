@@ -18,13 +18,16 @@ use casual_slide_model::presentation::{
 };
 use casual_slide_model::properties::DocumentProperties;
 use casual_slide_ooxml::{
-    OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree, resolve_internal,
+    OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree, part_names_equivalent,
+    resolve_internal,
 };
 
+use crate::color::Findings as ColorFindings;
 use crate::properties::{
     Elem, Findings, ImportError, ImportFindingKind, ImportLimits, Reader, import_app_properties,
     import_core_properties, import_custom_properties, ns,
 };
+use crate::text::{TextCounts, TextReader};
 
 const TRANSITIONAL_RELS: &str =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
@@ -212,7 +215,10 @@ pub fn read_slide_size(r: &mut Reader<'_>, el: &Elem) -> Result<Option<SlideSize
     Ok(cx.zip(cy).map(|(cx, cy)| SlideSize { cx, cy, size_type }))
 }
 
-fn read_text_font(r: &mut Reader<'_>, el: &Elem) -> Result<Option<TextFont>, ImportError> {
+pub(crate) fn read_text_font(
+    r: &mut Reader<'_>,
+    el: &Elem,
+) -> Result<Option<TextFont>, ImportError> {
     let mut el = el.clone();
     let typeface = r.required::<String>(&mut el, "typeface", |_| true)?;
     let panose = r.attr_in::<String>(&mut el, "panose", |p| {
@@ -390,8 +396,23 @@ pub fn import_presentation(
     limits: &ImportLimits,
     findings: &mut Findings,
 ) -> Result<Presentation, ImportError> {
+    let mut color = ColorFindings::default();
+    import_presentation_with_colors(tree, part, rels, limits, findings, &mut color)
+}
+
+/// As [`import_presentation`], also saying what the colour readers noticed in
+/// `defaultTextStyle`, under their own codes.
+pub fn import_presentation_with_colors(
+    tree: &XmlTree,
+    part: &str,
+    rels: &[Relationship],
+    limits: &ImportLimits,
+    findings: &mut Findings,
+    color: &mut ColorFindings,
+) -> Result<Presentation, ImportError> {
     let mut r = Reader::new(tree, part, limits, findings);
     let r = &mut r;
+    let rel_list = rels;
     let rels = Rels::new(rels);
     let mut root = r.root(ns::PML, "presentation")?;
     let mut p = Presentation {
@@ -499,7 +520,16 @@ pub fn import_presentation(
             "custDataLst" => p.customer_data = Some(read_customer_data(r, &el, &rels)?),
             "kinsoku" => p.kinsoku = read_kinsoku(r, &el)?,
             "modifyVerifier" => p.modify_verifier = Some(read_modify_verifier(r, &el)?),
-            // `defaultTextStyle`, `extLst` and whatever else: preserved, not modelled.
+            "defaultTextStyle" => {
+                let mut text = TextReader {
+                    r: &mut *r,
+                    rels: rel_list,
+                    color: &mut *color,
+                    counts: &mut TextCounts::default(),
+                };
+                p.default_text_style = Some(text.list_style(&el)?);
+            }
+            // `extLst` and whatever else: preserved, not modelled.
             _ => r.retained(&el),
         }
     }
@@ -1014,6 +1044,8 @@ pub struct ImportedDeck {
     pub deck: Deck,
     /// The report.
     pub findings: Findings,
+    /// What the colour readers noticed, in `defaultTextStyle`.
+    pub color_findings: ColorFindings,
 }
 
 /// Where a role's part is.
@@ -1044,10 +1076,10 @@ pub fn locate_part(
     };
     let name = rel_types[0].rsplit('/').next().unwrap_or_default();
     if found.next().is_some() {
-        findings.note(ImportFindingKind::DuplicateRelationship, source, name, None);
+        findings.note_role(ImportFindingKind::DuplicateRelationship, source, name);
     }
     let unusable = |findings: &mut Findings| {
-        findings.note(ImportFindingKind::UnusableRelationship, source, name, None);
+        findings.note_role(ImportFindingKind::UnusableRelationship, source, name);
         PartLocation::Unusable
     };
     if rel.mode != TargetMode::Internal {
@@ -1059,7 +1091,7 @@ pub fn locate_part(
     match package
         .part_names()
         .into_iter()
-        .find(|n| n.eq_ignore_ascii_case(&target))
+        .find(|n| part_names_equivalent(n, &target))
     {
         Some(actual) => PartLocation::At(actual),
         None => unusable(findings),
@@ -1156,12 +1188,14 @@ pub fn import_deck(
     let main = package.main_part().to_owned();
     let bytes = package.read_xml_part(&main)?;
     let tree = XmlTree::parse(&bytes, &main, package.limits())?;
-    let presentation = import_presentation(
+    let mut color_findings = ColorFindings::default();
+    let presentation = import_presentation_with_colors(
         &tree,
         &main,
         package.relationships_of(&main),
         limits,
         &mut findings,
+        &mut color_findings,
     )?;
     let presentation_properties = read_optional(
         package,
@@ -1205,5 +1239,9 @@ pub fn import_deck(
         properties: DocumentProperties { core, app, custom },
     };
     cross_check(&deck, &main, &mut findings);
-    Ok(ImportedDeck { deck, findings })
+    Ok(ImportedDeck {
+        deck,
+        findings,
+        color_findings,
+    })
 }

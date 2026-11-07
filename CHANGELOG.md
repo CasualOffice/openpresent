@@ -13,6 +13,12 @@ Nothing has been released. Release tags and their dry-run default are described 
 
 ### 2026-11-07
 
+**Added: text (`T1F-01`, `T1F-02`, `T1F-03`)**
+
+- Text bodies on shapes, `defaultTextStyle`, master text styles and `notesStyle`, modelled, imported and patched in place: every run and paragraph property, spacing, tabs, bullets, all 41 autonumber schemes, fonts as stated, hyperlinks on runs. `normAutofit`, `spAutoFit` and `noAutofit` stored as written.
+- `casual-slide-style` resolves text properties through run, paragraph, shape list style, layout placeholder, master placeholder, master text styles and presentation default.
+- `TextLimits`, `CS-TXT-0001` to `0005`, `CS-EXP-0009`, and the `text_bodies` fuzz target.
+
 **Added**
 
 - Governance: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`,

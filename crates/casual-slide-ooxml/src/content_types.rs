@@ -81,6 +81,31 @@ impl ContentTypes {
 mod tests {
     use super::*;
 
+    /// `XML-04`: a foreign attribute neither shadows the real one nor stands in for it.
+    #[test]
+    fn a_foreign_attribute_is_not_the_plain_one() {
+        let parse = |body: &str| {
+            let xml = format!("<Types xmlns:x=\"urn:x\">{body}</Types>");
+            ContentTypes::parse(xml.as_bytes(), &OoxmlLimits::default())
+        };
+        let types = parse(
+            "<Override x:PartName=\"/evil.xml\" PartName=\"/good.xml\" ContentType=\"a/b\" x:ContentType=\"evil/x\"/>\
+             <Default x:Extension=\"evil\" Extension=\"png\" ContentType=\"image/png\"/>",
+        )
+        .unwrap();
+        assert_eq!(types.resolve("good.xml"), Some("a/b"));
+        assert_eq!(types.resolve("evil.xml"), None);
+        assert_eq!(types.resolve("a.png"), Some("image/png"));
+        assert_eq!(types.resolve("a.evil"), None);
+        for body in [
+            "<Override x:PartName=\"/a.xml\" ContentType=\"a/b\"/>",
+            "<Override PartName=\"/a.xml\" x:ContentType=\"a/b\"/>",
+            "<Default x:Extension=\"png\" ContentType=\"a/b\"/>",
+        ] {
+            assert_eq!(parse(body).unwrap_err().code(), "CS-XML-0004", "{body}");
+        }
+    }
+
     #[test]
     fn an_override_matches_any_equivalent_spelling_of_its_part() {
         let types = ContentTypes::parse(

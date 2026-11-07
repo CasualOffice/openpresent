@@ -11,7 +11,7 @@ use crate::def::{
     Arg, AxisDef, Cmd, FillMode, GeometryDef, GuideDef, HandleDef, Op, PathDef, PtDef, RectDef,
     SiteDef,
 };
-use crate::diagnostic::{Diagnostic, Diagnostics, clip};
+use crate::diagnostic::{Diagnostic, Diagnostics};
 use crate::generated::BUILTIN_ORDER;
 use crate::limits;
 
@@ -28,6 +28,19 @@ pub enum GeometryError {
     TooManyHandles,
     /// More connection sites than [`limits::MAX_SITES`].
     TooManySites,
+}
+
+impl GeometryError {
+    /// The stable diagnostic code, in `docs/20`.
+    pub fn code(&self) -> &'static str {
+        match self {
+            GeometryError::TooManyGuides => "CS-GEO-0001",
+            GeometryError::TooManyPaths => "CS-GEO-0002",
+            GeometryError::TooManyPathPoints => "CS-GEO-0003",
+            GeometryError::TooManyHandles => "CS-GEO-0004",
+            GeometryError::TooManySites => "CS-GEO-0005",
+        }
+    }
 }
 
 impl std::fmt::Display for GeometryError {
@@ -290,7 +303,7 @@ pub(crate) fn parse_formula(
     let mut tokens = formula.split_ascii_whitespace();
     let first = tokens.next().unwrap_or("");
     let Some((op, arity)) = operator(first) else {
-        return Err(Diagnostic::UnknownOperator(clip(formula)));
+        return Err(Diagnostic::UnknownOperator);
     };
     let mut args = [Arg::Lit(0); 3];
     let mut problems = Vec::new();
@@ -302,17 +315,17 @@ pub(crate) fn parse_formula(
             } else if let Some(slot) = lookup(token).or_else(|| builtin_slot(token)) {
                 Arg::Slot(slot)
             } else {
-                problems.push(Diagnostic::UnknownGuide(clip(token)));
+                problems.push(Diagnostic::UnknownGuide);
                 Arg::Lit(0)
             };
         }
         given += 1;
     }
     if given < arity {
-        return Err(Diagnostic::WrongOperandCount(clip(formula)));
+        return Err(Diagnostic::WrongOperandCount);
     }
     if given > arity {
-        problems.push(Diagnostic::WrongOperandCount(clip(formula)));
+        problems.push(Diagnostic::WrongOperandCount);
     }
     let [a, b, c] = args;
     Ok(ParsedFormula {
@@ -382,7 +395,7 @@ impl Compiler {
         if let Some(value) = universal_measure(token) {
             return Arg::Lit(value);
         }
-        self.diagnostics.push(Diagnostic::UnknownGuide(clip(token)));
+        self.diagnostics.push(Diagnostic::UnknownGuide);
         Arg::Lit(0)
     }
 
@@ -395,7 +408,13 @@ impl Compiler {
 
     fn axis(&mut self, axis: &RawAxis) -> AxisDef {
         AxisDef {
-            guide: axis.guide.as_ref().map(|name| Cow::Owned(clip(name))),
+            guide: axis.guide.as_ref().and_then(|name| {
+                if name.len() > limits::MAX_NAME_LEN {
+                    self.diagnostics.push(Diagnostic::TooLong);
+                    return None;
+                }
+                Some(Cow::Owned(name.clone()))
+            }),
             min: axis.min.as_deref().map(|token| self.arg(token)),
             max: axis.max.as_deref().map(|token| self.arg(token)),
         }

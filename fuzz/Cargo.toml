@@ -11,6 +11,7 @@ cargo-fuzz = true
 
 [dependencies]
 casual-slide-export = { path = "../crates/casual-slide-export" }
+casual-slide-geometry = { path = "../crates/casual-slide-geometry" }
 casual-slide-import = { path = "../crates/casual-slide-import" }
 casual-slide-model = { path = "../crates/casual-slide-model" }
 casual-slide-ooxml = { path = "../crates/casual-slide-ooxml" }
@@ -19,6 +20,20 @@ casual-slide-style = { path = "../crates/casual-slide-style" }
 libfuzzer-sys = "0.4"
 
 [workspace]
+
+[[bin]]
+name = "geometry"
+path = "fuzz_targets/geometry.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "theme_colors"
+path = "fuzz_targets/theme_colors.rs"
+test = false
+doc = false
+bench = false
 
 [[bin]]
 name = "bounded_package"
@@ -79,6 +94,20 @@ bench = false
 [[bin]]
 name = "writer_plan"
 path = "fuzz_targets/writer_plan.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "drawing_properties"
+path = "fuzz_targets/drawing_properties.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "text_bodies"
+path = "fuzz_targets/text_bodies.rs"
 test = false
 doc = false
 bench = false

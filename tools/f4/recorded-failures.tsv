@@ -1,0 +1,20 @@
+# F4-03: F4 failures judged and kept, each with its reason. Read by validate.py. A part
+# whose every message a row explains reports `recorded`, and does not fail the deck;
+# anything else in that part does. --no-known reports them as failures.
+#
+# Columns, tab-separated: deck glob, part glob, message regex, kind, reason.
+#
+# Kinds:
+#   fixture-invalid  Invalid on purpose or by construction, to test retention.
+#   not-powerpoint   Claims a Strict namespace but carries Transitional values, which does
+#                    not look saved by PowerPoint (STRICT-02), so Strict is not relaxed for it.
+sdk-strict-*.pptx	*	attribute '\w+': '\.\.\.' is not a valid value of the union type '\{http://purl\.oclc\.org/ooxml/drawingml/(main|chart)\}ST_\w+'	not-powerpoint	The sdk-strict decks use Strict namespaces with Transitional numeric values (val="50000") where Strict requires percent strings; report PowerPoint 14.0, and look converted by a tool (fixtures/real/README.md). Not relaxed: a real Strict deck decides it (STRICT-02)
+rich-properties.pptx	ppt/presentation.xml	\{urn:unknown\}unknown	fixture-invalid	x:unknown="kept" in a namespace no schema knows, to test retention of unknown attributes
+strict-properties.pptx	ppt/presentation.xml	\{urn:unknown\}unknown	fixture-invalid	as rich-properties
+rich-properties.pptx	docProps/core.xml	\{urn:other\}title	fixture-invalid	a foreign element in core properties, to test retention
+strict-properties.pptx	docProps/core.xml	\{urn:other\}title	fixture-invalid	as rich-properties
+*-properties.pptx	ppt/notesMasters/notesMaster1.xml	Missing child element	fixture-invalid	notesMaster with no cSld, written by the generator; the fixture tests properties, not masters
+*-properties.pptx	ppt/handoutMasters/handoutMaster1.xml	Missing child element	fixture-invalid	handoutMaster with no cSld; as notesMaster
+strict-properties.pptx	ppt/presProps.xml	htmlPubPr	fixture-invalid	htmlPubPr, written by the same generator as the Transitional deck, is not in the Strict schema
+strict-properties.pptx	ppt/presentation.xml	modifyVerifier', attribute	fixture-invalid	modifyVerifier's Transitional attributes, kept in the Strict variant to test retention
+strict-properties.pptx	ppt/viewProps.xml	restored(Top|Left).*ST_PositiveFixedPercentage	fixture-invalid	viewProps sizes kept numeric in the Strict variant, to test that a Transitional value there is retained

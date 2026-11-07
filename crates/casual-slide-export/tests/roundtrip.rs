@@ -404,6 +404,57 @@ fn a_new_property_part_is_wired_in_and_holds_only_what_was_set() {
     assert_eq!(deck.properties.core, None);
 }
 
+/// `PKG-02`: an existing entry that names the new part in another spelling is that part.
+/// Compared with ASCII case alone, a second part was written beside it.
+#[test]
+fn a_new_part_will_not_overwrite_another_spelling_of_itself() {
+    let mut pkg = open(read("generated/minimal.pptx"));
+    let mut edits = PartEdits::default();
+    edits.replace("ppt/pres%50rops.xml", b"<x/>".to_vec());
+    let saved = pkg.save_with(&edits).unwrap();
+    let mut pkg = open(saved);
+    let mut deck = import_deck(&mut pkg, &limits()).unwrap().deck;
+    deck.presentation_properties = Some(Default::default());
+    let err = save_deck(&mut pkg, &deck, &limits()).unwrap_err();
+    assert_eq!(err.code(), "CS-EXP-0006", "{err}");
+}
+
+/// `PKG-02`: relationships found under another spelling of their name are added to, not
+/// replaced by a new part that loses them.
+#[test]
+fn a_new_part_is_added_to_relationships_under_another_spelling() {
+    let source = read("generated/percent-encoded-rels.pptx");
+    let mut pkg = open(source.clone());
+    let targets = |p: &PresentationPackage| -> Vec<String> {
+        let rels = p.relationships_of("ppt/presentation.xml");
+        rels.iter().map(|r| r.target.clone()).collect()
+    };
+    let before = targets(&pkg);
+    assert!(!before.is_empty());
+    let mut deck = import_deck(&mut pkg, &limits()).unwrap().deck;
+    deck.presentation_properties = Some(Default::default());
+    let outcome = save_deck(&mut pkg, &deck, &limits()).unwrap();
+
+    let reopened_package = open(outcome.bytes.clone());
+    let kept = targets(&reopened_package);
+    assert!(
+        before.iter().all(|t| kept.contains(t)),
+        "relationships were lost: {before:?} became {kept:?}"
+    );
+    assert!(kept.iter().any(|t| t == "presProps.xml"), "{kept:?}");
+
+    let after = parts(&outcome.bytes);
+    let rels: Vec<_> = after.keys().filter(|n| n.contains("_rels/pres")).collect();
+    assert_eq!(rels, ["ppt/_rels/pres%65ntation.xml.rels"]);
+    assert!(after.contains_key("ppt/presProps.xml"));
+    let reopened = model(&outcome.bytes);
+    assert_eq!(
+        reopened.presentation, deck.presentation,
+        "a relationship was lost"
+    );
+    assert!(reopened.presentation_properties.is_some());
+}
+
 #[test]
 fn a_new_presentation_properties_part_is_wired_in() {
     let source = read("generated/minimal.pptx");

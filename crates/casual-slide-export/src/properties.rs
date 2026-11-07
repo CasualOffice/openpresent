@@ -72,6 +72,14 @@ pub enum ExportError {
     },
     /// The writer refused the save: an invariant, a limit or a blocked construct.
     Refused(Box<crate::writer::WriterError>),
+    /// The model asks for an edit this tier does not write, or one that would leave
+    /// required content out.
+    UnsupportedEdit {
+        /// What.
+        what: &'static str,
+        /// The part.
+        part: String,
+    },
 }
 
 impl ExportError {
@@ -89,6 +97,7 @@ impl ExportError {
             Self::RoundTrip { .. } => "CS-EXP-0007",
             Self::VariantTooDeep { .. } => "CS-EXP-0008",
             Self::Refused(err) => err.code(),
+            Self::UnsupportedEdit { .. } => "CS-EXP-0009",
         }
     }
 }
@@ -132,6 +141,9 @@ impl fmt::Display for ExportError {
             Self::Refused(err) => write!(f, "{err}"),
             Self::VariantTooDeep { part } => {
                 write!(f, "[{code}] {part:?}: variant nested too deeply")
+            }
+            Self::UnsupportedEdit { what, part } => {
+                write!(f, "[{code}] {part:?}: editing {what} is not supported")
             }
         }
     }
@@ -316,7 +328,9 @@ impl Writer<'_> {
             .children(self.tree, self.part)?
             .into_iter()
             .find(|c| {
-                c.uri == parent.uri
+                // PresentationML holds DrawingML children, so they are landmarks too.
+                // A foreign element with a schema's name is not.
+                (c.uri == parent.uri || c.in_namespace(ns::PML) || c.in_namespace(ns::DML))
                     && match (rank(&c.local), mine) {
                         (Some(theirs), Some(mine)) => theirs > mine,
                         _ => false,
@@ -983,4 +997,55 @@ pub fn patch_custom_properties(
         patch_custom_property,
     )?;
     Ok(w.changes)
+}
+
+#[cfg(test)]
+mod insert_order_tests {
+    use super::*;
+
+    const OPEN: &str = "<p:scale xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" \
+        xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:x=\"urn:x\">";
+
+    fn insert(body: &str) -> String {
+        let xml = format!("{OPEN}{body}</p:scale>");
+        let mut tree = XmlTree::parse(
+            xml.as_bytes(),
+            "p",
+            &casual_slide_ooxml::OoxmlLimits::default(),
+        )
+        .unwrap();
+        let root = Elem::root(&tree, "p").unwrap();
+        let mut w = Writer {
+            tree: &mut tree,
+            part: "p",
+            strict: false,
+            known_rels: None,
+            changes: 0,
+        };
+        let child = w.new_child(&root, ns::DML, "a", "sx").unwrap();
+        w.insert_in_order(&root, &["sx", "sy"], "sx", &child)
+            .unwrap();
+        String::from_utf8(tree.to_bytes()).unwrap()
+    }
+
+    /// `T1D-03`: `a:sy` under `p:scale` is the parent's other namespace, and still comes
+    /// after `a:sx`. Comparing the parent's namespace alone wrote it first, which is
+    /// out of schema order.
+    #[test]
+    fn a_child_in_the_other_ooxml_namespace_is_a_landmark() {
+        let out = insert("<a:sy n=\"1\" d=\"1\"/>");
+        assert!(
+            out.find("<a:sx").unwrap() < out.find("<a:sy").unwrap(),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_foreign_element_with_a_schema_name_is_not_a_landmark() {
+        let out = insert("<x:sy/>");
+        assert!(
+            out.find("<x:sy").unwrap() < out.find("<a:sx").unwrap(),
+            "{out}"
+        );
+    }
 }

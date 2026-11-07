@@ -22,6 +22,7 @@ import xml.parsers.expat
 from collections import Counter
 
 XS = "http://www.w3.org/2001/XMLSchema"
+HAND_WRITTEN_PREFIX = "mc:"  # rows no schema gives (SPEC-08); this tool counts schemas
 KINDS = ("root", "rootattr", "type", "simple", "value", "element", "attribute",
          "group", "attrgroup", "any", "base")
 csv.field_size_limit(1 << 24)
@@ -123,6 +124,8 @@ def checklist_counts(path, keys):
     with open(path, encoding="utf8", newline="") as handle:
         rows = csv.DictReader(handle, delimiter="\t", quoting=csv.QUOTE_NONE)
         for row in rows:
+            if row["id"].startswith(HAND_WRITTEN_PREFIX):
+                continue
             key = row_key(row["id"], ordered)
             if key is None:
                 stray.append(row["id"])

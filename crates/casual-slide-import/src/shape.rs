@@ -1,9 +1,10 @@
 //! Read a shape tree from an `XmlTree`: `sp`, `grpSp`, `cxnSp`, `pic`,
 //! `graphicFrame` and `contentPart`, each a node with an [`ObjectId`].
 //!
-//! Each node's identity, transform, locks, non-visual properties and hyperlinks
-//! are read. Everything else a node holds (geometry, fills, lines, effects, text,
-//! the frame's graphic data) stays in the tree and is reported as retained.
+//! Each node's identity, transform, locks, non-visual properties and hyperlinks are
+//! read here; geometry, fills, lines, effects and 3D by [`crate::drawing`], and text
+//! bodies by [`crate::text`]. Everything else a node holds (the frame's graphic data)
+//! stays in the tree and is reported as retained.
 //!
 //! The walk follows the input to a depth of [`SlideLimits::max_group_depth`] and
 //! no further, and counts nodes against [`SlideLimits::max_shapes_per_part`]. An
@@ -21,9 +22,12 @@ use casual_slide_model::shape::{
 };
 use casual_slide_ooxml::{AlternateResolution, Branch, MARKUP_COMPATIBILITY, Relationship};
 
+use crate::color::Findings as ColorFindings;
+use crate::drawing::{Ctx, DrawingLimits, note_dag_siblings, read_blip_fill};
 use crate::presentation::read_positive_size;
-use crate::properties::{Elem, ImportFindingKind as K, Reader, ns};
+use crate::properties::{Elem, ImportError, ImportFindingKind as K, Reader, ns};
 use crate::slide::{SlideError, SlideLimits};
+use crate::text::{TextCounts, TextReader};
 
 /// `a16:` Office 2016 drawing, where `creationId` lives.
 pub const A16: &[&str] = &["http://schemas.microsoft.com/office/drawing/2014/main"];
@@ -84,6 +88,8 @@ pub(crate) struct ShapeReader<'s, 'r, 'a> {
     pub next_node: u32,
     pub spids: HashSet<u32>,
     pub map: Option<&'s mut SourceMap>,
+    pub color: &'s mut ColorFindings,
+    pub text_counts: TextCounts,
 }
 
 impl ShapeReader<'_, '_, '_> {
@@ -172,9 +178,11 @@ impl ShapeReader<'_, '_, '_> {
                         "spPr"
                     ) | (NodeKind::Group, "grpSpPr")
                         | (NodeKind::GraphicFrame, "xfrm" | "graphic")
+                        | (NodeKind::Picture, "blipFill")
+                        | (NodeKind::Shape, "txBody")
                 );
             if !modelled {
-                // `style`, `txBody`, `blipFill`, `extLst` and the unknown.
+                // `style`, `extLst` and the unknown.
                 self.r.retained(&child);
                 continue;
             }
@@ -184,8 +192,21 @@ impl ShapeReader<'_, '_, '_> {
             }
             match name {
                 "spPr" | "grpSpPr" => self.properties(&child, &mut n)?,
+                "blipFill" => {
+                    let fill = read_blip_fill(self.r, self.rels, DrawingLimits::default(), &child)?;
+                    n.properties.picture = fill.map(Box::new);
+                }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
                 "graphic" => n.graphic_uri = self.graphic(&child)?,
+                "txBody" => {
+                    let mut text = TextReader {
+                        r: &mut *self.r,
+                        rels: self.rels,
+                        color: &mut *self.color,
+                        counts: &mut self.text_counts,
+                    };
+                    n.text_body = Some(Box::new(text.body(&child)?));
+                }
                 _ => self.non_visual(&child, &mut n)?,
             }
         }
@@ -343,27 +364,7 @@ impl ShapeReader<'_, '_, '_> {
     }
 
     fn hyperlink(&mut self, el: &Elem) -> Result<Hyperlink, SlideError> {
-        let mut el = el.clone();
-        let rel_id = el.take_ns(ns::REL, "id");
-        if let Some(id) = &rel_id {
-            self.check_rel(&el, id);
-        }
-        let link = Hyperlink {
-            rel_id,
-            invalid_url: self.r.attr(&mut el, "invalidUrl")?,
-            action: self.r.attr(&mut el, "action")?,
-            target_frame: self.r.attr(&mut el, "tgtFrame")?,
-            tooltip: self.r.attr(&mut el, "tooltip")?,
-            history: self.r.attr(&mut el, "history")?,
-            highlight_click: self.r.attr(&mut el, "highlightClick")?,
-            end_sound: self.r.attr(&mut el, "endSnd")?,
-        };
-        self.r.finish(&el);
-        for child in self.r.children(&el)? {
-            // `snd` is Tier 1H, `extLst` stays.
-            self.r.retained(&child);
-        }
-        Ok(link)
+        Ok(read_hyperlink(self.r, self.rels, el)?)
     }
 
     fn kind_properties(&mut self, el: &Elem, n: &mut ShapeNode) -> Result<(), SlideError> {
@@ -483,10 +484,14 @@ impl ShapeReader<'_, '_, '_> {
         n.bw_mode = self.r.attr(&mut el, "bwMode")?;
         self.r.finish(&el);
         let mut seen = false;
+        let mut slots = HashSet::new();
+        let group = n.kind == NodeKind::Group;
         for child in self.r.children(&el)? {
             if !child.is(ns::DML, "xfrm") {
-                // Geometry, fill, line, effects, 3D and `extLst`: Tier 1E.
-                self.r.retained(&child);
+                let mut drawing = Ctx::new(&mut *self.r, self.rels, DrawingLimits::default());
+                if !drawing.property(&child, &mut n.properties, group, &mut slots)? {
+                    self.r.retained(&child);
+                }
                 continue;
             }
             if seen {
@@ -496,6 +501,7 @@ impl ShapeReader<'_, '_, '_> {
             seen = true;
             n.transform = Some(self.transform(&child, n.kind == NodeKind::Group)?);
         }
+        note_dag_siblings(self.r, &el, &n.properties);
         Ok(())
     }
 
@@ -549,6 +555,38 @@ impl ShapeReader<'_, '_, '_> {
         }
         Ok(uri)
     }
+}
+
+/// `a:CT_Hyperlink`, on a shape or a run.
+pub(crate) fn read_hyperlink(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    el: &Elem,
+) -> Result<Hyperlink, ImportError> {
+    let mut el = el.clone();
+    let rel_id = el.take_ns(ns::REL, "id");
+    if let Some(id) = &rel_id
+        && !id.is_empty()
+        && !rels.iter().any(|r| r.id == *id)
+    {
+        r.note(K::DanglingRelationship, &el, Some("r:id"));
+    }
+    let link = Hyperlink {
+        rel_id,
+        invalid_url: r.attr(&mut el, "invalidUrl")?,
+        action: r.attr(&mut el, "action")?,
+        target_frame: r.attr(&mut el, "tgtFrame")?,
+        tooltip: r.attr(&mut el, "tooltip")?,
+        history: r.attr(&mut el, "history")?,
+        highlight_click: r.attr(&mut el, "highlightClick")?,
+        end_sound: r.attr(&mut el, "endSnd")?,
+    };
+    r.finish(&el);
+    for child in r.children(&el)? {
+        // `snd` is Tier 1H, `extLst` stays.
+        r.retained(&child);
+    }
+    Ok(link)
 }
 
 /// `a:CT_Point2D`. `None` unless both coordinates are usable.

@@ -27,6 +27,7 @@ use casual_slide_model::presentation::{
 use casual_slide_model::properties::Lexical;
 use casual_slide_ooxml::{
     Conformance, OoxmlLimits, PresentationPackage, Relationship, TargetMode, XmlTree,
+    part_names_equivalent,
 };
 
 use crate::properties::{
@@ -204,7 +205,7 @@ fn patch_positive_size(
     w.attr(el, "cy", before.map(|b| &b.cy), Some(&after.cy))
 }
 
-fn patch_text_font(
+pub(crate) fn patch_text_font(
     w: &mut Writer<'_>,
     el: &Elem,
     before: Option<&TextFont>,
@@ -614,6 +615,11 @@ pub fn patch_presentation(
         patch_customer_data(w, el, old, new, limits)
     });
     child!("kinsoku", kinsoku, patch_kinsoku);
+    child!(
+        "defaultTextStyle",
+        default_text_style,
+        crate::text::patch_list_style
+    );
     child!("modifyVerifier", modify_verifier, patch_modify_verifier);
     Ok(w.changes)
 }
@@ -1393,7 +1399,7 @@ impl Save<'_> {
     /// Give a new part its relationship, content type and bytes.
     fn add_part(&mut self, role: &Role<'_>, bytes: Vec<u8>) -> Result<(), ExportError> {
         let names = self.package.part_names();
-        let taken = |n: &str| names.iter().any(|x| x.eq_ignore_ascii_case(n));
+        let taken = |n: &str| names.iter().any(|x| part_names_equivalent(x, n));
         if taken(&role.new_part) {
             return Err(ExportError::UnreadablePart {
                 part: role.new_part.clone(),
@@ -1402,7 +1408,7 @@ impl Save<'_> {
         let rels_name = rels_part_for(role.source);
         let actual = names
             .iter()
-            .find(|n| n.eq_ignore_ascii_case(&rels_name))
+            .find(|n| part_names_equivalent(n, &rels_name))
             .cloned();
         let mut tree = match self.rels.remove(&rels_name) {
             Some(tree) => tree,
