@@ -23,6 +23,8 @@ class Allowances(unittest.TestCase):
 
     def test_every_recorded_allowance_applies_to_the_vendored_schemas(self):
         texts = {p.name: p.read_bytes().decode("utf8") for p in (validate.SCHEMAS / "ooxml").glob("*.xsd")}
+        texts.update((f"ms-extensions/{p.name}", p.read_bytes().decode("utf8"))
+                     for p in (validate.SCHEMAS / "ms-extensions").glob("*.xsd"))
         before = dict(texts)
         validate.apply_allowances(texts, validate.allowances())
         self.assertNotEqual(texts, before)
@@ -46,6 +48,31 @@ class Allowances(unittest.TestCase):
     def test_a_newline_in_an_edit_is_a_crlf(self):
         texts = validate.apply_allowances({"x.xsd": "<a/>\r\n<c/>"}, [self.row(old="<a/>\\n<c/>", new="<b/>")])
         self.assertEqual(texts["x.xsd"], "<b/>")
+
+
+class Locations(unittest.TestCase):
+    WHERE = {"urn:a": "../ooxml/a.xsd", "urn:b": "ms-b.xsd"}
+
+    def test_an_import_is_located_by_its_namespace_once(self):
+        text = ('<xsd:import namespace="urn:a" schemaLocation="oart1.xsd"/>'
+                '<xsd:import namespace="urn:a" schemaLocation="oart2.xsd"/>'
+                '<xsd:import namespace="urn:b"/>')
+        self.assertEqual(validate.locate_imports(text, self.WHERE),
+                         '<xsd:import namespace="urn:a" schemaLocation="../ooxml/a.xsd"/>'
+                         '<xsd:import namespace="urn:b" schemaLocation="ms-b.xsd"/>')
+
+    def test_an_import_of_a_namespace_not_vendored_is_left(self):
+        text = '<xsd:import namespace="urn:c" schemaLocation="c.xsd"/>'
+        self.assertEqual(validate.locate_imports(text, self.WHERE), text)
+
+    def test_microsofts_chart_schemas_compile(self):
+        for schema in ("ms-extensions/ms-odrawxml-22.xsd", "ms-extensions/ms-odrawxml-15.xsd"):
+            with tempfile.TemporaryDirectory() as tmp:
+                work = pathlib.Path(tmp)
+                part = work / "p1.xml"
+                part.write_text("<a/>", encoding="utf8")
+                status, _ = validate.run_xmllint(schema, [part], work)[str(part)]
+                self.assertEqual(status, "invalid", schema)
 
 
 class Records(unittest.TestCase):

@@ -1,6 +1,6 @@
 //! Read who a retained object is and what stands in for it, and name every retained part
-//! (`SEC-C07`, Tier 1L). An OLE object, a control, a VML drawing and a 3D model are bytes:
-//! nothing here decodes one, starts one, or follows a link out of the file.
+//! (`SEC-C07`, Tier 1L). An OLE object, a control, a VML drawing, a 3D model and a macro
+//! project are bytes: nothing here decodes one, starts one, or follows a link out of the file.
 
 use std::collections::BTreeSet;
 
@@ -284,6 +284,9 @@ pub enum RetainedPartKind {
     Vml,
     /// A 3D model.
     Model3d,
+    /// A VBA macro project, as a `.pptm` holds. Never run, never decoded. Its presence is
+    /// the macro notice (`SEC-C07`): the deck opens, and the report names the project.
+    Macro,
 }
 
 /// What became of a retained part. It stays in the saved file whichever this is.
@@ -322,6 +325,7 @@ fn kind_of_relationship(rel: &Relationship) -> Option<RetainedPartKind> {
         Some("vmlDrawing") => Some(RetainedPartKind::Vml),
         _ if rel.rel_type.ends_with("/activeXControlBinary") => Some(RetainedPartKind::Control),
         _ if rel.rel_type.ends_with("/model3d") => Some(RetainedPartKind::Model3d),
+        _ if rel.rel_type.ends_with("/vbaProject") => Some(RetainedPartKind::Macro),
         _ => None,
     }
 }
@@ -338,6 +342,8 @@ fn kind_of_name(name: &str) -> Option<RetainedPartKind> {
         Some(RetainedPartKind::Control)
     } else if lower.ends_with(".glb") {
         Some(RetainedPartKind::Model3d)
+    } else if lower.ends_with("vbaproject.bin") {
+        Some(RetainedPartKind::Macro)
     } else {
         None
     }

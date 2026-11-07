@@ -31,4 +31,5 @@ Word and spreadsheet schemas are not vendored; they describe other formats.
 ## Known defects
 
 - `geometry/presetShapeDefinitions.xml` defines `upDownArrow` twice and never defines `upArrow`, which `ST_ShapeType` requires (`GEO-01`).
+- MS-PPTX and MS-ODRAWXML schemas indent with no-break spaces from the web pages, which XML does not count as white space, and import by Microsoft's own file names (`oartbasetypes.xsd`, `orel.xsd`), which are not published. `ms-odrawxml-22.xsd` writes `type="CT_GeoHierarchyEntity "`. F4 repairs all three in its private copy (`F4-05`); the files here are as extracted.
 - MS-PPTX and MS-ODRAWXML schemas were extracted from web pages, and could carry extraction faults that still parse. Compare against a published `.xsd` if one appears.

@@ -976,6 +976,58 @@ fn f4_allowance_each_accepts_what_powerpoint_writes_and_is_needed() {
     }
 }
 
+const CX: &str = "xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" \
+    xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
+
+/// A Office 2016 chart with this inside `cx:chartData`'s external data.
+fn chart_ex(external: &str) -> String {
+    format!(
+        "<cx:chartSpace {CX}><cx:chartData><cx:externalData r:id=\"rId1\" {external}/>\
+         <cx:data id=\"0\"><cx:numDim type=\"val\"><cx:f>Sheet1!$B$2</cx:f></cx:numDim></cx:data></cx:chartData>\
+         <cx:chart><cx:plotArea><cx:plotAreaRegion><cx:series layoutId=\"boxWhisker\"><cx:dataId val=\"0\"/></cx:series>\
+         </cx:plotAreaRegion></cx:plotArea></cx:chart></cx:chartSpace>"
+    )
+}
+
+/// F4-05: `cx:` and `cs:` parts are schema-checked, against MS-ODRAWXML's schemas.
+#[test]
+fn f4_fails_a_seeded_invalid_chart_ex_or_chart_style_part() {
+    if !f4_ready() {
+        return;
+    }
+    let work = scratch("f4-cx");
+    let status = |xml: &str| {
+        let (report, _) = f4_on(&work, "cx.pptx", &with_part(MINIMAL, SLIDE_PART, xml));
+        part_status(&report, SLIDE_PART).to_owned()
+    };
+    assert_eq!(status(&chart_ex("cx:autoUpdate=\"0\"")), "valid");
+    assert_eq!(status(&chart_ex("cx:autoUpdate=\"maybe\"")), "invalid");
+    assert_eq!(
+        status(&chart_ex("").replace("<cx:chart>", "<cx:notAnElement/><cx:chart>")),
+        "invalid"
+    );
+    let cs = "xmlns:cs=\"http://schemas.microsoft.com/office/drawing/2012/chartStyle\"";
+    let style = |inner: &str| {
+        format!("<cs:colorStyle {cs} meth=\"cycle\" id=\"10\">{inner}</cs:colorStyle>")
+    };
+    let colour = "<a:schemeClr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" val=\"accent1\"/>";
+    assert_eq!(status(&style(colour)), "valid");
+    assert_eq!(status(&style("<cs:notAnElement/>")), "invalid");
+}
+
+/// F4A-7: PowerPoint writes `cx:autoUpdate`, where the schema names a bare attribute.
+#[test]
+fn f4_allowance_qualified_auto_update_is_needed_and_the_bare_one_refused() {
+    if !f4_ready() {
+        return;
+    }
+    let work = scratch("f4-cx-allowed");
+    let (with, without) = f4_with_and_without(&work, &chart_ex("cx:autoUpdate=\"0\""));
+    assert_eq!((with.as_str(), without.as_str()), ("valid", "invalid"));
+    let (with, without) = f4_with_and_without(&work, &chart_ex("autoUpdate=\"0\""));
+    assert_eq!((with.as_str(), without.as_str()), ("invalid", "valid"));
+}
+
 #[test]
 fn f4_allowance_none_lets_a_real_error_through() {
     if !f4_ready() {
@@ -1066,6 +1118,30 @@ fn f4_passes_area_text_with_nothing_recorded() {
     let (report, code) = run_f4(&["--no-known", deck.to_str().unwrap()]);
     assert_eq!(code, 0, "{report}");
     assert!(!report.contains("recorded"), "{report}");
+}
+
+/// F4-06: the VML fixture, every element and value, is schema-valid but for the one
+/// attribute no VML type allows, `o:wrapcoords`.
+#[test]
+fn f4_finds_only_wrapcoords_wrong_in_area_vml() {
+    if !f4_ready() {
+        return;
+    }
+    let part = "ppt/drawings/vmlDrawing1.vml";
+    let deck = fixtures().join("generated/area-vml.pptx");
+    let (report, code) = run_f4(&["--no-known", deck.to_str().unwrap()]);
+    assert_eq!(code, 1, "{report}");
+    let messages: Vec<&str> = report
+        .lines()
+        .skip_while(|l| l.split_whitespace().nth(1) != Some(part))
+        .skip(1)
+        .take_while(|l| l.starts_with("      "))
+        .collect();
+    assert_eq!(messages.len(), 1, "{report}");
+    assert!(messages[0].contains("office}wrapcoords"), "{report}");
+    let (report, code) = run_f4(&[deck.to_str().unwrap()]);
+    assert_eq!(code, 0, "{report}");
+    assert_eq!(part_status(&report, part), "recorded", "{report}");
 }
 
 #[test]

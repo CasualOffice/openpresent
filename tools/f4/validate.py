@@ -121,6 +121,9 @@ for _strict, _transitional, _file in NAMESPACES:
     if _file:
         SCHEMA_FOR_ROOT[_strict] = f"ooxml-strict/{_file}"
         SCHEMA_FOR_ROOT[_transitional] = f"ooxml/{_file}"
+# Charts from Office 2016 and chart styles (F4-05): Microsoft's own schemas, from MS-ODRAWXML.
+SCHEMA_FOR_ROOT["http://schemas.microsoft.com/office/drawing/2014/chartex"] = "ms-extensions/ms-odrawxml-22.xsd"
+SCHEMA_FOR_ROOT["http://schemas.microsoft.com/office/drawing/2012/chartStyle"] = "ms-extensions/ms-odrawxml-15.xsd"
 
 # OPC forbids markup compatibility in these parts, so it is not resolved in them, and
 # the schema rejects it if it is there.
@@ -167,6 +170,46 @@ def apply_allowances(texts, rows):
     return texts
 
 
+def extension_locations():
+    """Namespace to schema file, as a path from schemas/ms-extensions, for every namespace
+    vendored: Ecma's Transitional files, then Microsoft's by index.json."""
+    where = {t: f"../ooxml/{f}" for _, t, f in NAMESPACES if f}
+    index = json.loads((SCHEMAS / "ms-extensions/index.json").read_text(encoding="utf8"))
+    where.update((uri, name) for name, uri, *_ in index)
+    return where
+
+
+IMPORT = re.compile(r"<xsd:import\b[^>]*/>")
+BETWEEN_TAGS = re.compile(r">[^<]*<")
+QNAME_ATTRIBUTE = re.compile(r'\b(type|ref|base|itemType)="\s*([^"\s]+)\s*"')
+
+
+def locate_imports(text, where=None):
+    """Microsoft's schemas import by Microsoft's own file names (`oartbasetypes.xsd`,
+    `orel.xsd`), which are not published as files. Each import's location becomes the
+    vendored file for its namespace; nothing else changes, so nothing is relaxed (F4-05).
+    An import of a namespace nothing vendored keeps its location, and xmllint says so.
+    Several of Microsoft's files for one namespace are one Ecma file, so it is imported once:
+    xmllint will not compile a second import of a location it has."""
+    where = extension_locations() if where is None else where
+    seen = set()
+
+    def one(match):
+        tag = match.group(0)
+        namespace = re.search(r'namespace="([^"]*)"', tag)
+        if not namespace or namespace.group(1) not in where:
+            return tag
+        if namespace.group(1) in seen:
+            return ""
+        seen.add(namespace.group(1))
+        located = f'schemaLocation="{where[namespace.group(1)]}"'
+        if "schemaLocation=" in tag:
+            return re.sub(r'schemaLocation="[^"]*"', located, tag)
+        return tag[:-2].rstrip() + f" {located}/>"
+
+    return IMPORT.sub(one, text)
+
+
 XML_IMPORT = '<xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>'
 
 
@@ -178,7 +221,7 @@ class Schemas:
 
     @classmethod
     def path(cls, schema):
-        if not schema.startswith("ooxml/"):
+        if not schema.startswith(("ooxml/", "ms-extensions/")):
             return SCHEMAS / schema
         if cls._overlay is None:
             cls._overlay = cls._build(cls.use_allowances)
@@ -195,12 +238,22 @@ class Schemas:
         apply_allowances(texts, [{"id": "xml-namespace-location", "file": name, "count": "1", "old": XML_IMPORT,
                                   "new": XML_IMPORT[:-2] + ' schemaLocation="http://www.w3.org/2001/xml.xsd"/>'}
                                  for name in ("wml.xsd", "shared-math.xsd")])
+        for source in (SCHEMAS / "ms-extensions").glob("*.xsd"):
+            text = source.read_bytes().decode("utf8")
+            # Extracted from web pages, these indent with no-break spaces, which XML does
+            # not count as white space, so no element compiles. Between tags only.
+            text = BETWEEN_TAGS.sub(lambda m: m.group(0).replace("\u00a0", " "), text)
+            # A QName collapses white space (XSD Part 2, 3.2.18), which xmllint does not do:
+            # MS-ODRAWXML writes `type="CT_GeoHierarchyEntity "`.
+            text = QNAME_ATTRIBUTE.sub(r'\1="\2"', text)
+            texts[f"ms-extensions/{source.name}"] = locate_imports(text)
         if use_allowances:
             apply_allowances(texts, allowances())
-        target = work / "ooxml"
-        target.mkdir()
+        (work / "ms-extensions").mkdir()
+        (work / "ooxml").mkdir()
         for name, text in texts.items():
-            (target / name).write_bytes(text.encode("utf8"))
+            target = work / name if name.startswith("ms-extensions/") else work / "ooxml" / name
+            target.write_bytes(text.encode("utf8"))
         return work
 
 

@@ -124,13 +124,76 @@ class Writer:
         return "".join(f' xmlns:{p}="{ns}"' for p, ns in sorted(self.used.items()))
 
 
+class ValidWriter(Writer):
+    """As Writer, but schema-valid, which F4 checks (F4-06). A value other than the first is
+    not written as a sibling, which an `xsd:all` or a single-occurrence child forbids, but in
+    a fresh copy of each ancestor up to the part's top level, where repeats are free. Every
+    copy carries its element's first-value attributes, so required ones stay present."""
+
+    # Values the vendored schemas constrain by pattern, or by a schema the audit does not read.
+    FIXED = {"ST_Guid": "{00000000-0000-4000-8000-000000000001}"}
+    # A strict `xsd:any` needs a declared element; this one has no required content.
+    ANY = "<o:lock/>"
+    # In the Excel VML schema, which the audit does not read: ObjectType is required.
+    EXTERNAL = {("urn:schemas-microsoft-com:office:excel", "ClientData"): ' ObjectType="Note"'}
+
+    def one_value(self, typ, q):
+        name = typ[-1] if isinstance(typ, tuple) else typ
+        return self.FIXED.get(name) or super().one_value(typ, q)
+
+    def values(self, typ, seen=None):
+        name = typ[-1] if isinstance(typ, tuple) else typ
+        return [] if name in self.FIXED else super().values(typ, seen)
+
+    def element(self, q, typ):
+        return "".join(self.valid(q, typ))
+
+    def valid(self, q, typ):
+        """This element, then each variant as its own top-level-ready markup."""
+        name = self.name(q)
+        if typ in self.schema.simples:
+            values = self.values(typ) or [self.one_value(typ, q)]
+            return [f"<{name}>{v}</{name}>" for v in values]
+        flat = self.schema.flat(typ)
+        attrs, others = self.attributes(flat)
+        # Only where the wildcard is all there is (o:equationxml): beside children it may be a choice.
+        any_child = self.ANY if flat["any"] and not flat["children"] else ""
+
+        def tag(pairs, content=""):
+            open_ = f"<{name}" + "".join(f" {k}={quoteattr(v)}" for k, v in pairs) + self.EXTERNAL.get(q, "")
+            return f"{open_}>{content}</{name}>" if content else f"{open_}/>"
+
+        if typ in self.done:
+            return [tag(attrs, any_child)]
+        self.done.add(typ)
+        body, variants = [], []
+        for child, entries in flat["children"].items():
+            decl = entries[0][1]
+            ctype = decl["type"]
+            if decl["ref"] or ctype is None:
+                glob = self.schema.elements.get(child)
+                ctype = glob["type"] if glob else ctype
+            first, *rest = self.valid(child, ctype)
+            body.append(first)
+            variants += [tag(attrs, r + any_child) for r in rest]
+        body.append(any_child)
+        variants += [tag([(k, value if k == key else v) for k, v in attrs], any_child) for key, value in others]
+        if flat["any"] and flat["children"]:
+            # The wildcard beside children (v:textbox: `##local`, skipped, in a choice) gets a
+            # copy of its own holding a no-namespace element.
+            variants.append(tag(attrs, "<any/>"))
+        return [tag(attrs, "".join(body) or "")] + variants
+
+
 def vml_part(schema):
-    w = Writer(schema, "rId1")
+    w = ValidWriter(schema, "rId1")
     body = []
     for q, e in sorted(schema.elements.items()):
         if q[0] in (V, O, PVML):
             body.append(w.element(q, e["type"]))
-    # Declared globally and used by no type: it is only ever found on a shape like this.
+    # Declared globally and used by no type, and no VML type takes a foreign attribute, so
+    # no schema-valid place exists for it. It is found on a shape like this, the one message
+    # F4 records for this deck (tools/f4/recorded-failures.tsv).
     body.append(f'<v:shape {w.name((O, "wrapcoords"))}="0,0"/>')
     return f"<xml{w.declarations()}>{''.join(body)}</xml>"
 

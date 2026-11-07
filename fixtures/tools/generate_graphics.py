@@ -324,7 +324,7 @@ def consistent_parts():
     p1, p2, doc, pres, sib, par, cx1 = (GUID % n for n in (1, 2, 3, 4, 5, 6, 7))
     data = (f'{DECL}<dgm:dataModel {d}><dgm:ptLst>'
             f'<dgm:pt modelId="{doc}" type="doc"><dgm:prSet loTypeId="urn:layout" loCatId="list" qsTypeId="urn:style" qsCatId="simple" csTypeId="urn:colors" csCatId="accent1"/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p/></dgm:t></dgm:pt>'
-            f'<dgm:pt modelId="{p1}"><dgm:prSet/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US"/><a:t>First</a:t></a:r></a:p></dgm:t></dgm:pt>'
+            f'<dgm:pt modelId="{p1}"><dgm:prSet/><dgm:spPr/><dgm:t><a:bodyPr/><a:lstStyle/><a:p><a:pPr marL="171450" indent="-171450"><a:buFont typeface="Arial"/><a:buChar char="&#8226;"/></a:pPr><a:r><a:rPr lang="en-US"/><a:t>First</a:t></a:r></a:p></dgm:t></dgm:pt>'
             f'<dgm:pt modelId="{par}" type="parTrans"><dgm:spPr/></dgm:pt><dgm:pt modelId="{sib}" type="sibTrans"><dgm:spPr/></dgm:pt>'
             f'<dgm:pt modelId="{pres}" type="pres"><dgm:prSet presAssocID="{p1}" presName="node" presStyleLbl="node1" presStyleIdx="0" presStyleCnt="1"/><dgm:spPr/></dgm:pt>'
             f'</dgm:ptLst><dgm:cxnLst><dgm:cxn modelId="{cx1}" srcId="{doc}" destId="{p1}" srcOrd="0" destOrd="0" parTransId="{par}" sibTransId="{sib}"/></dgm:cxnLst>'
