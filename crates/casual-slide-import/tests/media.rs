@@ -177,6 +177,31 @@ fn proof(id: &str) -> Option<Proof> {
             r#"<a:wavAudioFile name"#,
         ),
         "a:CT_EmbeddedWAVAudioFile/@name" => swap(r#" name="chime.wav""#, ""),
+        // `p14:media`: `EXT` rows, read here (`MS-PPTX` "Media").
+        "x:powerpoint/2010/main:CT_MediaTrim" => Proof::Present("<p14:trim"),
+        "x:powerpoint/2010/main:CT_MediaTrim/@st" => swap(r#"st="1000.5" "#, ""),
+        "x:powerpoint/2010/main:CT_MediaTrim/@end" => swap(r#" end="2000""#, ""),
+        "x:powerpoint/2010/main:CT_MediaFade" => Proof::Present("<p14:fade"),
+        "x:powerpoint/2010/main:CT_MediaFade/@in" => swap(r#"in="300" "#, ""),
+        "x:powerpoint/2010/main:CT_MediaFade/@out" => swap(r#" out="400""#, ""),
+        "x:powerpoint/2010/main:CT_MediaBookmark" => Proof::Present("<p14:bmk "),
+        "x:powerpoint/2010/main:CT_MediaBookmark/@name" => swap(r#"name="One" "#, ""),
+        "x:powerpoint/2010/main:CT_MediaBookmark/@time" => swap(r#" time="100""#, ""),
+        "x:powerpoint/2010/main:CT_MediaBookmarkList" => Proof::Present("<p14:bmkLst>"),
+        "x:powerpoint/2010/main:CT_MediaBookmarkList/bmk" => {
+            cut(r#"<p14:bmk name="Two" time="200.25"/>"#)
+        }
+        "x:powerpoint/2010/main:CT_Media" => Proof::Present("<p14:media"),
+        "x:powerpoint/2010/main:CT_Media/trim" => cut(r#"<p14:trim st="1000.5" end="2000"/>"#),
+        "x:powerpoint/2010/main:CT_Media/fade" => cut(r#"<p14:fade in="300" out="400"/>"#),
+        "x:powerpoint/2010/main:CT_Media/bmkLst" => cut(
+            r#"<p14:bmkLst><p14:bmk name="One" time="100"/><p14:bmk name="Two" time="200.25"/></p14:bmkLst>"#,
+        ),
+        "x:powerpoint/2010/main:CT_Media/extLst" => {
+            swap("<p173:tracksInfo", "<p173:wat").with_close("</p173:tracksInfo>", "</p173:wat>")
+        }
+        "x:powerpoint/2010/main:CT_Media/AG_Blob" => swap(r#"r:embed="rId5""#, ""),
+        "x:powerpoint/2010/main:<media>" => Proof::Present("<p14:media"),
         // MEDIA: tracks
         "x:powerpoint/2017/3/main:ST_DisplayLocation" => Proof::Present(r#"displayLoc="media""#),
         "x:powerpoint/2017/3/main:ST_DisplayLocation/=media" => {
@@ -353,8 +378,15 @@ fn checklist_rows() -> Vec<(String, String)> {
         .filter_map(|line| {
             let cols: Vec<&str> = line.split('\t').collect();
             let area = *cols.get(1)?;
-            matches!(area, "PIC" | "MEDIA")
-                .then(|| ((*cols.first().unwrap()).to_owned(), area.to_owned()))
+            let id = *cols.first()?;
+            // `p14:media` is in `EXT`; these rows are read here. Its event records and
+            // bookmark targets are timing's.
+            let p14 = id == "x:powerpoint/2010/main:<media>"
+                || (id.starts_with("x:powerpoint/2010/main:CT_Media")
+                    && !["BookmarkTarget", "PlaybackEvent", "SeekEvent"]
+                        .iter()
+                        .any(|x| id.contains(x)));
+            (matches!(area, "PIC" | "MEDIA") || p14).then(|| (id.to_owned(), area.to_owned()))
         })
         .collect()
 }
@@ -364,7 +396,12 @@ fn every_pic_and_media_row_is_handled_or_reported() {
     let (xml, rels) = source(EVERYTHING);
     let base = read_xml(&xml, &rels);
     let rows = checklist_rows();
-    assert_eq!(rows.len(), 116, "PIC and MEDIA have changed; so must this");
+    assert_eq!(
+        rows.iter().filter(|(_, area)| area != "EXT").count(),
+        116,
+        "PIC and MEDIA have changed; so must this"
+    );
+    assert_eq!(rows.len(), 116 + 18, "p14:media has changed; so must this");
     let mut missing = Vec::new();
     let (mut modelled, mut reported, mut inside, mut values, mut groups) = (0, 0, 0, 0, 0);
     for (id, _) in &rows {

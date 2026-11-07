@@ -585,6 +585,31 @@ fn replacing_a_shared_picture_gives_the_slide_a_new_relationship_and_leaves_the_
     assert_eq!(names.get("rId17"), Some(&1));
 }
 
+/// `INV-RI-03`: past a gap and past an id of another form, and no clash with either.
+#[test]
+fn a_new_relationship_goes_one_above_the_highest_numbered_id() {
+    let (_, mut tree, mut rels, mut part) = slide_of(EVERYTHING, SLIDE2);
+    rels.retain(|r| r.id != "rId3" && r.id != "rId9");
+    rels.push(Relationship {
+        id: "custom".to_owned(),
+        rel_type: IMAGE_REL.to_owned(),
+        target: "../media/other.png".to_owned(),
+        mode: TargetMode::Internal,
+    });
+    let node = named_id(&part, "Shared");
+    let done = replace(
+        &mut tree,
+        SLIDE2,
+        &rels,
+        &mut part,
+        node,
+        "rId2",
+        &image("../media/new.png"),
+    )
+    .unwrap();
+    assert_eq!(done.rel_id, "rId17", "not the gap at rId3");
+}
+
 /// A part reached by one relationship: replacing the picture leaves it to go.
 #[test]
 fn replacing_the_only_reference_to_a_picture_releases_its_part() {
