@@ -539,7 +539,7 @@ p:CT_Control/extLst	OLE	CT_Control	element	extLst	CT_ExtensionList	0..1			r	r	r	
 p:CT_Control/pic	OLE	CT_Control	element	pic	CT_Picture	0..1			y	y	r	.	.
 p:CT_Control/AG_Ole	OLE	CT_Control	attrgroup	AG_Ole	AG_Ole				r	r	r	.	.
 p:CT_ControlList	OLE		type	CT_ControlList					r	r	r	.	.
-p:CT_ControlList/control	OLE	CT_ControlList	element	control	CT_Control	0..unbounded			r	y	r	.	.
+p:CT_ControlList/control	OLE	CT_ControlList	element	control	CT_Control	0..unbounded			r	r	r	.	.
 p:ST_SlideId	SLIDE		simple	ST_SlideId				base=unsignedInt minInclusive=256 maxExclusive=2147483648	y	n/a	n/a	.	.
 p:CT_SlideIdListEntry	SLIDE		type	CT_SlideIdListEntry					r	r	r	.	.
 p:CT_SlideIdListEntry/extLst	SLIDE	CT_SlideIdListEntry	element	extLst	CT_ExtensionList	0..1			r	r	r	.	.
