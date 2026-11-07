@@ -325,7 +325,7 @@ fn read_part(
                     spids: HashSet::new(),
                     map: map.as_deref_mut(),
                 };
-                p.common = Some(read_common(&mut shapes, &el)?);
+                p.common = Some(read_common(&mut shapes, &el, color)?);
             }
             "clrMap" => p.color_map = Some(read_color_map(tree, el.id, color)),
             "clrMapOvr" => p.color_map_override = read_color_map_override(tree, el.id, color),
@@ -348,6 +348,7 @@ fn read_part(
 fn read_common(
     shapes: &mut ShapeReader<'_, '_, '_>,
     el: &Elem,
+    color: &mut ColorFindings,
 ) -> Result<CommonSlideData, SlideError> {
     let mut el = el.clone();
     let name = shapes.r.attr(&mut el, "name")?;
@@ -370,7 +371,7 @@ fn read_common(
             continue;
         }
         if child.local == "bg" {
-            common.background = Some(read_background(shapes.r, &child)?);
+            common.background = Some(read_background(shapes.r, &child, color)?);
         } else {
             common.shape_tree = Some(shapes.tree(&child)?);
         }
@@ -390,7 +391,11 @@ const FILLS: &[&str] = &[
     "grpFill",
 ];
 
-fn read_background(r: &mut Reader<'_>, el: &Elem) -> Result<Background, SlideError> {
+fn read_background(
+    r: &mut Reader<'_>,
+    el: &Elem,
+    color: &mut ColorFindings,
+) -> Result<Background, SlideError> {
     let mut el = el.clone();
     let mut bg = Background {
         bw_mode: r.attr(&mut el, "bwMode")?,
@@ -409,11 +414,8 @@ fn read_background(r: &mut Reader<'_>, el: &Elem) -> Result<Background, SlideErr
             continue;
         }
         if child.local == "bgRef" {
-            let mut color = ColorFindings::default();
-            let reference = read_style_matrix_ref(r.tree, child.id, &mut color);
-            if !color.items.is_empty() {
-                r.note(K::MalformedValue, &child, None);
-            }
+            // Its colour's findings keep their own codes.
+            let reference = read_style_matrix_ref(r.tree, child.id, color);
             bg.fill = Some(BackgroundFill::Reference(reference));
             continue;
         }

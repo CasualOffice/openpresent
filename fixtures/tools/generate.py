@@ -244,6 +244,7 @@ def fixtures():
         yield f"hostile/{name}.bin", data, expect, *limits
     yield from property_fixtures()
     yield "generated/slides-masters-layouts.pptx", zipped(slides_parts()), "open"
+    yield "generated/area-slide-values.pptx", zipped(slide_values_parts()), "open"
     yield "generated/slides-strict.pptx", zipped([(n, d) if isinstance(d, bytes) else strict([(n, d)])[0] for n, d in slides_parts()]), "open"
     # Lazy loading is measured on this: opening it must not read 500 slides.
     yield "generated/five-hundred-slides.pptx", zipped(deck(500)), "open"
@@ -474,6 +475,17 @@ def property_fixtures():
     # Unknown elements in numbers, which must not become a report of that size: made-up names are one finding (SEC-018).
     flood = "".join(f"<z{i}/>" for i in range(10_100))
     yield "hostile/import-findings-flood.bin", zipped(full_deck(pres_doc(f"<p:extLst/>{flood}"))), "open"
+    # T1D-03: one over each SlideLimits default a package can reach. max_parts cannot be, behind max_entries.
+    many_slides = "".join(f'<p:sldId id="{256 + i}" r:id="rId3"/>' for i in range(100_001))
+    yield "hostile/import-limit-structure-slides.bin", zipped(replace(deck(), "ppt/presentation.xml",
+        f'{DECL}<p:presentation {NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'
+        f'<p:sldIdLst>{many_slides}</p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>')), "open"
+    yield "hostile/slide-limit-parts.bin", zipped(deck(slides=6)), "open"
+    master = dict(deck())["ppt/slideMasters/slideMaster1.xml"]
+    many_layouts = "".join(f'<p:sldLayoutId id="{2147483649 + i}" r:id="rId1"/>' for i in range(10_001))
+    yield "hostile/slide-limit-layout-ids.bin", zipped(replace(deck(), "ppt/slideMasters/slideMaster1.xml",
+        master.replace('<p:sldLayoutId id="2147483649" r:id="rId1"/>', many_layouts))), "open"
+
     # COLOR-01: a theme past each colour bound in OoxmlLimits, which are capped and reported, not refused.
     def theme_with(scheme="", tail=""):
         names = ("dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink")
@@ -543,6 +555,59 @@ def ph_tree(*shapes):
 
 
 LIST = '<a:lvl1pPr><a:defRPr sz="1800"/></a:lvl1pPr>'
+
+
+def slide_values_parts():
+    """T1D-03: the Tier 1D values and lock attributes no other deck has. Every
+    ST_SlideLayoutType as a layout of one master, and on one slide every ST_PlaceholderType,
+    every ST_BlackWhiteMode and every lock attribute. Values come from the schemas."""
+    from generate_presets import enum  # imports this module, so not at the top
+    layout_types = enum("ST_SlideLayoutType", "pml")
+    entries = deck()
+    base = dict(entries)
+    layout = base["ppt/slideLayouts/slideLayout1.xml"]
+    layout_rels = base["ppt/slideLayouts/_rels/slideLayout1.xml.rels"]
+    master = base["ppt/slideMasters/slideMaster1.xml"]
+    master_rels = base["ppt/slideMasters/_rels/slideMaster1.xml.rels"]
+    ids, rels, parts, types = "", "", [], []
+    for i, value in enumerate(layout_types):
+        n = i + 2
+        ids += f'<p:sldLayoutId id="{2147483650 + i}" r:id="rId{n + 100}"/>'
+        rels += (f'<Relationship Id="rId{n + 100}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" '
+                 f'Target="../slideLayouts/slideLayout{n}.xml"/>')
+        parts.append((f"ppt/slideLayouts/slideLayout{n}.xml", layout.replace('type="titleOnly"', f'type="{value}"')))
+        parts.append((f"ppt/slideLayouts/_rels/slideLayout{n}.xml.rels", layout_rels))
+        types.append((f"/ppt/slideLayouts/slideLayout{n}.xml", f"{PML}.slideLayout+xml"))
+    master = master.replace("</p:sldLayoutIdLst>", ids + "</p:sldLayoutIdLst>")
+    master_rels = master_rels.replace("</Relationships>", rels + "</Relationships>")
+
+    def shape(sid, name, ph="", props="", locks=""):
+        return (f'<p:sp><p:nvSpPr><p:cNvPr id="{sid}" name="{name}"/><p:cNvSpPr>{locks}</p:cNvSpPr><p:nvPr>{ph}</p:nvPr></p:nvSpPr>'
+                f'<p:spPr{props}/></p:sp>')
+
+    nodes, sid = [], 2
+    for i, value in enumerate(enum("ST_PlaceholderType", "pml")):
+        size = ' sz="full"' if i == 0 else ""
+        nodes.append(shape(sid, f"Placeholder {value}", f'<p:ph type="{value}"{size} idx="{100 + i}"/>'))
+        sid += 1
+    for value in enum("ST_BlackWhiteMode"):
+        nodes.append(shape(sid, f"Mode {value}", props=f' bwMode="{value}"'))
+        sid += 1
+    flags = ("noGrp", "noSelect", "noRot", "noChangeAspect", "noMove", "noResize", "noEditPoints", "noAdjustHandles",
+             "noChangeArrowheads", "noChangeShapeType")
+    every = "".join(f' {f}="1"' for f in flags)
+    nodes.append(shape(sid, "Locked", locks=f'<a:spLocks{every} noTextEdit="1"/>'))
+    group_flags = "".join(f' {f}="1"' for f in ("noGrp", "noUngrp", "noSelect", "noRot", "noChangeAspect", "noMove", "noResize"))
+    nodes.append(f'<p:grpSp><p:nvGrpSpPr><p:cNvPr id="{sid + 1}" name="Locked group"/><p:cNvGrpSpPr><a:grpSpLocks{group_flags}/></p:cNvGrpSpPr><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:grpSp>')
+    frame_flags = "".join(f' {f}="1"' for f in ("noGrp", "noDrilldown", "noSelect", "noChangeAspect", "noMove", "noResize"))
+    nodes.append(f'<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="{sid + 2}" name="Locked frame"/><p:cNvGraphicFramePr><a:graphicFrameLocks{frame_flags}/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>'
+                 '<p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>'
+                 '<a:graphic><a:graphicData uri="urn:openslide:fixture:empty"/></a:graphic></p:graphicFrame>')
+    slide = f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{"".join(nodes)}</p:spTree></p:cSld></p:sld>'
+    out = deck(parts=parts, types_extra=types)
+    out = replace(out, "ppt/slideMasters/slideMaster1.xml", master)
+    out = replace(out, "ppt/slideMasters/_rels/slideMaster1.xml.rels", master_rels)
+    return replace(out, "ppt/slides/slide1.xml", slide)
 
 
 def slides_parts():

@@ -119,9 +119,9 @@ These are constants, not fields of `ImportLimits`, so a host cannot tighten them
 | --- | --- | --- | --- | --- |
 | `max_shapes_per_part` | `100_000` | Shape-tree nodes in one part | CS-SLD | Tested; hostile fixture |
 | `max_group_depth` | `64` | Group nesting | CS-SLD | Tested; hostile fixture |
-| `max_slides` | `100_000` | Slides indexed | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
-| `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
-| `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD | Tested by tightening; no hostile fixture (`T1D-03`) |
+| `max_slides` | `100_000` | Slides indexed | CS-SLD-0003 | Tested; fixture `import-limit-structure-slides`, seen red. `ImportLimits::max_slides` holds the same default and refuses first in `import_deck`; a host raising that one reaches this |
+| `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD-0004 | Fixture `slide-limit-parts`, under a tightened bound. **Not reachable at the default**: `max_entries` refuses a package first, which a test holds |
+| `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD-0004 | Tested; fixture `slide-limit-layout-ids`, seen red |
 
 ## Geometry
 

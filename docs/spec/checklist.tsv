@@ -650,12 +650,12 @@ p:CT_ModifyVerifier/@algIdExtSource	PRES	CT_ModifyVerifier	attribute	@algIdExtSo
 p:CT_ModifyVerifier/@cryptProviderTypeExt	PRES	CT_ModifyVerifier	attribute	@cryptProviderTypeExt	unsignedInt	optional			.	.	.	.	.
 p:CT_ModifyVerifier/@cryptProviderTypeExtSource	PRES	CT_ModifyVerifier	attribute	@cryptProviderTypeExtSource	string	optional			.	.	.	.	.
 p:CT_Presentation	PRES		type	CT_Presentation					.	.	.	.	.
-p:CT_Presentation/sldMasterIdLst	PRES	CT_Presentation	element	sldMasterIdLst	CT_SlideMasterIdList	0..1			.	.	.	.	.
+p:CT_Presentation/sldMasterIdLst	PRES	CT_Presentation	element	sldMasterIdLst	CT_SlideMasterIdList	0..1			.	y	.	.	.
 p:CT_Presentation/notesMasterIdLst	PRES	CT_Presentation	element	notesMasterIdLst	CT_NotesMasterIdList	0..1			.	.	.	.	.
 p:CT_Presentation/handoutMasterIdLst	PRES	CT_Presentation	element	handoutMasterIdLst	CT_HandoutMasterIdList	0..1			.	.	.	.	.
 p:CT_Presentation/sldIdLst	PRES	CT_Presentation	element	sldIdLst	CT_SlideIdList	0..1			.	y	.	.	.
 p:CT_Presentation/sldSz	PRES	CT_Presentation	element	sldSz	CT_SlideSize	0..1			.	y	.	.	.
-p:CT_Presentation/notesSz	PRES	CT_Presentation	element	notesSz	CT_PositiveSize2D				.	.	.	.	.
+p:CT_Presentation/notesSz	PRES	CT_Presentation	element	notesSz	CT_PositiveSize2D				.	y	.	.	.
 p:CT_Presentation/smartTags	PRES	CT_Presentation	element	smartTags	CT_SmartTags	0..1			y	y	.	.	.
 p:CT_Presentation/embeddedFontLst	PRES	CT_Presentation	element	embeddedFontLst	CT_EmbeddedFontList	0..1			.	.	.	.	.
 p:CT_Presentation/custShowLst	PRES	CT_Presentation	element	custShowLst	CT_CustomShowList	0..1			.	y	.	.	.
@@ -682,7 +682,7 @@ p:CT_HtmlPublishProperties	PRES		type	CT_HtmlPublishProperties					.	.	.	.	.
 p:CT_HtmlPublishProperties/EG_SlideListChoice	PRES	CT_HtmlPublishProperties	group	EG_SlideListChoice	EG_SlideListChoice				.	.	.	.	.
 p:CT_HtmlPublishProperties/extLst	PRES	CT_HtmlPublishProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_HtmlPublishProperties/@showSpeakerNotes	PRES	CT_HtmlPublishProperties	attribute	@showSpeakerNotes	boolean	optional	true		y	y	.	.	.
-p:CT_HtmlPublishProperties/@target	PRES	CT_HtmlPublishProperties	attribute	@target	string	optional			.	.	.	.	.
+p:CT_HtmlPublishProperties/@target	PRES	CT_HtmlPublishProperties	attribute	@target	string	optional			y	y	.	.	.
 p:CT_HtmlPublishProperties/@title	PRES	CT_HtmlPublishProperties	attribute	@title	string	optional			y	y	.	.	.
 p:CT_HtmlPublishProperties/@r:id	PRES	CT_HtmlPublishProperties	attribute	@r:id	id	required			.	y	.	.	.
 p:ST_WebColorType	PRES		simple	ST_WebColorType				base=token	.	.	.	.	.
@@ -768,7 +768,7 @@ p:CT_HeaderFooter/@sldNum	SLIDE	CT_HeaderFooter	attribute	@sldNum	boolean	option
 p:CT_HeaderFooter/@hdr	SLIDE	CT_HeaderFooter	attribute	@hdr	boolean	optional	true		.	.	.	.	.
 p:CT_HeaderFooter/@ftr	SLIDE	CT_HeaderFooter	attribute	@ftr	boolean	optional	true		.	.	.	.	.
 p:CT_HeaderFooter/@dt	SLIDE	CT_HeaderFooter	attribute	@dt	boolean	optional	true		.	.	.	.	.
-p:ST_PlaceholderType	SLIDE		simple	ST_PlaceholderType				base=token	.	.	.	.	.
+p:ST_PlaceholderType	SLIDE		simple	ST_PlaceholderType				base=token	y	.	.	.	.
 p:ST_PlaceholderType/=title	SLIDE	ST_PlaceholderType	value	=title					y	.	.	.	.
 p:ST_PlaceholderType/=body	SLIDE	ST_PlaceholderType	value	=body					y	.	.	.	.
 p:ST_PlaceholderType/=ctrTitle	SLIDE	ST_PlaceholderType	value	=ctrTitle					y	.	.	.	.
@@ -777,16 +777,16 @@ p:ST_PlaceholderType/=dt	SLIDE	ST_PlaceholderType	value	=dt					y	.	.	.	.
 p:ST_PlaceholderType/=sldNum	SLIDE	ST_PlaceholderType	value	=sldNum					y	.	.	.	.
 p:ST_PlaceholderType/=ftr	SLIDE	ST_PlaceholderType	value	=ftr					y	.	.	.	.
 p:ST_PlaceholderType/=hdr	SLIDE	ST_PlaceholderType	value	=hdr					y	.	.	.	.
-p:ST_PlaceholderType/=obj	SLIDE	ST_PlaceholderType	value	=obj					.	.	.	.	.
-p:ST_PlaceholderType/=chart	SLIDE	ST_PlaceholderType	value	=chart					.	.	.	.	.
-p:ST_PlaceholderType/=tbl	SLIDE	ST_PlaceholderType	value	=tbl					.	.	.	.	.
-p:ST_PlaceholderType/=clipArt	SLIDE	ST_PlaceholderType	value	=clipArt					.	.	.	.	.
-p:ST_PlaceholderType/=dgm	SLIDE	ST_PlaceholderType	value	=dgm					.	.	.	.	.
-p:ST_PlaceholderType/=media	SLIDE	ST_PlaceholderType	value	=media					.	.	.	.	.
+p:ST_PlaceholderType/=obj	SLIDE	ST_PlaceholderType	value	=obj					y	.	.	.	.
+p:ST_PlaceholderType/=chart	SLIDE	ST_PlaceholderType	value	=chart					y	.	.	.	.
+p:ST_PlaceholderType/=tbl	SLIDE	ST_PlaceholderType	value	=tbl					y	.	.	.	.
+p:ST_PlaceholderType/=clipArt	SLIDE	ST_PlaceholderType	value	=clipArt					y	.	.	.	.
+p:ST_PlaceholderType/=dgm	SLIDE	ST_PlaceholderType	value	=dgm					y	.	.	.	.
+p:ST_PlaceholderType/=media	SLIDE	ST_PlaceholderType	value	=media					y	.	.	.	.
 p:ST_PlaceholderType/=sldImg	SLIDE	ST_PlaceholderType	value	=sldImg					y	.	.	.	.
-p:ST_PlaceholderType/=pic	SLIDE	ST_PlaceholderType	value	=pic					y	.	.	.	.
-p:ST_PlaceholderSize	SLIDE		simple	ST_PlaceholderSize				base=token	.	.	.	.	.
-p:ST_PlaceholderSize/=full	SLIDE	ST_PlaceholderSize	value	=full					.	.	.	.	.
+p:ST_PlaceholderType/=pic	SLIDE	ST_PlaceholderType	value	=pic					y	y	.	.	.
+p:ST_PlaceholderSize	SLIDE		simple	ST_PlaceholderSize				base=token	y	.	.	.	.
+p:ST_PlaceholderSize/=full	SLIDE	ST_PlaceholderSize	value	=full					y	.	.	.	.
 p:ST_PlaceholderSize/=half	SLIDE	ST_PlaceholderSize	value	=half					y	.	.	.	.
 p:ST_PlaceholderSize/=quarter	SLIDE	ST_PlaceholderSize	value	=quarter					y	.	.	.	.
 p:CT_Placeholder	SLIDE		type	CT_Placeholder					.	.	.	.	.
@@ -879,7 +879,7 @@ p:CT_Background/EG_Background	SLIDE	CT_Background	group	EG_Background	EG_Backgro
 p:CT_Background/@bwMode	SLIDE	CT_Background	attribute	@bwMode	ST_BlackWhiteMode	optional	white		y	.	.	.	.
 p:CT_CommonSlideData	VIEW		type	CT_CommonSlideData					.	.	.	.	.
 p:CT_CommonSlideData/bg	VIEW	CT_CommonSlideData	element	bg	CT_Background	0..1			.	y	.	.	.
-p:CT_CommonSlideData/spTree	VIEW	CT_CommonSlideData	element	spTree	CT_GroupShape				.	.	.	.	.
+p:CT_CommonSlideData/spTree	VIEW	CT_CommonSlideData	element	spTree	CT_GroupShape				.	y	.	.	.
 p:CT_CommonSlideData/custDataLst	VIEW	CT_CommonSlideData	element	custDataLst	CT_CustomerDataList	0..1			.	.	.	.	.
 p:CT_CommonSlideData/controls	VIEW	CT_CommonSlideData	element	controls	CT_ControlList	0..1			.	.	.	.	.
 p:CT_CommonSlideData/extLst	VIEW	CT_CommonSlideData	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
@@ -893,39 +893,39 @@ p:CT_Slide/extLst	SLIDE	CT_Slide	element	extLst	CT_ExtensionListModify	0..1			.	
 p:CT_Slide/AG_ChildSlide	SLIDE	CT_Slide	attrgroup	AG_ChildSlide	AG_ChildSlide				.	.	.	.	.
 p:CT_Slide/@show	SLIDE	CT_Slide	attribute	@show	boolean	optional	true		y	.	.	.	.
 p:<sld>	SLIDE		root	<sld>	CT_Slide				.	.	.	.	.
-p:ST_SlideLayoutType	SLIDE		simple	ST_SlideLayoutType				base=token	.	.	.	.	.
+p:ST_SlideLayoutType	SLIDE		simple	ST_SlideLayoutType				base=token	y	.	.	.	.
 p:ST_SlideLayoutType/=title	SLIDE	ST_SlideLayoutType	value	=title					y	.	.	.	.
-p:ST_SlideLayoutType/=tx	SLIDE	ST_SlideLayoutType	value	=tx					.	.	.	.	.
-p:ST_SlideLayoutType/=twoColTx	SLIDE	ST_SlideLayoutType	value	=twoColTx					.	.	.	.	.
-p:ST_SlideLayoutType/=tbl	SLIDE	ST_SlideLayoutType	value	=tbl					.	.	.	.	.
-p:ST_SlideLayoutType/=txAndChart	SLIDE	ST_SlideLayoutType	value	=txAndChart					.	.	.	.	.
-p:ST_SlideLayoutType/=chartAndTx	SLIDE	ST_SlideLayoutType	value	=chartAndTx					.	.	.	.	.
-p:ST_SlideLayoutType/=dgm	SLIDE	ST_SlideLayoutType	value	=dgm					.	.	.	.	.
-p:ST_SlideLayoutType/=chart	SLIDE	ST_SlideLayoutType	value	=chart					.	.	.	.	.
-p:ST_SlideLayoutType/=txAndClipArt	SLIDE	ST_SlideLayoutType	value	=txAndClipArt					.	.	.	.	.
-p:ST_SlideLayoutType/=clipArtAndTx	SLIDE	ST_SlideLayoutType	value	=clipArtAndTx					.	.	.	.	.
+p:ST_SlideLayoutType/=tx	SLIDE	ST_SlideLayoutType	value	=tx					y	.	.	.	.
+p:ST_SlideLayoutType/=twoColTx	SLIDE	ST_SlideLayoutType	value	=twoColTx					y	.	.	.	.
+p:ST_SlideLayoutType/=tbl	SLIDE	ST_SlideLayoutType	value	=tbl					y	.	.	.	.
+p:ST_SlideLayoutType/=txAndChart	SLIDE	ST_SlideLayoutType	value	=txAndChart					y	.	.	.	.
+p:ST_SlideLayoutType/=chartAndTx	SLIDE	ST_SlideLayoutType	value	=chartAndTx					y	.	.	.	.
+p:ST_SlideLayoutType/=dgm	SLIDE	ST_SlideLayoutType	value	=dgm					y	.	.	.	.
+p:ST_SlideLayoutType/=chart	SLIDE	ST_SlideLayoutType	value	=chart					y	.	.	.	.
+p:ST_SlideLayoutType/=txAndClipArt	SLIDE	ST_SlideLayoutType	value	=txAndClipArt					y	.	.	.	.
+p:ST_SlideLayoutType/=clipArtAndTx	SLIDE	ST_SlideLayoutType	value	=clipArtAndTx					y	.	.	.	.
 p:ST_SlideLayoutType/=titleOnly	SLIDE	ST_SlideLayoutType	value	=titleOnly					y	.	.	.	.
 p:ST_SlideLayoutType/=blank	SLIDE	ST_SlideLayoutType	value	=blank					y	.	.	.	.
-p:ST_SlideLayoutType/=txAndObj	SLIDE	ST_SlideLayoutType	value	=txAndObj					.	.	.	.	.
-p:ST_SlideLayoutType/=objAndTx	SLIDE	ST_SlideLayoutType	value	=objAndTx					.	.	.	.	.
-p:ST_SlideLayoutType/=objOnly	SLIDE	ST_SlideLayoutType	value	=objOnly					.	.	.	.	.
+p:ST_SlideLayoutType/=txAndObj	SLIDE	ST_SlideLayoutType	value	=txAndObj					y	.	.	.	.
+p:ST_SlideLayoutType/=objAndTx	SLIDE	ST_SlideLayoutType	value	=objAndTx					y	.	.	.	.
+p:ST_SlideLayoutType/=objOnly	SLIDE	ST_SlideLayoutType	value	=objOnly					y	.	.	.	.
 p:ST_SlideLayoutType/=obj	SLIDE	ST_SlideLayoutType	value	=obj					y	.	.	.	.
-p:ST_SlideLayoutType/=txAndMedia	SLIDE	ST_SlideLayoutType	value	=txAndMedia					.	.	.	.	.
-p:ST_SlideLayoutType/=mediaAndTx	SLIDE	ST_SlideLayoutType	value	=mediaAndTx					.	.	.	.	.
-p:ST_SlideLayoutType/=objOverTx	SLIDE	ST_SlideLayoutType	value	=objOverTx					.	.	.	.	.
-p:ST_SlideLayoutType/=txOverObj	SLIDE	ST_SlideLayoutType	value	=txOverObj					.	.	.	.	.
-p:ST_SlideLayoutType/=txAndTwoObj	SLIDE	ST_SlideLayoutType	value	=txAndTwoObj					.	.	.	.	.
-p:ST_SlideLayoutType/=twoObjAndTx	SLIDE	ST_SlideLayoutType	value	=twoObjAndTx					.	.	.	.	.
-p:ST_SlideLayoutType/=twoObjOverTx	SLIDE	ST_SlideLayoutType	value	=twoObjOverTx					.	.	.	.	.
-p:ST_SlideLayoutType/=fourObj	SLIDE	ST_SlideLayoutType	value	=fourObj					.	.	.	.	.
+p:ST_SlideLayoutType/=txAndMedia	SLIDE	ST_SlideLayoutType	value	=txAndMedia					y	.	.	.	.
+p:ST_SlideLayoutType/=mediaAndTx	SLIDE	ST_SlideLayoutType	value	=mediaAndTx					y	.	.	.	.
+p:ST_SlideLayoutType/=objOverTx	SLIDE	ST_SlideLayoutType	value	=objOverTx					y	.	.	.	.
+p:ST_SlideLayoutType/=txOverObj	SLIDE	ST_SlideLayoutType	value	=txOverObj					y	.	.	.	.
+p:ST_SlideLayoutType/=txAndTwoObj	SLIDE	ST_SlideLayoutType	value	=txAndTwoObj					y	.	.	.	.
+p:ST_SlideLayoutType/=twoObjAndTx	SLIDE	ST_SlideLayoutType	value	=twoObjAndTx					y	.	.	.	.
+p:ST_SlideLayoutType/=twoObjOverTx	SLIDE	ST_SlideLayoutType	value	=twoObjOverTx					y	.	.	.	.
+p:ST_SlideLayoutType/=fourObj	SLIDE	ST_SlideLayoutType	value	=fourObj					y	.	.	.	.
 p:ST_SlideLayoutType/=vertTx	SLIDE	ST_SlideLayoutType	value	=vertTx					y	.	.	.	.
-p:ST_SlideLayoutType/=clipArtAndVertTx	SLIDE	ST_SlideLayoutType	value	=clipArtAndVertTx					.	.	.	.	.
+p:ST_SlideLayoutType/=clipArtAndVertTx	SLIDE	ST_SlideLayoutType	value	=clipArtAndVertTx					y	.	.	.	.
 p:ST_SlideLayoutType/=vertTitleAndTx	SLIDE	ST_SlideLayoutType	value	=vertTitleAndTx					y	.	.	.	.
-p:ST_SlideLayoutType/=vertTitleAndTxOverChart	SLIDE	ST_SlideLayoutType	value	=vertTitleAndTxOverChart					.	.	.	.	.
+p:ST_SlideLayoutType/=vertTitleAndTxOverChart	SLIDE	ST_SlideLayoutType	value	=vertTitleAndTxOverChart					y	.	.	.	.
 p:ST_SlideLayoutType/=twoObj	SLIDE	ST_SlideLayoutType	value	=twoObj					y	.	.	.	.
-p:ST_SlideLayoutType/=objAndTwoObj	SLIDE	ST_SlideLayoutType	value	=objAndTwoObj					.	.	.	.	.
-p:ST_SlideLayoutType/=twoObjAndObj	SLIDE	ST_SlideLayoutType	value	=twoObjAndObj					.	.	.	.	.
-p:ST_SlideLayoutType/=cust	SLIDE	ST_SlideLayoutType	value	=cust					.	.	.	.	.
+p:ST_SlideLayoutType/=objAndTwoObj	SLIDE	ST_SlideLayoutType	value	=objAndTwoObj					y	.	.	.	.
+p:ST_SlideLayoutType/=twoObjAndObj	SLIDE	ST_SlideLayoutType	value	=twoObjAndObj					y	.	.	.	.
+p:ST_SlideLayoutType/=cust	SLIDE	ST_SlideLayoutType	value	=cust					y	.	.	.	.
 p:ST_SlideLayoutType/=secHead	SLIDE	ST_SlideLayoutType	value	=secHead					y	.	.	.	.
 p:ST_SlideLayoutType/=twoTxTwoObj	SLIDE	ST_SlideLayoutType	value	=twoTxTwoObj					y	.	.	.	.
 p:ST_SlideLayoutType/=objTx	SLIDE	ST_SlideLayoutType	value	=objTx					y	.	.	.	.
@@ -1036,7 +1036,7 @@ p:CT_OutlineViewSlideList	VIEW		type	CT_OutlineViewSlideList					.	y	y	.	.
 p:CT_OutlineViewSlideList/sld	VIEW	CT_OutlineViewSlideList	element	sld	CT_OutlineViewSlideEntry	0..unbounded			.	y	y	.	.
 p:CT_OutlineViewProperties	VIEW		type	CT_OutlineViewProperties					.	.	.	.	.
 p:CT_OutlineViewProperties/cViewPr	VIEW	CT_OutlineViewProperties	element	cViewPr	CT_CommonViewProperties				.	.	.	.	.
-p:CT_OutlineViewProperties/sldLst	VIEW	CT_OutlineViewProperties	element	sldLst	CT_OutlineViewSlideList	0..1			.	.	.	.	.
+p:CT_OutlineViewProperties/sldLst	VIEW	CT_OutlineViewProperties	element	sldLst	CT_OutlineViewSlideList	0..1			.	y	.	.	.
 p:CT_OutlineViewProperties/extLst	VIEW	CT_OutlineViewProperties	element	extLst	CT_ExtensionList	0..1			.	.	.	.	.
 p:CT_SlideSorterViewProperties	VIEW		type	CT_SlideSorterViewProperties					.	.	.	.	.
 p:CT_SlideSorterViewProperties/cViewPr	VIEW	CT_SlideSorterViewProperties	element	cViewPr	CT_CommonViewProperties				.	.	.	.	.
@@ -1140,7 +1140,7 @@ a:CT_CustomColorList/custClr	THEME	CT_CustomColorList	element	custClr	CT_CustomC
 a:CT_FontCollection	THEME		type	CT_FontCollection					.	.	.	.	.
 a:CT_FontCollection/latin	THEME	CT_FontCollection	element	latin	CT_TextFont				y	y	y	.	.
 a:CT_FontCollection/ea	THEME	CT_FontCollection	element	ea	CT_TextFont				.	y	.	.	.
-a:CT_FontCollection/cs	THEME	CT_FontCollection	element	cs	CT_TextFont				.	.	.	.	.
+a:CT_FontCollection/cs	THEME	CT_FontCollection	element	cs	CT_TextFont				.	y	.	.	.
 a:CT_FontCollection/font	THEME	CT_FontCollection	element	font	CT_SupplementalFont	0..unbounded			.	y	y	.	.
 a:CT_FontCollection/extLst	THEME	CT_FontCollection	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_EffectStyleItem	THEME		type	CT_EffectStyleItem					.	.	.	.	.
@@ -1148,7 +1148,7 @@ a:CT_EffectStyleItem/EG_EffectProperties	THEME	CT_EffectStyleItem	group	EG_Effec
 a:CT_EffectStyleItem/scene3d	THEME	CT_EffectStyleItem	element	scene3d	CT_Scene3D	0..1			.	.	.	.	.
 a:CT_EffectStyleItem/sp3d	THEME	CT_EffectStyleItem	element	sp3d	CT_Shape3D	0..1			.	.	.	.	.
 a:CT_FontScheme	THEME		type	CT_FontScheme					.	.	.	.	.
-a:CT_FontScheme/majorFont	THEME	CT_FontScheme	element	majorFont	CT_FontCollection				.	.	.	.	.
+a:CT_FontScheme/majorFont	THEME	CT_FontScheme	element	majorFont	CT_FontCollection				.	y	.	.	.
 a:CT_FontScheme/minorFont	THEME	CT_FontScheme	element	minorFont	CT_FontCollection				.	.	.	.	.
 a:CT_FontScheme/extLst	THEME	CT_FontScheme	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_FontScheme/@name	THEME	CT_FontScheme	attribute	@name	string	required			.	y	.	.	.
@@ -1568,18 +1568,18 @@ a:CT_Color	COLOR		type	CT_Color					.	y	.	.	.
 a:CT_Color/EG_ColorChoice	COLOR	CT_Color	group	EG_ColorChoice	EG_ColorChoice				.	y	.	.	.
 a:CT_ColorMRU	COLOR		type	CT_ColorMRU					.	y	.	.	.
 a:CT_ColorMRU/EG_ColorChoice	COLOR	CT_ColorMRU	group	EG_ColorChoice	EG_ColorChoice	0..unbounded			.	y	.	.	.
-a:ST_BlackWhiteMode	SHAPE		simple	ST_BlackWhiteMode				base=token	.	.	.	.	.
-a:ST_BlackWhiteMode/=clr	SHAPE	ST_BlackWhiteMode	value	=clr					.	.	.	.	.
+a:ST_BlackWhiteMode	SHAPE		simple	ST_BlackWhiteMode				base=token	y	.	.	.	.
+a:ST_BlackWhiteMode/=clr	SHAPE	ST_BlackWhiteMode	value	=clr					y	.	.	.	.
 a:ST_BlackWhiteMode/=auto	SHAPE	ST_BlackWhiteMode	value	=auto					y	.	.	.	.
 a:ST_BlackWhiteMode/=gray	SHAPE	ST_BlackWhiteMode	value	=gray					y	.	.	.	.
-a:ST_BlackWhiteMode/=ltGray	SHAPE	ST_BlackWhiteMode	value	=ltGray					.	.	.	.	.
-a:ST_BlackWhiteMode/=invGray	SHAPE	ST_BlackWhiteMode	value	=invGray					.	.	.	.	.
-a:ST_BlackWhiteMode/=grayWhite	SHAPE	ST_BlackWhiteMode	value	=grayWhite					.	.	.	.	.
-a:ST_BlackWhiteMode/=blackGray	SHAPE	ST_BlackWhiteMode	value	=blackGray					.	.	.	.	.
-a:ST_BlackWhiteMode/=blackWhite	SHAPE	ST_BlackWhiteMode	value	=blackWhite					.	.	.	.	.
+a:ST_BlackWhiteMode/=ltGray	SHAPE	ST_BlackWhiteMode	value	=ltGray					y	.	.	.	.
+a:ST_BlackWhiteMode/=invGray	SHAPE	ST_BlackWhiteMode	value	=invGray					y	.	.	.	.
+a:ST_BlackWhiteMode/=grayWhite	SHAPE	ST_BlackWhiteMode	value	=grayWhite					y	.	.	.	.
+a:ST_BlackWhiteMode/=blackGray	SHAPE	ST_BlackWhiteMode	value	=blackGray					y	.	.	.	.
+a:ST_BlackWhiteMode/=blackWhite	SHAPE	ST_BlackWhiteMode	value	=blackWhite					y	.	.	.	.
 a:ST_BlackWhiteMode/=black	SHAPE	ST_BlackWhiteMode	value	=black					y	.	.	.	.
-a:ST_BlackWhiteMode/=white	SHAPE	ST_BlackWhiteMode	value	=white					.	.	.	.	.
-a:ST_BlackWhiteMode/=hidden	SHAPE	ST_BlackWhiteMode	value	=hidden					.	.	.	.	.
+a:ST_BlackWhiteMode/=white	SHAPE	ST_BlackWhiteMode	value	=white					y	.	.	.	.
+a:ST_BlackWhiteMode/=hidden	SHAPE	ST_BlackWhiteMode	value	=hidden					y	.	.	.	.
 a:AG_Blob	PIC		type	AG_Blob					.	.	.	.	.
 a:AG_Blob/@r:embed	PIC	AG_Blob	attribute	@r:embed	embed	optional			.	.	.	.	.
 a:AG_Blob/@r:link	PIC	AG_Blob	attribute	@r:link	link	optional			.	.	.	.	.
@@ -1599,12 +1599,12 @@ a:CT_Hyperlink/@highlightClick	SHAPE	CT_Hyperlink	attribute	@highlightClick	bool
 a:CT_Hyperlink/@endSnd	SHAPE	CT_Hyperlink	attribute	@endSnd	boolean	optional	false		.	.	.	.	.
 a:ST_DrawingElementId	SHAPE		simple	ST_DrawingElementId				base=unsignedInt	.	.	.	.	.
 a:AG_Locking	SHAPE		type	AG_Locking					.	.	.	.	.
-a:AG_Locking/@noGrp	SHAPE	AG_Locking	attribute	@noGrp	boolean	optional	false		.	.	.	.	.
-a:AG_Locking/@noSelect	SHAPE	AG_Locking	attribute	@noSelect	boolean	optional	false		.	.	.	.	.
+a:AG_Locking/@noGrp	SHAPE	AG_Locking	attribute	@noGrp	boolean	optional	false		y	.	.	.	.
+a:AG_Locking/@noSelect	SHAPE	AG_Locking	attribute	@noSelect	boolean	optional	false		y	.	.	.	.
 a:AG_Locking/@noRot	SHAPE	AG_Locking	attribute	@noRot	boolean	optional	false		y	.	.	.	.
-a:AG_Locking/@noChangeAspect	SHAPE	AG_Locking	attribute	@noChangeAspect	boolean	optional	false		.	.	.	.	.
+a:AG_Locking/@noChangeAspect	SHAPE	AG_Locking	attribute	@noChangeAspect	boolean	optional	false		y	.	.	.	.
 a:AG_Locking/@noMove	SHAPE	AG_Locking	attribute	@noMove	boolean	optional	false		y	.	.	.	.
-a:AG_Locking/@noResize	SHAPE	AG_Locking	attribute	@noResize	boolean	optional	false		.	.	.	.	.
+a:AG_Locking/@noResize	SHAPE	AG_Locking	attribute	@noResize	boolean	optional	false		y	.	.	.	.
 a:AG_Locking/@noEditPoints	SHAPE	AG_Locking	attribute	@noEditPoints	boolean	optional	false		.	.	.	.	.
 a:AG_Locking/@noAdjustHandles	SHAPE	AG_Locking	attribute	@noAdjustHandles	boolean	optional	false		.	.	.	.	.
 a:AG_Locking/@noChangeArrowheads	SHAPE	AG_Locking	attribute	@noChangeArrowheads	boolean	optional	false		.	.	.	.	.
@@ -1622,21 +1622,21 @@ a:CT_PictureLocking/AG_Locking	PIC	CT_PictureLocking	attrgroup	AG_Locking	AG_Loc
 a:CT_PictureLocking/@noCrop	PIC	CT_PictureLocking	attribute	@noCrop	boolean	optional	false		.	.	.	.	.
 a:CT_GroupLocking	SHAPE		type	CT_GroupLocking					.	.	.	.	.
 a:CT_GroupLocking/extLst	SHAPE	CT_GroupLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_GroupLocking/@noGrp	SHAPE	CT_GroupLocking	attribute	@noGrp	boolean	optional	false		.	.	.	.	.
+a:CT_GroupLocking/@noGrp	SHAPE	CT_GroupLocking	attribute	@noGrp	boolean	optional	false		y	.	.	.	.
 a:CT_GroupLocking/@noUngrp	SHAPE	CT_GroupLocking	attribute	@noUngrp	boolean	optional	false		y	.	.	.	.
-a:CT_GroupLocking/@noSelect	SHAPE	CT_GroupLocking	attribute	@noSelect	boolean	optional	false		.	.	.	.	.
+a:CT_GroupLocking/@noSelect	SHAPE	CT_GroupLocking	attribute	@noSelect	boolean	optional	false		y	.	.	.	.
 a:CT_GroupLocking/@noRot	SHAPE	CT_GroupLocking	attribute	@noRot	boolean	optional	false		y	.	.	.	.
-a:CT_GroupLocking/@noChangeAspect	SHAPE	CT_GroupLocking	attribute	@noChangeAspect	boolean	optional	false		.	.	.	.	.
-a:CT_GroupLocking/@noMove	SHAPE	CT_GroupLocking	attribute	@noMove	boolean	optional	false		.	.	.	.	.
-a:CT_GroupLocking/@noResize	SHAPE	CT_GroupLocking	attribute	@noResize	boolean	optional	false		.	.	.	.	.
+a:CT_GroupLocking/@noChangeAspect	SHAPE	CT_GroupLocking	attribute	@noChangeAspect	boolean	optional	false		y	.	.	.	.
+a:CT_GroupLocking/@noMove	SHAPE	CT_GroupLocking	attribute	@noMove	boolean	optional	false		y	.	.	.	.
+a:CT_GroupLocking/@noResize	SHAPE	CT_GroupLocking	attribute	@noResize	boolean	optional	false		y	.	.	.	.
 a:CT_GraphicalObjectFrameLocking	SHAPE		type	CT_GraphicalObjectFrameLocking					.	.	.	.	.
 a:CT_GraphicalObjectFrameLocking/extLst	SHAPE	CT_GraphicalObjectFrameLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
-a:CT_GraphicalObjectFrameLocking/@noGrp	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noGrp	boolean	optional	false		.	.	.	.	.
+a:CT_GraphicalObjectFrameLocking/@noGrp	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noGrp	boolean	optional	false		y	.	.	.	.
 a:CT_GraphicalObjectFrameLocking/@noDrilldown	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noDrilldown	boolean	optional	false		y	.	.	.	.
-a:CT_GraphicalObjectFrameLocking/@noSelect	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noSelect	boolean	optional	false		.	.	.	.	.
-a:CT_GraphicalObjectFrameLocking/@noChangeAspect	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noChangeAspect	boolean	optional	false		.	.	.	.	.
-a:CT_GraphicalObjectFrameLocking/@noMove	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noMove	boolean	optional	false		.	.	.	.	.
-a:CT_GraphicalObjectFrameLocking/@noResize	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noResize	boolean	optional	false		.	.	.	.	.
+a:CT_GraphicalObjectFrameLocking/@noSelect	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noSelect	boolean	optional	false		y	.	.	.	.
+a:CT_GraphicalObjectFrameLocking/@noChangeAspect	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noChangeAspect	boolean	optional	false		y	.	.	.	.
+a:CT_GraphicalObjectFrameLocking/@noMove	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noMove	boolean	optional	false		y	.	.	.	.
+a:CT_GraphicalObjectFrameLocking/@noResize	SHAPE	CT_GraphicalObjectFrameLocking	attribute	@noResize	boolean	optional	false		y	.	.	.	.
 a:CT_ContentPartLocking	SHAPE		type	CT_ContentPartLocking					.	.	.	.	.
 a:CT_ContentPartLocking/extLst	SHAPE	CT_ContentPartLocking	element	extLst	CT_OfficeArtExtensionList	0..1			.	.	.	.	.
 a:CT_ContentPartLocking/AG_Locking	SHAPE	CT_ContentPartLocking	attrgroup	AG_Locking	AG_Locking				.	.	.	.	.
