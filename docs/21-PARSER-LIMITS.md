@@ -243,15 +243,15 @@ Each fixture is seen to read with its bound raised by one (`raising_each_limit_b
 
 | Field | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `max_chart_parts` | `8_192` | Chart-family parts read in one deck | CS-CHT-0001 | Partial: with the bound lowered: a deck crossing the default is too large to commit; guard not seen failing (`SEC-021`) |
-| `max_series` | `4_096` | Series in one part | CS-CHT-0002 | Partial: `hostile/chart-limit-series.bin`; guard not seen failing (`SEC-021`) |
-| `max_points` | `1_048_576` | Cached points in one part | CS-CHT-0003 | Partial: `hostile/chart-limit-points.bin`; guard not seen failing (`SEC-021`) |
-| `max_data_points` | `262_144` | `dPt` and `cx:dataPoint` in one part | CS-CHT-0004 | Partial: `hostile/chart-limit-data-points.bin`; guard not seen failing (`SEC-021`) |
-| `max_data_labels` | `262_144` | `dLbl` and `cx:dataLabel` in one part | CS-CHT-0005 | Partial: `hostile/chart-limit-data-labels.bin`; guard not seen failing (`SEC-021`) |
-| `max_levels` | `4_096` | `lvl` in one part | CS-CHT-0006 | Partial: `hostile/chart-limit-levels.bin`; guard not seen failing (`SEC-021`) |
-| `max_anchors` | `65_536` | Anchors in one chart drawing | CS-CHT-0007 | Partial: `hostile/chart-limit-anchors.bin`; guard not seen failing (`SEC-021`) |
-| `max_extensions` | `262_144` | `ext` in one part | CS-CHT-0008 | Partial: `hostile/chart-limit-extensions.bin`; guard not seen failing (`SEC-021`) |
-| `max_group_depth` | `64` | Groups nested in one chart drawing, the one recursion in these schemas | CS-CHT-0009 | Partial: `hostile/chart-limit-group-depth.bin`; guard not seen failing (`SEC-021`) |
+| `max_chart_parts` | `8_192` | Chart-family parts read in one deck | CS-CHT-0001 | Tested: with the bound lowered: a deck crossing the default is too large to commit; guard removed, `more_chart_parts_than_the_bound_are_set_aside_and_the_rest_read` red (`SEC-021`, 2026-11-08) |
+| `max_series` | `4_096` | Series in one part | CS-CHT-0002 | Tested: `hostile/chart-limit-series.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
+| `max_points` | `1_048_576` | Cached points in one part | CS-CHT-0003 | Tested: `hostile/chart-limit-points.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
+| `max_data_points` | `262_144` | `dPt` and `cx:dataPoint` in one part | CS-CHT-0004 | Tested: `hostile/chart-limit-data-points.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
+| `max_data_labels` | `262_144` | `dLbl` and `cx:dataLabel` in one part | CS-CHT-0005 | Tested: `hostile/chart-limit-data-labels.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
+| `max_levels` | `4_096` | `lvl` in one part | CS-CHT-0006 | Tested: `hostile/chart-limit-levels.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
+| `max_anchors` | `65_536` | Anchors in one chart drawing | CS-CHT-0007 | Tested: `hostile/chart-limit-anchors.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
+| `max_extensions` | `262_144` | `ext` in one part | CS-CHT-0008 | Tested: `hostile/chart-limit-extensions.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
+| `max_group_depth` | `64` | Groups nested in one chart drawing, the one recursion in these schemas | CS-CHT-0009 | Tested: `hostile/chart-limit-group-depth.bin`; guard removed, `a_chart_past_each_bound_is_set_aside_with_its_code_and_the_deck_opens` red (`SEC-021`, 2026-11-08) |
 
 What is damaged but not over a bound is read as far as it goes and reported: `hostile/chart-bad-structure.bin`. What is rooted wrongly is set aside: `hostile/chart-wrong-root.bin`; what is not XML likewise, built in `crates/casual-slide-export/tests/chart.rs`, as every `open` deck in the corpus is held to parse part by part. A workbook that could not be read if anyone tried is untouched: `hostile/chart-workbook-corrupt.bin`.
 
