@@ -154,7 +154,7 @@ fn every_field_of_the_presentation_part_is_read() {
     assert_eq!(verifier.hash_data.as_deref(), Some("BBBB"));
 
     // Preserved, not modelled, and said so.
-    for element in ["defaultTextStyle", "extLst", "clrMru", "penClr"] {
+    for element in ["extLst", "clrMru", "penClr"] {
         assert!(d.findings.has(K::RetainedElement, element), "{element}");
     }
     assert!(d.findings.has(K::RetainedAttribute, "presentation"));

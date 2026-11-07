@@ -123,6 +123,26 @@ These are constants, not fields of `ImportLimits`, so a host cannot tighten them
 | `max_parts` | `250_000` | Slide parts of all kinds | CS-SLD-0004 | Fixture `slide-limit-parts`, under a tightened bound. **Not reachable at the default**: `max_entries` refuses a package first, which a test holds |
 | `max_layout_ids` | `10_000` | Entries in a master's layout list | CS-SLD-0004 | Tested; fixture `slide-limit-layout-ids`, seen red |
 
+## Drawing properties: `DrawingLimits`
+
+`crates/casual-slide-import/src/drawing.rs`. Geometry, fills, lines, effects and 3D on one shape. Over a limit, the **whole property** is left out of the model and reported as `CS-DRW-0001`; the tree keeps it, so the deck opens and saves as it was. A part of a gradient would be a wrong gradient, which is why the list is not cut. The caps from `casual-slide-geometry` below apply again, on compile.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_gradient_stops` | `1_024` | `gs` in one `gsLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_dash_stops` | `1_024` | `ds` in one `custDash` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_effects` | `1_024` | Effects in one list, blip or container | CS-DRW-0001 | Tested; hostile fixture |
+| `max_effect_depth` | `32` | Nesting of containers, and of fills in effects in blips, which the schema does not bound | CS-DRW-0001 | Tested; two hostile fixtures |
+| `max_picture_effects` | `4_096` | `imgEffect` in one layer, marks in one `backgroundRemoval` | CS-DRW-0001 | Bound by the same check as `max_effects`; no hostile fixture |
+| `max_guides` | `4_096` | `gd` in one `avLst` or `gdLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_handles` | `256` | Children of one `ahLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_sites` | `4_096` | `cxn` in one `cxnLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_paths` | `1_024` | `path` in one `pathLst` | CS-DRW-0001 | Tested; hostile fixture |
+| `max_path_commands` | `262_144` | Commands in one path | CS-DRW-0001 | Tested; hostile fixture |
+| `max_items_per_property` | `1_000_000` | Elements read for one property, whatever its shape | CS-DRW-0001 | Bound by the same check as the lists; no hostile fixture, as `max_elements` reaches first by default |
+
+A shape path uses `DrawingLimits::default()`. `read_fill`, `read_line`, `read_effects`, `read_blip_fill` and `read_preset_text_shape` take limits, which is how `one_under_each_limit_is_read` tightens one.
+
 ## Geometry
 
 `crates/casual-slide-geometry/src/lib.rs`, module `limits`, enforced by `RawGeometry::compile`.
@@ -143,6 +163,20 @@ cap is the generous one.
 
 A geometry diagnostic holds no text from the file (`SEC-019`), and every refusal and repair has a code (`GEO-04`).
 
+## Text: `TextLimits`
+
+`crates/casual-slide-import/src/text.rs`, nested in `ImportLimits` as `text`. Each is well beyond any real deck; the largest committed real deck is well under one percent of each. The part bounds below `max_runs_per_part` set what a text-heavy part can cost in the model: a run holds at most about 400 bytes of model before its strings, and each string is bounded by `max_value_bytes` and by the part. A size test holds that figure, so at the defaults text in one part stays near 400 MiB plus its characters. A run's fill, line and effects are boxed and sized by what the file holds, each under `DrawingLimits`, as on a shape.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `max_paragraphs_per_body` | `100_000` | Paragraphs in one text body | CS-TXT-0001 | Tested; `hostile/text-limit-paragraphs-in-body.bin` |
+| `max_runs_per_paragraph` | `100_000` | Runs, breaks, fields and retained children in one paragraph | CS-TXT-0002 | Tested; `hostile/text-limit-runs-in-paragraph.bin` |
+| `max_paragraphs_per_part` | `250_000` | Paragraphs across one part's shapes | CS-TXT-0003 | Tested; `hostile/text-limit-paragraphs-in-part.bin` |
+| `max_runs_per_part` | `1_000_000` | Runs, breaks, fields and retained children across one part | CS-TXT-0004 | Tested, with the bound lowered: a deck crossing the default is too large to commit |
+| `max_tab_stops` | `1_024` | Tab stops in one `tabLst`. Between the schema's 32 and this, they are kept and reported as `CS-IMF-0002` | CS-TXT-0005 | Tested; `hostile/text-limit-tab-stops.bin` |
+
+Text bodies follow no input to any depth: `txBody`, `p`, `r` and `rPr` have a fixed shape, and a colour's transforms have their own bound. `a:t` is bounded by `max_value_bytes`.
+
 ## Export
 
 | Limit | Default | Bounds | Code | Status |
@@ -156,8 +190,8 @@ Each of these is a known gap with an owner, not an oversight:
 - **Time.** No limit bounds the time a deck can take within its byte budgets (`SEC-P10`, Tier 1A).
 - **Embedded packages.** An embedded deck or workbook is retained, never opened; opening one
   will be a separate admission with an inherited budget (`SEC-P09`).
-- **Text, layout and rendering** limits arrive with Tiers 1F and 2D: runs per paragraph, glyphs
-  per frame, image pixel dimensions before decode.
+- **Layout and rendering** limits arrive with Tier 2D: glyphs per frame, image pixel dimensions
+  before decode.
 - **Legacy `.ppt`** has no reader; a Compound File is refused as `CS-OPC-0005` (`CFB-01`, `PPT-01`).
 
 ## Tools

@@ -28,6 +28,9 @@ by saying so.
 | 17 | 2026-11-07 | Push directly to `main`; no pull requests for now. Supersedes CLAUDE.md's rule against committing to `main` until the owner says otherwise | [CLAUDE.md](../CLAUDE.md), `openslide-merge` skill |
 | 18 | 2026-11-07 | Update the README and repo overview. While Phase 0 completes, plan out all of Phase 1 | README, GitHub description and topics; [06](06-ROADMAP-AND-DELIVERY.md) Phase 1 plan; task rows in [14](14-EXECUTION-TRACKER.md) |
 | 19 | 2026-11-07 | Fix the open findings and proceed | Close-out session and Phase 1 Wave 1 |
+| 20 | 2026-11-07 | Fonts and painting are not the priority. The foundation comes first: stop that work until the foundation is built. Supersedes the walking skeleton after Tier 1D | `SKEL-01` blocked, fonts removed, [06](06-ROADMAP-AND-DELIVERY.md) |
+| 21 | 2026-11-07 | Phase 0 is done, sign-off given. Start completing Phase 1 | [06](06-ROADMAP-AND-DELIVERY.md) |
+| 22 | 2026-11-07 | Do not leave work at "built". Complete it: a tier counts only when it meets its exit gate | [CLAUDE.md](../CLAUDE.md), [05](05-PHASES-AND-TASKS.md) |
 
 ## Boundaries set by the environment
 

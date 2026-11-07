@@ -797,3 +797,27 @@ fn an_effect_reference_sets_and_refuses_what_is_no_token() {
         );
     }
 }
+
+/// Each refusal, produced for real, with its code in `docs/20`.
+#[test]
+fn each_colour_and_theme_refusal_has_its_stable_code() {
+    let mut tree = parse(FONTS);
+    let (major, latin) = (FontRole::Major, FontSlot::Latin);
+    let invalid = set_font_panose(&mut tree, major, latin, Some("x")).unwrap_err();
+    assert_eq!(invalid.code(), "CS-CLE-0001");
+
+    let mut too_many = Color::srgb(1, 2, 3);
+    too_many.transforms = vec![ColorTransform::new(K::Comp, 0); MAX_COLOR_TRANSFORMS + 1];
+    let mut theme = parse(&format!(
+        "<a:theme {A}><a:themeElements><a:clrScheme name=\"c\"><a:dk1><a:srgbClr val=\"010203\"/></a:dk1></a:clrScheme></a:themeElements></a:theme>"
+    ));
+    let err = set_scheme_color(&mut theme, I::Dk1, &too_many).unwrap_err();
+    assert_eq!(err.code(), "CS-CLE-0002");
+
+    let mut empty = parse(&format!("<a:theme {A}/>"));
+    let err = set_font_charset(&mut empty, major, latin, None).unwrap_err();
+    assert_eq!(err.code(), "CS-CLE-0003");
+
+    assert_eq!(ExportError::MalformedNode("x").code(), "CS-CLE-0004");
+    assert_eq!(ExportError::NoNamespace.code(), "CS-CLE-0005");
+}

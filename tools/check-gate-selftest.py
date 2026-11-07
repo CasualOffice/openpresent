@@ -144,7 +144,7 @@ def parser_limit_cases():
 
 def error_code_cases():
     code = 'fn code() -> &str { "CS-AAA-0001" }\nfn other() -> &str { "CS-AAA-0002" }\n'
-    doc = "One: CS-AAA-0001 a thing; 0002 another.\n"
+    doc = "One: CS-AAA-0001 a thing (`MS-OI29500` 2.1.1292, 2026-11-07); 0002 another.\n"
     clean = {"crates/x/src/lib.rs": code, "docs/20-ERROR-CODE-REGISTRY.md": doc}
     yield ("a code with no entry", clean,
            {"crates/x/src/more.rs": 'const C: &str = "CS-BBB-0001";\n'}, "CS-BBB-0001: in")

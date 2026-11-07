@@ -15,7 +15,8 @@ import sys
 
 DOC = "docs/20-ERROR-CODE-REGISTRY.md"
 FULL = re.compile(r"\bCS-[A-Z]{3}-[0-9]{4}\b")
-ON_LINE = re.compile(r"\bCS-([A-Z]{3})-([0-9]{4})\b|(?<![-0-9])\b([0-9]{4})\b")
+# A short form stands alone: `2.1.1292` is a section of another document, `2026-11` a date.
+ON_LINE = re.compile(r"\bCS-([A-Z]{3})-([0-9]{4})\b|(?<![-.0-9])\b([0-9]{4})\b(?![-.][0-9])")
 
 
 def in_code(root):

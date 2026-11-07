@@ -1,9 +1,8 @@
 //! `GEO-04`: hostile decks holding custom geometry past each cap, or built to hurt.
 //!
-//! Nothing reads `a:custGeom` from a part until `T1E-01`, so this test has its own small
-//! reader. Bytes come from the fixtures, through the parts of the engine a real import
-//! will use, so that the binding inherits a fixture for each limit. It lives here because
-//! the geometry crate depends on nothing, tests included.
+//! This test has its own small reader of `a:custGeom`, so it holds the geometry crate's
+//! caps directly, under import's own bounds. It lives here because the geometry crate
+//! depends on nothing, tests included.
 
 use std::path::Path;
 

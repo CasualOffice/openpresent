@@ -69,4 +69,4 @@ Every task, none of it optional:
 
 ## Current state
 
-**Phases 0 and 1 are open, under waiver W-1** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Tiers 1A to 1C are built but not closed, and Tier 1D is merging. The Phase 1 plan is in [06](docs/06-ROADMAP-AND-DELIVERY.md). Nothing renders yet. All ADRs are Accepted.
+**Phase 0 is closed. Phase 1 is open** ([06](docs/06-ROADMAP-AND-DELIVERY.md)). The package reader and part graph are built. Tiers 1A to 1C are built but not closed, and Tier 1D is merging. The Phase 1 plan is in [06](docs/06-ROADMAP-AND-DELIVERY.md). Nothing renders yet. All ADRs are Accepted.

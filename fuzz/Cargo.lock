@@ -52,6 +52,7 @@ version = "0.0.0"
 name = "casual-slide-import"
 version = "0.0.0"
 dependencies = [
+ "casual-slide-geometry",
  "casual-slide-model",
  "casual-slide-ooxml",
 ]

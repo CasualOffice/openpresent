@@ -2,8 +2,9 @@
 //! transform, locks, non-visual properties, hyperlinks and actions, for `sp`,
 //! `grpSp`, `cxnSp`, `pic`, `graphicFrame` and `contentPart`.
 //!
-//! What a node holds beyond this (geometry, fills, lines, effects, text bodies,
-//! table and chart content, the picture's `blipFill`) stays in the part's tree,
+//! Geometry, fills, lines, effects and 3D are in [`ShapeNode::properties`], and a
+//! shape's text body in [`crate::text`]. What a node holds beyond those (table and
+//! chart content) stays in the part's tree,
 //! preserved but not modelled, and is named in the import report. `Option` means
 //! the file did not state a value, or stated one that could not be used; a schema
 //! default is never filled in here. Effective values come from `casual-slide-style`.
@@ -22,6 +23,7 @@ use std::fmt;
 
 use crate::presentation::{Point, PositiveSize};
 use crate::properties::token_enum;
+use crate::text::TextBody;
 
 /// A stable internal id: the part's ordinal in the deck, and the node within it.
 /// Node 0 is the part itself; 1 is its shape tree's root group.
@@ -560,10 +562,14 @@ pub struct ShapeNode {
     pub bw_mode: Option<BlackWhiteMode>,
     /// `@useBgFill`, shapes only.
     pub use_bg_fill: Option<bool>,
+    /// Geometry, fill, line, effects and 3D: Tier 1E.
+    pub properties: crate::drawing::ShapeProperties,
     /// `a:graphic/a:graphicData/@uri`, graphic frames only: what the frame holds.
     pub graphic_uri: Option<String>,
     /// `@r:id`, content parts only.
     pub rel_id: Option<String>,
+    /// `txBody`, shapes only. A table cell's text is Tier 1G's.
+    pub text_body: Option<Box<TextBody>>,
     /// A group's children, in document order, which is z-order.
     pub children: Vec<ShapeNode>,
 }
@@ -583,8 +589,10 @@ impl ShapeNode {
             transform: None,
             bw_mode: None,
             use_bg_fill: None,
+            properties: crate::drawing::ShapeProperties::default(),
             graphic_uri: None,
             rel_id: None,
+            text_body: None,
             children: Vec::new(),
         }
     }

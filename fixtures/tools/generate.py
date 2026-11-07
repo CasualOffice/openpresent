@@ -249,6 +249,10 @@ def fixtures():
     # Lazy loading is measured on this: opening it must not read 500 slides.
     yield "generated/five-hundred-slides.pptx", zipped(deck(500)), "open"
     yield from slide_hostile()
+    yield "generated/drawing-every-element.pptx", zipped(drawing_deck()), "open CS-FND-0001"
+    yield from drawing_hostile()
+    from generate_text import fixtures as text_fixtures  # imports this module, so not at the top
+    yield from text_fixtures()
 
 
 def main_part(xml):
@@ -500,7 +504,7 @@ def property_fixtures():
     ):
         yield f"hostile/color-{name}.bin", zipped(replace(deck(), "ppt/theme/theme1.xml", theme)), "open"
 
-    # GEO-04: custom geometry past each cap in casual-slide-geometry's `limits`, which the test reads itself until T1E-01.
+    # GEO-04: custom geometry past each cap in casual-slide-geometry's `limits`, which the test reads itself.
     def geometry(body):
         shape = ('<p:sp><p:nvSpPr><p:cNvPr id="2" name="Custom"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
                  f'<p:spPr><a:custGeom>{body}</a:custGeom></p:spPr></p:sp>')
@@ -805,6 +809,182 @@ def slide_hostile():
            '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="f"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>'
            '<p:xfrm/><a:graphic><a:graphicData/></a:graphic></p:graphicFrame><p:contentPart/><p:unknownNode/></p:spTree>')
     yield "hostile/slide-bad-values.bin", with_slide(bad), "open"
+
+
+A14_NS = "http://schemas.microsoft.com/office/drawing/2010/main"
+ASK_NS = "http://schemas.microsoft.com/office/drawing/2018/sketchyshapes"
+PNG = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000001"
+                    "e221bc330000000049454e44ae426082")
+
+
+def drawn(sid, name, props, tag="sp", holder="spPr", nv="cNvSpPr", container="nvSpPr"):
+    return (f'<p:{tag}><p:{container}><p:cNvPr id="{sid}" name="{name}"/><p:{nv}/><p:nvPr/></p:{container}>'
+            f'<p:{holder}><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>{props}</p:{holder}></p:{tag}>')
+
+
+RECT = '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+RGB = '<a:srgbClr val="112233"><a:alpha val="50000"/></a:srgbClr>'
+SOLID = f'<a:solidFill>{RGB}</a:solidFill>'
+LIST_EFFECTS = (
+    '<a:blur rad="1000" grow="0"/>'
+    f'<a:fillOverlay blend="mult">{SOLID}</a:fillOverlay>'
+    f'<a:glow rad="2000">{RGB}</a:glow>'
+    f'<a:innerShdw blurRad="1" dist="2" dir="3">{RGB}</a:innerShdw>'
+    f'<a:outerShdw blurRad="1" dist="2" dir="3" sx="90000" sy="80000" kx="4" ky="5" algn="ctr" rotWithShape="0">{RGB}</a:outerShdw>'
+    f'<a:prstShdw prst="shdw7" dist="2" dir="3">{RGB}</a:prstShdw>'
+    '<a:reflection blurRad="1" stA="2" stPos="3" endA="4" endPos="5" dist="6" dir="7" fadeDir="8" sx="9" sy="10" kx="11" ky="12" algn="tl" rotWithShape="1"/>'
+    '<a:softEdge rad="1234"/>')
+BLIP_EFFECTS = (
+    '<a:alphaBiLevel thresh="50000"/><a:alphaCeiling/><a:alphaFloor/>'
+    f'<a:alphaInv>{RGB}</a:alphaInv>'
+    '<a:alphaMod><a:cont type="sib" name="m"><a:alphaFloor/></a:cont></a:alphaMod>'
+    '<a:alphaModFix amt="90000"/><a:alphaRepl a="20000"/><a:biLevel thresh="30000"/><a:blur rad="9"/>'
+    f'<a:clrChange useA="0"><a:clrFrom>{RGB}</a:clrFrom><a:clrTo>{RGB}</a:clrTo></a:clrChange>'
+    f'<a:clrRepl>{RGB}</a:clrRepl><a:duotone>{RGB}<a:schemeClr val="accent1"/></a:duotone>'
+    f'<a:fillOverlay blend="screen">{SOLID}</a:fillOverlay><a:grayscl/>'
+    '<a:hsl hue="60000" sat="10000" lum="-10000"/><a:lum bright="10000" contrast="-20000"/><a:tint hue="1" amt="2"/>')
+ARTISTIC = "".join(
+    f'<a14:imgEffect visible="1"><a14:{name}{attrs}/></a14:imgEffect>' for name, attrs in [
+        ("artisticBlur", ' radius="10"'), ("artisticCement", ' trans="1000" crackSpacing="24"'),
+        ("artisticChalkSketch", ' trans="1000" pressure="2"'), ("artisticCrisscrossEtching", ' trans="1000" pressure="30"'),
+        ("artisticCutout", ' trans="1000" numberOfShades="2"'), ("artisticFilmGrain", ' trans="1000" grainSize="40"'),
+        ("artisticGlass", ' trans="1000" scaling="34"'), ("artisticGlowDiffused", ' trans="1000" intensity="5"'),
+        ("artisticGlowEdges", ' trans="1000" smoothness="3"'), ("artisticLightScreen", ' trans="1000" gridSize="4"'),
+        ("artisticLineDrawing", ' trans="1000" pencilSize="9"'), ("artisticMarker", ' trans="1000" size="97"'),
+        ("artisticMosiaicBubbles", ' trans="1000" pressure="14"'), ("artisticPaintStrokes", ' trans="1000" intensity="5"'),
+        ("artisticPaintBrush", ' trans="1000" brushSize="2"'), ("artisticPastelsSmooth", ' trans="1000" scaling="34"'),
+        ("artisticPencilGrayscale", ' trans="1000" pencilSize="27"'), ("artisticPencilSketch", ' trans="1000" pressure="22"'),
+        ("artisticPhotocopy", ' trans="1000" detail="3"'), ("artisticPlasticWrap", ' trans="1000" smoothness="5"'),
+        ("artisticTexturizer", ' trans="1000" scaling="34"'), ("artisticWatercolorSponge", ' trans="1000" brushSize="2"'),
+        ("brightnessContrast", ' bright="10000" contrast="-10000"'), ("colorTemperature", ' colorTemp="6500"'),
+        ("saturation", ' sat="150000"'), ("sharpenSoften", ' amount="25000"')])
+IMG_PROPS = (f'<a14:imgProps xmlns:a14="{A14_NS}"><a14:imgLayer r:embed="rId2">{ARTISTIC}'
+             '<a14:imgEffect><a14:backgroundRemoval t="1000" b="2000" l="3000" r="4000">'
+             '<a14:foregroundMark x1="1" y1="2" x2="3" y2="4"/><a14:backgroundMark x1="5" y1="6" x2="7" y2="8"/>'
+             '</a14:backgroundRemoval></a14:imgEffect></a14:imgLayer></a14:imgProps>')
+EXT_BLIP = (f'<a:extLst><a:ext uri="{{BEBA8EAE-BF5A-486C-A8C5-ECC9F3942E4B}}">{IMG_PROPS}</a:ext>'
+            f'<a:ext uri="{{28A0092B-C50C-407E-A947-70E740481C1C}}"><a14:useLocalDpi xmlns:a14="{A14_NS}" val="0"/></a:ext></a:extLst>')
+SCENE = ('<a:camera prst="perspectiveFront" fov="5400000" zoom="110000"><a:rot lat="1" lon="2" rev="3"/></a:camera>'
+         '<a:lightRig rig="threePt" dir="t"><a:rot lat="4" lon="5" rev="6"/></a:lightRig>'
+         '<a:backdrop><a:anchor x="1" y="2" z="3"/><a:norm dx="4" dy="5" dz="6"/><a:up dx="7" dy="8" dz="9"/></a:backdrop>')
+SP3D_ATTRS = ' z="10" extrusionH="20" contourW="30" prstMaterial="metal"'
+SP3D_KIDS = (f'<a:bevelT w="1" h="2" prst="angle"/><a:bevelB w="3" h="4" prst="convex"/>'
+             f'<a:extrusionClr>{RGB}</a:extrusionClr><a:contourClr>{RGB}</a:contourClr>')
+SKETCH = (f'<a:ext uri="{{C807C97D-BFC1-408E-A445-0C87EB9F89A2}}"><ask:lineSketchStyleProps xmlns:ask="{ASK_NS}" sd="12345">'
+          f'{RECT}<ask:type><ask:lineSketchScribble/></ask:type></ask:lineSketchStyleProps></a:ext>')
+
+
+def drawing_slide():
+    """Every Tier 1E element and attribute at least once, to the schema. Synthetic: not
+    written by PowerPoint, which is what fixtures/real is for."""
+    custom = ('<a:custGeom><a:avLst><a:gd name="adj" fmla="val 5000"/></a:avLst><a:gdLst><a:gd name="g1" fmla="*/ w adj 100000"/></a:gdLst>'
+              '<a:ahLst><a:ahXY gdRefX="adj" minX="0" maxX="100000" gdRefY="adj" minY="0" maxY="100000"><a:pos x="g1" y="t"/></a:ahXY>'
+              '<a:ahPolar gdRefR="adj" minR="0" maxR="50000" gdRefAng="adj" minAng="0" maxAng="21599999"><a:pos x="g1" y="b"/></a:ahPolar></a:ahLst>'
+              '<a:cxnLst><a:cxn ang="0"><a:pos x="r" y="vc"/></a:cxn></a:cxnLst><a:rect l="l" t="t" r="r" b="b"/>'
+              '<a:pathLst><a:path w="100" h="100" fill="darken" stroke="0" extrusionOk="0"><a:moveTo><a:pt x="0" y="50"/></a:moveTo>'
+              '<a:lnTo><a:pt x="25" y="0"/></a:lnTo><a:arcTo wR="10" hR="20" stAng="0" swAng="5400000"/>'
+              '<a:quadBezTo><a:pt x="1" y="2"/><a:pt x="3" y="4"/></a:quadBezTo>'
+              '<a:cubicBezTo><a:pt x="5" y="6"/><a:pt x="7" y="8"/><a:pt x="9" y="10"/></a:cubicBezTo><a:close/></a:path></a:pathLst></a:custGeom>')
+    dag = ('<a:effectDag type="tree" name="top">'
+           '<a:cont type="sib" name="inner"><a:alphaFloor/></a:cont><a:effect ref="inner"/>'
+           '<a:alphaBiLevel thresh="1"/><a:alphaCeiling/><a:alphaFloor/>'
+           f'<a:alphaInv>{RGB}</a:alphaInv><a:alphaMod><a:cont/></a:alphaMod><a:alphaModFix amt="2"/><a:alphaOutset rad="3"/>'
+           '<a:alphaRepl a="4"/><a:biLevel thresh="5"/><a:blend blend="darken"><a:cont/></a:blend><a:blur rad="6" grow="1"/>'
+           f'<a:clrChange useA="1"><a:clrFrom>{RGB}</a:clrFrom><a:clrTo>{RGB}</a:clrTo></a:clrChange><a:clrRepl>{RGB}</a:clrRepl>'
+           f'<a:duotone>{RGB}{RGB}</a:duotone><a:fill>{SOLID}</a:fill><a:fillOverlay blend="lighten">{SOLID}</a:fillOverlay>'
+           f'<a:glow rad="7">{RGB}</a:glow><a:grayscl/><a:hsl hue="8" sat="9" lum="10"/><a:innerShdw blurRad="11">{RGB}</a:innerShdw>'
+           f'<a:lum bright="12" contrast="13"/><a:outerShdw blurRad="14">{RGB}</a:outerShdw><a:prstShdw prst="shdw1">{RGB}</a:prstShdw>'
+           '<a:reflection blurRad="15"/><a:relOff tx="16" ty="17"/><a:softEdge rad="18"/><a:tint hue="19" amt="20"/>'
+           '<a:xfrm sx="21" sy="22" kx="23" ky="24" tx="25" ty="26"/></a:effectDag>')
+    hidden = (f'<a:extLst><a:ext uri="{{909E8E84-426E-40DD-AFC4-6F175D3DCCD1}}"><a14:hiddenFill xmlns:a14="{A14_NS}">{SOLID}</a14:hiddenFill></a:ext>'
+              f'<a:ext uri="{{91240B29-F687-4F45-9708-019B960494DF}}"><a14:hiddenLine xmlns:a14="{A14_NS}" w="9525">{SOLID}<a:miter lim="800000"/></a14:hiddenLine></a:ext>'
+              f'<a:ext uri="{{AF507438-7753-43E0-B8FC-AC1667EBCBE1}}"><a14:hiddenEffects xmlns:a14="{A14_NS}"><a:effectLst><a:blur rad="1"/></a:effectLst></a14:hiddenEffects></a:ext>'
+              f'<a:ext uri="{{53640926-AAD7-44D8-BBD7-CCE9431645EC}}"><a14:shadowObscured xmlns:a14="{A14_NS}" val="1"/></a:ext>'
+              f'<a:ext uri="{{00000000-0000-0000-0000-000000000001}}"><a14:hiddenScene3d xmlns:a14="{A14_NS}">{SCENE}</a14:hiddenScene3d></a:ext>'
+              f'<a:ext uri="{{00000000-0000-0000-0000-000000000002}}"><a14:hiddenSp3d xmlns:a14="{A14_NS}"{SP3D_ATTRS}>{SP3D_KIDS}</a14:hiddenSp3d></a:ext></a:extLst>')
+    shapes = [
+        drawn(2, "custom", custom),
+        drawn(3, "solid and full line",
+              '<a:prstGeom prst="wedgeRectCallout"><a:avLst><a:gd name="adj1" fmla="val -20833"/><a:gd name="adj2" fmla="val 62500"/></a:avLst></a:prstGeom>'
+              f'{SOLID}<a:ln w="12700" cap="rnd" cmpd="dbl" algn="in">{SOLID}<a:prstDash val="sysDot"/><a:round/>'
+              f'<a:headEnd type="triangle" w="sm" len="lg"/><a:tailEnd type="arrow" w="lg" len="sm"/><a:extLst>{SKETCH}</a:extLst></a:ln>'),
+        drawn(4, "linear gradient",
+              f'{RECT}<a:gradFill flip="xy" rotWithShape="1"><a:gsLst><a:gs pos="0">{RGB}</a:gs><a:gs pos="100000"><a:schemeClr val="accent1"/></a:gs></a:gsLst>'
+              '<a:lin ang="5400000" scaled="0"/><a:tileRect l="1" t="2" r="3" b="4"/></a:gradFill>'
+              '<a:ln><a:noFill/><a:custDash><a:ds d="100000" sp="50000"/><a:ds d="200000" sp="60000"/></a:custDash><a:miter lim="800000"/></a:ln>'),
+        drawn(5, "path gradient",
+              f'{RECT}<a:gradFill><a:gsLst><a:gs pos="0">{RGB}</a:gs><a:gs pos="100000">{RGB}</a:gs></a:gsLst>'
+              '<a:path path="circle"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path></a:gradFill>'
+              f'<a:ln><a:gradFill><a:gsLst><a:gs pos="0">{RGB}</a:gs><a:gs pos="100000">{RGB}</a:gs></a:gsLst></a:gradFill><a:bevel/></a:ln>'),
+        drawn(6, "pattern", f'{RECT}<a:pattFill prst="dkDnDiag"><a:fgClr>{RGB}</a:fgClr><a:bgClr><a:schemeClr val="bg1"/></a:bgClr></a:pattFill>'
+              f'<a:ln><a:pattFill prst="pct5"><a:fgClr>{RGB}</a:fgClr><a:bgClr>{RGB}</a:bgClr></a:pattFill></a:ln>'),
+        drawn(7, "tiled picture", f'{RECT}<a:blipFill dpi="96" rotWithShape="0"><a:blip r:embed="rId2" r:link="rId3" cstate="print"/>'
+              '<a:srcRect l="1" t="2" r="3" b="4"/><a:tile tx="1" ty="2" sx="50000" sy="60000" flip="xy" algn="ctr"/></a:blipFill>'),
+        drawn(8, "stretched picture", f'{RECT}<a:blipFill><a:blip r:embed="rId2">{BLIP_EFFECTS}{EXT_BLIP}</a:blip>'
+              '<a:stretch><a:fillRect l="1" t="2" r="3" b="4"/></a:stretch></a:blipFill>'),
+        drawn(9, "effect list and 3D", f'{RECT}<a:grpFill/><a:effectLst>{LIST_EFFECTS}</a:effectLst><a:scene3d>{SCENE}</a:scene3d><a:sp3d{SP3D_ATTRS}>{SP3D_KIDS}</a:sp3d>'),
+        drawn(10, "effect dag", f'{RECT}{dag}'),
+        drawn(11, "hidden", f'{RECT}<a:noFill/>{hidden}'),
+        drawn(12, "connector", f'<a:prstGeom prst="bentConnector3"><a:avLst/></a:prstGeom><a:ln w="1"/>', tag="cxnSp", nv="cNvCxnSpPr", container="nvCxnSpPr"),
+        *[drawn(20 + i, f"sketch {kind}", f'{RECT}<a:ln><a:extLst><a:ext uri="{{C807C97D-BFC1-408E-A445-0C87EB9F89A2}}"><ask:lineSketchStyleProps xmlns:ask="{ASK_NS}">'
+                f'<ask:type><ask:{kind}/></ask:type><ask:seed>{i}</ask:seed></ask:lineSketchStyleProps></a:ext></a:extLst></a:ln>')
+          for i, kind in enumerate(["lineSketchNone", "lineSketchCurved", "lineSketchFreehand"])],
+        (f'<p:pic><p:nvPicPr><p:cNvPr id="13" name="picture"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill rotWithShape="1"><a:blip r:embed="rId2"><a:grayscl/>{EXT_BLIP}</a:blip>'
+         f'<a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>{RECT}</p:spPr></p:pic>'),
+        ('<p:grpSp><p:nvGrpSpPr><p:cNvPr id="14" name="group"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
+         f'<p:grpSpPr>{SOLID}<a:effectLst><a:outerShdw blurRad="1" sx="90000" sy="90000">{RGB}</a:outerShdw></a:effectLst><a:scene3d>{SCENE}</a:scene3d></p:grpSpPr>'
+         + drawn(15, "in group", f'{RECT}<a:grpFill/>') + '</p:grpSp>'),
+    ]
+    return f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{"".join(shapes)}</p:spTree></p:cSld></p:sld>'
+
+
+def drawing_deck(slide=None):
+    entries = deck(slide_rels=[("image", "../media/image1.png"), ("image", "https://example.invalid/a.png", "External")],
+                   parts=[("ppt/media/image1.png", PNG)])
+    return replace(entries, "ppt/slides/slide1.xml", slide or drawing_slide())
+
+
+def drawing_hostile():
+    """Each opens; the slide part reads, with the property left out or the value reported.
+    Codes are in crates/casual-slide-import/tests/drawing.rs."""
+    def one(props):
+        return zipped(drawing_deck(f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{drawn(2, "s", props)}</p:spTree></p:cSld></p:sld>'))
+    stop = f'<a:gs pos="0">{RGB}</a:gs>'
+    # Each of these carries the fixture's external image relationship, reported on opening.
+    yield "hostile/drawing-limit-gradient-stops.bin", one(f'<a:gradFill><a:gsLst>{stop * 1025}</a:gsLst></a:gradFill>'), "open CS-FND-0001"
+    yield "hostile/drawing-limit-dash-stops.bin", one('<a:ln><a:custDash>' + '<a:ds d="1" sp="1"/>' * 1025 + '</a:custDash></a:ln>'), "open CS-FND-0001"
+    yield "hostile/drawing-limit-effects.bin", one('<a:effectDag>' + '<a:grayscl/>' * 1025 + '</a:effectDag>'), "open CS-FND-0001"
+    yield "hostile/drawing-limit-effect-depth.bin", one('<a:effectDag>' + '<a:cont>' * 40 + '</a:cont>' * 40 + '</a:effectDag>'), "open CS-FND-0001"
+    nested = '<a:fillOverlay blend="over"><a:blipFill><a:blip>' * 40 + '</a:blip></a:blipFill></a:fillOverlay>' * 40
+    yield "hostile/drawing-limit-fill-depth.bin", one(f'<a:blipFill><a:blip>{nested}</a:blip></a:blipFill>'), "open CS-FND-0001"
+    guide = '<a:gd name="a" fmla="val 1"/>'
+    yield "hostile/drawing-limit-guides.bin", one(f'<a:custGeom><a:gdLst>{guide * 4097}</a:gdLst><a:pathLst/></a:custGeom>'), "open CS-FND-0001"
+    path = '<a:path><a:close/></a:path>'
+    yield "hostile/drawing-limit-paths.bin", one(f'<a:custGeom><a:pathLst>{path * 1025}</a:pathLst></a:custGeom>'), "open CS-FND-0001"
+    cmd = '<a:lnTo><a:pt x="1" y="1"/></a:lnTo>'
+    yield "hostile/drawing-limit-path-commands.bin", one(f'<a:custGeom><a:pathLst><a:path>{cmd * 262145}</a:path></a:pathLst></a:custGeom>'), "open CS-FND-0001"
+    handle = '<a:ahXY><a:pos x="1" y="1"/></a:ahXY>'
+    yield "hostile/drawing-limit-handles.bin", one(f'<a:custGeom><a:ahLst>{handle * 257}</a:ahLst><a:pathLst/></a:custGeom>'), "open CS-FND-0001"
+    site = '<a:cxn ang="0"><a:pos x="1" y="1"/></a:cxn>'
+    yield "hostile/drawing-limit-sites.bin", one(f'<a:custGeom><a:cxnLst>{site * 4097}</a:cxnLst><a:pathLst/></a:custGeom>'), "open CS-FND-0001"
+    bad = ('<a:prstGeom prst="notAShape"><a:avLst><a:gd/><a:gd name="zz" fmla="val 1"/><a:gd name="yy" fmla="bogus 1 2"/></a:avLst></a:prstGeom>'
+           '<a:gradFill flip="q" rotWithShape="9"><a:gsLst><a:gs pos="999999"/><a:gs/><a:gs pos="x"><a:srgbClr val="nope"/></a:gs></a:gsLst>'
+           '<a:lin ang="-1" scaled="?"/><a:path path="wat"/></a:gradFill><a:solidFill><a:srgbClr val="000000"/></a:solidFill>'
+           '<a:ln w="99999999" cap="z" cmpd="z" algn="z"><a:blipFill/><a:prstDash val="z"/><a:custDash><a:ds d="0" sp="-1"/></a:custDash>'
+           '<a:round/><a:miter lim="-5"/><a:headEnd type="z" w="z" len="z"/><a:extLst><a:ext uri="x"><a:foreign/></a:ext></a:extLst></a:ln>'
+           '<a:effectLst><a:outerShdw dir="99999999999" kx="5400000" blurRad="-1" sx="1e9"/><a:outerShdw/><a:tint/><a:softEdge/>'
+           '<a:fillOverlay/></a:effectLst><a:effectDag name="a"><a:cont name="a"><a:effect ref="nowhere"/></a:cont></a:effectDag>'
+           '<a:scene3d><a:camera prst="z" fov="-1" zoom="-1"><a:rot lat="-1"/></a:camera><a:lightRig rig="z" dir="z"/></a:scene3d>'
+           '<a:sp3d z="1e99" extrusionH="-1" contourW="-1" prstMaterial="z"><a:bevelT w="-1" prst="z"/><a:extrusionClr/></a:sp3d>'
+           '<a:unknownThing/><a:extLst><a:ext uri="y"><foreign xmlns="urn:x"/></a:ext></a:extLst>')
+    yield "hostile/drawing-bad-values.bin", one(bad), "open CS-FND-0001"
+    cg = ('<a:custGeom><a:gdLst><a:gd name="a" fmla="wat a b"/><a:gd name="c" fmla="*/ a nothere"/></a:gdLst><a:rect/><a:ahLst><a:ahXY/><a:wat/></a:ahLst>'
+          '<a:cxnLst><a:cxn/></a:cxnLst><a:pathLst><a:path w="-1" fill="z" stroke="9"><a:lnTo/><a:quadBezTo/><a:cubicBezTo><a:pt/></a:cubicBezTo><a:arcTo/><a:wat/></a:path></a:pathLst></a:custGeom>')
+    yield "hostile/drawing-bad-custom-geometry.bin", one(cg), "open CS-FND-0001"
+    # A blip naming no relationship, and a DAG whose containers reference each other.
+    yield "hostile/drawing-dangling-and-cycle.bin", one(
+        '<a:blipFill><a:blip r:embed="rId404" r:link="rId405"/></a:blipFill>'
+        '<a:effectDag name="a"><a:effect ref="a"/><a:cont name="b"><a:effect ref="a"/><a:effect ref="b"/></a:cont></a:effectDag>'), "open CS-FND-0001"
 
 
 def hostile_noise():

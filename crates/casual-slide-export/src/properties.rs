@@ -70,6 +70,14 @@ pub enum ExportError {
         /// The part.
         part: String,
     },
+    /// The model asks for an edit this tier does not write, or one that would leave
+    /// required content out.
+    UnsupportedEdit {
+        /// What.
+        what: &'static str,
+        /// The part.
+        part: String,
+    },
 }
 
 impl ExportError {
@@ -86,6 +94,7 @@ impl ExportError {
             Self::UnreadablePart { .. } => "CS-EXP-0006",
             Self::RoundTrip { .. } => "CS-EXP-0007",
             Self::VariantTooDeep { .. } => "CS-EXP-0008",
+            Self::UnsupportedEdit { .. } => "CS-EXP-0009",
         }
     }
 }
@@ -128,6 +137,9 @@ impl fmt::Display for ExportError {
             }
             Self::VariantTooDeep { part } => {
                 write!(f, "[{code}] {part:?}: variant nested too deeply")
+            }
+            Self::UnsupportedEdit { what, part } => {
+                write!(f, "[{code}] {part:?}: editing {what} is not supported")
             }
         }
     }

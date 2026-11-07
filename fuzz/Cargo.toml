@@ -90,3 +90,17 @@ path = "fuzz_targets/slide_parts.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "drawing_properties"
+path = "fuzz_targets/drawing_properties.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "text_bodies"
+path = "fuzz_targets/text_bodies.rs"
+test = false
+doc = false
+bench = false
