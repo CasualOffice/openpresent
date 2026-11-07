@@ -38,6 +38,19 @@ const MICROSOFT_MEDIA_RELS: &[&str] = &[
     "http://schemas.microsoft.com/office/2017/04/relationships/track",
 ];
 
+/// Microsoft's relationship types that import follows and reads (`REL-01`): `chartEx` and
+/// a chart's style and colours (`T-1J`), a diagram's drawing (`T-1K`), and modern comments
+/// and their authors (`T-1M`). Each is spelled as `casual-slide-import` matches it. Types
+/// whose parts are only kept whole, such as `changesInfo`, stay reported.
+const MICROSOFT_READ_RELS: &[&str] = &[
+    "http://schemas.microsoft.com/office/2007/relationships/diagramDrawing",
+    "http://schemas.microsoft.com/office/2014/relationships/chartEx",
+    "http://schemas.microsoft.com/office/2011/relationships/chartStyle",
+    "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle",
+    "http://schemas.microsoft.com/office/2018/10/relationships/comments",
+    "http://schemas.microsoft.com/office/2018/10/relationships/authors",
+];
+
 /// Relationship types in ECMA-376 that a presentation may use (`docs/spec/parts.md`).
 /// Transitional files spell two with a hyphen, as real decks do; Strict does not.
 const KNOWN_RELS: &[&str] = &[
@@ -895,6 +908,7 @@ fn inspect_type(
         _ if r.rel_type.ends_with("/metadata/thumbnail") => {}
         // `MS-PPTX` "Media Part" and "Track Part".
         _ if MICROSOFT_MEDIA_RELS.contains(&r.rel_type.as_str()) => {}
+        _ if MICROSOFT_READ_RELS.contains(&r.rel_type.as_str()) => {}
         _ => note(FindingKind::UnknownRelationshipType, part, id),
     }
 }

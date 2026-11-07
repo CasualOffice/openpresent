@@ -52,3 +52,48 @@ fn microsoft_media_and_track_relationships_are_known() {
         pkg.findings()
     );
 }
+
+/// `REL-01`: the relationship types of Microsoft's that import follows and reads, chartEx
+/// with its style and colours, a diagram's drawing, and modern comments with their authors,
+/// are not reported as unknown. A healthy deck holding them says nothing about them.
+#[test]
+fn microsoft_chart_and_comment_relationships_that_import_reads_are_known() {
+    const READ: [&str; 6] = [
+        "http://schemas.microsoft.com/office/2007/relationships/diagramDrawing",
+        "http://schemas.microsoft.com/office/2014/relationships/chartEx",
+        "http://schemas.microsoft.com/office/2011/relationships/chartStyle",
+        "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle",
+        "http://schemas.microsoft.com/office/2018/10/relationships/comments",
+        "http://schemas.microsoft.com/office/2018/10/relationships/authors",
+    ];
+    let mut seen = std::collections::BTreeSet::new();
+    // Real decks: chartEx, style and colours; comment authors; a diagram's drawing.
+    for deck in [
+        "real/sdk-of16-01.pptx",
+        "real/z14230715-ddi-ko.pptx",
+        "real/z20089741-tasamoh-ar.pptx",
+        "generated/comments-modern.pptx",
+    ] {
+        let pkg = open(deck);
+        let mut sources = pkg.part_names();
+        sources.push(String::new());
+        for source in sources {
+            for rel in pkg.relationships_of(&source) {
+                if !READ.contains(&rel.rel_type.as_str()) {
+                    continue;
+                }
+                seen.insert(rel.rel_type.clone());
+                assert!(
+                    !pkg.findings().iter().any(|f| {
+                        f.kind == FindingKind::UnknownRelationshipType
+                            && f.part == source
+                            && f.rel_id.as_deref() == Some(rel.id.as_str())
+                    }),
+                    "{deck}: {source} {} reported unknown",
+                    rel.rel_type
+                );
+            }
+        }
+    }
+    assert_eq!(seen.len(), READ.len(), "each type is in a deck: {seen:?}");
+}

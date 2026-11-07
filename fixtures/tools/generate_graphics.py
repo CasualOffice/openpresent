@@ -439,29 +439,29 @@ def hostile(s):
     dgm = f'xmlns:dgm="{sp.DGM}" {A} {R}'
     dsp = f'xmlns:dsp="{sp.DSP}" xmlns:dgm="{sp.DGM}" {A}'
     points = seeded('<dgm:pt modelId="1"/>', 65_537)
-    yield "hostile/graphics-limit-points.bin", one_diagram(data=f"{DECL}<dgm:dataModel {dgm}><dgm:ptLst>{points}</dgm:ptLst></dgm:dataModel>"), "open CS-FND-0007"
+    yield "hostile/graphics-limit-points.bin", one_diagram(data=f"{DECL}<dgm:dataModel {dgm}><dgm:ptLst>{points}</dgm:ptLst></dgm:dataModel>"), "open"
     cxn = seeded('<dgm:cxn modelId="1" srcId="1" destId="1" srcOrd="0" destOrd="0"/>', 131_073)
-    yield "hostile/graphics-limit-connections.bin", one_diagram(data=f'{DECL}<dgm:dataModel {dgm}><dgm:ptLst/><dgm:cxnLst>{cxn}</dgm:cxnLst></dgm:dataModel>'), "open CS-FND-0007"
+    yield "hostile/graphics-limit-connections.bin", one_diagram(data=f'{DECL}<dgm:dataModel {dgm}><dgm:ptLst/><dgm:cxnLst>{cxn}</dgm:cxnLst></dgm:dataModel>'), "open"
     nodes = seeded('<dgm:layoutNode name="n"/>', 65_537)
-    yield "hostile/graphics-limit-layout-nodes.bin", one_diagram(layout=f"{DECL}<dgm:layoutDef {dgm}><dgm:layoutNode>{nodes}</dgm:layoutNode></dgm:layoutDef>"), "open CS-FND-0007"
+    yield "hostile/graphics-limit-layout-nodes.bin", one_diagram(layout=f"{DECL}<dgm:layoutDef {dgm}><dgm:layoutNode>{nodes}</dgm:layoutNode></dgm:layoutDef>"), "open"
     tree = '<dsp:nvGrpSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvGrpSpPr/></dsp:nvGrpSpPr><dsp:grpSpPr/>'
     shapes = seeded('<dsp:sp modelId="1"/>', 65_537)
-    yield "hostile/graphics-limit-drawing-shapes.bin", one_diagram(drawing=f"{DECL}<dsp:drawing {dsp}><dsp:spTree>{tree}{shapes}</dsp:spTree></dsp:drawing>"), "open CS-FND-0007"
+    yield "hostile/graphics-limit-drawing-shapes.bin", one_diagram(drawing=f"{DECL}<dsp:drawing {dsp}><dsp:spTree>{tree}{shapes}</dsp:spTree></dsp:drawing>"), "open"
     deep = 200
-    yield "hostile/graphics-limit-depth.bin", one_diagram(layout=f'{DECL}<dgm:layoutDef {dgm}>{"<dgm:layoutNode>" * deep}{"</dgm:layoutNode>" * deep}</dgm:layoutDef>'), "open CS-FND-0007"
+    yield "hostile/graphics-limit-depth.bin", one_diagram(layout=f'{DECL}<dgm:layoutDef {dgm}>{"<dgm:layoutNode>" * deep}{"</dgm:layoutNode>" * deep}</dgm:layoutDef>'), "open"
     # A definition that would take for ever if anything ran it: a loop of the largest count in
     # a loop, to the depth allowed. Nothing runs it, so it costs its size. SEC-C12.
     loops = 100
     bomb = '<dgm:forEach axis="ch" cnt="4294967295" ptType="all">' * loops + "</dgm:forEach>" * loops
-    yield "hostile/graphics-layout-loop-bomb.bin", one_diagram(layout=f'{DECL}<dgm:layoutDef {dgm} uniqueId="urn:layout"><dgm:layoutNode>{bomb}</dgm:layoutNode></dgm:layoutDef>'), "open CS-FND-0007"
+    yield "hostile/graphics-layout-loop-bomb.bin", one_diagram(layout=f'{DECL}<dgm:layoutDef {dgm} uniqueId="urn:layout"><dgm:layoutNode>{bomb}</dgm:layoutNode></dgm:layoutDef>'), "open"
     # Damage, reported and nothing refused: a part of the wrong kind, parts that disagree. The
     # marker must reach no finding. One that is not XML is built in tests/graphics.rs, as
     # every "open" deck in the corpus is held to parse part by part.
     mark = "QzMarkerQz"
-    yield "hostile/graphics-wrong-root.bin", one_diagram(style=f'{DECL}<dgm:notADefinition {dgm} a="{mark}"/>', colors=f"{DECL}<dgm:layoutDef {dgm}/>"), "open CS-FND-0007"
+    yield "hostile/graphics-wrong-root.bin", one_diagram(style=f'{DECL}<dgm:notADefinition {dgm} a="{mark}"/>', colors=f"{DECL}<dgm:layoutDef {dgm}/>"), "open"
     bad = (f'{DECL}<dgm:dataModel {dgm}><dgm:ptLst><dgm:pt modelId="{mark}" type="{mark}" cxnId="{mark}" unknown="{mark}"><dgm:prSet presAssocID="{mark}" custScaleX="{mark}"/><dgm:prSet/><dgm:wat/></dgm:pt>'
            f'<dgm:pt modelId="7"/><dgm:pt modelId="7"/></dgm:ptLst><dgm:cxnLst><dgm:cxn modelId="8" srcId="99" destId="98"/><dgm:cxn/></dgm:cxnLst><dgm:extLst><a:ext uri="x"><dsp:dataModelExt xmlns:dsp="{sp.DSP}" relId="rId999"/></a:ext></dgm:extLst></dgm:dataModel>')
-    yield "hostile/graphics-bad-data.bin", one_diagram(data=bad), "open CS-FND-0007"
+    yield "hostile/graphics-bad-data.bin", one_diagram(data=bad), "open"
     # Inline math over the depth bound, and an ink part with too many traces.
     frac = '<m:f><m:num>' * 80 + "</m:num></m:f>" * 80
     equation = f'<a:p><mc:AlternateContent xmlns:mc="{MC}" xmlns:a14="{A14}"><mc:Choice Requires="a14"><a14:m><m:oMath xmlns:m="{sp.MATH}">{frac}</m:oMath></a14:m></mc:Choice><mc:Fallback><a:r><a:t>x</a:t></a:r></mc:Fallback></mc:AlternateContent></a:p>'
@@ -475,8 +475,8 @@ def hostile(s):
 
 def fixtures():
     s = sp.Schemas()
-    yield "generated/graphics-diagram-every-row.pptx", zipped(every_row_diagram(s)), "open CS-FND-0005 CS-FND-0007"
-    yield "generated/graphics-diagram-consistent.pptx", zipped(diagram_deck([consistent_parts()])), "open CS-FND-0007"
+    yield "generated/graphics-diagram-every-row.pptx", zipped(every_row_diagram(s)), "open CS-FND-0005"
+    yield "generated/graphics-diagram-consistent.pptx", zipped(diagram_deck([consistent_parts()])), "open"
     yield "generated/graphics-math.pptx", zipped(math_deck(s)), "open CS-FND-0005"
     yield "generated/graphics-ink.pptx", zipped(ink_deck(s)), "open CS-FND-0005"
     yield from hostile(s)
