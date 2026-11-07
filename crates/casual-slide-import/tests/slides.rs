@@ -458,6 +458,8 @@ fn a_500_slide_deck_is_indexed_without_reading_a_slide() {
         "CS-XML-0004",
         "a broken slide is found only when read"
     );
+    let missing = lazy.part(&mut pkg, 99_999).unwrap_err();
+    assert_eq!(missing.code(), "CS-SLD-0005");
 }
 
 #[test]
