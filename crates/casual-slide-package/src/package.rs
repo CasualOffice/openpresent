@@ -159,6 +159,11 @@ impl Package {
             }
 
             directory = directory.min(entry.central_header_start());
+            // The local header names the entry the directory names: a raw copy writes one
+            // name from the other, and a file whose two disagree cannot be read back.
+            if local_name(&source, entry.header_start()) != Some(entry.name_raw()) {
+                return Err(PackageError::NotAPackage);
+            }
             // Opening the entry read its local header, so where its data starts is known.
             if let Some(start) = entry.data_start() {
                 let data_end = start
@@ -536,4 +541,16 @@ thread_local! {
 pub(crate) fn initial_capacity(declared: u64) -> usize {
     const MAX_UP_FRONT: u64 = 1 << 20;
     declared.min(MAX_UP_FRONT) as usize
+}
+
+/// The name a local header at `at` gives its entry, if the header is there and whole.
+fn local_name(source: &[u8], at: u64) -> Option<&[u8]> {
+    let at = usize::try_from(at).ok()?;
+    let fixed = source.get(at..at.checked_add(30)?)?;
+    if fixed.get(..4)? != b"PK\x03\x04" {
+        return None;
+    }
+    let len = usize::from(u16::from_le_bytes([*fixed.get(26)?, *fixed.get(27)?]));
+    let start = at.checked_add(30)?;
+    source.get(start..start.checked_add(len)?)
 }

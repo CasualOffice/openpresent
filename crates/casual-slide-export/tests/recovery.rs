@@ -456,3 +456,16 @@ fn a_central_directory_size_that_disagrees_with_its_local_header_still_saves() {
     let edited = edit_title(&mut pkg, &d);
     PresentationPackage::open_strict(edited, OoxmlLimits::default()).unwrap();
 }
+
+/// `FUZZ-03`, the second `deck_recover` input: one byte of a central directory name made
+/// non-ASCII, so the directory names an entry its local header does not. An edit saves.
+#[test]
+fn a_central_name_that_disagrees_with_its_local_header_still_saves() {
+    let mut deck = read(STRICT);
+    let at = 0x6f25 % deck.len();
+    deck[at] = 0xc9;
+    let mut pkg = open(deck);
+    let (d, _) = read_all(&mut pkg);
+    let edited = edit_title(&mut pkg, &d);
+    PresentationPackage::open_strict(edited, OoxmlLimits::default()).unwrap();
+}
