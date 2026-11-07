@@ -404,3 +404,17 @@ x:drawing/2014/chartex:ST_ExtensionDropMode/=always	MIE	T1J-03	Only `CT_FeatureE
 x:drawing/2014/chartex:ST_ExtensionDropMode	M	T1J-03	Only `CT_FeatureExtension/@drop` has this type and no element holds that type, so no legal deck has it
 c:CT_ExtensionList/ext	MIE	T1J-01	Read and written as typed items, unreported, so `r` would be false; the audit lets no `ext` earn `y`
 x:drawing/2014/chartex:CT_ExtensionList/ext	MIE	T1J-03	Read and written as typed items, unreported, so `r` would be false; the audit lets no `ext` earn `y`
+p:CT_ApplicationNonVisualDrawingProps	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_Shape	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_Connector	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_GroupShape	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_CommonSlideData	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_Slide	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_SlideLayout	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_SlideMaster	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_HandoutMaster	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_NotesMaster	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+p:CT_NotesSlide	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+a:CT_BaseStyles	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+a:CT_NonVisualDrawingProps	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
+a:CT_DefaultShapeDefinition	E	T1N-04	Not all it declares has a mark: a member is blank in E, with its own reason
