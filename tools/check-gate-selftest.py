@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""The gates are tested: each must pass a clean scratch tree and fail a seeded one.
+
+Ported in purpose from OpenCalc's `tools/check-gate-selftest.py` at `b23c67c`. There,
+eighteen gates guarded the repository and nothing guarded them; two had re-derived the
+tracker-row pattern too narrowly and printed a confident green over 47 rows they could
+not see. A gate that cannot fail is not a gate, and the only way to know one can is to
+make it.
+
+For every gate, this builds the smallest scratch repository the gate reads, runs the
+gate's `check(root)` on it and requires a pass, then seeds one violation and requires
+that gate to fail **and to name the violation**. A gate that fails for some other
+reason has not been shown to see the seed. Also:
+
+  * the shared row pattern sees the irregular ids real trackers hold, and not headers;
+  * no gate defines its own row-id pattern instead of importing `tracker_rows`.
+
+Needs `cargo` for the two gates that ask it. Writes only to a temporary directory.
+
+    python3 tools/check-gate-selftest.py
+"""
+
+import contextlib
+import importlib.util
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+HERE = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from tracker_rows import ID_ROW, cells, rows  # noqa: E402
+
+MUST_SEE = ["FID-19", "UX-NAV-01", "UX-P08a", "UX-A11Y-01", "BUG-FREEZEPANE", "M11-1a", "P1A-003b", "T-1A", "F4-02"]
+MUST_NOT_SEE = ["ID", "Note", "---"]
+
+
+def load(name):
+    spec = importlib.util.spec_from_file_location(name.replace("-", "_")[:-3], HERE / name)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def write(root, files):
+    for rel, text in files.items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf8")
+
+
+@contextlib.contextmanager
+def scratch():
+    path = pathlib.Path(tempfile.mkdtemp(prefix="gate-selftest-"))
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+
+
+TRACKER = """# 14
+
+| ID | Title | St | Sev |
+| --- | --- | --- | --- |
+| FOO-01 | A row | Open | P1 |
+| FOO-02 | Another | Done | P2 |
+"""
+INDEX = "# 00\n\n| Doc | What |\n| --- | --- |\n| [14-EXECUTION-TRACKER](14-EXECUTION-TRACKER.md) | t |\n"
+REGISTER = "# 08\n\n| ID | Decision | St |\n| --- | --- | --- |\n| ADR-001 | One | Accepted |\n"
+
+
+def base_docs():
+    return {
+        "docs/00-README.md": INDEX,
+        "docs/08-ADR-REGISTER.md": REGISTER,
+        "docs/14-EXECUTION-TRACKER.md": TRACKER,
+    }
+
+
+# Each case: (gate file, function building the clean tree, function seeding it, text
+# the failure must contain). A seed is the smallest edit that breaks the gate's rule.
+def tracker_shape_cases():
+    yield ("an unescaped pipe", base_docs(),
+           {"docs/14-EXECUTION-TRACKER.md": TRACKER.replace("| A row |", "| A | row |")}, "FOO-01 has 5 columns")
+    yield ("a status outside the vocabulary", base_docs(),
+           {"docs/14-EXECUTION-TRACKER.md": TRACKER.replace("| Done |", "| Finished |")}, "FOO-02 has status")
+
+
+def doc_reference_cases():
+    clean = dict(base_docs(), **{"docs/20-NOTE.md": "See docs/14, ADR-001, FOO-01, and OpenCalc's docs/95.\n"})
+    yield ("a dead doc number", clean, {"docs/20-NOTE.md": "See docs/21.\n"}, "docs/21")
+    yield ("a dead file name", clean, {"docs/20-NOTE.md": "See docs/14-TRACKER.md.\n"}, "docs/14-TRACKER.md")
+    yield ("a dead ADR", clean, {"docs/20-NOTE.md": "See ADR-002.\n"}, "ADR-002")
+    yield ("a dead tracker id", clean, {"docs/20-NOTE.md": "See FOO-03.\n"}, "FOO-03")
+    yield ("a known dead reference that was fixed", clean,
+           {"tools/doc-references.known": "docs/20-NOTE.md\tdocs/21\tFOO-01\twhy\n"}, "no longer cites")
+
+
+def crate_dep_cases():
+    ws = '[workspace]\nmembers = ["crates/a"]\nresolver = "2"\n'
+    crate = '[package]\nname = "a"\nversion = "0.0.0"\nedition = "2021"\n\n[dependencies]\n'
+    server = '[package]\nname = "casual-slide-collab-server"\nversion = "0.0.0"\nedition = "2021"\n'
+    clean = {"Cargo.toml": ws, "crates/a/Cargo.toml": crate, "crates/a/src/lib.rs": "",
+             "server/collab/Cargo.toml": server, "server/collab/src/lib.rs": ""}
+    yield ("a crate depending on a server", clean,
+           {"crates/a/Cargo.toml": crate + 'casual-slide-collab-server = { path = "../../server/collab" }\n'},
+           "outside crates/")
+    yield ("a dev-dependency on a server", clean,
+           {"crates/a/Cargo.toml": crate + '\n[dev-dependencies]\ncasual-slide-collab-server = { path = "../../server/collab" }\n'},
+           "(dev)")
+
+
+def fuzz_lock_cases():
+    crate = '[package]\nname = "a"\nversion = "0.0.0"\nedition = "2021"\n'
+    fuzz = ('[package]\nname = "fz"\nversion = "0.0.0"\nedition = "2021"\n\n[dependencies]\n'
+            'a = { path = "../crates/a" }\n\n[workspace]\n')
+    lock = ('# This file is automatically @generated by Cargo.\n# It is not intended for manual editing.\n'
+            'version = 4\n\n[[package]]\nname = "a"\nversion = "0.0.0"\n\n'
+            '[[package]]\nname = "fz"\nversion = "0.0.0"\ndependencies = [\n "a",\n]\n')
+    clean = {"crates/a/Cargo.toml": crate, "crates/a/src/lib.rs": "", "fuzz/Cargo.toml": fuzz,
+             "fuzz/src/main.rs": "fn main() {}\n", "fuzz/Cargo.lock": lock}
+    yield ("a path dependency that gained a dependency the fuzz lockfile lacks", clean,
+           {"crates/b/Cargo.toml": crate.replace('"a"', '"b"'), "crates/b/src/lib.rs": "",
+            "crates/a/Cargo.toml": crate + '\n[dependencies]\nb = { path = "../b" }\n'}, "fuzz/Cargo.lock is out of date")
+
+
+def parser_limit_cases():
+    code = ("pub struct FooLimits {\n    pub max_things: usize,\n}\n\n"
+            "impl Default for FooLimits {\n    fn default() -> Self {\n        Self {\n"
+            "            max_things: 1 << 10,\n        }\n    }\n}\n\npub const MAX_DEPTH: usize = 16;\n")
+    doc = "| Limit | Default |\n| --- | --- |\n| `max_things` | `1 << 10` | x |\n| `MAX_DEPTH` | `16` | x |\n"
+    clean = {"crates/x/src/limits.rs": code, "docs/21-PARSER-LIMITS.md": doc}
+    yield ("a default changed in the code", clean,
+           {"crates/x/src/limits.rs": code.replace("1 << 10", "1 << 12")}, "is 1 << 12 in the code")
+    yield ("a new limit field", clean,
+           {"crates/x/src/limits.rs": code.replace("    pub max_things: usize,\n", "    pub max_things: usize,\n    pub max_more: usize,\n")
+            .replace("            max_things: 1 << 10,\n", "            max_things: 1 << 10,\n            max_more: 7,\n")},
+           "max_more = 7 is not in")
+    yield ("a new constant", clean,
+           {"crates/x/src/other.rs": "const MAX_WIDTH: u32 = 9;\n"}, "MAX_WIDTH")
+
+
+def workflow_cases():
+    wf = ("name: ci\non:\n  push:\npermissions:\n  contents: read\njobs:\n  build:\n    runs-on: ubuntu-latest\n"
+          "    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4\n      - run: make\n")
+    doc = "| Job | Workflow |\n| --- | --- |\n| `build` | `ci.yml` | make |\n"
+    clean = {".github/workflows/ci.yml": wf, "docs/15-CI-AND-RELEASE-GATES.md": doc}
+    yield ("an action pinned by tag", clean,
+           {".github/workflows/ci.yml": wf.replace("@11d5960a326750d5838078e36cf38b85af677262", "@v4")}, "not pinned")
+    yield ("a retry", clean,
+           {".github/workflows/ci.yml": wf.replace("      - run: make\n", "      - run: make\n        continue-on-error: true\n")}, "a retry")
+    yield ("a job missing from docs/15", clean,
+           {".github/workflows/ci.yml": wf + "  extra:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n"}, "`extra`")
+    yield ("a docs/15 row with no job", clean,
+           {"docs/15-CI-AND-RELEASE-GATES.md": doc + "| `gone` | `ci.yml` | x |\n"}, "`gone`")
+    yield ("no permissions", clean,
+           {".github/workflows/ci.yml": wf.replace("permissions:\n  contents: read\n", "")}, "permissions")
+    release = ("name: release\non:\n  push:\n    branches: [main]\n  workflow_dispatch:\n    inputs:\n      dry_run:\n"
+               "        type: boolean\n        default: false\npermissions:\n  contents: read\njobs:\n  publish:\n"
+               "    runs-on: ubuntu-latest\n    steps:\n      - run: true\n")
+    yield ("a release on a branch push, publishing by default", clean,
+           {".github/workflows/release.yml": release,
+            "docs/15-CI-AND-RELEASE-GATES.md": doc + "| `publish` | `release.yml` | x |\n"}, "tags only")
+
+
+def repo_cases():
+    yield ("a tracker id used twice", base_docs(),
+           {"docs/14-EXECUTION-TRACKER.md": TRACKER + "| FOO-01 | Again | Open | P1 |\n"}, "used 2 times")
+
+
+GATES = [
+    ("check-tracker-shape.py", tracker_shape_cases),
+    ("check-doc-references.py", doc_reference_cases),
+    ("check-crate-deps.py", crate_dep_cases),
+    ("check-fuzz-lock.py", fuzz_lock_cases),
+    ("check-parser-limits.py", parser_limit_cases),
+    ("check-workflows.py", workflow_cases),
+]
+
+
+def run_case(check, name, clean, seed, expect):
+    problems = []
+    with scratch() as root:
+        if "crates/x/src/limits.rs" not in clean:
+            (root / "crates").mkdir()
+        write(root, clean)
+        found, _ = check(root)
+        if found:
+            return [f"{name}: the clean tree fails: {found[:3]}"]
+        write(root, seed)
+        found, _ = check(root)
+        if not found:
+            problems.append(f"{name}: the seeded violation passes")
+        elif not any(expect in f for f in found):
+            problems.append(f"{name}: fails, but not on the seed ({expect!r} not in {found[:3]})")
+    return problems
+
+
+def shared_pattern_problems():
+    problems = []
+    for rid in MUST_SEE:
+        if not ID_ROW.match(f"| {rid} | Title | Open | P2 |"):
+            problems.append(f"the shared row pattern cannot see {rid}")
+    for text in MUST_NOT_SEE:
+        if ID_ROW.match(f"| {text} | Title | Open | P2 |"):
+            problems.append(f"the shared row pattern matches {text!r}, which is not a row")
+    if cells(r"| ID-01 | one \| two | Open |")[1] != r"one \| two":
+        problems.append("cells() does not honour a `\\|` escape")
+    if [r for _, r, _ in rows("| REAL-01 | a |\n```\n| FAKE-01 | b |\n```\n")] != ["REAL-01"]:
+        problems.append("rows() does not skip fenced examples")
+    for gate in sorted(HERE.glob("check-*.py")):
+        if gate.name == "check-gate-selftest.py":
+            continue
+        for line in gate.read_text(encoding="utf8").splitlines():
+            bare = line.replace("\\", "")
+            if re.search(r"re\.compile\(", line) and "^|" in bare and "A-Z" in bare:
+                problems.append(f"{gate.name} defines its own row-id pattern; import tracker_rows.ID_ROW")
+    return problems
+
+
+def commit_problems():
+    commits = load("check-commits.py")
+    problems = []
+    for good in ("feat(ooxml): refuse duplicate attributes (XML-02)", "docs: record the result",
+                 "feat(model,import,export): document properties", 'Revert "feat: x"'):
+        if commits.problems_in(good):
+            problems.append(f"check-commits refuses a good message: {good!r}")
+    for bad, why in (("Fix stuff", "no type"), ("feat: add a thing.", "full stop"),
+                     ("wip(x): y", "unknown type"), ("fixup! feat: x", "rebase note"),
+                     ("feat(X): y", "upper-case scope"), ("feat: " + "x" * 120, "too long"),
+                     ("feat: x\nbody without a blank line", "second line")):
+        if not commits.problems_in(bad):
+            problems.append(f"check-commits accepts a bad message ({why}): {bad[:40]!r}")
+    return problems
+
+
+def main():
+    problems = shared_pattern_problems() + commit_problems()
+    seeded = 2  # the commit checks above, good and bad
+    for gate, cases in GATES:
+        check = load(gate).check
+        for name, clean, seed, expect in cases():
+            problems += [f"{gate}: {p}" for p in run_case(check, name, clean, seed, expect)]
+            seeded += 1
+    repo = load("check-repo.py")
+    for name, clean, seed, expect in repo_cases():
+        problems += [f"check-repo.py: {p}" for p in run_case(repo.own_checks, name, clean, seed, expect)]
+        seeded += 1
+    if problems:
+        print("the gates' own checks do not pass:", file=sys.stderr)
+        for p in problems:
+            print(f"  {p}", file=sys.stderr)
+        return 1
+    print(f"gate self-test: {seeded} seeded violations, each seen failing its gate; "
+          f"{len(MUST_SEE)} id shapes seen; one shared row definition")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

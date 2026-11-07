@@ -1,0 +1,8 @@
+<Project>
+  <!-- Build output lives under target/, which git ignores, never beside the sources.
+       Set here because MSBuild reads it before the project's own properties. -->
+  <PropertyGroup>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)../../target/ooxml-sdk/bin/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)../../target/ooxml-sdk/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

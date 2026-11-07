@@ -1,0 +1,16 @@
+# F-007: runs the engine over decks given on the command line, one stage at a time,
+# and reports per deck instead of stopping at the first failure. A separate workspace,
+# as fuzz/ is, so it never joins the product graph; check-fuzz-lock.py holds its lockfile.
+[package]
+name = "casual-slide-real-decks"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[dependencies]
+casual-slide-export = { path = "../../crates/casual-slide-export" }
+casual-slide-import = { path = "../../crates/casual-slide-import" }
+casual-slide-ooxml = { path = "../../crates/casual-slide-ooxml" }
+casual-slide-package = { path = "../../crates/casual-slide-package" }
+
+[workspace]

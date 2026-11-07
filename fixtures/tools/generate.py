@@ -503,7 +503,7 @@ def check():
     rows = [ln.split("\t") for ln in (ROOT / "manifest.tsv").read_text().splitlines()[1:]]
     listed = {r[0] for r in rows}
     bad = [r[0] for r in rows if not (ROOT / r[0]).exists() or hashlib.sha256((ROOT / r[0]).read_bytes()).hexdigest() != r[1]]
-    stray = [str(p.relative_to(ROOT)) for d in ("generated", "hostile", "producers") for p in (ROOT / d).glob("*") if str(p.relative_to(ROOT)) not in listed and p.name != "expect.tsv"]
+    stray = [str(p.relative_to(ROOT)) for d in ("generated", "hostile", "producers", "real") for p in (ROOT / d).glob("*") if str(p.relative_to(ROOT)) not in listed and p.name not in ("expect.tsv", "README.md")]
     if bad or stray:
         raise SystemExit(f"fixtures differ from manifest: {bad} unlisted: {stray}")
     print(f"fixtures match manifest: {len(rows)}")
@@ -521,10 +521,11 @@ def main():
         extra = "".join(f"\t{x}" for x in limits)
         lines.append(f"{rel}\t{hashlib.sha256(data).hexdigest()}\t{expect}{extra}\n")
     # Decks written by other software are committed, never regenerated.
-    for row in (ROOT / "producers/expect.tsv").read_text().splitlines():
-        name, expect = row.split("\t")
-        rel = f"producers/{name}"
-        lines.append(f"{rel}\t{hashlib.sha256((ROOT / rel).read_bytes()).hexdigest()}\t{expect}\n")
+    for folder in ("producers", "real"):
+        for row in (ROOT / folder / "expect.tsv").read_text().splitlines():
+            name, expect = row.split("\t")
+            rel = f"{folder}/{name}"
+            lines.append(f"{rel}\t{hashlib.sha256((ROOT / rel).read_bytes()).hexdigest()}\t{expect}\n")
     (ROOT / "manifest.tsv").write_text("".join(lines))
     print(f"wrote {len(lines) - 1} fixtures")
 
