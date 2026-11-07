@@ -764,7 +764,10 @@ pub(crate) fn change_rules(draft: &Draft<'_>, before: &View, after: &View, found
             .unwrap_or_default()
     };
     let (old, new) = (thumbs(before), thumbs(after));
-    if !draft.log.books.fresh_thumbnail {
+    // The rule is for an edited save (docs/36). A repair with nothing edited, as
+    // `repair_deck` makes, writes no part, and a thumbnail it keeps is as it arrived.
+    let edited = draft.overlay_names().next().is_some();
+    if edited && !draft.log.books.fresh_thumbnail {
         for part in new.iter().filter(|p| old.contains(p)) {
             add(found, "INV-TH-02", part, "a stale thumbnail stayed");
         }
