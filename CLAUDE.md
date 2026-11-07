@@ -99,7 +99,9 @@ Industry-standard practice applies everywhere, with these specifics.
 - **Work lands directly on `main`, with no pull requests for now** (owner instruction 17). Parallel workers still use their own worktree branches; the main session verifies and merges them to `main`, then pushes. Never force-push `main`. Never skip hooks. Enable them with `git config core.hooksPath .githooks`.
 - Never commit build output, confidential decks, or unreviewed third-party files.
 
-**Gates before any commit**
+**One broad gate (owner instruction 32).** CI on `main` runs the list below. A merge needs only to compile, then push, and a red CI is fixed first. Sessions do not run this list.
+
+**The list CI runs**
 
 ```sh
 cargo fmt --all -- --check
