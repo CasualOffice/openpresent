@@ -21,6 +21,13 @@ libfuzzer-sys = "0.4"
 [workspace]
 
 [[bin]]
+name = "media_references"
+path = "fuzz_targets/media_references.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "bounded_package"
 path = "fuzz_targets/bounded_package.rs"
 test = false

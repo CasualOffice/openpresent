@@ -380,6 +380,7 @@ impl Patch<'_, '_> {
             || b.transform != a.transform
             || b.bw_mode != a.bw_mode
             || b.use_bg_fill != a.use_bg_fill
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
             || b.rel_id != a.rel_id
@@ -422,6 +423,7 @@ impl Patch<'_, '_> {
         let changed_nv = b.non_visual != a.non_visual
             || b.locks != a.locks
             || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
             || b.app != a.app;
         if changed_nv {
             let container = self.child(el, ns::PML, a.kind.non_visual_container())?;
@@ -466,9 +468,18 @@ impl Patch<'_, '_> {
             let el = self.need(el, "cNvPr")?;
             self.drawing(&el, bn, an)?;
         }
-        if b.locks != a.locks || b.text_box != a.text_box {
+        if b.locks != a.locks
+            || b.text_box != a.text_box
+            || b.prefer_relative_resize != a.prefer_relative_resize
+        {
             let el = self.child(container, ns::PML, a.kind.non_visual_properties())?;
             let el = self.need(el, "the kind's non-visual properties")?;
+            self.w.attr(
+                &el,
+                "preferRelativeResize",
+                b.prefer_relative_resize.as_ref(),
+                a.prefer_relative_resize.as_ref(),
+            )?;
             self.w
                 .attr(&el, "txBox", b.text_box.as_ref(), a.text_box.as_ref())?;
             let lock = a.kind.lock_element();
@@ -528,9 +539,7 @@ impl Patch<'_, '_> {
     }
 
     fn app(&mut self, el: &Elem, b: &AppNonVisual, a: &AppNonVisual) -> Result<()> {
-        if b.media != a.media {
-            return Err(self.unsupported("media"));
-        }
+        crate::media::patch_app_media(&mut self.w, el, b, a)?;
         self.w
             .attr(el, "isPhoto", b.is_photo.as_ref(), a.is_photo.as_ref())?;
         self.w.attr(
@@ -774,7 +783,18 @@ pub(crate) fn patch_hyperlink(
         b.highlight_click.as_ref(),
         a.highlight_click.as_ref(),
     )?;
-    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())
+    w.attr(el, "endSnd", b.end_sound.as_ref(), a.end_sound.as_ref())?;
+    if b.sound != a.sound {
+        let holder = |link: &Hyperlink| {
+            crate::drawing::Node::a("hlink").opt(
+                link.sound
+                    .as_ref()
+                    .map(|s| crate::media::wav_node("snd", s)),
+            )
+        };
+        crate::drawing::patch(w, el, Some(&holder(b)), &holder(a))?;
+    }
+    Ok(())
 }
 
 fn patch_placeholder(

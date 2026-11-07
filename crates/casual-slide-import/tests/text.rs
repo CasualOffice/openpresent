@@ -163,13 +163,6 @@ fn every_row_of_the_text_area_is_modelled_or_reported() {
                     "{id}: {findings:?}"
                 );
             }
-            Outcome::Stated => {
-                assert_ne!(base, with, "{id}: that it is stated is not in the model");
-                assert!(
-                    findings.has(K::RetainedElement, row.element) || row.element == "buBlip",
-                    "{id}: {findings:?}"
-                );
-            }
             Outcome::Reported => {
                 assert_eq!(base, with, "{id}");
                 assert!(
@@ -396,12 +389,10 @@ fn every_property_deck_reads_as_written() {
         panic!("buAutoNum");
     };
     assert_eq!(*start_at, Some(3));
-    assert_eq!(
-        bullets[3].bullet,
-        Some(Bullet::Picture {
-            embed: Some("rId3".to_owned())
-        })
-    );
+    let Some(Bullet::Picture(Some(blip))) = &bullets[3].bullet else {
+        panic!("buBlip");
+    };
+    assert_eq!(blip.embed.as_deref(), Some("rId3"));
     assert_eq!(bullets[4].bullet_color, Some(BulletColor::FollowText));
     assert_eq!(bullets[4].bullet_size, Some(BulletSize::FollowText));
     assert_eq!(bullets[4].bullet_font, Some(BulletFont::FollowText));

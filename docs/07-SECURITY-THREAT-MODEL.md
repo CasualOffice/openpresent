@@ -44,12 +44,12 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 
 | ID | Threat | Control | Status |
 | --- | --- | --- | --- |
-| SEC-C01 | Image bomb: small file, enormous pixel count | Read dimensions first; pixel cap before decode; decode in a worker | Planned 1H, 3 |
+| SEC-C01 | Image bomb: small file, enormous pixel count | **Tested for 1H:** `catalog_media` reads PNG, JPEG, GIF and BMP sizes from the header, in bounds and without decoding, and reports past `max_image_pixels` as `CS-MED-0004` (`hostile/media-image-bomb.bin`, `an_image_declaring_too_many_pixels_is_reported_from_its_header`). Other formats give no size, and nothing here decodes. The cap before decode, and decoding in a worker, come with the decoder | Partial: dimensions and report Tested; the decode gate Planned 2E, 3 |
 | SEC-C02 | Decoder bugs in PNG, JPEG, GIF, TIFF, WebP | Browser decodes in the editor. Native uses pure-Rust decoders with features named one by one | Planned 2E |
-| SEC-C03 | **SVG with script, external references or `foreignObject`.** A classic XSS vector | Never placed in the DOM as SVG. Sanitized and rendered from our own path model, or as an `<img>` in a sandboxed context | Planned 1H, 2E |
+| SEC-C03 | **SVG with script, external references or `foreignObject`.** A classic XSS vector | Never placed in the DOM as SVG. Sanitized and rendered from our own path model, or as an `<img>` in a sandboxed context. **Tested for 1H:** the engine holds `asvg:svgBlip` as a relationship id beside its PNG fallback; the part is hashed and otherwise read by nothing, and comes out byte for byte (`generated/svg-with-script.pptx`, `a_scripted_svg_stays_opaque_and_its_content_reaches_nothing`, `a_scripted_svg_stays_byte_identical_however_its_picture_is_edited`) | Tested for 1H; rendering Planned 2E |
 | SEC-C04 | **EMF and WMF**, with a long CVE history, common in real decks | Parsed by our own bounded reader over a drawing-record allowlist; else the fallback image | Planned 2E |
 | SEC-C05 | Font files: malformed tables; embedded `.fntdata` | Embedded fonts off by default for rendering; embedding rights honoured; `skrifa` only, fuzzed | Planned 2D |
-| SEC-C06 | Media: video and audio parsers | Browser plays in a sandbox; the engine never parses media | Planned 3 |
+| SEC-C06 | Media: video and audio parsers | Browser plays in a sandbox; the engine never parses media. **Tested for 1H:** a clip is a relationship id and a hash; no format or size is read from it (`a_catalog_knows_a_part_by_its_hash_and_every_relationship_to_it`) | Tested for 1H; playback Planned 3 |
 | SEC-C07 | VBA, ActiveX, OLE | **Never executed.** Retained as bytes; `.pptm` opens with a visible notice; fallback image only | Planned 1L |
 | SEC-C08 | Geometry guide formulas: cycles, huge values, division by zero | Evaluated in document order with no recursion; saturating arithmetic; cap on guides and path points. Import compiles every custom geometry under those caps, over `DrawingLimits` (`CS-DRW-0001`), with hostile fixtures and the `drawing_properties` fuzz target (`GEO-04`) | Tested |
 | SEC-C09 | Pathological text: combining floods, huge runs, deep lists | Per-body caps; layout time budget | Planned 2D |
@@ -62,7 +62,7 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 
 | ID | Threat | Control | Status |
 | --- | --- | --- | --- |
-| SEC-N01 | **Tracking and SSRF:** `TargetMode="External"` images, media, OLE links, remote templates | **Never fetched automatically**, on the server especially; every one reported. Host policy and placeholder come in Phase 3 | Tested for 1A |
+| SEC-N01 | **Tracking and SSRF:** `TargetMode="External"` images, media, OLE links, remote templates | **Never fetched automatically**, on the server especially; every one reported. **Tier 1H:** a linked picture, SVG, clip, caption track and `oEmbedUrl` is reported as `CS-MED-0001` on the element naming it and listed by `catalog_media` (`each_external_reference_is_reported_on_the_element_that_names_it`). Host policy and placeholder come in Phase 3 | Tested for 1A, 1H |
 | SEC-N02 | NTLM credential theft through UNC paths such as `\\host\share` | UNC and `file:` targets classified, reported, never followed; inert display comes in Phase 3 | Tested for 1A |
 | SEC-N03 | Link schemes: `javascript:`, `data:`, `vbscript:`, `file:` | Allowlist: `http`, `https`, `mailto`, `tel`, and in-deck jumps. Confirmation before leaving | Planned 3 |
 | SEC-N04 | `ppaction://` program launch and macro actions | Parsed and retained; program and macro actions never run | Planned 1D, 8 |

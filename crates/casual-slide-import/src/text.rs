@@ -4,7 +4,7 @@
 //!
 //! A value that can be used goes in the model, with its written form where the type
 //! has several. One that cannot is reported and left out, and stays in the tree. What
-//! other tiers still own (3D, a warp's `avLst`, a picture bullet's content, `extLst`) is
+//! other tiers still own (3D, a warp's `avLst`, `extLst`) is
 //! reported and stays in the tree. A run's fill, line and effects go through Tier 1E's
 //! readers, with their own bounds. A count over a bound in
 //! [`TextLimits`] refuses the part. Nothing here recurses on input: a text body has a
@@ -28,7 +28,9 @@ use casual_slide_model::text::{
 use casual_slide_ooxml::Relationship;
 
 use crate::color::{Findings as ColorFindings, read_color_choice};
-use crate::drawing::{DrawingLimits, is_fill_element, read_effects, read_fill, read_line};
+use crate::drawing::{
+    DrawingLimits, is_fill_element, read_blip, read_effects, read_fill, read_line,
+};
 use crate::presentation::read_text_font;
 use crate::properties::{
     Elem, ImportError, ImportFindingKind as K, Reader, TextBound, is_guid, ns,
@@ -527,7 +529,7 @@ impl TextReader<'_, '_> {
 
     fn bullet_picture(&mut self, el: &Elem) -> Result<Bullet, ImportError> {
         self.r.finish(el);
-        let mut embed = None;
+        let mut blip = None;
         let mut seen = false;
         for child in self.r.children(el)? {
             if !child.is(ns::DML, "blip") || seen {
@@ -535,23 +537,12 @@ impl TextReader<'_, '_> {
                 continue;
             }
             seen = true;
-            let mut blip = child.clone();
-            embed = blip.take_ns(ns::REL, "embed");
-            if let Some(id) = &embed
-                && !self.rels.iter().any(|r| r.id == *id)
-            {
-                self.r.note(K::DanglingRelationship, &blip, Some("r:embed"));
-            }
-            self.r.finish(&blip);
-            for inner in self.r.children(&child)? {
-                // Tier 1H: nothing here decodes a picture.
-                self.r.retained(&inner);
-            }
+            blip = read_blip(self.r, self.rels, DrawingLimits::default(), &child)?.map(Box::new);
         }
         if !seen {
             self.r.note(K::MissingRequired, el, Some("blip"));
         }
-        Ok(Bullet::Picture { embed })
+        Ok(Bullet::Picture(blip))
     }
 
     /// `a:CT_TextSpacing`. `None`, reported, if it holds nothing usable.

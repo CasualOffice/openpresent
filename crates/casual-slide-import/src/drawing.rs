@@ -22,7 +22,7 @@ use casual_slide_model::color::{
 };
 use casual_slide_model::drawing::{HiddenProperties, ShapeProperties};
 use casual_slide_model::effect::EffectProperties;
-use casual_slide_model::fill::{BlipFill, Fill};
+use casual_slide_model::fill::{Blip, BlipFill, Fill};
 use casual_slide_model::line::Line;
 use casual_slide_model::presentation::{COORDINATE_MIN, Coordinate, POSITIVE_COORDINATE_MAX};
 use casual_slide_model::properties::Lexical;
@@ -602,6 +602,16 @@ pub fn read_blip_fill(
     el: &Elem,
 ) -> Result<Option<BlipFill>, ImportError> {
     Ctx::new(r, rels, limits).guard(el, |c| c.blip_fill(el))
+}
+
+/// `a:CT_Blip` on its own, as a picture bullet holds it. `None`, reported, over a bound.
+pub(crate) fn read_blip(
+    r: &mut Reader<'_>,
+    rels: &[Relationship],
+    limits: DrawingLimits,
+    el: &Elem,
+) -> Result<Option<Blip>, ImportError> {
+    Ctx::new(r, rels, limits).guard(el, |c| c.blip(el))
 }
 
 /// `MS-OI29500` 2.1.1295: what Office leaves unspecified beside an `effectDag`.

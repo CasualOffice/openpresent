@@ -6,8 +6,11 @@ use casual_slide_model::fill::{
     RelativeRect, TileInfo,
 };
 
+use casual_slide_model::picture::{ImageFormula, OEmbed, SvgBlip};
+
 use crate::drawing::{A14, Ctx, Res};
 use crate::effect::EffectScope;
+use crate::media::{AIF, ASVG, Expect, MediaFinding, WOE, read_rel};
 use crate::properties::{Elem, ImportFindingKind as K, ns};
 
 impl Ctx<'_, '_> {
@@ -198,11 +201,11 @@ impl Ctx<'_, '_> {
         Ok(b)
     }
 
-    fn blip(&mut self, el: &Elem) -> Res<Blip> {
+    pub(crate) fn blip(&mut self, el: &Elem) -> Res<Blip> {
         let mut e = el.clone();
         let mut b = Blip {
-            embed: self.rel(&mut e, "embed"),
-            link: self.rel(&mut e, "link"),
+            embed: read_rel(self.r, self.rels, &mut e, "embed", Expect::Image),
+            link: read_rel(self.r, self.rels, &mut e, "link", Expect::Image),
             compression: self.attr(&mut e, "cstate")?,
             ..Blip::default()
         };
@@ -226,6 +229,12 @@ impl Ctx<'_, '_> {
         Ok(b)
     }
 
+    /// `@uri` of the `a:ext` an extension's item sits in.
+    fn holder_uri(&self, item: &Elem) -> Option<String> {
+        let ext = self.r.tree.parent_element(item.id)?;
+        self.r.tree.plain_attribute(ext, "uri")
+    }
+
     fn blip_extensions(&mut self, el: &Elem, b: &mut Blip) -> Res<()> {
         for item in self.extension_items(el)? {
             if item.is(A14, "imgProps") && b.image_properties.is_none() {
@@ -234,8 +243,48 @@ impl Ctx<'_, '_> {
                 let mut k = item.clone();
                 b.use_local_dpi = self.attr(&mut k, "val")?;
                 self.r.finish(&k);
+            } else if item.is(ASVG, "svgBlip") && b.svg.is_none() {
+                // A reference. Nothing here, or anywhere, parses what it reaches.
+                let mut k = item.clone();
+                let svg = SvgBlip {
+                    embed: read_rel(self.r, self.rels, &mut k, "embed", Expect::Image),
+                    link: read_rel(self.r, self.rels, &mut k, "link", Expect::Image),
+                };
+                self.r.finish(&k);
+                self.no_kids(&item)?;
+                b.svg = Some(svg);
+                if b.embed.is_none() && b.link.is_none() {
+                    self.r
+                        .note(K::Media(MediaFinding::SvgWithoutFallback), &item, None);
+                }
+            } else if item.is(AIF, "imageFormula") && b.image_formula.is_none() {
+                let mut k = item.clone();
+                b.image_formula = Some(ImageFormula {
+                    formula: self.attr(&mut k, "formula")?,
+                    ext_uri: self.holder_uri(&item),
+                });
+                self.r.finish(&k);
+                self.no_kids(&item)?;
+            } else if item.is(WOE, "oembed") && b.oembed.is_none() {
+                let mut k = item.clone();
+                let oembed = OEmbed {
+                    url: self.r.required(&mut k, "oEmbedUrl", |_: &String| true)?,
+                    media_type: self.r.required(&mut k, "mediaType", |_: &String| true)?,
+                    pic_locks_auto: self.attr(&mut k, "picLocksAutoForOEmbed")?,
+                    ext_uri: self.holder_uri(&item),
+                };
+                self.r.finish(&k);
+                self.no_kids(&item)?;
+                if oembed.url.is_some() {
+                    self.r.note(
+                        K::Media(MediaFinding::ExternalTarget),
+                        &item,
+                        Some("oEmbedUrl"),
+                    );
+                }
+                b.oembed = Some(oembed);
             } else {
-                // `asvg:svgBlip` and the rest: Tier 1H, or nobody's.
+                // Nobody's: it stays in the tree.
                 self.r.retained(&item);
             }
         }

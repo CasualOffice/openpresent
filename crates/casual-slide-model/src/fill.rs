@@ -8,6 +8,7 @@
 
 use crate::color::{Angle, Color, Percentage};
 use crate::effect::{Effect, ImageProperties};
+use crate::picture::{ImageFormula, OEmbed, SvgBlip};
 use crate::presentation::Coordinate;
 use crate::properties::token_enum;
 
@@ -209,8 +210,8 @@ pub enum BlipFillMode {
     Stretch(Option<RelativeRect>),
 }
 
-/// `a:CT_Blip`: a reference to a picture, and what is done to it. What the picture
-/// holds is Tier 1H; `extLst` entries other than those here stay in the tree.
+/// `a:CT_Blip`: a reference to a picture, and what is done to it. Nothing here says what
+/// the picture holds; `extLst` entries other than those here stay in the tree.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Blip {
     /// `@r:embed`.
@@ -225,6 +226,12 @@ pub struct Blip {
     pub image_properties: Option<ImageProperties>,
     /// `a14:useLocalDpi/@val`, from `extLst`.
     pub use_local_dpi: Option<bool>,
+    /// `asvg:svgBlip`, from `extLst`, of which this blip's `@r:embed` is the fallback.
+    pub svg: Option<SvgBlip>,
+    /// `aif:imageFormula`, from `extLst`.
+    pub image_formula: Option<ImageFormula>,
+    /// `woe:oembed`, from `extLst`.
+    pub oembed: Option<OEmbed>,
 }
 
 /// `a:CT_BlipFillProperties`, as a shape's fill and as a picture's `p:blipFill`.

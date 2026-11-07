@@ -54,7 +54,25 @@ fn pattern(p: &PatternFill) -> Node {
         )
 }
 
-fn blip(b: &Blip) -> Node {
+/// `a:CT_Blip`.
+pub(crate) fn blip_node(b: &Blip) -> Node {
+    let svg = b.svg.as_ref().map(|s| {
+        Node::new(Space::Asvg, "svgBlip")
+            .rel("embed", s.embed.as_ref())
+            .rel("link", s.link.as_ref())
+    });
+    let formula = b.image_formula.as_ref().map(|v| {
+        Node::new(Space::Aif, "imageFormula")
+            .lex("formula", v.formula.as_ref())
+            .ext_uri(v.ext_uri.as_ref())
+    });
+    let oembed = b.oembed.as_ref().map(|o| {
+        Node::new(Space::Woe, "oembed")
+            .lex("oEmbedUrl", o.url.as_ref())
+            .lex("mediaType", o.media_type.as_ref())
+            .lex("picLocksAutoForOEmbed", o.pic_locks_auto.as_ref())
+            .ext_uri(o.ext_uri.as_ref())
+    });
     let local_dpi = b
         .use_local_dpi
         .map(|v| Node::new(Space::A14, "useLocalDpi").lex("val", Some(&v)));
@@ -65,6 +83,9 @@ fn blip(b: &Blip) -> Node {
         .list(b.effects.iter().map(effect_node))
         .ext(b.image_properties.as_ref().map(image_properties_node))
         .ext(local_dpi)
+        .ext(svg)
+        .ext(formula)
+        .ext(oembed)
 }
 
 /// `a:CT_BlipFillProperties`: `a:blipFill`, or a picture's `p:blipFill`.
@@ -82,7 +103,7 @@ pub(crate) fn blip_fill_node(f: &BlipFill, space: Space) -> Node {
     Node::new(space, "blipFill")
         .lex("dpi", f.dpi.as_ref())
         .lex("rotWithShape", f.rotate_with_shape.as_ref())
-        .opt(f.blip.as_ref().map(blip))
+        .opt(f.blip.as_ref().map(blip_node))
         .opt(f.source_rect.as_ref().map(|r| rect("srcRect", r)))
         .opt(mode)
 }

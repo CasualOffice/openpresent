@@ -162,9 +162,6 @@ fn enum_case(simple_type: &str) -> EnumCase {
 enum Outcome {
     /// In the model, and not reported as retained.
     Modelled,
-    /// That it is stated is in the model; what it holds is another tier's, and export
-    /// cannot add one.
-    Stated,
     /// Reported as retained, with no model field. Patching leaves it alone.
     Reported,
 }
@@ -216,7 +213,7 @@ const GUID_FOR_TESTS: &str = "{1C8F3A2E-5B6D-4E7F-8A9B-0C1D2E3F4A5B}";
 /// `None` for `CT_GvmlTextShape`: only `lockedCanvas` holds one, in `graphicData`,
 /// which stays in the tree and is reported as `CS-IMF-0010`.
 fn text_row(id: &str) -> Option<Row> {
-    use Outcome::{Modelled, Reported, Stated};
+    use Outcome::{Modelled, Reported};
     let attr = |name: &str, value: &str| format!(r#"{}="{value}""#, name.trim_start_matches('@'));
     let (owner, name) = id.split_once('/').unwrap();
     let mut outcome = Modelled;
@@ -305,8 +302,6 @@ fn text_row(id: &str) -> Option<Row> {
         "EG_TextBullet" if name == "buAutoNum" => paragraph_row("", r#"<a:buAutoNum type="arabicPlain"/>"#),
         "EG_TextBullet" if name == "buChar" => paragraph_row("", r#"<a:buChar char="-"/>"#),
         "EG_TextBullet" if name == "buBlip" => {
-            outcome = Stated;
-            element = "buBlip";
             paragraph_row("", r#"<a:buBlip><a:blip r:embed="rId3"/></a:buBlip>"#)
         }
         "EG_TextBulletColor" | "EG_TextBulletSize" | "EG_TextBulletTypeface" | "EG_TextBullet" => {
@@ -320,8 +315,6 @@ fn text_row(id: &str) -> Option<Row> {
         },
         "CT_TextCharBullet" => paragraph_row("", r#"<a:buChar char="-"/>"#),
         "CT_TextBlipBullet" => {
-            outcome = Stated;
-            element = "buBlip";
             paragraph_row("", r#"<a:buBlip><a:blip r:embed="rId3"/></a:buBlip>"#)
         }
         "CT_TextFont" => {

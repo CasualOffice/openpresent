@@ -292,6 +292,8 @@ pub enum ImportFindingKind {
     FindingsTruncated,
     /// What a drawing property's reader noticed, under its own codes.
     Drawing(crate::drawing::DrawingFinding),
+    /// What a media reference's reader noticed, under its own codes.
+    Media(crate::media::MediaFinding),
 }
 
 impl ImportFindingKind {
@@ -314,6 +316,7 @@ impl ImportFindingKind {
             Self::UnusableRelationship => "CS-IMF-0014",
             Self::FindingsTruncated => "CS-IMF-0015",
             Self::Drawing(finding) => finding.code(),
+            Self::Media(finding) => finding.code(),
         }
     }
 }

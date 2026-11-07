@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use casual_slide_import::drawing::{DrawingFinding as D, DrawingLimits, read_fill};
 use casual_slide_import::geometry::{compile_custom, read_preset_text_shape};
+use casual_slide_import::media::MediaFinding;
 use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::{
     Elem, Findings, ImportFindingKind as K, ImportLimits, Reader,
@@ -138,6 +139,8 @@ fn every_element_and_attribute_row_in_the_areas_is_in_the_fixture_and_read() {
         .findings
         .iter()
         .filter(|f| f.part.contains("slides/slide"))
+        // The fixture's linked picture, reported as Tier 1H reports every external target.
+        .filter(|f| f.kind != K::Media(MediaFinding::ExternalTarget))
         .collect();
     assert!(retained.is_empty(), "{retained:#?}");
 

@@ -239,6 +239,8 @@ def fixtures():
     yield from drawing_hostile()
     from generate_text import fixtures as text_fixtures  # imports this module, so not at the top
     yield from text_fixtures()
+    from generate_media import fixtures as media_fixtures  # imports this module, so not at the top
+    yield from media_fixtures()
 
 
 def main_part(xml):

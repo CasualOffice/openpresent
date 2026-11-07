@@ -167,7 +167,6 @@ fn every_row_of_the_text_area_is_written_or_refused_or_left_alone() {
                     "{id}: nothing in the model, so nothing to write"
                 );
             }
-            (Outcome::Stated, Err(code)) => assert_eq!(code, "CS-EXP-0009", "{id}"),
             (outcome, other) => panic!("{id}: {outcome:?} gave {other:?}"),
         }
 
@@ -716,9 +715,7 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
     for change in [
         (|s| {
             let body = named_mut(s, "Bullets").text_body.as_mut().unwrap();
-            body.paragraphs[0].properties.as_mut().unwrap().bullet = Some(Bullet::Picture {
-                embed: Some("rId3".to_owned()),
-            });
+            body.paragraphs[0].properties.as_mut().unwrap().bullet = Some(Bullet::Picture(None));
         }) as fn(&mut SlidePart),
         |s| {
             named_mut(s, "No Autofit")
@@ -1143,7 +1140,10 @@ fn every_text_body_can_be_written_from_the_model() {
                     &xml,
                 ) {
                     Ok(_) => written += 1,
-                    Err(e) if e.code() == "CS-EXP-0009" => refused += 1,
+                    Err(e) if e.code() == "CS-EXP-0009" => {
+                        eprintln!("{path} {name}: {e}");
+                        refused += 1;
+                    }
                     Err(e) => panic!("{path} {name}: {e}"),
                 }
             }
