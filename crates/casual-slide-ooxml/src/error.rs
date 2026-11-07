@@ -1,7 +1,8 @@
 //! Package inspection errors, each with a stable code (`docs/20-ERROR-CODE-REGISTRY.md`).
 //!
-//! Part names may appear in a message. Document text must not, so that a diagnostic
-//! can be shipped to a log; `MalformedXml` reasons do not yet hold to this (`SEC-015`).
+//! Part names and counts may appear in a message. Document text must not, so that
+//! a diagnostic can be shipped to a log (`SEC-015`): no variant carries a value read
+//! from a part, and a malformed part's reason is fixed text.
 
 use core::fmt;
 
@@ -13,8 +14,8 @@ use casual_slide_package::PackageError;
 pub enum OoxmlError {
     /// The underlying package could not be admitted or read.
     Package(PackageError),
-    /// A part's XML was malformed.
-    MalformedXml { part: String, reason: String },
+    /// A part's XML was malformed. The reason is fixed text, never the part's.
+    MalformedXml { part: String, reason: &'static str },
     /// A part declares a document type. OOXML never needs one, and it is the
     /// route to entity expansion and external entities.
     DoctypeRefused { part: String },
@@ -32,13 +33,17 @@ pub enum OoxmlError {
     TooManyContentTypes { limit: usize },
     /// A part the format requires is absent.
     MissingPart { name: String },
-    /// The main part's content type is not a presentation.
-    NotAPresentation { content_type: String },
+    /// The main part's content type is not a presentation. The type itself is
+    /// document text, so it is not carried; [`ContentTypes`](crate::ContentTypes)
+    /// has it.
+    NotAPresentation { part: String },
     /// A Compound File: a legacy `.ppt`, or an encrypted or rights-protected deck.
     CompoundFile,
     /// A part declares a namespace must-understand, and it is not understood. The
     /// author said the part cannot be read correctly without it (ECMA-376 Part 3).
-    MustUnderstand { part: String, namespace: String },
+    /// The namespace is document text, so it is not carried; resolving the part's
+    /// compatibility names it.
+    MustUnderstand { part: String },
 }
 
 impl OoxmlError {
@@ -93,8 +98,8 @@ impl fmt::Display for OoxmlError {
                 write!(f, "content type count exceeds limit {limit}")
             }
             OoxmlError::MissingPart { name } => write!(f, "required part missing: {name:?}"),
-            OoxmlError::NotAPresentation { content_type } => {
-                write!(f, "main part is not a presentation: {content_type:?}")
+            OoxmlError::NotAPresentation { part } => {
+                write!(f, "main part {part:?} is not a presentation")
             }
             OoxmlError::CompoundFile => {
                 write!(
@@ -102,11 +107,8 @@ impl fmt::Display for OoxmlError {
                     "a Compound File: legacy .ppt, or encrypted or rights-protected"
                 )
             }
-            OoxmlError::MustUnderstand { part, namespace } => {
-                write!(
-                    f,
-                    "{part:?} must be understood as {namespace:?}, which is not"
-                )
+            OoxmlError::MustUnderstand { part } => {
+                write!(f, "{part:?} requires a namespace that is not understood")
             }
         }
     }

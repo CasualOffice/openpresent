@@ -1386,7 +1386,7 @@ fn rels_part_for(part: &str) -> String {
 
 impl Save<'_> {
     fn parse_structural(&mut self, name: &str) -> Result<XmlTree, ExportError> {
-        let bytes = self.package.read_part(name)?;
+        let bytes = self.package.read_xml_part(name)?;
         Ok(XmlTree::parse(&bytes, name, &self.xml_limits)?)
     }
 
@@ -1522,7 +1522,7 @@ impl Save<'_> {
             }
         };
         let rels = self.package.relationships_of(&part).to_vec();
-        let bytes = self.package.read_part(&part)?;
+        let bytes = self.package.read_xml_part(&part)?;
         let tree = XmlTree::parse(&bytes, &part, &self.xml_limits)
             .map_err(ImportError::from)
             .and_then(|t| read(&t, &part, &rels, &self.limits).map(|_| t));
@@ -1576,7 +1576,7 @@ pub fn save_deck(
     let mut changed = Vec::new();
     let mut edits = PartEdits::default();
     let main_rels = package.relationships_of(&main).to_vec();
-    let main_bytes = package.read_part(&main)?;
+    let main_bytes = package.read_xml_part(&main)?;
     let mut tree = XmlTree::parse(&main_bytes, &main, &xml_limits)?;
     let changes = patch_presentation(
         &mut tree,

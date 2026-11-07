@@ -43,7 +43,7 @@ pub(crate) fn parse_relationships(
             return if name.as_ref() == b"Relationships" {
                 Ok(())
             } else {
-                Err(wrong_root(part, "Relationships"))
+                Err(wrong_root(part, "the root element is not Relationships"))
             };
         }
         if name.as_ref() != b"Relationship" {
@@ -58,16 +58,16 @@ pub(crate) fn parse_relationships(
         if !ids.insert(id.clone()) {
             return Err(OoxmlError::MalformedXml {
                 part: part.to_owned(),
-                reason: format!("relationship id {id:?} repeated"),
+                reason: "a relationship id is repeated",
             });
         }
         let mode = match attr(e, b"TargetMode", part)?.as_deref() {
             None | Some("Internal") => TargetMode::Internal,
             Some("External") => TargetMode::External,
-            Some(other) => {
+            Some(_) => {
                 return Err(OoxmlError::MalformedXml {
                     part: part.to_owned(),
-                    reason: format!("unknown target mode {other:?}"),
+                    reason: "an unknown target mode",
                 });
             }
         };
@@ -82,10 +82,20 @@ pub(crate) fn parse_relationships(
     Ok(rels)
 }
 
-/// The part a target resolves to from `source`. `None` when it climbs above the
-/// package root, which a tolerant normalizer would silently turn into a
-/// different part.
-pub(crate) fn resolve_internal(source: &str, target: &str) -> Option<String> {
+/// The part a target resolves to from `source`, the part whose relationship it
+/// is (`""` for the package). `None` when it climbs above the package root, which
+/// a tolerant normalizer would silently turn into a different part.
+///
+/// This is the one rule for resolving a target: the part graph and every reader
+/// above it use it (`PKG-05`). The result is a name to look up through
+/// [`part_name_key`](crate::part_name_key), not yet a part.
+///
+/// ```
+/// use casual_slide_ooxml::resolve_internal;
+/// assert_eq!(resolve_internal("ppt/slides/slide1.xml", "../media/a.png").as_deref(), Some("ppt/media/a.png"));
+/// assert_eq!(resolve_internal("ppt/slide.xml", "../../etc/passwd"), None);
+/// ```
+pub fn resolve_internal(source: &str, target: &str) -> Option<String> {
     let target = target.split('#').next().unwrap_or_default();
     let joined;
     let path = if let Some(absolute) = target.strip_prefix('/') {

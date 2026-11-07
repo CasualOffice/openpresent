@@ -3,16 +3,28 @@
 //! Every part goes through [`walk`]. Keeping a single path is the control: a
 //! parser written beside it would not inherit the document-type refusal or the
 //! bounds, and nothing would show that it had not.
+//!
+//! [`walk`] is also where it is decided what XML is. A part is admitted only if it
+//! is namespace-well-formed XML 1.0, so a reader built on the walker, a reader of
+//! the tree, and a conforming third-party parser all see the same document or
+//! none (`XML-02`, `XML-03`). What quick-xml lets through is checked here.
+//!
+//! **No document text in a refusal** (`SEC-015`): a reason is a fixed string, so
+//! nothing a part contains can reach a log through one.
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use quick_xml::Reader;
+use quick_xml::errors::{Error as XmlError, IllFormedError};
 use quick_xml::events::{BytesStart, Event};
 
 use crate::error::OoxmlError;
 use crate::limits::OoxmlLimits;
 
 const PREDEFINED: [&[u8]; 5] = [b"lt", b"gt", b"amp", b"apos", b"quot"];
+const XML_NS: &[u8] = b"http://www.w3.org/XML/1998/namespace";
+const XMLNS_NS: &[u8] = b"http://www.w3.org/2000/xmlns/";
 
 /// UTF-8 bytes for a part, which OPC allows in UTF-8 or UTF-16, marked by a BOM.
 fn decode<'a>(bytes: &'a [u8], part: &str) -> Result<Cow<'a, [u8]>, OoxmlError> {
@@ -34,11 +46,331 @@ fn decode<'a>(bytes: &'a [u8], part: &str) -> Result<Cow<'a, [u8]>, OoxmlError> 
     }
 }
 
-fn malformed(part: &str, reason: impl Into<String>) -> OoxmlError {
+/// A refusal of a part's XML. The reason is fixed text: never a name, value or
+/// message taken from the part.
+fn malformed(part: &str, reason: &'static str) -> OoxmlError {
     OoxmlError::MalformedXml {
         part: part.to_owned(),
-        reason: reason.into(),
+        reason,
     }
+}
+
+/// A fixed reason for each of quick-xml's errors. Its own messages quote names
+/// and text from the document, so they are never used.
+fn reason_for(err: &XmlError) -> &'static str {
+    match err {
+        XmlError::Syntax(_) => "not XML syntax",
+        XmlError::IllFormed(IllFormedError::MismatchedEndTag { .. }) => {
+            "an end tag does not match its start tag"
+        }
+        XmlError::IllFormed(IllFormedError::UnmatchedEndTag(_)) => "an end tag has no start tag",
+        XmlError::IllFormed(IllFormedError::MissingEndTag(_)) => "an element is not closed",
+        XmlError::IllFormed(IllFormedError::DoubleHyphenInComment) => "a comment holds `--`",
+        XmlError::IllFormed(IllFormedError::UnclosedReference) => "a reference is not closed",
+        XmlError::IllFormed(_) => "ill-formed markup",
+        XmlError::InvalidAttr(_) => "a malformed attribute",
+        XmlError::Escape(_) => "an invalid reference",
+        XmlError::Encoding(_) => "not valid text",
+        XmlError::Io(_) => "could not be read",
+        XmlError::Namespace(_) => "a namespace error",
+    }
+}
+
+/// Whether `c` is a character XML 1.0 allows in a document.
+fn is_xml_char(c: u32) -> bool {
+    matches!(c, 0x9 | 0xA | 0xD | 0x20..=0xD7FF | 0xE000..=0xFFFD | 0x1_0000..=0x10_FFFF)
+}
+
+/// The whole part is UTF-8 and holds only characters XML allows. One pass, before
+/// anything is parsed, so no later reader meets a character this one did not.
+fn check_characters(xml: &[u8]) -> Result<(), &'static str> {
+    let text = std::str::from_utf8(xml).map_err(|_| "not valid UTF-8")?;
+    if text.chars().all(|c| is_xml_char(u32::from(c))) {
+        Ok(())
+    } else {
+        Err("a character XML does not allow")
+    }
+}
+
+/// XML's white space. Not Rust's, which also counts form feed.
+fn is_space(b: u8) -> bool {
+    matches!(b, b' ' | b'\t' | b'\r' | b'\n')
+}
+
+fn is_name_start(c: char) -> bool {
+    matches!(c,
+        'A'..='Z' | '_' | 'a'..='z' | '\u{C0}'..='\u{D6}' | '\u{D8}'..='\u{F6}'
+        | '\u{F8}'..='\u{2FF}' | '\u{370}'..='\u{37D}' | '\u{37F}'..='\u{1FFF}'
+        | '\u{200C}'..='\u{200D}' | '\u{2070}'..='\u{218F}' | '\u{2C00}'..='\u{2FEF}'
+        | '\u{3001}'..='\u{D7FF}' | '\u{F900}'..='\u{FDCF}' | '\u{FDF0}'..='\u{FFFD}'
+        | '\u{10000}'..='\u{EFFFF}')
+}
+
+fn is_name_char(c: char) -> bool {
+    is_name_start(c)
+        || matches!(c, '-' | '.' | '0'..='9' | '\u{B7}' | '\u{300}'..='\u{36F}' | '\u{203F}'..='\u{2040}')
+}
+
+/// An XML name with no colon (Namespaces in XML, `NCName`).
+fn is_ncname(bytes: &[u8]) -> bool {
+    let Ok(name) = std::str::from_utf8(bytes) else {
+        return false;
+    };
+    let mut chars = name.chars();
+    chars.next().is_some_and(is_name_start) && chars.all(is_name_char)
+}
+
+/// A qualified name split into prefix and local part. `None` if it is not one.
+fn split_qname(name: &[u8]) -> Option<(&[u8], &[u8])> {
+    let mut parts = name.splitn(3, |b| *b == b':');
+    let first = parts.next()?;
+    match (parts.next(), parts.next()) {
+        (None, _) => is_ncname(first).then_some((&b""[..], first)),
+        (Some(local), None) => (is_ncname(first) && is_ncname(local)).then_some((first, local)),
+        (Some(_), Some(_)) => None,
+    }
+}
+
+/// An attribute value with its references resolved and white space normalized
+/// as for CDATA. Refuses what XML does not allow in one: `<`, and a reference
+/// that is not one of the five predefined entities or a character XML allows.
+fn attribute_value(raw: &[u8]) -> Result<Cow<'_, [u8]>, &'static str> {
+    if raw.contains(&b'<') {
+        return Err("`<` in an attribute value");
+    }
+    if !raw
+        .iter()
+        .any(|b| matches!(b, b'&' | b'\t' | b'\r' | b'\n'))
+    {
+        return Ok(Cow::Borrowed(raw));
+    }
+    let mut out = Vec::with_capacity(raw.len());
+    let mut rest = raw;
+    while let Some((&b, tail)) = rest.split_first() {
+        rest = tail;
+        if b != b'&' {
+            out.push(if is_space(b) { b' ' } else { b });
+            continue;
+        }
+        let end = rest
+            .iter()
+            .position(|c| *c == b';')
+            .ok_or("a reference is not closed")?;
+        let (name, after) = rest.split_at(end);
+        rest = after.get(1..).unwrap_or_default();
+        let c = match name {
+            b"lt" => '<',
+            b"gt" => '>',
+            b"amp" => '&',
+            b"apos" => '\'',
+            b"quot" => '"',
+            _ => char_reference(name).ok_or("an invalid reference")?,
+        };
+        out.extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes());
+    }
+    Ok(Cow::Owned(out))
+}
+
+/// The character a reference's body (`#65`, `#x41`) names, if XML allows it.
+fn char_reference(body: &[u8]) -> Option<char> {
+    let digits = std::str::from_utf8(body.strip_prefix(b"#")?).ok()?;
+    let (digits, radix) = match digits.strip_prefix('x') {
+        Some(hex) => (hex, 16),
+        None => (digits, 10),
+    };
+    if digits.is_empty() || !digits.chars().all(|c| c.is_digit(radix)) {
+        return None;
+    }
+    let code = u32::from_str_radix(digits, radix).ok()?;
+    is_xml_char(code).then(|| char::from_u32(code)).flatten()
+}
+
+/// One attribute as written in a start tag.
+struct RawAttribute<'a> {
+    name: &'a [u8],
+    value: &'a [u8],
+}
+
+enum ScanError {
+    TooMany,
+    Malformed(&'static str),
+}
+
+/// The attributes of a start tag, by XML's grammar: each preceded by white
+/// space, a name, `=` with optional white space, and a quoted value. Stops as soon
+/// as there are more than `max`.
+fn scan_attributes(
+    tag: &[u8],
+    name_len: usize,
+    max: usize,
+) -> Result<Vec<RawAttribute<'_>>, ScanError> {
+    let skip_space = |mut at: usize| {
+        while tag.get(at).copied().is_some_and(is_space) {
+            at += 1;
+        }
+        at
+    };
+    let mut out = Vec::new();
+    let mut at = name_len;
+    loop {
+        let before = at;
+        at = skip_space(at);
+        if at >= tag.len() {
+            return Ok(out);
+        }
+        if at == before {
+            return Err(ScanError::Malformed(
+                "attributes not separated by white space",
+            ));
+        }
+        let name_start = at;
+        while tag.get(at).is_some_and(|b| *b != b'=' && !is_space(*b)) {
+            at += 1;
+        }
+        let name = tag.get(name_start..at).unwrap_or_default();
+        at = skip_space(at);
+        if tag.get(at) != Some(&b'=') {
+            return Err(ScanError::Malformed("an attribute has no value"));
+        }
+        at = skip_space(at + 1);
+        let quote = match tag.get(at) {
+            Some(q @ (b'"' | b'\'')) => *q,
+            _ => return Err(ScanError::Malformed("an attribute value is not quoted")),
+        };
+        at += 1;
+        let rest = tag.get(at..).unwrap_or_default();
+        let len = rest
+            .iter()
+            .position(|b| *b == quote)
+            .ok_or(ScanError::Malformed("an attribute value is not closed"))?;
+        if out.len() >= max {
+            return Err(ScanError::TooMany);
+        }
+        out.push(RawAttribute {
+            name,
+            value: rest.get(..len).unwrap_or_default(),
+        });
+        at += len + 1;
+    }
+}
+
+/// The namespace bindings in scope. Lookups are by prefix, so their cost does not
+/// grow with the number of declarations a hostile part piles up.
+#[derive(Default)]
+struct Scope {
+    /// Prefix, or empty for the default namespace, to the bindings in force,
+    /// innermost last. An empty URI undeclares the default namespace.
+    bindings: HashMap<Vec<u8>, Vec<Vec<u8>>>,
+    /// The prefixes each open element declared, to undo at its end.
+    frames: Vec<Vec<Vec<u8>>>,
+}
+
+impl Scope {
+    fn resolve(&self, prefix: &[u8]) -> Option<&[u8]> {
+        if prefix == b"xml" {
+            return Some(XML_NS);
+        }
+        self.bindings
+            .get(prefix)
+            .and_then(|stack| stack.last())
+            .map(Vec::as_slice)
+    }
+
+    fn enter(&mut self, declared: Vec<(Vec<u8>, Vec<u8>)>) {
+        let mut prefixes = Vec::with_capacity(declared.len());
+        for (prefix, uri) in declared {
+            self.bindings.entry(prefix.clone()).or_default().push(uri);
+            prefixes.push(prefix);
+        }
+        self.frames.push(prefixes);
+    }
+
+    fn leave(&mut self) {
+        for prefix in self.frames.pop().unwrap_or_default() {
+            if let Some(stack) = self.bindings.get_mut(&prefix) {
+                stack.pop();
+                if stack.is_empty() {
+                    self.bindings.remove(&prefix);
+                }
+            }
+        }
+    }
+}
+
+/// Check a start tag against XML and Namespaces in XML, and open its scope.
+fn enter_element(
+    start: &BytesStart<'_>,
+    scope: &mut Scope,
+    part: &str,
+    limits: &OoxmlLimits,
+) -> Result<(), OoxmlError> {
+    let tag: &[u8] = start;
+    let name = start.name();
+    let name = name.as_ref();
+    let (prefix, _) = split_qname(name)
+        .ok_or_else(|| malformed(part, "an element name is not a qualified name"))?;
+    let attributes =
+        scan_attributes(tag, name.len(), limits.max_xml_attributes).map_err(|e| match e {
+            ScanError::TooMany => OoxmlError::TooManyAttributes {
+                part: part.to_owned(),
+                limit: limits.max_xml_attributes,
+            },
+            ScanError::Malformed(reason) => malformed(part, reason),
+        })?;
+
+    // Declarations first: they are in scope for the element's own name and attributes.
+    let mut declared: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
+    let mut values = Vec::with_capacity(attributes.len());
+    for a in &attributes {
+        let value = attribute_value(a.value).map_err(|reason| malformed(part, reason))?;
+        let declares = match split_qname(a.name) {
+            Some((b"", b"xmlns")) => Some(&b""[..]),
+            Some((b"xmlns", p)) => Some(p),
+            Some(_) => None,
+            None => return Err(malformed(part, "an attribute name is not a qualified name")),
+        };
+        if let Some(p) = declares {
+            let uri = value.as_ref();
+            let refused = match p {
+                b"xmlns" => true,
+                b"xml" => uri != XML_NS,
+                b"" => uri == XML_NS || uri == XMLNS_NS,
+                _ => uri.is_empty() || uri == XML_NS || uri == XMLNS_NS,
+            };
+            if refused {
+                return Err(malformed(part, "a namespace declaration the rules forbid"));
+            }
+            declared.push((p.to_vec(), uri.to_vec()));
+        }
+        values.push(value);
+    }
+    if prefix == b"xmlns" {
+        return Err(malformed(part, "an element in the reserved xmlns prefix"));
+    }
+    scope.enter(declared);
+    if !prefix.is_empty() && scope.resolve(prefix).is_none() {
+        return Err(malformed(part, "an element prefix is not declared"));
+    }
+
+    // Unique by expanded name, which also catches a name written twice.
+    let mut expanded: Vec<(&[u8], &[u8])> = Vec::with_capacity(attributes.len());
+    for a in &attributes {
+        let (prefix, local) = split_qname(a.name).unwrap_or_default();
+        let uri = match (prefix, local) {
+            (b"", b"xmlns") => XMLNS_NS,
+            (b"xmlns", _) => XMLNS_NS,
+            (b"", _) => b"",
+            (p, _) => scope
+                .resolve(p)
+                .ok_or_else(|| malformed(part, "an attribute prefix is not declared"))?,
+        };
+        expanded.push((uri, local));
+    }
+    expanded.sort_unstable();
+    if expanded.windows(2).any(|w| w[0] == w[1]) {
+        return Err(malformed(part, "an attribute is repeated"));
+    }
+    Ok(())
 }
 
 /// Walk one XML part, calling `on_element` for each start or empty element with
@@ -46,7 +378,9 @@ fn malformed(part: &str, reason: impl Into<String>) -> OoxmlError {
 ///
 /// Refuses: any document type; a reference to an entity other than the five
 /// predefined; anything over the part's size, element, depth or attribute
-/// bounds; and a part that is not exactly one well-nested root element.
+/// bounds; a part that is not exactly one well-nested root element; and anything
+/// else that is not namespace-well-formed XML 1.0, such as a character XML does
+/// not allow, a malformed or repeated attribute, or an undeclared prefix.
 pub fn walk(
     bytes: &[u8],
     part: &str,
@@ -60,21 +394,32 @@ pub fn walk(
         });
     }
     let xml = decode(bytes, part)?;
+    // The mark was taken off above. Another would be content before the root, which
+    // quick-xml drops without a word, so the tree would not write back what it read.
+    if xml.starts_with("\u{feff}".as_bytes()) {
+        return Err(malformed(part, "a second byte-order mark"));
+    }
+    check_characters(&xml).map_err(|reason| malformed(part, reason))?;
     let mut reader = Reader::from_reader(xml.as_ref());
+    reader.config_mut().check_comments = true;
     let mut buf = Vec::new();
     let mut elements = 0usize;
     let mut depth = 0usize;
     let mut roots = 0usize;
+    let mut scope = Scope::default();
+    let mut first = true;
 
     loop {
         let event = reader
             .read_event_into(&mut buf)
-            .map_err(|err| malformed(part, err.to_string()))?;
+            .map_err(|err| malformed(part, reason_for(&err)))?;
+        let at_first = std::mem::take(&mut first);
         let (start, is_empty) = match event {
             Event::Start(e) => (e, false),
             Event::Empty(e) => (e, true),
             Event::End(_) => {
                 depth = depth.saturating_sub(1);
+                scope.leave();
                 buf.clear();
                 continue;
             }
@@ -84,11 +429,38 @@ pub fn walk(
                 });
             }
             Event::GeneralRef(r) => {
-                if !r.is_char_ref() && !PREDEFINED.contains(&r.as_ref()) {
-                    return Err(malformed(part, "reference to an undeclared entity"));
+                if depth == 0 {
+                    return Err(malformed(part, "a reference outside the root element"));
+                }
+                let allowed = if r.is_char_ref() {
+                    char_reference(&r).is_some()
+                } else {
+                    PREDEFINED.contains(&r.as_ref())
+                };
+                if !allowed {
+                    return Err(malformed(
+                        part,
+                        "a reference to an undeclared entity or a character XML does not allow",
+                    ));
                 }
                 buf.clear();
                 continue;
+            }
+            Event::Text(t) => {
+                if depth == 0 && !t.iter().copied().all(is_space) {
+                    return Err(malformed(part, "text outside the root element"));
+                }
+                if t.windows(3).any(|w| w == b"]]>") {
+                    return Err(malformed(part, "`]]>` in text"));
+                }
+                buf.clear();
+                continue;
+            }
+            Event::CData(_) if depth == 0 => {
+                return Err(malformed(part, "character data outside the root element"));
+            }
+            Event::Decl(_) if !at_first => {
+                return Err(malformed(part, "an XML declaration not at the start"));
             }
             Event::Eof => break,
             _ => {
@@ -117,14 +489,11 @@ pub fn walk(
                 limit: limits.max_xml_depth,
             });
         }
-        if start.attributes().count() > limits.max_xml_attributes {
-            return Err(OoxmlError::TooManyAttributes {
-                part: part.to_owned(),
-                limit: limits.max_xml_attributes,
-            });
-        }
+        enter_element(&start, &mut scope, part, limits)?;
         on_element(&start, this_depth)?;
-        if !is_empty {
+        if is_empty {
+            scope.leave();
+        } else {
             depth = this_depth;
         }
         buf.clear();
@@ -147,11 +516,11 @@ pub(crate) fn attr(
 ) -> Result<Option<String>, OoxmlError> {
     let mut found = None;
     for a in e.attributes() {
-        let a = a.map_err(|err| malformed(part, err.to_string()))?;
+        let a = a.map_err(|_| malformed(part, "a malformed attribute"))?;
         if a.key.local_name().as_ref() == local {
             let value = a
                 .normalized_value(quick_xml::XmlVersion::Implicit1_0)
-                .map_err(|err| malformed(part, err.to_string()))?;
+                .map_err(|_| malformed(part, "an invalid reference"))?;
             found = Some(value.into_owned());
         }
     }
@@ -159,16 +528,12 @@ pub(crate) fn attr(
 }
 
 pub(crate) fn required(e: &BytesStart<'_>, local: &[u8], part: &str) -> Result<String, OoxmlError> {
-    attr(e, local, part)?.ok_or_else(|| {
-        malformed(
-            part,
-            format!("missing attribute {}", String::from_utf8_lossy(local)),
-        )
-    })
+    attr(e, local, part)?.ok_or_else(|| malformed(part, "a required attribute is missing"))
 }
 
-pub(crate) fn wrong_root(part: &str, expected: &str) -> OoxmlError {
-    malformed(part, format!("root element is not {expected}"))
+/// A refusal for a part whose root is not the element its role requires.
+pub(crate) fn wrong_root(part: &str, reason: &'static str) -> OoxmlError {
+    malformed(part, reason)
 }
 
 /// One node of a [`XmlTree`], holding its source text exactly.
@@ -247,7 +612,7 @@ impl XmlTree {
         loop {
             let event = reader
                 .read_event_into(&mut buf)
-                .map_err(|err| malformed(part, err.to_string()))?;
+                .map_err(|err| malformed(part, reason_for(&err)))?;
             let node = match &event {
                 Event::Eof => break,
                 Event::Start(e) => Node::Element {
@@ -397,19 +762,6 @@ impl XmlTree {
         self.child_elements(id)
             .into_iter()
             .find(|&c| self.local_name(c) == local)
-    }
-
-    /// An attribute's value by local name, unescaped.
-    pub fn attribute(&self, id: ElementId, local: &str) -> Option<String> {
-        let (start, _) = self.element(id);
-        let name_len = self.qualified_name(id).len();
-        let tag = BytesStart::from_content(start, name_len);
-        tag.attributes().flatten().find_map(|a| {
-            (a.key.local_name().as_ref() == local.as_bytes())
-                .then(|| a.normalized_value(quick_xml::XmlVersion::Implicit1_0).ok())
-                .flatten()
-                .map(std::borrow::Cow::into_owned)
-        })
     }
 
     /// Every attribute as written, declarations included: the qualified name, and
@@ -606,9 +958,24 @@ impl XmlTree {
             })
     }
 
-    /// An attribute with no prefix, unescaped. Use this for the schema's own
-    /// attributes: [`XmlTree::attribute`] matches by local name in any namespace,
-    /// so a foreign `x:val` written first would be taken for `val`.
+    /// An attribute by its name as written, unescaped: `val` is the attribute with
+    /// no prefix, which is how the schema's own attributes are written, and `r:id`
+    /// names the prefixed one. A foreign `x:val` is never taken for `val`.
+    ///
+    /// ```
+    /// # use casual_slide_ooxml::{OoxmlLimits, XmlTree};
+    /// let t = XmlTree::parse(b"<r xmlns:x=\"u\" x:val=\"no\" val=\"yes\"/>", "t", &OoxmlLimits::default()).unwrap();
+    /// assert_eq!(t.plain_attribute(t.root(), "val").as_deref(), Some("yes"));
+    /// ```
+    ///
+    /// There is no lookup by local name in any namespace (`XML-01`): it let a
+    /// foreign attribute shadow the schema's, and readers disagreed.
+    ///
+    /// ```compile_fail
+    /// # use casual_slide_ooxml::{OoxmlLimits, XmlTree};
+    /// let t = XmlTree::parse(b"<r xmlns:x=\"u\" x:val=\"no\" val=\"yes\"/>", "t", &OoxmlLimits::default()).unwrap();
+    /// let _ = t.attribute(t.root(), "val");
+    /// ```
     pub fn plain_attribute(&self, id: ElementId, name: &str) -> Option<String> {
         self.exact_attribute(id, name)
     }
@@ -802,9 +1169,8 @@ fn attribute_spans(start: &str, name_len: usize) -> Option<Vec<AttributeSpan>> {
 /// Reading attributes and mixed content, and the edits the model's export needs.
 /// Each changes only the nodes it names.
 impl XmlTree {
-    /// Every attribute as `(name as written, value)`, in order and unescaped.
-    /// Unlike [`XmlTree::attribute`] this tells `r:id` from `id`, and refuses a
-    /// malformed or repeated attribute.
+    /// Every attribute as `(name as written, value)`, in order and unescaped. This
+    /// tells `r:id` from `id`, and refuses a malformed or repeated attribute.
     pub fn attributes(
         &self,
         id: ElementId,
@@ -822,7 +1188,7 @@ impl XmlTree {
         let tag = BytesStart::from_content(start, name_len);
         let mut out = Vec::new();
         for a in tag.attributes() {
-            let a = a.map_err(|err| malformed(part, err.to_string()))?;
+            let a = a.map_err(|_| malformed(part, "a malformed attribute"))?;
             let key = std::str::from_utf8(a.key.as_ref())
                 .map_err(|_| malformed(part, "not valid UTF-8"))?
                 .to_owned();
@@ -838,7 +1204,7 @@ impl XmlTree {
             }
             let value = a
                 .normalized_value(quick_xml::XmlVersion::Implicit1_0)
-                .map_err(|err| malformed(part, err.to_string()))?;
+                .map_err(|_| malformed(part, "an invalid reference"))?;
             out.push((key, value.into_owned()));
         }
         Ok(out)
@@ -914,6 +1280,8 @@ impl XmlTree {
             end: None,
             children: Vec::new(),
         });
+        // Every node has a parent entry, so the two stay aligned.
+        self.parents.push(None);
         ElementId(id)
     }
 
@@ -925,6 +1293,7 @@ impl XmlTree {
         if let Node::Element { children, .. } = &mut self.nodes[parent.0] {
             children.insert(at, child.0);
         }
+        self.set_parent(child, parent);
     }
 
     fn insertion_point(&self, parent: ElementId, before: Option<ElementId>) -> usize {
@@ -990,6 +1359,15 @@ impl XmlTree {
         let rest: Vec<usize> = incoming.collect();
         out.splice(at..at, rest);
         *children = out;
+        for &child in new {
+            self.set_parent(child, parent);
+        }
+    }
+
+    fn set_parent(&mut self, child: ElementId, parent: ElementId) {
+        if let Some(slot) = self.parents.get_mut(child.0) {
+            *slot = Some(parent.0);
+        }
     }
 
     /// Remove everything inside an element, keeping its tags.
@@ -1047,12 +1425,12 @@ mod tree_tests {
 
     #[test]
     fn an_edit_changes_only_what_it_names() {
-        let mut t = parse("<r  z=\"1\"><!-- c --><p:a q='2'>old</p:a> <b/></r>");
+        let mut t = parse("<r  z=\"1\" xmlns:p=\"u\"><!-- c --><p:a q='2'>old</p:a> <b/></r>");
         let a = t.child(t.root(), "a").unwrap();
         t.set_text(a, "new & <x>");
         assert_eq!(
             t.to_bytes(),
-            b"<r  z=\"1\"><!-- c --><p:a q='2'>new &amp; &lt;x&gt;</p:a> <b/></r>"
+            b"<r  z=\"1\" xmlns:p=\"u\"><!-- c --><p:a q='2'>new &amp; &lt;x&gt;</p:a> <b/></r>"
         );
         let b = t.child(t.root(), "b").unwrap();
         t.set_text(b, "v");
@@ -1062,10 +1440,15 @@ mod tree_tests {
 
     #[test]
     fn reads_names_attributes_and_text() {
-        let t = parse("<p:r x:k=\"a&amp;b\"><c>1&lt;2<![CDATA[&]]></c><d><e/></d></p:r>");
+        let t = parse(
+            "<p:r xmlns:p=\"u\" xmlns:x=\"v\" x:k=\"a&amp;b\"><c>1&lt;2<![CDATA[&]]></c><d><e/></d></p:r>",
+        );
         assert_eq!(t.local_name(t.root()), "r");
         assert_eq!(t.qualified_name(t.root()), "p:r");
-        assert_eq!(t.attribute(t.root(), "k").unwrap(), "a&b");
+        assert_eq!(
+            t.attributes(t.root(), "t").unwrap()[2],
+            ("x:k".to_owned(), "a&b".to_owned())
+        );
         assert_eq!(t.text(t.child(t.root(), "c").unwrap()).unwrap(), "1<2&");
         assert_eq!(t.text(t.child(t.root(), "d").unwrap()), None);
     }
@@ -1107,13 +1490,17 @@ mod tree_tests {
         assert_eq!(t.to_bytes(), b"<r a=\"it's b='9'\" b='n'/>");
     }
 
+    /// `XML-01`: a foreign `x:val` written first is not `val`.
     #[test]
     fn a_foreign_attribute_does_not_shadow_the_plain_one() {
         let t = parse("<r xmlns:x=\"u\" x:val=\"bad\" val=\"good\"/>");
-        assert_eq!(t.attribute(t.root(), "val").unwrap(), "bad");
         assert_eq!(t.plain_attribute(t.root(), "val").unwrap(), "good");
+        let t = parse("<r xmlns:x=\"u\" x:val=\"bad\"/>");
+        assert_eq!(t.plain_attribute(t.root(), "val"), None);
     }
 
+    /// The walker refuses a part with a bad attribute, so a parsed tree has none.
+    /// A start tag an edit made malformed is seen, and blocks attribute edits.
     #[test]
     fn bad_attributes_are_seen_and_block_edits() {
         for s in [
@@ -1122,24 +1509,29 @@ mod tree_tests {
             "<r a=\"1\" a=\"2\"/>",
             "<r a=\"&nope;\"/>",
         ] {
-            let t = parse(s);
-            assert!(!t.attributes_valid(t.root()), "{s}");
+            let err = XmlTree::parse(s.as_bytes(), "t", &OoxmlLimits::default()).unwrap_err();
+            assert_eq!(err.code(), "CS-XML-0004", "{s}");
         }
-        let mut t = parse("<r a/>");
-        assert!(!t.set_attribute(t.root(), "a", "1"));
-        assert_eq!(t.to_bytes(), b"<r a/>");
+        let mut t = parse("<r/>");
+        let k = t.new_element("k a");
+        t.insert_child(t.root(), None, k);
+        assert!(!t.attributes_valid(k));
+        assert!(!t.set_attribute(k, "a", "1"));
+        assert_eq!(t.to_bytes(), b"<r><k a/></r>");
         let good = parse("<r a=\"1\" b='2'/>");
         assert!(good.attributes_valid(good.root()));
     }
 
     #[test]
     fn namespaces_resolve_outward_and_shadow() {
-        let t = parse("<a:r xmlns:a=\"one\" xmlns=\"dflt\"><b/><a:c xmlns:a=\"two\"/><z:d/></a:r>");
+        let t = parse(
+            "<a:r xmlns:a=\"one\" xmlns=\"dflt\"><b/><a:c xmlns:a=\"two\"/><d xmlns=\"\"/></a:r>",
+        );
         let kids = t.child_elements(t.root());
         assert_eq!(t.namespace_uri(t.root()).unwrap(), "one");
         assert_eq!(t.namespace_uri(kids[0]).unwrap(), "dflt");
         assert_eq!(t.namespace_uri(kids[1]).unwrap(), "two");
-        assert_eq!(t.namespace_uri(kids[2]), None);
+        assert_eq!(t.namespace_uri(kids[2]).as_deref(), Some(""));
         assert_eq!(t.parent(kids[0]), Some(t.root()));
         assert_eq!(t.parent(t.root()), None);
         assert_eq!(t.prefix_for_namespace(kids[0], "one").unwrap(), "a");
@@ -1167,11 +1559,11 @@ mod tree_tests {
 
     #[test]
     fn attributes_tell_prefixed_from_plain_and_refuse_repeats() {
-        let t = parse("<a r:id=\"rel\" id=\"7\" k='&lt;'/>");
+        let t = parse("<a xmlns:r=\"u\" r:id=\"rel\" id=\"7\" k='&lt;'/>");
         let attrs = t.attributes(t.root(), "t").unwrap();
-        assert_eq!(attrs[0], ("r:id".to_owned(), "rel".to_owned()));
-        assert_eq!(attrs[1], ("id".to_owned(), "7".to_owned()));
-        assert_eq!(attrs[2].1, "<");
+        assert_eq!(attrs[1], ("r:id".to_owned(), "rel".to_owned()));
+        assert_eq!(attrs[2], ("id".to_owned(), "7".to_owned()));
+        assert_eq!(attrs[3].1, "<");
         for bad in [
             "<a b=\"1\" b=\"2\"/>",
             "<a b=1/>",
@@ -1183,10 +1575,15 @@ mod tree_tests {
             "<a xmlns:=\"u\"/>",
             "<a b\u{0}=\"1\"/>",
         ] {
-            let t = parse(bad);
-            let err = t.attributes(t.root(), "t").unwrap_err();
+            // Refused by the walker now, before any tree exists to ask.
+            let err = XmlTree::parse(bad.as_bytes(), "t", &OoxmlLimits::default()).unwrap_err();
             assert_eq!(err.code(), "CS-XML-0004", "{bad}");
         }
+        // And for a start tag an edit made unreadable.
+        let mut t = parse("<r/>");
+        let k = t.new_element("k b=\"1\"c=\"2\"");
+        t.insert_child(t.root(), None, k);
+        assert_eq!(t.attributes(k, "t").unwrap_err().code(), "CS-XML-0004");
     }
 
     #[test]
@@ -1203,10 +1600,11 @@ mod tree_tests {
         assert!(t.remove_attribute(r, "x"));
         assert!(!t.remove_attribute(r, "x"));
         assert!(t.to_bytes().ends_with(b"z=\"3\" n=\"v\" />"));
-        let mut bad = parse("<a b=1/>");
-        let r = bad.root();
-        assert!(!bad.set_attribute(r, "c", "v"));
-        assert_eq!(bad.to_bytes(), b"<a b=1/>");
+        let mut bad = parse("<a/>");
+        let k = bad.new_element("k b=1");
+        bad.insert_child(bad.root(), None, k);
+        assert!(!bad.set_attribute(k, "c", "v"));
+        assert_eq!(bad.to_bytes(), b"<a><k b=1/></a>");
     }
 
     #[test]
@@ -1225,6 +1623,27 @@ mod tree_tests {
         assert!(!t.remove_child(r, b));
         t.clear_content(c);
         assert_eq!(t.to_bytes(), b"<r><a/>\n <c></c><d/>\n</r>");
+    }
+
+    /// An element made by an edit has its parent, and so its namespace, and does
+    /// not shift the parents of nodes added after it.
+    #[test]
+    fn a_new_element_knows_its_parent() {
+        let mut t = parse("<a:r xmlns:a=\"u\"><a:k/></a:r>");
+        let r = t.root();
+        let n = t.new_element("a:n");
+        t.insert_child(r, None, n);
+        assert_eq!(t.parent(n), Some(r));
+        assert_eq!(t.namespace_uri(n).as_deref(), Some("u"));
+        let m = t.new_element("a:m");
+        let k = t.child(r, "k").unwrap();
+        t.replace_children(r, &[k], &[m]);
+        assert_eq!(t.parent(m), Some(r));
+        let c = t.insert_element(n, None, "a:c", &[]);
+        assert_eq!(t.parent(c), Some(n));
+        t.set_text(c, "x");
+        assert_eq!(t.parent(c), Some(n));
+        assert_eq!(t.namespace_uri(c).as_deref(), Some("u"));
     }
 
     #[test]
@@ -1252,8 +1671,8 @@ mod tree_tests {
     fn own_text_skips_children_and_normalizes_line_ends() {
         let t = parse("<a>x\r\ny<b>no</b>&#13;<![CDATA[<z>]]></a>");
         assert_eq!(t.own_text(t.root()).unwrap(), "x\ny\r<z>");
-        let bad = parse("<a>&#xD800;</a>");
-        assert_eq!(bad.own_text(bad.root()), None);
+        let bad = XmlTree::parse(b"<a>&#xD800;</a>", "t", &OoxmlLimits::default());
+        assert_eq!(bad.unwrap_err().code(), "CS-XML-0004");
     }
 
     #[test]
@@ -1327,5 +1746,198 @@ mod tree_tests {
     fn the_tree_inherits_the_walkers_refusals() {
         let err = XmlTree::parse(b"<!DOCTYPE a><a/>", "t", &OoxmlLimits::default()).unwrap_err();
         assert_eq!(err.code(), "CS-XML-0005");
+    }
+}
+
+/// `XML-02`, `XML-03`: one decision about what is XML, made in [`walk`], so every
+/// reader built on it agrees about the same bytes.
+#[cfg(test)]
+mod walk_tests {
+    use super::*;
+
+    fn refusal(bytes: &[u8]) -> Option<&'static str> {
+        let limits = OoxmlLimits::default();
+        let walked = walk(bytes, "t", &limits, |_, _| Ok(()));
+        let tree = XmlTree::parse(bytes, "t", &limits);
+        match (walked, tree) {
+            (Err(a), Err(b)) if a.code() == "CS-XML-0004" && b.code() == "CS-XML-0004" => None,
+            (Err(_), Err(_)) => Some("refused with another code"),
+            (Ok(()), _) => Some("admitted by walk"),
+            (Err(_), Ok(_)) => Some("refused by walk, admitted by the tree"),
+        }
+    }
+
+    fn admitted(bytes: &[u8]) -> bool {
+        let limits = OoxmlLimits::default();
+        walk(bytes, "t", &limits, |_, _| Ok(())).is_ok()
+            && XmlTree::parse(bytes, "t", &limits).is_ok_and(|t| t.to_bytes() == bytes)
+    }
+
+    fn assert_all_refused(cases: &[&[u8]]) {
+        let wrong: Vec<String> = cases
+            .iter()
+            .filter_map(|c| {
+                refusal(c).map(|why| format!("{:?}: {why}", String::from_utf8_lossy(c)))
+            })
+            .collect();
+        assert!(
+            wrong.is_empty(),
+            "{} of {}:\n{}",
+            wrong.len(),
+            cases.len(),
+            wrong.join("\n")
+        );
+    }
+
+    #[test]
+    fn malformed_and_repeated_attributes_are_refused() {
+        assert_all_refused(&[
+            b"<r a/>",
+            b"<r a=1/>",
+            b"<r a=\"1/>",
+            b"<r a=\"1\" a=\"2\"/>",
+            b"<r a=\"1\" a='1'/>",
+            b"<r a=\"&nope;\"/>",
+            b"<r a=\"&amp\"/>",
+            b"<r a=\"&#;\"/>",
+            b"<r a=\"&#0;\"/>",
+            b"<r a=\"&#xD800;\"/>",
+            b"<r a=\"&#x110000;\"/>",
+            b"<r a=\"<\"/>",
+            b"<r =\"1\"/>",
+            // Repeated once prefixes are resolved: Namespaces in XML, 6.3.
+            b"<r xmlns:x=\"u\" xmlns:y=\"u\" x:a=\"1\" y:a=\"2\"/>",
+            b"<r xmlns:x=\"u\" xmlns:x=\"v\"/>",
+            b"<r xmlns=\"u\" xmlns=\"u\"/>",
+        ]);
+    }
+
+    #[test]
+    fn what_is_not_xml_is_refused() {
+        assert_all_refused(&[
+            // Names: NUL, other characters no name may hold, and qualified-name syntax.
+            b"<r\0/>",
+            b"<r a\0b=\"1\"/>",
+            b"<r\x01/>",
+            b"<1r/>",
+            b"<r 1a=\"1\"/>",
+            b"<r a:b:c=\"1\"/>",
+            b"<r :a=\"1\"/>",
+            b"<r a:=\"1\"/>",
+            b"<:r/>",
+            b"<r xmlns:=\"u\"/>",
+            b"<r/ >",
+            // Attributes run together, or separated by something XML does not call space.
+            b"<r a=\"1\"b=\"2\"/>",
+            b"<r a='1'b='2'/>",
+            b"<r a=\"1\"\x0cb=\"2\"/>",
+            // Prefixes nothing declares, and declarations the namespace rules forbid.
+            b"<x:r/>",
+            b"<r x:a=\"1\"/>",
+            b"<r><x:s/></r>",
+            b"<r><s xmlns:x=\"u\"/><x:t/></r>",
+            b"<r xmlns:x=\"\"/>",
+            b"<r xmlns:xmlns=\"u\"/>",
+            b"<r xmlns:xml=\"u\"/>",
+            b"<r xmlns:x=\"http://www.w3.org/XML/1998/namespace\"/>",
+            b"<r xmlns=\"http://www.w3.org/2000/xmlns/\"/>",
+            b"<xmlns:r/>",
+            // Characters XML does not allow, raw or by reference.
+            b"<r>\0</r>",
+            b"<r>\x01</r>",
+            b"<r>\x0c</r>",
+            b"<r>\xef\xbf\xbe</r>",
+            b"<r>\xff</r>",
+            b"<r>&#0;</r>",
+            b"<r>&#x1;</r>",
+            b"<r>&#xFFFF;</r>",
+            b"<r><!-- \x00 --></r>",
+            // Content outside the root, and markup out of place.
+            b"text<r/>",
+            b"<r/>text",
+            b"&amp;<r/>",
+            b"<r/>&#65;",
+            b"<r/><![CDATA[x]]>",
+            b"<r>]]></r>",
+            b"<r><!-- a -- b --></r>",
+            b"<r/><?xml version=\"1.0\"?>",
+            b" <?xml version=\"1.0\"?><r/>",
+            // A second byte-order mark: quick-xml drops it, so the tree would not
+            // write back what it read. Found by the `xml_tree` fuzz target.
+            b"\xef\xbb\xbf\xef\xbb\xbf<r/>",
+            b"\xff\xfe\xff\xfe<\0r\0/\0>\0",
+        ]);
+    }
+
+    #[test]
+    fn well_formed_parts_still_pass_and_round_trip() {
+        for good in [
+            &b"<r xmlns:x=\"u\" x:a=\"1\" a=\"2\"/>"[..],
+            b"<r xml:lang=\"en\" xml:space=\"preserve\"/>",
+            b"<r xmlns=\"u\"><s xmlns=\"\"/></r>",
+            b"<r a = '1'\n\tb=\"2\" />",
+            b"<r a=\"&lt;&#x41;&#65;&amp;&quot;&apos;&gt;\"/>",
+            b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<!-- c --><r/>\n",
+            b"<r>]]&gt;&#x9;&#xA;&#xD;</r>",
+            b"<x:r xmlns:x=\"u\"><x:s/><y:t xmlns:y=\"v\" y:a=\"1\"/></x:r>",
+            b"<r xmlns:x=\"u\" xmlns:y=\"v\" x:a=\"1\" y:a=\"2\"/>",
+            b"<r xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"/>",
+            "<\u{e9}t\u{e9} \u{e0}=\"\u{1F600}\"/>".as_bytes(),
+            b"<r><![CDATA[<]]>\t</r>",
+            b"<r a=\"1\"\r\nb=\"2\"/>",
+            b"\xef\xbb\xbf<r/>",
+            b"\xff\xfe<\0r\0/\0>\0",
+        ] {
+            assert!(admitted(good), "{:?}", String::from_utf8_lossy(good));
+        }
+    }
+
+    /// The bound on a part's size holds in the walker itself, not only in the reads
+    /// that feed it (`SEC-016`).
+    #[test]
+    fn the_walker_refuses_a_part_over_its_size_bound() {
+        let limits = OoxmlLimits {
+            max_xml_part_bytes: 16,
+            ..OoxmlLimits::default()
+        };
+        let part = b"<r><a/><a/><a/></r>";
+        let err = walk(part, "t", &limits, |_, _| Ok(())).unwrap_err();
+        assert_eq!(err.code(), "CS-XML-0006");
+        let err = XmlTree::parse(part, "t", &limits).unwrap_err();
+        assert_eq!(err.code(), "CS-XML-0006");
+        assert!(
+            walk(&part[..15], "t", &limits, |_, _| Ok(()))
+                .is_err_and(|e| e.code() == "CS-XML-0004")
+        );
+    }
+
+    /// The attribute bound is per element, and counts what the file wrote.
+    #[test]
+    fn the_walker_refuses_an_element_over_its_attribute_bound() {
+        let limits = OoxmlLimits {
+            max_xml_attributes: 3,
+            ..OoxmlLimits::default()
+        };
+        assert!(walk(b"<r a=\"1\" b=\"1\" c=\"1\"/>", "t", &limits, |_, _| Ok(())).is_ok());
+        let err = walk(
+            b"<r a=\"1\" b=\"1\" c=\"1\" d=\"1\"/>",
+            "t",
+            &limits,
+            |_, _| Ok(()),
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), "CS-XML-0003");
+    }
+
+    /// And the element bound per part.
+    #[test]
+    fn the_walker_refuses_a_part_over_its_element_bound() {
+        let limits = OoxmlLimits {
+            max_xml_elements: 3,
+            ..OoxmlLimits::default()
+        };
+        assert!(walk(b"<r><a/><a/></r>", "t", &limits, |_, _| Ok(())).is_ok());
+        let err = walk(b"<r><a/><a/><a/></r>", "t", &limits, |_, _| Ok(())).unwrap_err();
+        assert_eq!(err.code(), "CS-XML-0001");
     }
 }

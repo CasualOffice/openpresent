@@ -28,5 +28,5 @@ pub use namespaces::{
     relationship_type_to_transitional, to_strict, to_transitional, understood_namespaces,
 };
 pub use part_name::{part_name_key, part_names_equivalent};
-pub use rels::{ExternalKind, Relationship, TargetMode, classify_external};
+pub use rels::{ExternalKind, Relationship, TargetMode, classify_external, resolve_internal};
 pub use xml::{ElementId, XmlTree, walk};

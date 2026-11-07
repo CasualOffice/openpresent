@@ -93,7 +93,7 @@ pub fn read_theme_parts(
     let limits: OoxmlLimits = *pkg.limits();
     let mut out = Vec::with_capacity(names.len());
     for name in names {
-        let bytes = pkg.read_part(&name)?;
+        let bytes = pkg.read_xml_part(&name)?;
         let tree = XmlTree::parse(&bytes, &name, &limits)?;
         out.push((name, tree));
     }

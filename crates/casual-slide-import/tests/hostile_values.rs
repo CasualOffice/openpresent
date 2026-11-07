@@ -294,13 +294,9 @@ fn names_resolve_through_namespaces_not_prefixes() {
     ] {
         assert_eq!(err.code(), "CS-IMP-0003");
     }
-    let tree = XmlTree::parse(b"<p:presentation/>", "p", &xml_limits).unwrap();
-    let err = import_presentation(&tree, "p", &[], &limits, &mut f).unwrap_err();
-    assert_eq!(
-        err.code(),
-        "CS-IMP-0003",
-        "an undeclared prefix is no namespace"
-    );
+    // An undeclared prefix is no namespace: the walker refuses the part (`XML-03`).
+    let err = XmlTree::parse(b"<p:presentation/>", "p", &xml_limits).unwrap_err();
+    assert_eq!(err.code(), "CS-XML-0004");
 }
 
 /// Every attribute value of the rich parts replaced by every hostile value, one at a

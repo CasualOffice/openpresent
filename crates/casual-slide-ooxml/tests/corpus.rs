@@ -14,7 +14,8 @@ fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures")
 }
 
-fn cases() -> Vec<(String, String)> {
+/// Each fixture with the limits its manifest row names, else the defaults.
+fn limited_cases() -> Vec<(String, String, OoxmlLimits)> {
     let manifest = std::fs::read_to_string(fixtures().join("manifest.tsv")).unwrap();
     manifest
         .lines()
@@ -23,9 +24,34 @@ fn cases() -> Vec<(String, String)> {
             let mut cols = line.split('\t');
             let path = cols.next().unwrap().to_owned();
             cols.next();
-            (path, cols.next().unwrap().to_owned())
+            let expect = cols.next().unwrap().to_owned();
+            let limits = cols
+                .next()
+                .map_or_else(OoxmlLimits::default, |l| limits_from(&path, l));
+            (path, expect, limits)
         })
         .collect()
+}
+
+fn limits_from(path: &str, column: &str) -> OoxmlLimits {
+    let mut limits = OoxmlLimits::default();
+    for pair in column.split(',') {
+        let (field, value) = pair
+            .split_once('=')
+            .unwrap_or_else(|| panic!("{path}: {pair}"));
+        let value: usize = value.parse().unwrap_or_else(|_| panic!("{path}: {pair}"));
+        match field {
+            "max_xml_part_bytes" => limits.max_xml_part_bytes = value,
+            "max_xml_elements" => limits.max_xml_elements = value,
+            "max_xml_depth" => limits.max_xml_depth = value,
+            "max_xml_attributes" => limits.max_xml_attributes = value,
+            "max_part_relationships" => limits.max_part_relationships = value,
+            "max_total_relationships" => limits.max_total_relationships = value,
+            "max_content_types" => limits.max_content_types = value,
+            other => panic!("{path}: no limit {other}"),
+        }
+    }
+    limits
 }
 
 fn read(path: &str) -> Vec<u8> {
@@ -34,10 +60,10 @@ fn read(path: &str) -> Vec<u8> {
 
 #[test]
 fn every_fixture_meets_its_expectation() {
-    let cases = cases();
+    let cases = limited_cases();
     assert!(cases.len() > 30, "only {} fixtures", cases.len());
-    for (path, expect) in cases {
-        let result = PresentationPackage::open(read(&path), OoxmlLimits::default());
+    for (path, expect, limits) in cases {
+        let result = PresentationPackage::open(read(&path), limits);
         if let Some(code) = expect.strip_prefix("refuse:") {
             match result {
                 Ok(_) => panic!("{path}: admitted, expected {code}"),
@@ -55,11 +81,32 @@ fn every_fixture_meets_its_expectation() {
 }
 
 fn opening_decks() -> Vec<String> {
-    cases()
+    limited_cases()
         .into_iter()
-        .filter(|(_, e)| e.starts_with("open"))
-        .map(|(p, _)| p)
+        .filter(|(_, e, _)| e.starts_with("open"))
+        .map(|(p, _, _)| p)
         .collect()
+}
+
+/// `SEC-016`: a deck refused under lowered limits is refused because of them, so
+/// the default limits admit it. Otherwise it tests something else.
+#[test]
+fn a_deck_with_lowered_limits_is_refused_only_by_them() {
+    let mut seen = 0;
+    for line in std::fs::read_to_string(fixtures().join("manifest.tsv"))
+        .unwrap()
+        .lines()
+        .skip(1)
+    {
+        let cols: Vec<&str> = line.split('\t').collect();
+        if cols.len() < 4 {
+            continue;
+        }
+        PresentationPackage::open(read(cols[0]), OoxmlLimits::default())
+            .unwrap_or_else(|e| panic!("{}: {e}", cols[0]));
+        seen += 1;
+    }
+    assert!(seen >= 5, "{seen}");
 }
 
 /// Fidelity F1: an unedited save is the file.
@@ -97,18 +144,69 @@ fn an_edit_leaves_every_other_part_intact() {
     }
 }
 
+/// Declared sizes, by entry name.
+fn declared_sizes(bytes: &[u8]) -> std::collections::BTreeMap<String, u64> {
+    let mut package =
+        casual_slide_package::Package::open(bytes.to_vec(), Default::default()).unwrap();
+    package
+        .entries()
+        .unwrap()
+        .into_iter()
+        .map(|e| (e.name, e.uncompressed))
+        .collect()
+}
+
 #[test]
 fn opening_a_deck_does_not_read_its_media() {
     // Only structure is read on open, so a deck full of media opens cheaply and
-    // no decoder is reachable from opening a file.
-    let mut pkg =
-        PresentationPackage::open(read("generated/image.pptx"), OoxmlLimits::default()).unwrap();
-    assert!(pkg.part_names().iter().any(|n| n.ends_with("image1.png")));
+    // no decoder is reachable from opening a file. Proven on the read ledger
+    // (`SEC-017`): opening charges exactly the content types, the main part and
+    // the relationship parts, and nothing else.
+    let bytes = read("generated/image.pptx");
+    let sizes = declared_sizes(&bytes);
+    let structure: u64 = sizes
+        .iter()
+        .filter(|(n, _)| {
+            n.as_str() == "[Content_Types].xml"
+                || n.as_str() == "ppt/presentation.xml"
+                || n.ends_with(".rels")
+        })
+        .map(|(_, s)| s)
+        .sum();
+    let media = sizes["ppt/media/image1.png"];
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    assert_eq!(pkg.consumed(), structure);
     assert!(
         pkg.read_part("PPT/MEDIA/IMAGE1.PNG")
             .unwrap()
             .starts_with(b"\x89PNG")
     );
+    assert_eq!(pkg.consumed(), structure + media);
+}
+
+/// `PKG-04`: a part read for parsing is refused on its declaration, with nothing
+/// decompressed, so the walker never has to refuse what has already been read.
+#[test]
+fn an_oversized_xml_part_is_refused_before_it_is_read() {
+    let big = slide(&"<p:sp/>".repeat(20_000));
+    let deck = with_part("generated/minimal.pptx", "ppt/slides/slide1.xml", &big);
+    let limits = OoxmlLimits {
+        max_xml_part_bytes: 100_000,
+        ..OoxmlLimits::default()
+    };
+    let mut pkg = PresentationPackage::open(deck, limits).unwrap();
+    let before = pkg.consumed();
+    let err = pkg.read_xml_part("ppt/slides/slide1.xml").unwrap_err();
+    assert_eq!(err.code(), "CS-PKG-0009");
+    assert_eq!(pkg.consumed(), before);
+    let err = pkg.read_resolved("ppt/slides/slide1.xml").unwrap_err();
+    assert_eq!(err.code(), "CS-PKG-0009");
+    assert_eq!(pkg.consumed(), before);
+    assert!(pkg.read_xml_part("ppt/slides/slideLayout1.xml").is_err());
+    let layout = pkg
+        .read_xml_part("ppt/slideLayouts/slideLayout1.xml")
+        .unwrap();
+    assert_eq!(pkg.consumed(), before + layout.len() as u64);
 }
 
 #[test]
@@ -248,7 +346,16 @@ fn a_must_understand_we_do_not_know_refuses_only_where_it_is_reached() {
     let mut pkg = PresentationPackage::open(deck, OoxmlLimits::default()).unwrap();
     let err = pkg.read_resolved("ppt/slides/slide1.xml").unwrap_err();
     assert_eq!(err.code(), "CS-MCE-0001");
-    assert!(err.to_string().contains("powerpoint/2010/main"));
+    // The namespace is the document's text, so the message does not carry it
+    // (`SEC-015`); resolving the part names it.
+    assert!(!err.to_string().contains("powerpoint/2010/main"), "{err}");
+    let bytes = pkg.read_part("ppt/slides/slide1.xml").unwrap();
+    let tree = XmlTree::parse(&bytes, "ppt/slides/slide1.xml", &OoxmlLimits::default()).unwrap();
+    assert!(
+        resolve_compatibility(&tree)
+            .must_understand
+            .contains("http://schemas.microsoft.com/office/powerpoint/2010/main")
+    );
 
     // In a branch not taken, it is retained and it does not matter.
     let hidden = slide(
@@ -679,9 +786,22 @@ fn the_engine_and_f4_resolve_markup_compatibility_alike() {
     assert!(inputs.len() > 50);
     let part = work.join("part.xml");
     for (label, bytes) in inputs {
-        let tree = XmlTree::parse(&bytes, "t", &limits).unwrap();
         std::fs::write(&part, &bytes).unwrap();
         let (theirs, _) = run_f4(&["--mce-report", part.to_str().unwrap()]);
+        // An undeclared element prefix is not namespace-well-formed, so the walker
+        // refuses the part (`XML-03`). F4 reads without namespaces and reports it;
+        // the two agree that the part is broken.
+        let tree = match XmlTree::parse(&bytes, "t", &limits) {
+            Ok(tree) => tree,
+            Err(err) => {
+                assert_eq!(err.code(), "CS-XML-0004", "{label}");
+                assert!(
+                    theirs.contains("undeclared-element-prefix"),
+                    "{label}: {theirs}"
+                );
+                continue;
+            }
+        };
         assert_eq!(
             summary(&resolve_compatibility(&tree)),
             theirs.trim_end(),
