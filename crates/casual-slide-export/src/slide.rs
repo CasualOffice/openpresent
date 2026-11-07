@@ -320,6 +320,9 @@ impl Patch<'_, '_> {
                 if b.background != a.background {
                     return Err(self.unsupported("a background"));
                 }
+                if !crate::retained::controls_unchanged(&b.controls, &a.controls) {
+                    return Err(self.unsupported("a retained control"));
+                }
                 match (&b.shape_tree, &a.shape_tree) {
                     (Some(bt), Some(at)) => self.node(bt, at)?,
                     (None, None) => {}
@@ -383,6 +386,7 @@ impl Patch<'_, '_> {
             || b.use_bg_fill != a.use_bg_fill
             || b.properties != a.properties
             || b.graphic_uri != a.graphic_uri
+            || !crate::retained::object_unchanged(b.retained.as_deref(), a.retained.as_deref())
             || b.rel_id != a.rel_id
             || b.text_body != a.text_body
             || b.table != a.table
@@ -407,6 +411,9 @@ impl Patch<'_, '_> {
     }
 
     fn own(&mut self, el: &Elem, b: &ShapeNode, a: &ShapeNode) -> Result<()> {
+        if !crate::retained::object_unchanged(b.retained.as_deref(), a.retained.as_deref()) {
+            return Err(self.unsupported("a retained object"));
+        }
         if b.graphic_uri != a.graphic_uri {
             return Err(self.unsupported("a graphic frame's content"));
         }

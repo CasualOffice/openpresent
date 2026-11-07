@@ -9,6 +9,7 @@ pub mod geometry;
 pub mod line;
 pub mod presentation;
 pub mod properties;
+pub mod retained;
 pub mod shape;
 pub mod slide;
 pub mod table;

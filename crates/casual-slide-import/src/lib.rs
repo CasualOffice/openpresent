@@ -9,6 +9,7 @@ pub mod geometry;
 pub mod line;
 pub mod presentation;
 pub mod properties;
+pub mod retained;
 #[rustfmt::skip]
 mod schema_names;
 pub mod shape;

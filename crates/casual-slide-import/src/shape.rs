@@ -37,6 +37,9 @@ pub const A16: &[&str] = &["http://schemas.microsoft.com/office/drawing/2014/mai
 /// `adec:`, where `decorative` lives.
 pub const ADEC: &[&str] = &["http://schemas.microsoft.com/office/drawing/2017/decorative"];
 /// Markup compatibility.
+use crate::retained::{model_beside_picture, read_frame_content};
+use casual_slide_model::retained::RetainedObject;
+
 const MC: &[&str] = &[MARKUP_COMPATIBILITY];
 
 /// Where a node came from in the tree, for an export that patches it in place.
@@ -205,7 +208,9 @@ impl ShapeReader<'_, '_, '_> {
                     n.properties.picture = fill.map(Box::new);
                 }
                 "xfrm" => n.transform = Some(self.transform(&child, false)?),
-                "graphic" => n.graphic_uri = self.graphic(&child, &mut n.table)?,
+                "graphic" => {
+                    n.graphic_uri = self.graphic(&child, &mut n.table, &mut n.retained)?;
+                }
                 "txBody" => {
                     let mut text = TextReader {
                         r: &mut *self.r,
@@ -266,7 +271,11 @@ impl ShapeReader<'_, '_, '_> {
         for child in self.r.children(&branch)? {
             match node_kind(&child) {
                 Some(kind) => {
-                    let c = self.node(&child, kind, depth + 1, true)?;
+                    let mut c = self.node(&child, kind, depth + 1, true)?;
+                    if kind == NodeKind::Picture {
+                        c.retained =
+                            model_beside_picture(self.r, self.rels, el, &child)?.map(Box::new);
+                    }
                     group.children.push(c);
                 }
                 None => self.r.retained(&child),
@@ -554,6 +563,7 @@ impl ShapeReader<'_, '_, '_> {
         &mut self,
         el: &Elem,
         table: &mut Option<Box<Table>>,
+        retained: &mut Option<Box<RetainedObject>>,
     ) -> Result<Option<String>, SlideError> {
         self.r.finish(el);
         let mut uri = None;
@@ -569,6 +579,9 @@ impl ShapeReader<'_, '_, '_> {
             for inner in self.r.children(&data)? {
                 if !inner.is(ns::DML, "tbl") {
                     self.r.retained(&inner);
+                    if retained.is_none() {
+                        *retained = read_frame_content(self.r, self.rels, &inner)?.map(Box::new);
+                    }
                 } else if table.is_some() {
                     self.r.note(K::DuplicateElement, &inner, None);
                 } else {
