@@ -99,7 +99,7 @@ Industry-standard practice applies everywhere, with these specifics.
 - **Work lands directly on `main`, with no pull requests for now** (owner instruction 17). Parallel workers still use their own worktree branches; the main session verifies and merges them to `main`, then pushes. Never force-push `main`. Never skip hooks. Enable them with `git config core.hooksPath .githooks`.
 - Never commit build output, confidential decks, or unreviewed third-party files.
 
-**Until Phase 1 is complete, no CI on GitHub and no local CI (owner instruction 37)**: workflows are disabled, and the gates run once at the end.
+**No local CI scans; CI runs on GitHub (owner instruction 37).** Sessions run only the named tests they need.
 
 **One broad gate (owner instruction 32).** CI on `main` runs the list below. A merge needs only to compile, then push, and a red CI is fixed first. Sessions do not run this list.
 

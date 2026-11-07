@@ -45,7 +45,7 @@ by saying so.
 | 34 | 2026-11-08 | A flipped byte in a part that still parses: keep the bytes and tell the user, rather than replace the part with a stand-in, even though that file stays invalid until the part is repaired | [29](29-RECOVERY.md), [06](06-ROADMAP-AND-DELIVERY.md) |
 | 35 | 2026-11-08 | Withdrawn by the owner: said about another repo. Applies to nothing here, and `DEC-03` stands | `DEC-03` |
 | 36 | 2026-11-08 | Drop Keynote decks from the Phase 1 corpus requirement: Apple-native output is not a priority | [06](06-ROADMAP-AND-DELIVERY.md), `CORP-01` |
-| 37 | 2026-11-08 | No CI on GitHub and no local CI until Phase 1 is complete. GitHub workflows are disabled until then; the gates run once, at the end | [CLAUDE.md](../CLAUDE.md), [15](15-CI-AND-RELEASE-GATES.md) |
+| 37 | 2026-11-08 | Corrected by the owner the same day: no local CI scans; CI runs on GitHub. Workflows stay enabled, and sessions run only the named tests they need | [CLAUDE.md](../CLAUDE.md), [15](15-CI-AND-RELEASE-GATES.md) |
 
 ## Boundaries set by the environment
 
