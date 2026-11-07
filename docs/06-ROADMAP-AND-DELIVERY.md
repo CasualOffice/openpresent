@@ -18,7 +18,7 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
 | 0 Foundation | **Open** | One criterion left before sign-off: all CI jobs green on `main`, including the new ones |
 | 1 Model, import, export | **Open under waiver W-1** | See the Phase 1 plan below |
-| 2 to 10 | Not opened | `SKEL-01` previews 2A and 2B during Phase 1 |
+| 2 to 10 | Not opened | **No rendering, painting or font work until Phase 1 closes** (owner instruction 20) |
 
 ### Waivers
 
@@ -90,7 +90,7 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 | Wave | Runs at once, because each owns separate files | Needs |
 | --- | --- | --- |
 | **0: close-out** | `STAT-01`, 1A and 1C leftovers, merge 1D | — |
-| **1: the shape of a slide** | 1E shape properties · 1F text · 1N core · `SKEL-01` | 1D |
+| **1: the shape of a slide** | 1E shape properties · 1F text · 1N core | 1D |
 | **2: objects** | 1G tables · 1H pictures and media · 1I timing and transitions · 1M comments, sections, zoom | 1E, 1F |
 | **3: the big parts** | 1J charts · 1K SmartArt, equations, ink | 1E, 1F |
 | **4: retained, then finish** | 1L OLE, VML, 3D · `T1C-02` · 1N close | 1H, all |
@@ -102,10 +102,9 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 
 **What can change this plan:**
 - Real decks may refuse under the stricter XML reader, or exercise constructs not yet planned. That is why `F-007` comes first.
-- `SKEL-01` may show that a tier's semantics are wrong, which reopens it.
 - Throughput from 1A to 1D sizes the rest. Dates follow once 1D has merged, not before.
 
-**Walking skeleton (`SKEL-01`).** As soon as 1D closes, 5 real decks go through 2A, 2B and basic text, so that wrong semantics show up before the remaining tiers build on them. It adds to import-export-first; it does not reorder it.
+**The foundation comes first (owner instruction 20).** Phase 1 is import, export and modelling. Nothing is drawn, and no font work happens, until it closes. `SKEL-01` waits for Phase 2.
 
 **A tier closes when:**
 1. Every in-scope row is `y` or `r` for model, import and export, or has a named reason, and the audit tool agrees.

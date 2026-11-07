@@ -1,4 +1,4 @@
-//! Read a shape tree from an [`XmlTree`]: `sp`, `grpSp`, `cxnSp`, `pic`,
+//! Read a shape tree from an `XmlTree`: `sp`, `grpSp`, `cxnSp`, `pic`,
 //! `graphicFrame` and `contentPart`, each a node with an [`ObjectId`].
 //!
 //! Each node's identity, transform, locks, non-visual properties and hyperlinks

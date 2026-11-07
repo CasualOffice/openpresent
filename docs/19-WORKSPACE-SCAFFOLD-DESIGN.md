@@ -32,7 +32,7 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
 | `-model` | Presentation, themes, masters, layouts, slides, shape tree, text bodies, tables, retained-source references, snapshot I/O | XML, geometry, layout | New |
 | `-style` | Resolving effective properties through the inheritance chain and theme | Text layout, mutation | New |
 | `-geometry` | Preset and custom geometry to paths; adjust-value formulas; connection sites | Fills, text | New; generated tables, `SPK-03` |
-| `-text` | Bundled faces, advances, outlines, shaping, bidi, line-break data | Slide concepts | Fork of calc's (2.8k lines, no internal deps), plus shaping |
+| `-text` | Fonts, advances, outlines, shaping, bidi, line-break data | **Not in the repo yet.** Arrives with Tier 2D, copied from OpenCalc then (owner instruction 20) |
 | `-chart` | Chart part model and plotting to display items | Workbook logic | Port from calc's `-layout` chart code |
 | `-layout` | Paragraph and text-body layout, autofit, caret and hit-test geometry, scene to display list | Painting, I/O | New; display-list shape from calc |
 | `-anim` | Timing tree to timeline; sampling at time *t* | Painting, wall clock | New |
