@@ -284,7 +284,9 @@ def two_masters():
 
 def shared_theme():
     """One theme under the master and under the notes master, as a deck can arrive."""
-    entries = noted()
+    entries = [(n, d) for n, d in noted() if n != "ppt/theme/theme2.xml"]
+    entries = [(n, d.replace(f'<Override PartName="/ppt/theme/theme2.xml" ContentType="{THEME_TYPE}"/>', "")
+                if n == "[Content_Types].xml" else d) for n, d in entries]
     return replace(entries, "ppt/notesMasters/_rels/notesMaster1.xml.rels", rels(("theme", "../theme/theme1.xml")))
 
 

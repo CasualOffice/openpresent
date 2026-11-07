@@ -108,8 +108,9 @@ pub(crate) struct Changes {
     pub section_list_requested: bool,
     /// Sections an operation removed, by id.
     pub removed_sections: BTreeSet<String>,
-    /// Slide ids moved between sections by an operation that names the section.
-    pub placed_slides: BTreeSet<String>,
+    /// The section each new slide was placed in, by slide id. An operation that moves it
+    /// updates this, so what preflight compares is what operations did (`INV-SL-06`).
+    pub section_of_new: BTreeMap<String, String>,
     /// Slide ids given up in this save, not reused.
     pub retired_slide_ids: BTreeSet<u64>,
     /// Master or layout ids given up in this save, not reused.
@@ -685,17 +686,28 @@ impl<'p> Draft<'p> {
     /// to: a media part goes only with its last incoming relationship, from any source.
     pub(crate) fn sweep(&mut self) -> Result<(), WriterError> {
         let mut roots = vec![String::new()];
+        let added = self.log.added.clone();
         for (k, name) in &self.names {
-            if !self.input_reach.contains(k) && !is_rels_part(name) && k != &key(CONTENT_TYPES_PART)
+            if !self.input_reach.contains(k)
+                && !added.contains(name)
+                && !is_rels_part(name)
+                && k != &key(CONTENT_TYPES_PART)
             {
                 roots.push(name.clone());
             }
         }
         let kept = self.reach_from(&roots)?;
+        // A part this plan added and then cut off goes the same way (fuzz: add a layout,
+        // remove it). Its `.rels` goes with it, and is not judged on its own.
         let gone: Vec<String> = self
             .names
             .iter()
-            .filter(|(k, _)| self.input_reach.contains(*k) && !kept.contains(*k))
+            .filter(|(k, name)| {
+                (self.input_reach.contains(*k) || added.contains(*name))
+                    && !kept.contains(*k)
+                    && !is_rels_part(name)
+                    && *k != &key(CONTENT_TYPES_PART)
+            })
             .map(|(_, name)| name.clone())
             .collect();
         for name in gone {

@@ -1950,10 +1950,10 @@ fn editing_a_shared_theme_gives_the_master_its_own() {
     let after = parts_of(&outcome.bytes);
     assert_eq!(after["ppt/theme/theme1.xml"], bytes, "the other referrer's");
     let master_rels = text(&after, "ppt/slideMasters/_rels/slideMaster1.xml.rels");
-    assert!(master_rels.contains("theme3.xml"), "{master_rels}");
-    assert!(text(&after, "ppt/theme/theme3.xml").contains("name=\"Mine\""));
+    assert!(master_rels.contains("theme2.xml"), "{master_rels}");
+    assert!(text(&after, "ppt/theme/theme2.xml").contains("name=\"Mine\""));
     assert!(
-        text(&after, MAIN_RELS).contains("theme/theme3.xml"),
+        text(&after, MAIN_RELS).contains("theme/theme2.xml"),
         "the presentation follows the first master"
     );
 

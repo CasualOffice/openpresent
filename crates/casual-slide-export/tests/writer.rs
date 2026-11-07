@@ -102,8 +102,8 @@ fn one_save_combines_properties_theme_and_slides() {
         &ImportLimits::default(),
     )
     .unwrap();
-    let first = slides.parts.structure.slides[0];
-    let mut edited = slides.parts.get(first).unwrap().clone();
+    let second = slides.parts.structure.slides[1];
+    let mut edited = slides.parts.get(second).unwrap().clone();
     edited.show_master_shapes = Some(false);
     let wanted_parts = [&edited];
     let theme = renamed_theme(&mut pkg, "Combined theme");
@@ -134,6 +134,10 @@ fn one_save_combines_properties_theme_and_slides() {
     );
     assert!(text("docProps/core.xml").contains("Combined"), "properties");
     assert!(text(THEME).contains("name=\"Combined theme\""), "the theme");
+    assert!(
+        text("ppt/slides/slide2.xml").contains("showMasterSp=\"0\""),
+        "the slide's patch"
+    );
     assert!(!after.contains_key("ppt/slides/slide1.xml"), "the delete");
     assert!(after.contains_key("ppt/slides/slide4.xml"), "the add");
     assert!(after.contains_key("ppt/slides/slide5.xml"), "the duplicate");
@@ -174,6 +178,65 @@ fn a_plan_that_fails_part_way_writes_nothing_and_a_second_try_works() {
         .save(&mut pkg)
         .unwrap();
     assert!(parts(&good.bytes).contains_key("ppt/slides/slide4.xml"));
+}
+
+/// Found by the fuzz target: a new slide's neighbour going later in the plan.
+#[test]
+fn a_new_slide_stays_in_its_section_when_the_slide_before_it_goes() {
+    let source = read("generated/rr-sections.pptx");
+    let mut pkg = open(&source);
+    let outcome = SavePlan::new()
+        .op(Op::DuplicateSlide {
+            slide: SlideRef::Index(2),
+        })
+        .op(Op::DeleteSlide {
+            slide: SlideRef::Index(2),
+        })
+        .save(&mut pkg)
+        .unwrap();
+    assert_eq!(outcome.new_slides, ["ppt/slides/slide4.xml"]);
+}
+
+/// Found by the fuzz target: a part this plan added, and this plan then took away.
+#[test]
+fn a_part_added_and_removed_in_one_plan_is_not_written() {
+    let source = read(THREE);
+    let mut pkg = open(&source);
+    let outcome = SavePlan::new()
+        .op(Op::AddLayout {
+            master: "ppt/slideMasters/slideMaster1.xml".to_owned(),
+            copy_of: "ppt/slideLayouts/slideLayout1.xml".to_owned(),
+        })
+        .op(Op::RemoveLayout {
+            layout: "ppt/slideLayouts/slideLayout2.xml".to_owned(),
+        })
+        .op(Op::DuplicateSlide {
+            slide: SlideRef::Index(0),
+        })
+        .op(Op::DeleteSlide {
+            slide: SlideRef::Index(1),
+        })
+        .op(Op::AddNotes {
+            slide: SlideRef::Index(0),
+            text: "Gone".to_owned(),
+        })
+        .op(Op::RemoveNotes {
+            slide: SlideRef::Index(0),
+        })
+        .save(&mut pkg)
+        .unwrap();
+    let after = parts(&outcome.bytes);
+    assert!(!after.contains_key("ppt/slideLayouts/slideLayout2.xml"));
+    assert!(!after.contains_key("ppt/slides/slide4.xml"));
+    assert!(!after.contains_key("ppt/slides/_rels/slide4.xml.rels"));
+    assert!(!after.contains_key("ppt/notesSlides/notesSlide1.xml"));
+    assert!(
+        after.contains_key("ppt/notesMasters/notesMaster1.xml"),
+        "the master stays once made"
+    );
+    let types = String::from_utf8(after["[Content_Types].xml"].clone()).unwrap();
+    assert!(!types.contains("slide4.xml"), "{types}");
+    f4(&outcome.bytes);
 }
 
 #[test]

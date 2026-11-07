@@ -394,6 +394,7 @@ impl Draft<'_> {
         let id = self.insert_slide_entry(&rel_id, position)?;
         self.place_in_section(&id, previous.as_deref())?;
         self.log.new_slide_ids.insert(id);
+        self.note_new_slide_sections()?;
         self.new_slides.push(part.to_owned());
         Ok(())
     }
@@ -557,7 +558,8 @@ impl Draft<'_> {
         if let Some(list) = pml_child(tree, tree.root(), "sldIdLst") {
             tree.replace_children(list, &current, &new);
         }
-        self.place_in_section(&entry.raw_id, previous.as_deref())
+        self.place_in_section(&entry.raw_id, previous.as_deref())?;
+        self.note_new_slide_sections()
     }
 
     /// `INV-SP-03` (Inferred): bytes matching a media part reuse that part. Otherwise a
@@ -1106,7 +1108,8 @@ impl Draft<'_> {
                     id: id.to_owned(),
                     slides: moved,
                 });
-                self.write_sections(&sections)
+                self.write_sections(&sections)?;
+                self.note_new_slide_sections()
             }
         }
     }
@@ -1130,7 +1133,7 @@ impl Draft<'_> {
         self.write_sections(&sections)?;
         self.remove_section_element(id)?;
         self.log.removed_sections.insert(id.to_owned());
-        Ok(())
+        self.note_new_slide_sections()
     }
 
     fn move_slide_to_section(
@@ -1155,8 +1158,8 @@ impl Draft<'_> {
         }
         row.slides.insert(index, entry.raw_id.clone());
         self.write_sections(&sections)?;
-        self.log.placed_slides.insert(entry.raw_id);
-        self.order_slides_by_sections()
+        self.order_slides_by_sections()?;
+        self.note_new_slide_sections()
     }
 
     fn add_custom_show(&mut self, name: &str, slides: &[SlideRef]) -> Result<(), WriterError> {

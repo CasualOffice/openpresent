@@ -403,6 +403,19 @@ impl Draft<'_> {
         self.write_sections(&sections)
     }
 
+    /// Record where each new slide now sits, after an operation that placed it.
+    pub(crate) fn note_new_slide_sections(&mut self) -> Result<(), WriterError> {
+        let sections = self.sections()?.unwrap_or_default();
+        let mut placed = std::collections::BTreeMap::new();
+        for id in &self.log.new_slide_ids {
+            if let Some(section) = sections.iter().find(|s| s.slides.contains(id)) {
+                placed.insert(id.clone(), section.id.clone());
+            }
+        }
+        self.log.section_of_new = placed;
+        Ok(())
+    }
+
     /// Take a slide out of every section (`INV-SL-04`, `INV-SP-09`).
     pub(crate) fn drop_from_sections(&mut self, slide: &str) -> Result<(), WriterError> {
         let Some(mut sections) = self.sections()? else {

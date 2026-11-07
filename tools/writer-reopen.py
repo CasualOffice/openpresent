@@ -6,23 +6,19 @@
 
     python3 tools/writer-reopen.py f4 <dir>     # each result against its input
     python3 tools/writer-reopen.py sdk <dir>    # F-006, the same way
-    python3 tools/writer-reopen.py lo <dir>     # LibreOffice, in tools/fidelity's sandbox
     python3 tools/writer-reopen.py sdk-rr       # fixtures/rr/good, each against its base
 
 A part that failed in the input may fail in a result, under its own name or its clone's;
-nothing else may. LibreOffice is F7, a second opinion and never a PowerPoint result, and
-tools/fidelity refuses a deck with OLE or macros before LibreOffice exists: a refused deck
-is counted as refused, not as opened. fixtures/hostile is refused here outright.
+nothing else may. fixtures/hostile is refused here outright. This tool does not run
+LibreOffice: the owner stopped that while it was crashing on their machine.
 
 Exit: 0 if nothing new failed, 1 if something did, 2 if it could not run.
 """
 import json
 import os
 import pathlib
-import shutil
 import subprocess
 import sys
-import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 FIXTURES = REPO / "fixtures"
@@ -152,64 +148,13 @@ def run_sdk_rr(_root=None):
     return 1 if new else 0
 
 
-def run_lo(root):
-    sys.path.insert(0, str(REPO / "tools/fidelity"))
-    import render  # noqa: E402  the sandbox lives there
-
-    rows = list(results(root))
-    opened = refused = failed = same_as_input = 0
-    problems = []
-    baseline = {}
-
-    def input_opens(deck):
-        """A deck LibreOffice cannot take as it arrived says nothing about the writer."""
-        if deck.name not in baseline:
-            with tempfile.TemporaryDirectory() as out:
-                try:
-                    render.render(str(input_of(deck)), out)
-                    baseline[deck.name] = True
-                except Exception:  # every failure means the same thing here
-                    baseline[deck.name] = False
-        return baseline[deck.name]
-
-    for variant, deck in rows:
-        with tempfile.TemporaryDirectory() as out:
-            try:
-                render.render(str(deck), out)
-                opened += 1
-            except render.Refused as why:
-                # The sandbox's preflight. Its reason names a kind of part, never content.
-                text = str(why)
-                if "OLE" in text or "macro" in text or "ActiveX" in text or "leaves the package" in text:
-                    refused += 1
-                    problems.append(f"refused {variant}/{deck.name}: {text[:160]}")
-                elif not input_opens(deck) or "pages, limit" in text:
-                    same_as_input += 1
-                    problems.append(f"as its input, or the tool's page limit: {variant}/{deck.name}: {text[:80]}")
-                else:
-                    failed += 1
-                    problems.append(f"FAILED {variant}/{deck.name}: {text[:300]}")
-            except Exception as err:  # the tool's own failures are all results here
-                if input_opens(deck):
-                    failed += 1
-                    problems.append(f"FAILED {variant}/{deck.name}: {type(err).__name__}: {str(err)[:300]}")
-                else:
-                    same_as_input += 1
-                    problems.append(f"as its input: {variant}/{deck.name}: {type(err).__name__}")
-    print(f"LibreOffice (F7, a second opinion): {opened} opened, {refused} refused by the sandbox's "
-          f"preflight, {same_as_input} failed as their input did or at the tool's page limit, {failed} failed, of {len(rows)}")
-    for line in problems:
-        print(" ", line)
-    return 1 if failed else 0
-
-
 def main(argv):
     if argv == ["sdk-rr"]:
         return run_sdk_rr()
-    if len(argv) != 2 or argv[0] not in ("f4", "sdk", "lo"):
+    if len(argv) != 2 or argv[0] not in ("f4", "sdk"):
         print(__doc__)
         return 2
-    return {"f4": run_f4, "sdk": run_sdk, "lo": run_lo}[argv[0]](argv[1])
+    return {"f4": run_f4, "sdk": run_sdk}[argv[0]](argv[1])
 
 
 if __name__ == "__main__":

@@ -492,6 +492,8 @@ Tier 1N's core, `T1N-01` to `T1N-04`. **Nothing here was observed in PowerPoint;
 - **`INV-RI-04`, `INV-ID-06` and `INV-ID-07` read bodies only of parts the save wrote**, or a save would parse every slide. So a seeded deck with one of these breaks is reported when that part is next written, not on any save.
 - **An `RR-*` deck comes from the writer, not `generate.py`.** Python builds the inputs (`fixtures/tools/generate_rr.py`), and `tests/writer_rr.rs` writes `fixtures/rr/good` and `fixtures/rr/seeded`, with `RR_WRITE=1`. `fixtures/rr/manifest.tsv` says what became of each seeded deck: a name `Package::rewrite` refuses cannot be written, and two entries naming one part cannot be opened, which are second lines of defence.
 
+**Not run: F7.** The owner stopped LibreOffice while it was crashing on their machine, so results of this writer are validated with F4 and `F-006` only until told otherwise. A partial earlier run is no evidence of a pass.
+
 **Not built, and not in these rows:** a zoom naming a deleted slide is refused (`CS-SAV-0009`) rather than replaced by its fallback, which is `INV-FB-05`. Macro actions are not removed on dropping VBA, `INV-SA-04`. `app.xml` counts are stale after an add or delete until `T1N-05` (`INV-AP-01`), and so are thumbnails (`INV-TH-02`). The format grid is `T1N-06`; `Op::Retype` is the one edit it rests on.
 
 | Invariant | Status | Fixture | Evidence mark, for `PV-01` |

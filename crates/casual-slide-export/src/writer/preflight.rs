@@ -1586,29 +1586,17 @@ fn section_rules(draft: &Draft<'_>, before: &View, after: &View, found: &mut Fou
             }
         }
     }
-    // INV-SL-06 (Inferred): a new slide joins the section of the slide before it.
+    // INV-SL-06 (Inferred): a new slide joins the section of the slide before it. Where
+    // that is was settled when it was placed; later operations may change who is before it.
     if let Some(now) = now {
-        let order = &after.presentation.slides;
-        for (at, entry) in order.iter().enumerate() {
-            if !log.new_slide_ids.contains(&entry.raw) || log.placed_slides.contains(&entry.raw) {
-                continue;
-            }
-            let section_of = |id: &String| now.iter().position(|s| s.slides.contains(id));
-            let mine = section_of(&entry.raw);
-            let previous = at.checked_sub(1).and_then(|i| order.get(i));
-            let wanted = match previous {
-                Some(p) => section_of(&p.raw).or(Some(0)),
-                None => Some(0),
-            };
-            if mine.is_some() && mine != wanted {
+        for (slide, wanted) in &log.section_of_new {
+            let holder = now.iter().find(|s| s.slides.contains(slide));
+            if holder.is_some_and(|s| &s.id != wanted) {
                 add(
                     found,
                     "INV-SL-06",
                     main,
-                    format!(
-                        "slide {} is not with the one before it",
-                        id_detail(&entry.raw)
-                    ),
+                    format!("slide {} is not with the one before it", id_detail(slide)),
                 );
             }
         }
