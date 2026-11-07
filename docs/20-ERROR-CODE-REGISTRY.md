@@ -13,7 +13,7 @@ Stable, never reused. **The contract:** messages and findings carry part names, 
 | CS-PKG-0007 | Duplicate part | | CS-OPC-0001 | Required part missing |
 | CS-PKG-0008 | Rewrite failed | | CS-OPC-0002 | Too many relationships |
 | CS-PKG-0009 | Part over reader's cap | | CS-OPC-0003 | Too many content types |
-| | | | CS-OPC-0004 | Not a presentation |
+| CS-PKG-0010 | Part read stopped by the host's time budget (`SEC-P10`) | | CS-OPC-0004 | Not a presentation |
 | | | | CS-OPC-0005 | Compound file, which refuses even without `strict` |
 | | | | CS-MCE-0001 | A must-understand namespace is not understood |
 

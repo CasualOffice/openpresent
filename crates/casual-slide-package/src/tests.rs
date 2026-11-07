@@ -542,3 +542,60 @@ fn a_rewrite_writes_a_fixed_timestamp() {
         );
     }
 }
+
+/// Set the sizes in the first local header only, leaving the central directory as written.
+fn lie_in_local_header(
+    mut zip: Vec<u8>,
+    compressed: Option<u32>,
+    uncompressed: Option<u32>,
+) -> Vec<u8> {
+    let at = zip.windows(4).position(|w| w == b"PK\x03\x04").unwrap();
+    if let Some(c) = compressed {
+        zip[at + 18..at + 22].copy_from_slice(&c.to_le_bytes());
+    }
+    if let Some(u) = uncompressed {
+        zip[at + 22..at + 26].copy_from_slice(&u.to_le_bytes());
+    }
+    zip
+}
+
+/// A local header whose sizes disagree with the central directory: a reader trusting one
+/// stops at a different byte from a reader trusting the other. SEC-P11.
+#[test]
+fn a_local_header_whose_sizes_disagree_with_the_directory_is_refused() {
+    let zip = make_zip(&[("[Content_Types].xml", b"<Types/>"), ("a.xml", b"<a/>")]);
+    assert!(!is_refused(zip.clone()), "the honest package opens");
+    let err = Package::open(
+        lie_in_local_header(zip.clone(), Some(1), None),
+        PackageLimits::default(),
+    )
+    .unwrap_err();
+    assert_eq!(err.code(), "CS-PKG-0005");
+    assert!(is_refused(lie_in_local_header(zip, None, Some(7))));
+}
+
+/// The host's time budget stops a slow decompression inside every size cap, and a budget
+/// that never runs out changes nothing. The predicate stands in for a clock. SEC-P10.
+#[test]
+fn the_hosts_time_budget_stops_a_part_read() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let payload: Vec<u8> = (0..1u32 << 20).map(|i| (i % 251) as u8).collect();
+    let zip = make_zip(&[("[Content_Types].xml", b"<Types/>"), ("big.bin", &payload)]);
+
+    let mut pkg = Package::open(zip.clone(), PackageLimits::default()).unwrap();
+    pkg.set_cancel(Some(Arc::new(|| false)));
+    assert_eq!(pkg.read_part("big.bin").unwrap(), payload);
+
+    let asked = Arc::new(AtomicUsize::new(0));
+    let counter = Arc::clone(&asked);
+    let mut pkg = Package::open(zip, PackageLimits::default()).unwrap();
+    pkg.set_cancel(Some(Arc::new(move || {
+        counter.fetch_add(1, Ordering::Relaxed) >= 2
+    })));
+    let err = pkg.read_part("big.bin").map(|b| b.len()).unwrap_err();
+    assert!(matches!(err, PackageError::Cancelled { .. }), "got {err:?}");
+    assert_eq!(err.code(), "CS-PKG-0010");
+    assert!(asked.load(Ordering::Relaxed) >= 3);
+}
