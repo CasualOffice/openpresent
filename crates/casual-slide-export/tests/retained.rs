@@ -55,6 +55,17 @@ fn fixture(path: &str) -> Vec<u8> {
     .unwrap()
 }
 
+/// The hostile deck's object, its stored bytes changed after its checksum was written.
+fn damaged(path: &str) -> Vec<u8> {
+    let mut bytes = fixture(path);
+    let at = bytes
+        .windows(4)
+        .position(|w| w == [0xd0, 0xcf, 0x11, 0xe0])
+        .unwrap();
+    bytes[at] ^= 0xFF;
+    bytes
+}
+
 fn open(bytes: Vec<u8>) -> PresentationPackage {
     PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap()
 }
@@ -107,7 +118,7 @@ fn import(tree: &XmlTree, rels: &[Relationship]) -> SlidePart {
     .0
 }
 
-fn patch(tree: &mut XmlTree, rels: &[Relationship], after: &SlidePart) -> bool {
+fn patch(tree: &mut XmlTree, rels: &[Relationship], after: &SlidePart) -> Result<usize, String> {
     patch_slide_part(
         tree,
         SLIDE,
@@ -118,7 +129,7 @@ fn patch(tree: &mut XmlTree, rels: &[Relationship], after: &SlidePart) -> bool {
         &ImportLimits::default(),
         &OoxmlLimits::default(),
     )
-    .is_ok()
+    .map_err(|e| e.to_string())
 }
 
 /// Rename the title, which is nothing to do with any retained object, and save.
@@ -130,7 +141,7 @@ fn edit_title(deck: &[u8]) -> Vec<u8> {
     let root = after.common.as_mut().unwrap().shape_tree.as_mut().unwrap();
     let title = &mut root.children[0];
     title.non_visual.as_mut().unwrap().name = Some("Renamed".to_owned());
-    assert!(patch(&mut tree, &rels, &after));
+    patch(&mut tree, &rels, &after).unwrap();
     let mut edits = PartEdits::default();
     edits.replace(SLIDE, tree.to_bytes());
     package.save_with(&edits).unwrap()
@@ -208,9 +219,21 @@ fn changing_an_object_or_a_control_through_the_model_is_refused() {
     let mut after = before.clone();
     let root = after.common.as_mut().unwrap().shape_tree.as_mut().unwrap();
     root.children[2].retained.as_mut().unwrap().prog_id = Some("Other".to_owned());
-    assert!(!patch(&mut tree, &rels, &after), "an object");
+    let refused = patch(&mut tree, &rels, &after).unwrap_err();
+    assert!(refused.contains("a retained object"), "{refused}");
 
     let mut after = before.clone();
     after.common.as_mut().unwrap().controls.pop();
-    assert!(!patch(&mut tree, &rels, &after), "a control");
+    let refused = patch(&mut tree, &rels, &after).unwrap_err();
+    assert!(refused.contains("a retained control"), "{refused}");
+}
+
+#[test]
+fn a_damaged_object_comes_through_an_edit_as_it_arrived() {
+    let bytes = damaged("hostile/retained-objects-damaged.bin");
+    assert_eq!(open(bytes.clone()).save_unedited(), bytes);
+    let (a, b) = (stored(&bytes), stored(&edit_title(&bytes)));
+    let name = "ppt/embeddings/oleObject1.bin";
+    assert!(a.contains_key(name));
+    assert_eq!(a.get(name), b.get(name));
 }
