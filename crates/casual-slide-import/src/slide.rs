@@ -1100,6 +1100,20 @@ pub struct ImportedSlides {
     pub charts: crate::chart::DeckCharts,
 }
 
+/// Read every part `structure` lists, in its order, each to a part or the reason it would not.
+fn load_every_part(
+    package: &mut PresentationPackage,
+    structure: &DeckStructure,
+    limits: &SlideLimits,
+    import_limits: &ImportLimits,
+) -> Vec<Result<ImportedPart, SlideError>> {
+    structure
+        .parts
+        .iter()
+        .map(|entry| load_part(package, structure, entry.id.part, limits, import_limits))
+        .collect()
+}
+
 /// Index the deck and read every slide-like part. A part that cannot be used, by being
 /// malformed, the wrong kind, or over a bound, is reported as `CS-IMF-0012`, set aside and
 /// read as an empty part, so slide order survives (`REC-04`). Under `strict`, a part with
@@ -1111,20 +1125,21 @@ pub fn import_slide_parts(
     import_limits: &ImportLimits,
 ) -> Result<ImportedSlides, SlideError> {
     let mut findings = Findings::new(import_limits.max_findings);
-    let structure = index_deck(package, presentation, limits, &mut findings)?;
+    let mut structure = index_deck(package, presentation, limits, &mut findings)?;
+    let mut loaded = load_every_part(package, &structure, limits, import_limits);
+    // A part found damaged only when read, such as one whose local header is broken, starts
+    // a repair of the whole package, which can drop that part and supply or relink another
+    // in its place (docs/29). The index is then of a package that is gone: index again, from
+    // what the repair left, and read again.
+    if !package.is_strict() && loaded.iter().any(Result::is_err) {
+        let mut again = Findings::new(import_limits.max_findings);
+        structure = index_deck(package, presentation, limits, &mut again)?;
+        findings = again;
+        loaded = load_every_part(package, &structure, limits, import_limits);
+    }
     let mut color_findings = ColorFindings::default();
     let mut parts = Vec::with_capacity(structure.parts.len());
     let mut damaged = Vec::new();
-    let mut loaded = Vec::with_capacity(structure.parts.len());
-    for entry in &structure.parts {
-        loaded.push(load_part(
-            package,
-            &structure,
-            entry.id.part,
-            limits,
-            import_limits,
-        ));
-    }
     // Everything that will not read is set aside at once, which is one repair however many.
     if !package.is_strict() {
         let unusable: Vec<String> = structure

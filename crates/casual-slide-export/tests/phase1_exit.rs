@@ -361,17 +361,24 @@ fn a_table_style_bound_leaves_the_slides_readable() {
 }
 
 /// Found by the full damage corpus: 32 bytes flipped in slideLayout1's local header. The package
-/// opens clean from its directory, the layout is found damaged only when read, and then it is
-/// missing, so the whole slide import fails `CS-OPC-0001` where docs/29 supplies a layout.
+/// opens clean from its directory, and the layout is found damaged only when read. That read
+/// repairs the package, which drops the layout and supplies one; the slide import read on from
+/// its index of the package before the repair, and failed `CS-OPC-0001` on the dropped part.
 #[test]
-#[ignore = "finding P1X-01: a layout found damaged on read fails the slide import"]
 fn a_layout_damaged_in_its_local_header_still_lets_the_slides_read() {
     let mut bytes = std::fs::read(fixtures().join("real/z17310490-vierfelder-de.pptx")).unwrap();
     for b in bytes.iter_mut().skip(9948).take(32) {
         *b ^= 0xA5;
     }
-    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
-    read_all(&mut pkg).unwrap();
+    let mut pkg = PresentationPackage::open(bytes.clone(), OoxmlLimits::default()).unwrap();
+    let (_, slides) = read_all(&mut pkg).unwrap();
+    let structure = &slides.parts.structure;
+    assert!(!structure.slides.is_empty() && !structure.layouts.is_empty());
+    for ordinal in &structure.slides {
+        let slide = slides.parts.get(*ordinal).unwrap();
+        assert!(slide.shape_tree().is_some(), "slide {ordinal} is not there");
+    }
+    edit_every_way(&bytes).unwrap();
 }
 
 /// Found by the first export run over the hostile files: adding and duplicating a slide in a
