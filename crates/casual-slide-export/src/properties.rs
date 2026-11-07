@@ -187,10 +187,19 @@ pub struct Writer<'a> {
 }
 
 impl Writer<'_> {
-    /// The namespace to use for something new.
+    /// The namespace to use for something new: the first of `uris`, or in a Strict deck
+    /// its Strict spelling where the list has one. A list's later entries are not all
+    /// Strict: `a14:` keeps the pre-release Office 2010 namespace second, for reading only
+    /// (`WR-11`).
     pub fn uri<'u>(&self, uris: &[&'u str]) -> &'u str {
-        let at = usize::from(self.strict && uris.len() > 1);
-        uris.get(at).copied().unwrap_or_default()
+        let first = uris.first().copied().unwrap_or_default();
+        if !self.strict {
+            return first;
+        }
+        uris.iter()
+            .copied()
+            .find(|u| u.starts_with(STRICT_NAMESPACE_PREFIX))
+            .unwrap_or(first)
     }
 
     /// Refuse a string XML cannot carry.
@@ -738,6 +747,9 @@ fn variant_text(v: &Variant) -> Option<String> {
 }
 
 const MAX_WRITE_DEPTH: usize = 16;
+
+/// Where every Strict namespace of ISO/IEC 29500 lives.
+const STRICT_NAMESPACE_PREFIX: &str = "http://purl.oclc.org/ooxml/";
 
 /// Write a variant as a new last child of `parent`.
 // spec-audit: owner=variant,vector,array,property

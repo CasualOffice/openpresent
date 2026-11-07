@@ -601,3 +601,63 @@ fn media_over_its_limit_is_refused() {
         .unwrap_err();
     assert_eq!(err.code(), "CS-SAV-0018");
 }
+
+/// `WR-11`: something new in a Strict deck takes the Strict spelling of an ECMA namespace,
+/// and the released namespace of a Microsoft one. `a14:` lists the pre-release Office 2010
+/// namespace second, for reading only; Strict took the second entry of every list, so a new
+/// `a14` element was declared in the namespace no released PowerPoint reads.
+#[test]
+fn a_new_element_in_a_strict_deck_takes_the_released_namespace() {
+    use casual_slide_export::properties::Writer;
+    use casual_slide_import::drawing::A14;
+    use casual_slide_import::properties::{Elem, ns};
+
+    const STRICT_PML: &str = "http://purl.oclc.org/ooxml/presentationml/main";
+    let xml = format!("<p:sld xmlns:p=\"{STRICT_PML}\"/>");
+    let mut tree = XmlTree::parse(xml.as_bytes(), "s", &OoxmlLimits::default()).unwrap();
+    let root = Elem::root(&tree, "s").unwrap();
+    let mut w = Writer {
+        tree: &mut tree,
+        part: "s",
+        strict: true,
+        known_rels: None,
+        changes: 0,
+    };
+    assert_eq!(
+        w.uri(A14),
+        "http://schemas.microsoft.com/office/drawing/2010/main"
+    );
+    assert_eq!(w.uri(ns::DML), "http://purl.oclc.org/ooxml/drawingml/main");
+    let kid = w.new_child(&root, A14, "a14", "hiddenFill").unwrap();
+    let a = w.new_child(&root, ns::DML, "a", "ext").unwrap();
+    for id in [kid.id, a.id] {
+        tree.insert_child(root.id, None, id);
+    }
+    let out = String::from_utf8(tree.to_bytes()).unwrap();
+    assert!(
+        out.contains("xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\""),
+        "{out}"
+    );
+    assert!(!out.contains("2007/7/7"), "{out}");
+    assert!(
+        out.contains("xmlns:a=\"http://purl.oclc.org/ooxml/drawingml/main\""),
+        "{out}"
+    );
+    // Transitional is unchanged.
+    let mut tree = XmlTree::parse(b"<x/>", "t", &OoxmlLimits::default()).unwrap();
+    let w = Writer {
+        tree: &mut tree,
+        part: "t",
+        strict: false,
+        known_rels: None,
+        changes: 0,
+    };
+    assert_eq!(
+        w.uri(A14),
+        "http://schemas.microsoft.com/office/drawing/2010/main"
+    );
+    assert_eq!(
+        w.uri(ns::DML),
+        "http://schemas.openxmlformats.org/drawingml/2006/main"
+    );
+}
