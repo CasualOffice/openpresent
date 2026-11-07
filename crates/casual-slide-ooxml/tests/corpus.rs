@@ -1068,6 +1068,30 @@ fn f4_passes_area_text_with_nothing_recorded() {
     assert!(!report.contains("recorded"), "{report}");
 }
 
+/// F4-06: the VML fixture, every element and value, is schema-valid but for the one
+/// attribute no VML type allows, `o:wrapcoords`.
+#[test]
+fn f4_finds_only_wrapcoords_wrong_in_area_vml() {
+    if !f4_ready() {
+        return;
+    }
+    let part = "ppt/drawings/vmlDrawing1.vml";
+    let deck = fixtures().join("generated/area-vml.pptx");
+    let (report, code) = run_f4(&["--no-known", deck.to_str().unwrap()]);
+    assert_eq!(code, 1, "{report}");
+    let messages: Vec<&str> = report
+        .lines()
+        .skip_while(|l| l.split_whitespace().nth(1) != Some(part))
+        .skip(1)
+        .take_while(|l| l.starts_with("      "))
+        .collect();
+    assert_eq!(messages.len(), 1, "{report}");
+    assert!(messages[0].contains("office}wrapcoords"), "{report}");
+    let (report, code) = run_f4(&[deck.to_str().unwrap()]);
+    assert_eq!(code, 0, "{report}");
+    assert_eq!(part_status(&report, part), "recorded", "{report}");
+}
+
 #[test]
 fn f4_recorded_failures_cover_only_what_they_say() {
     if !f4_ready() {
