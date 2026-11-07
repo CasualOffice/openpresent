@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use casual_slide_export::slide::save_slide_parts;
 use casual_slide_import::presentation::import_deck;
@@ -14,6 +15,7 @@ use casual_slide_model::shape::{Locks, PlaceholderType, ShapeNode, Transform};
 use casual_slide_model::slide::{HeaderFooter, SlidePart, SlideParts};
 use casual_slide_model::theme::{ColorMapOverride, ColorMapSlot, ColorSchemeIndex};
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
+use casual_slide_package::PartEdits;
 
 const RICH: &str = "generated/slides-masters-layouts.pptx";
 const STRICT: &str = "generated/slides-strict.pptx";
@@ -599,10 +601,13 @@ fn f4_validates(bytes: &[u8]) {
         eprintln!("xmllint or python3 not installed: F4 skipped");
         return;
     }
+    // Tests run in parallel, so each call needs its own file: a name taken from the
+    // directory's count let two tests read each other's half-written deck.
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("f4-slides");
     std::fs::create_dir_all(&dir).unwrap();
-    let n = std::fs::read_dir(&dir).unwrap().count();
-    let file = dir.join(format!("edited-{n}.pptx"));
+    let n = NEXT.fetch_add(1, Ordering::Relaxed);
+    let file = dir.join(format!("edited-{}-{n}.pptx", std::process::id()));
     std::fs::write(&file, bytes).unwrap();
     let tool = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/f4/validate.py");
     let out = Command::new("python3")
@@ -611,6 +616,7 @@ fn f4_validates(bytes: &[u8]) {
         .arg(&file)
         .output()
         .unwrap();
+    std::fs::remove_file(&file).unwrap();
     assert!(
         out.status.success(),
         "{}\n{}",
@@ -638,6 +644,71 @@ fn edited_decks_validate() {
             .no_select = Some(true);
         m.get_mut(6).unwrap().color_map_override = Some(ColorMapOverride::Master);
         m.get_mut(6).unwrap().show_master_shapes = None;
+        // A new `a:xfrm` among existing siblings, which only schema order can judge.
+        named_mut(m.get_mut(5).unwrap(), "Title 1").transform = Some(Transform {
+            offset: Some(at(1, 2)),
+            extent: Some(PositiveSize { cx: 3, cy: 4 }),
+            ..Transform::default()
+        });
     });
     f4_validates(&edited);
+}
+
+/// BEH-22, BEH-24: prefixes, quoting, spacing, comments and a coordinate in another
+/// unit survive an edit to a neighbouring attribute.
+#[test]
+fn an_edit_keeps_prefixes_quotes_spacing_and_units_around_it() {
+    let source = read(RICH);
+    let mut pkg = open(source);
+    let slide = String::from_utf8(pkg.read_part(SLIDE2).unwrap()).unwrap();
+    let odd = slide.replace(
+        r#"<a:off x="914400" y="0"/>"#,
+        "<!-- kept --><a:off  x='1in'\n y=\"0\"/>",
+    );
+    assert_ne!(odd, slide);
+    let mut edits = PartEdits::default();
+    edits.replace(SLIDE2, odd.into_bytes());
+    let source = pkg.save_with(&edits).unwrap();
+    let before = model(&source);
+    let child = before
+        .get(5)
+        .unwrap()
+        .shape_tree()
+        .unwrap()
+        .descendants()
+        .find(|n| n.non_visual.as_ref().and_then(|v| v.name.as_deref()) == Some("Child B"))
+        .unwrap();
+    assert_eq!(child.transform.unwrap().offset, Some(at(914_400, 0)), "1in");
+    let edited = edit(&source, &[5], |m| {
+        named_mut(m.get_mut(5).unwrap(), "Child B")
+            .transform
+            .as_mut()
+            .unwrap()
+            .offset = Some(at(914_400, 7));
+    });
+    assert_only_this_changed(
+        &source,
+        &edited,
+        SLIDE2,
+        "<!-- kept --><a:off  x='1in'\n y=\"0\"/>",
+        "<!-- kept --><a:off  x='1in'\n y=\"7\"/>",
+    );
+}
+
+#[test]
+fn a_part_not_in_the_structure_is_refused() {
+    let source = read(RICH);
+    let m = model(&source);
+    let mut stray = m.get(5).unwrap().clone();
+    stray.id = casual_slide_model::shape::ObjectId::part(999);
+    let mut pkg = open(source);
+    let err = save_slide_parts(
+        &mut pkg,
+        &m.structure,
+        &[&stray],
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap_err();
+    assert_eq!(err.code(), "CS-SLE-0004");
 }

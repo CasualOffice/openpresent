@@ -501,6 +501,19 @@ fn hostile_slides_refuse_with_their_code_or_report() {
     assert_eq!(cycle.parts.structure.entry(slide).unwrap().layout, None);
     assert!(cycle.findings.has(K::WrongRelationship, "slideLayout"));
     assert!(cycle.findings.has(K::WrongRelationship, "slideMaster"));
+    // A real part of another kind, reached first through this relationship, is not a layout.
+    let wrong = slides("hostile/slide-layout-wrong-kind.bin");
+    let slide = wrong.parts.structure.slides[0];
+    assert_eq!(wrong.parts.structure.entry(slide).unwrap().layout, None);
+    assert!(wrong.findings.has(K::WrongRelationship, "slideLayout"));
+    assert!(
+        wrong
+            .parts
+            .structure
+            .parts
+            .iter()
+            .all(|e| !e.part.contains("theme"))
+    );
     for path in [
         "hostile/slide-no-layout.bin",
         "hostile/slide-missing-layout.bin",
@@ -577,13 +590,46 @@ fn bad_values_are_reported_and_left_out_never_coerced() {
     }
 }
 
+/// BEH-21: nothing the file did not say is in the model, on any node or part.
 #[test]
-#[ignore]
-fn dump() {
-    let s = slides(&std::env::var("DECK").unwrap());
-    println!("{:#?}", s.parts.structure);
-    for f in s.findings.iter() {
-        println!("{f:?}");
-    }
-    println!("{:#?}", s.parts.slide(0));
+fn absent_stays_absent_on_a_bare_node_and_part() {
+    let s = slides("generated/minimal.pptx");
+    let slide = s.parts.slide(0).unwrap();
+    assert_eq!(
+        (
+            slide.show,
+            slide.show_master_shapes,
+            slide.show_master_placeholder_animations
+        ),
+        (None, None, None)
+    );
+    assert_eq!(slide.color_map_override, None);
+    assert_eq!(slide.common.as_ref().unwrap().background, None);
+    let tree = slide.shape_tree().unwrap();
+    assert_eq!(
+        (tree.transform, tree.bw_mode, tree.locks),
+        (None, None, None)
+    );
+    let title = &tree.children[0];
+    let mut expected = ShapeNode::new(title.id, NodeKind::Shape);
+    expected.non_visual = title.non_visual.clone();
+    expected.app = title.app.clone();
+    expected.transform = title.transform;
+    assert_eq!(*title, expected, "no field the file did not state");
+    let nv = title.non_visual.as_ref().unwrap();
+    assert_eq!(
+        (nv.descr.as_deref(), nv.hidden, nv.title.as_deref()),
+        (None, None, None)
+    );
+    assert_eq!(
+        (nv.hyperlink_click.as_ref(), nv.creation_id.as_deref()),
+        (None, None)
+    );
+    let t = title.transform.unwrap();
+    assert_eq!((t.rotation, t.flip_h, t.flip_v), (None, None, None));
+    let ph = title.placeholder().unwrap();
+    assert_eq!(
+        (ph.idx, ph.size, ph.orient, ph.has_custom_prompt),
+        (None, None, None, None)
+    );
 }

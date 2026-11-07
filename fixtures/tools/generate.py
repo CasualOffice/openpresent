@@ -636,6 +636,9 @@ def slide_hostile():
     cycle = replace(deck(), "ppt/slides/_rels/slide1.xml.rels", rels(("slideLayout", "slide1.xml")))
     cycle = replace(cycle, "ppt/slideLayouts/_rels/slideLayout1.xml.rels", rels(("slideMaster", "../slides/slide1.xml")))
     yield "hostile/slide-layout-cycle.bin", zipped(cycle), "open"
+    # A layout relationship that reaches a real part of another kind, not yet seen as anything.
+    yield "hostile/slide-layout-wrong-kind.bin", with_slide(f"<p:spTree>{TREE}</p:spTree>",
+                                                            rels(("slideLayout", "../theme/theme1.xml"))), "open"
     # A slide with no layout relationship at all, and one whose layout part is not there.
     yield "hostile/slide-no-layout.bin", with_slide(f"<p:spTree>{TREE}</p:spTree>", rels()), "open"
     yield "hostile/slide-missing-layout.bin", with_slide(f"<p:spTree>{TREE}</p:spTree>",
