@@ -1,6 +1,6 @@
 //! Patch slide-like parts and their shape trees in place (ADR-013, Tier 1D).
 //!
-//! The part is read again with a map from each [`ObjectId`] to the element it came
+//! The part is read again with a map from each `ObjectId` to the element it came
 //! from; the wanted model is compared with what the tree says, and only the
 //! attributes and children that differ are touched. Every other byte stays as it
 //! was read, and a part not handed in is not opened at all.

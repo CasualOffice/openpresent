@@ -97,40 +97,6 @@ The XSD schemas in tools/f4/ (coreProperties.xsd, dublin-core/) are local stubs
 written for this project, not copies; see tools/f4/validate.py.
 
 ===============================================================================
-3. Fonts
-===============================================================================
-
-Copied from OpenCalc at b23c67c (F-002). Fonts are embedded or served as asset
-bytes, unmodified except where stated, and never sold on their own.
-
-  crates/casual-slide-text/fonts/Roboto-*.ttf (4)
-      Roboto, Google. Apache-2.0 (see LICENSE).
-      https://github.com/googlefonts/roboto-2
-  crates/casual-slide-text/fonts/Caladea-*.ttf (4)
-      Caladea, Huerta Tipografia. Apache-2.0 (see LICENSE).
-      https://github.com/huertatipografica/Caladea
-  crates/casual-slide-text/fonts/Carlito-*.ttf (4)
-      Carlito, The Carlito Project Authors. SIL Open Font License 1.1, Reserved
-      Font Name "Carlito". Licence: crates/casual-slide-text/fonts/LICENSES/OFL-1.1-Carlito.txt
-      https://github.com/googlefonts/carlito, commit 3a810cab78ebd6e2e4eed42af9e8453c4f9b850a
-  crates/casual-slide-text/fonts/liberation/*.ttf (12)
-      Liberation Sans, Serif and Mono 2.1.5, Red Hat and Google. SIL Open Font
-      License 1.1, Reserved Font Names Liberation, Arimo, Tinos, Cousine.
-      Licence: crates/casual-slide-text/fonts/LICENSES/OFL-1.1-Liberation.txt
-      https://github.com/liberationfonts/liberation-fonts
-  webapp/fonts/cjk/ (1,602 WOFF2 slices, 12 variants)
-      Noto Sans CJK and Noto Serif CJK (JP, KR, SC, TC), Adobe and Google, as
-      published in google/fonts at commit 47d54ca1ebb14fd864695f1d39dc734f39017c33.
-      Instanced to static weights and cut into unicode-range slices by OpenCalc's
-      tools/fonts/build-cjk-slices.py (fontTools 4.60.2); source SHA-256 pins are in
-      webapp/fonts/cjk/manifest.json. SIL Open Font License 1.1.
-      Licences: webapp/fonts/cjk/OFL-Noto-Sans-CJK.txt, OFL-Noto-Serif-CJK.txt
-
-Subsetting and slicing are modifications under the OFL. They keep the original
-family names, which the OFL permits only where no Reserved Font Name applies;
-whether a sliced Noto face may keep its name is part of the DEC-07 review.
-
-===============================================================================
 4. Test fixtures written by other software
 ===============================================================================
 

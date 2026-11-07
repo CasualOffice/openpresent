@@ -81,7 +81,7 @@ fetched, unsafe links, macro projects, embedded objects, and parts nothing point
  Host (browser, desktop, server)
    └─ SDK / WebAssembly bridge
         ├─ Model, inheritance resolver, operations     casual-slide-model, -style, -transaction
-        ├─ Geometry, text, layout, display list         casual-slide-geometry, -text, -layout
+        ├─ Geometry, text, layout, display list         casual-slide-geometry, -layout
         └─ Render backends: canvas, PNG, PDF            casual-slide-render
    Import and export                                    casual-slide-package, -ooxml, -import, -export
 ```
@@ -97,7 +97,6 @@ OpenCalc and what had to be different.
 | `casual-slide-model` | The presentation as plain typed values |
 | `casual-slide-import`, `-export` | XML to model, and model changes patched back into XML |
 | `casual-slide-geometry` | Preset and custom shape geometry, deterministic on every platform |
-| `casual-slide-text` | Bundled fonts and metrics, including Calibri- and Cambria-compatible faces |
 
 ## Documentation
 
@@ -130,8 +129,7 @@ Found a security issue? Please report it privately to the maintainers rather tha
 
 ## License
 
-[Apache-2.0](LICENSE). Bundled fonts carry their own licences (Apache-2.0 and SIL OFL 1.1); see
-`crates/casual-slide-text/fonts/`. The vendored Office Open XML schemas are © Ecma International and
+[Apache-2.0](LICENSE). The vendored Office Open XML schemas are © Ecma International and
 Microsoft and are used under their published terms; see [schemas/README.md](schemas/README.md).
 
 PowerPoint and Microsoft Office are trademarks of Microsoft Corporation. OpenPresent is not affiliated

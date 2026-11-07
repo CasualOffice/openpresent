@@ -74,6 +74,7 @@
 | FID-03 | Fixtures for the 17 ranked problems | Open | P0 | [52](52-COMPETITOR-STUDY.md): fonts, autofit, SmartArt, animation and round-trip validity first. The first five were each reported by several products | Each has a fixture in its tier |
 | ADR-014 | Precedent check for ADR-013 | Done | P2 | Study found the need strongly supported and no precedent for a byte-faithful tree, so it is ours to prove (`ARC-02`). Kept | — |
 | T1D-03 | Tier 1D leftovers | Open | P1 | Hostile fixtures for `max_slides`, `max_parts`, `max_layout_ids`; codes in docs/20; `bgRef` finding keeps its colour code; verify layout-to-master matching claims that came from memory; fixtures for 46 enum values and lock attributes; `insert_in_order` namespace limit | Per-tier gate |
+| FONT-02 | Fonts removed from the repo | Done | P1 | Owner instruction 20. `casual-slide-text` and `webapp/fonts` (1,645 files, 67 MB) were copied once in the first commit and nothing used them. Copy again from OpenCalc at Tier 2D. `TXT-*`, `FONT-01` wait for Phase 2 | Workspace builds and tests pass without them |
 | GEO-01 | `upArrow` missing from Ecma's preset definitions | Done | P1 | The two `upDownArrow` copies are identical. `upArrow` derived from `downArrow` by y to h-y; LibreOffice's copy agrees on path, sites, text rectangle, handles | Golden and mirror tests; generator exits 1 if the override goes |
 | GEO-02 | Other defects in Ecma's definitions | Done | P1 | `textNoShape` absent from warps (empty definition added); `curvedLeftArrow` uses undefined `cd3`; surplus operands in 8 circular arrow formulas; `pie` text rectangle inside out; `gear6` and `gear9` mirrored guides. Corrected explicitly in the generator. **`pie` and gear corrections are our reading, not a PowerPoint match** | A test per correction; PowerPoint check via `PV-01` |
 | GEO-03 | Geometry engine | Done | P0 | `casual-slide-geometry`: 17 operators, 40 built-in guides, all 187 presets and 41 warps, own trig for determinism. Bit-exact fingerprint agrees on aarch64 and wasm32; x86_64 not run. Built-in list partly recalled, since the Ecma prose is not in the repo. 181 of 187 paths agree with LibreOffice's table | Main session merged, gates pass, broke `atan2` and saw red |
@@ -140,7 +141,7 @@ From an independent review. The percent-encoding, tracker pattern, MCE and dead-
 | STRICT-01 | Strict handling | In progress | P0 | Namespace map and write-back in source form; 14 Strict XSDs vendored. The only Strict deck is synthetic. Import reads Strict percentages; nothing above that uses the map fully yet | PowerPoint-saved Strict deck via `F-007` |
 | ARC-01 | ADR-013 wording contradicted the DAG | Done | P0 | **Decided:** `-model` stays plain values. The tree lives with `-export`; ops mark objects dirty, and save applies dirty values to the tree. See [28](28-PACKAGE-AND-PART-GRAPH.md) | Phase 1 tiers follow it |
 | ARC-02 | Prove ADR-013 end to end | In progress | P0 | One property through tree, model, edit, save, reopen | Row for each view follows it |
-| SKEL-01 | Walking skeleton | Open | P0 | **Decided:** 5 real decks through 2A, 2B and basic text right after 1D, so semantics errors appear early. Adds to, not replaces, import-export-first | 5 decks render |
+| SKEL-01 | Walking skeleton | Blocked | P1 | **Reversed by owner instruction 20:** no rendering until Phase 1 closes. Started and stopped 2026-11-07; nothing merged. First task of Phase 2 | Phase 1 closed |
 | TXT-01 | Font contract | Open | P0 | Session font manifest pinned for collaborators and export, reported on mismatch. Aptos has no substitute. Corpus split by font availability. After `SPK-01` | Design note; fixtures |
 | TXT-02 | Split 2D and 2F into smaller tiers | Done | P1 | Applied in [06](06-ROADMAP-AND-DELIVERY.md) | — |
 | SAVE-01 | Autosave, recovery, atomic save | Open | P0 | Nothing designed. docs/83, exit criterion of Phase 4 | Crash test loses nothing |
@@ -217,7 +218,7 @@ Order and waves are in [06](06-ROADMAP-AND-DELIVERY.md). Tier rows above close w
 | T1C-01 | Tier 1C leftovers | Open | P1 | `COLOR-01`; effect reference; `themeManager`; export setters for panose, pitch, charset, style reference index | Tests seen red |
 | T1C-02 | Close Tier 1C | Open | P0 | Format scheme internals, after 1E; object defaults, after 1F | Per-tier gate |
 | T1D-02 | Merge Tier 1D | Done | P0 | Merged onto the parser fixes; 372 tests pass | Gates pass |
-| SKEL-02 | Skeleton: minimal layout and PNG | Open | P0 | Creates `-layout` and `-render` with composition, presets, solid fills and one-font text, enough to see 5 decks. Compared in F7 only | 5 decks rendered and inspected |
+| SKEL-02 | Skeleton: minimal layout and PNG | Blocked | P1 | Waits with `SKEL-01` | Phase 1 closed |
 | T1E-01 | Geometry binding | Open | P0 | `prstGeom`, `custGeom`, `avLst` into the model; calls `-geometry`; `GEO-04` | All 187 presets round-trip |
 | T1E-02 | Fills | Open | P0 | Solid, gradient, pattern, blip, group, none; rotate-with-shape | Every `ST_PresetPatternVal`; fixed point |
 | T1E-03 | Lines | Open | P1 | Width, cap, compound, dash, join, arrowheads, sketch extension | Every enum value |
