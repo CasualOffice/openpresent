@@ -400,9 +400,9 @@ fn hostile_values_are_reported_and_left_out_never_a_panic() {
         assert!(found, "{kind:?} {element} {attribute}: {f:#?}");
     }
     for element in [
-        "unknownThing",
+        // `unknownThing` and `foreign` are names the part made up (`SEC-018`).
+        "(unknown)",
         "blipFill",
-        "foreign",
         "tint",
         "extrusionClr",
     ] {
@@ -740,7 +740,7 @@ fn hostile_warps_and_3d_are_reported_and_a_duplicate_of_the_choice_is_not_read()
         "{:?}",
         d.findings
     );
-    assert!(d.findings.has(K::RetainedElement, "foreign"));
+    assert!(d.findings.has(K::RetainedElement, "(unknown)"));
     assert!(d.findings.has(K::MissingRequired, "gd"), "{:?}", d.findings);
     assert!(
         matches!(props.text_3d, Some(Text3D::Shape(_))),
@@ -765,7 +765,7 @@ fn hostile_warps_and_3d_are_reported_and_a_duplicate_of_the_choice_is_not_read()
 
     let d = load("hostile/text-limit-3d-depth.bin");
     assert!(
-        d.findings.has(K::RetainedElement, "foreign"),
+        d.findings.has(K::RetainedElement, "(unknown)"),
         "{:?}",
         d.findings
     );

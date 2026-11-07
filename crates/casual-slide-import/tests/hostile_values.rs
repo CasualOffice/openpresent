@@ -9,6 +9,7 @@ use casual_slide_import::properties::{
     import_core_properties, import_custom_properties,
 };
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
+use casual_slide_package::PartEdits;
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures")
@@ -48,6 +49,32 @@ fn a_count_past_its_bound_refuses_with_its_code() {
     }
 }
 
+/// `PKG-02`: a target percent-encoded, as Part 2 allows, is the part it names. Compared
+/// with ASCII case alone, this deck's properties were dropped as unusable.
+#[test]
+fn a_percent_encoded_target_reaches_its_part() {
+    const RELS: &str = "ppt/_rels/presentation.xml.rels";
+    let bytes = std::fs::read(fixtures().join("generated/rich-properties.pptx")).unwrap();
+    let mut pkg = PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap();
+    let plain = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
+    assert!(plain.deck.presentation_properties.is_some());
+
+    let rels = String::from_utf8(pkg.read_part(RELS).unwrap()).unwrap();
+    let encoded = rels.replace("presProps.xml", "pres%50rops.xml");
+    assert_ne!(rels, encoded);
+    let mut edits = PartEdits::default();
+    edits.replace(RELS, encoded.into_bytes());
+    let saved = pkg.save_with(&edits).unwrap();
+
+    let mut pkg = PresentationPackage::open(saved, OoxmlLimits::default()).unwrap();
+    let imported = import_deck(&mut pkg, &ImportLimits::default()).unwrap();
+    assert_eq!(
+        imported.deck.presentation_properties,
+        plain.deck.presentation_properties
+    );
+    assert!(!imported.findings.has(K::UnusableRelationship, ""));
+}
+
 #[test]
 fn a_limit_tightened_by_the_host_applies() {
     let limits = ImportLimits {
@@ -65,8 +92,23 @@ fn a_limit_tightened_by_the_host_applies() {
 
 #[test]
 fn the_report_is_bounded() {
+    // Ten thousand made-up names are one finding: no name of theirs reaches the report.
     let d = import("hostile/import-findings-flood.bin").unwrap();
-    assert!(d.findings.len() <= ImportLimits::default().max_findings + 1);
+    let flooded = d
+        .findings
+        .iter()
+        .filter(|f| f.kind == K::RetainedElement && f.element == "(unknown)")
+        .count();
+    assert_eq!(flooded, 1, "{:?}", d.findings);
+    assert!(d.findings.len() < 20, "{}", d.findings.len());
+
+    // Distinct findings past the bound: the list stops, and says so.
+    let limits = ImportLimits {
+        max_findings: 5,
+        ..ImportLimits::default()
+    };
+    let d = import_deck(&mut open("hostile/import-bad-values.bin"), &limits).unwrap();
+    assert!(d.findings.len() <= limits.max_findings + 1);
     assert!(d.findings.iter().any(|f| f.kind == K::FindingsTruncated));
 }
 
@@ -207,7 +249,7 @@ fn bad_values_in_properties_and_view_state_are_left_out_and_reported() {
     assert!(d.findings.has(K::MalformedValue, "date"));
     assert!(d.findings.has(K::MalformedValue, "blob"));
     assert!(d.findings.has(K::MalformedValue, "array"));
-    assert!(d.findings.has(K::RetainedElement, "wat"));
+    assert!(d.findings.has(K::RetainedElement, "(unknown)"), "`wat`");
 }
 
 /// A finding is structure. No value from the document is in the report.

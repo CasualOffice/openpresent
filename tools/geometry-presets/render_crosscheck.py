@@ -11,6 +11,7 @@ and reports the Hausdorff distance to the same preset evaluated here:
 A small distance says LibreOffice and this engine draw about the same outline at
 this size and at default adjusts. It says nothing about PowerPoint.
 """
+import os
 import json
 import math
 import pathlib
@@ -194,6 +195,8 @@ def one_way(a, b):
 
 
 def main():
+    if os.environ.get("OPENPRESENT_ALLOW_SOFFICE") != "1":
+        raise SystemExit("soffice is off; set OPENPRESENT_ALLOW_SOFFICE=1 to run it on purpose")
     dump, work = sys.argv[1], pathlib.Path(sys.argv[2])
     names = sys.argv[3:] or DEFAULT
     work.mkdir(parents=True, exist_ok=True)

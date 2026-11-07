@@ -10,6 +10,7 @@ use crate::properties::{Elem, ImportFindingKind as K, ns};
 
 impl Ctx<'_, '_> {
     /// `a:CT_Scene3D`, under any name.
+    // spec-audit: owner=scene3d,hiddenScene3d
     pub(crate) fn scene3d(&mut self, el: &Elem) -> Res<Scene3D> {
         self.r.finish(el);
         let mut s = Scene3D::default();
@@ -29,6 +30,7 @@ impl Ctx<'_, '_> {
         Ok(s)
     }
 
+    // spec-audit: owner=rot,camera,lightRig
     fn sphere(&mut self, el: &Elem) -> Res<SphereCoords> {
         let mut e = el.clone();
         let has = |e: &Elem, n: &str| e.get(n).is_some();
@@ -47,6 +49,7 @@ impl Ctx<'_, '_> {
         Ok(s)
     }
 
+    // spec-audit: owner=camera
     fn camera(&mut self, el: &Elem) -> Res<Camera> {
         let mut e = el.clone();
         let mut cam = Camera {
@@ -67,6 +70,7 @@ impl Ctx<'_, '_> {
         Ok(cam)
     }
 
+    // spec-audit: owner=lightRig
     fn light_rig(&mut self, el: &Elem) -> Res<LightRig> {
         let mut e = el.clone();
         let mut rig = LightRig {
@@ -86,6 +90,7 @@ impl Ctx<'_, '_> {
         Ok(rig)
     }
 
+    // spec-audit: owner=backdrop
     fn backdrop(&mut self, el: &Elem) -> Res<Backdrop> {
         self.r.finish(el);
         let mut b = Backdrop::default();
@@ -113,6 +118,7 @@ impl Ctx<'_, '_> {
         Ok(b)
     }
 
+    // spec-audit: owner=norm,up
     fn vector(&mut self, el: &Elem) -> Res<Vector3D> {
         let mut e = el.clone();
         let v = Vector3D {
@@ -125,6 +131,7 @@ impl Ctx<'_, '_> {
         Ok(v)
     }
 
+    // spec-audit: owner=bevelT,bevelB
     fn bevel(&mut self, el: &Elem) -> Res<Bevel> {
         let mut e = el.clone();
         let b = Bevel {
@@ -139,6 +146,7 @@ impl Ctx<'_, '_> {
 
     /// `a:CT_Shape3D`, under any name.
     /// `a:CT_FlatText`, a text body's `flatTx`.
+    // spec-audit: owner=flatTx
     pub(crate) fn flat_text(&mut self, el: &Elem) -> Res<FlatText> {
         let mut e = el.clone();
         let z = self.coord(&mut e, "z")?;
@@ -147,6 +155,7 @@ impl Ctx<'_, '_> {
         Ok(FlatText { z })
     }
 
+    // spec-audit: owner=sp3d,hiddenSp3d
     pub(crate) fn sp3d(&mut self, el: &Elem) -> Res<Shape3D> {
         let mut e = el.clone();
         let mut s = Shape3D {

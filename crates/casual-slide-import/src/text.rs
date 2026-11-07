@@ -110,6 +110,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextBody`, under whichever element holds it.
+    // spec-audit: owner=txBody
     pub fn body(&mut self, el: &Elem) -> Result<TextBody, ImportError> {
         self.r.finish(el);
         let limits = self.r.limits.text;
@@ -163,6 +164,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextBodyProperties`.
+    // spec-audit: owner=bodyPr
     pub fn body_properties(&mut self, el: &Elem) -> Result<BodyProperties, ImportError> {
         let mut e = el.clone();
         let drawing = self.drawing;
@@ -265,6 +267,16 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextListStyle`, under whichever element holds it.
+    // spec-audit: a:CT_TextListStyle/lvl1pPr
+    // spec-audit: a:CT_TextListStyle/lvl2pPr
+    // spec-audit: a:CT_TextListStyle/lvl3pPr
+    // spec-audit: a:CT_TextListStyle/lvl4pPr
+    // spec-audit: a:CT_TextListStyle/lvl5pPr
+    // spec-audit: a:CT_TextListStyle/lvl6pPr
+    // spec-audit: a:CT_TextListStyle/lvl7pPr
+    // spec-audit: a:CT_TextListStyle/lvl8pPr
+    // spec-audit: a:CT_TextListStyle/lvl9pPr
+    // spec-audit: owner=lstStyle
     pub fn list_style(&mut self, el: &Elem) -> Result<TextListStyle, ImportError> {
         self.r.finish(el);
         let mut style = TextListStyle::default();
@@ -298,6 +310,7 @@ impl TextReader<'_, '_> {
         self.paragraph_properties(el)
     }
 
+    // spec-audit: owner=p
     fn paragraph(&mut self, el: &Elem) -> Result<Paragraph, ImportError> {
         self.r.finish(el);
         let limits = self.r.limits.text;
@@ -354,6 +367,7 @@ impl TextReader<'_, '_> {
         Ok(p)
     }
 
+    // spec-audit: owner=r
     fn run(&mut self, el: &Elem) -> Result<TextRun, ImportError> {
         self.r.finish(el);
         let mut run = TextRun::default();
@@ -382,6 +396,7 @@ impl TextReader<'_, '_> {
         Ok(run)
     }
 
+    // spec-audit: owner=br
     fn line_break(&mut self, el: &Elem) -> Result<LineBreak, ImportError> {
         self.r.finish(el);
         let mut br = LineBreak::default();
@@ -397,6 +412,7 @@ impl TextReader<'_, '_> {
         Ok(br)
     }
 
+    // spec-audit: owner=fld
     fn field(&mut self, el: &Elem) -> Result<TextField, ImportError> {
         let mut e = el.clone();
         let mut field = TextField {
@@ -433,6 +449,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextParagraphProperties`: `pPr`, or a list style level.
+    // spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr
     pub fn paragraph_properties(&mut self, el: &Elem) -> Result<ParagraphProperties, ImportError> {
         let mut e = el.clone();
         let r = &mut *self.r;
@@ -548,6 +565,7 @@ impl TextReader<'_, '_> {
         Ok(p)
     }
 
+    // spec-audit: owner=buBlip
     fn bullet_picture(&mut self, el: &Elem) -> Result<Bullet, ImportError> {
         self.r.finish(el);
         let mut embed = None;
@@ -578,6 +596,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextSpacing`. `None`, reported, if it holds nothing usable.
+    // spec-audit: owner=lnSpc,spcBef,spcAft,spcPct,spcPts
     fn spacing(&mut self, el: &Elem) -> Result<Option<TextSpacing>, ImportError> {
         self.r.finish(el);
         let mut value = None;
@@ -613,6 +632,7 @@ impl TextReader<'_, '_> {
         Ok(value)
     }
 
+    // spec-audit: owner=tabLst,tab
     fn tabs(&mut self, el: &Elem) -> Result<Vec<TabStop>, ImportError> {
         self.r.finish(el);
         let limit = self.r.limits.text.max_tab_stops;
@@ -640,6 +660,7 @@ impl TextReader<'_, '_> {
     }
 
     /// `a:CT_TextCharacterProperties`: `rPr`, `defRPr` or `endParaRPr`.
+    // spec-audit: owner=rPr,defRPr,endParaRPr
     pub fn character(&mut self, el: &Elem) -> Result<CharacterProperties, ImportError> {
         let mut e = el.clone();
         let r = &mut *self.r;

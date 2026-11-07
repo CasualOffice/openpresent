@@ -7,16 +7,16 @@
 
 use casual_slide_model::theme::{
     BaseStyles, ClipboardStyleSheet, ColorMap, ColorMapOverride, ColorMapSlot, ColorScheme,
-    ColorSchemeIndex, CustomColor, ExtraColorScheme, FontCollection, FontCollectionIndex, FontRef,
-    FontScheme, FormatScheme, GradientStop, ObjectDefaults, ShapeDefinition, ShapeStyle,
-    StyleEffect, StyleFill, StyleLine, StyleMatrixRef, SupplementalFont, TextFont, Theme,
-    ThemeFamily, ThemeOverride, ThemeableFont, ThemeableStyle,
+    ColorSchemeIndex, CustomColor, EffectReference, ExtraColorScheme, FontCollection,
+    FontCollectionIndex, FontRef, FontScheme, FormatScheme, GradientStop, ObjectDefaults,
+    ShapeDefinition, ShapeStyle, StyleEffect, StyleFill, StyleLine, StyleMatrixRef,
+    SupplementalFont, TextFont, Theme, ThemeFamily, ThemeManager, ThemeOverride, ThemeableFont,
+    ThemeableStyle,
 };
 use casual_slide_ooxml::{ElementId, OoxmlError, OoxmlLimits, PresentationPackage, XmlTree};
 
 use crate::color::{
-    Finding, FindingKind, Findings, MAX_FINDINGS, MAX_LIST_ENTRIES, bounded_children, dml_name,
-    read_color_choice, read_optional_color,
+    FindingKind, Findings, bounded_children, dml_name, read_color_choice, read_optional_color,
 };
 use crate::drawing::{DrawingFinding, DrawingLimits};
 use crate::properties::{
@@ -106,10 +106,18 @@ pub fn read_theme_parts(
     Ok(out)
 }
 
-/// Read a `theme` part.
+/// Read a `theme` part under the default limits.
 pub fn import_theme(tree: &XmlTree) -> Result<Imported<Theme>, ThemeImportError> {
+    import_theme_limited(tree, &OoxmlLimits::default())
+}
+
+/// Read a `theme` part under these limits.
+pub fn import_theme_limited(
+    tree: &XmlTree,
+    limits: &OoxmlLimits,
+) -> Result<Imported<Theme>, ThemeImportError> {
     let root = expect_root(tree, "theme")?;
-    let mut findings = Findings::default();
+    let mut findings = Findings::with_limits(limits);
     let mut value = Reader {
         tree,
         findings: &mut findings,
@@ -145,6 +153,40 @@ pub fn import_theme_override(tree: &XmlTree) -> Result<Imported<ThemeOverride>, 
         }
     }
     Ok(Imported { value, findings })
+}
+
+/// Read a `themeManager` part, which by its schema holds nothing. Whatever it does hold
+/// stays in the part, and is reported.
+pub fn import_theme_manager(tree: &XmlTree) -> Result<Imported<ThemeManager>, ThemeImportError> {
+    let root = expect_root(tree, "themeManager")?;
+    let mut findings = Findings::default();
+    let mut r = Reader {
+        tree,
+        findings: &mut findings,
+    };
+    for child in r.children(root) {
+        r.unknown(child);
+    }
+    Ok(Imported {
+        value: ThemeManager,
+        findings,
+    })
+}
+
+/// Read `CT_EffectReference`, an `a:effect` that names an effect. A missing `@ref` is
+/// reported and left absent.
+pub fn read_effect_reference(
+    tree: &XmlTree,
+    el: ElementId,
+    findings: &mut Findings,
+) -> EffectReference {
+    let mut r = Reader { tree, findings };
+    let reference = if r.readable(el) {
+        r.required(el, "ref")
+    } else {
+        None
+    };
+    EffectReference { reference }
 }
 
 /// Read a `CT_ClipboardStyleSheet` root, by its schema shape.
@@ -319,7 +361,7 @@ impl Reader<'_> {
                 uris.extend(self.attr(ext, "uri"));
             }
         }
-        uris.truncate(MAX_LIST_ENTRIES);
+        uris.truncate(self.findings.bounds.list_entries);
         uris
     }
 
@@ -476,7 +518,7 @@ impl Reader<'_> {
                 Some("ea") => self.once(&mut out.ea, child, Self::text_font),
                 Some("cs") => self.once(&mut out.cs, child, Self::text_font),
                 Some("font") => {
-                    if out.fonts.len() >= MAX_LIST_ENTRIES {
+                    if out.fonts.len() >= self.findings.bounds.list_entries {
                         self.note(FindingKind::ListCapped, el, "font");
                         break;
                     }
@@ -544,7 +586,7 @@ impl Reader<'_> {
     fn fill_list(&mut self, el: ElementId) -> Vec<StyleFill> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -603,7 +645,7 @@ impl Reader<'_> {
                     self.unknown(stop);
                     continue;
                 }
-                if out.len() >= MAX_LIST_ENTRIES {
+                if out.len() >= self.findings.bounds.list_entries {
                     self.note(FindingKind::ListCapped, child, "gs");
                     break;
                 }
@@ -628,7 +670,7 @@ impl Reader<'_> {
     fn line_list(&mut self, el: ElementId) -> Vec<StyleLine> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -661,7 +703,7 @@ impl Reader<'_> {
     fn effect_list(&mut self, el: ElementId) -> Vec<StyleEffect> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -758,7 +800,7 @@ impl Reader<'_> {
     fn extra_schemes(&mut self, el: ElementId) -> Vec<ExtraColorScheme> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -784,7 +826,7 @@ impl Reader<'_> {
     fn custom_colors(&mut self, el: ElementId) -> Vec<CustomColor> {
         let mut out = Vec::new();
         for child in self.children(el) {
-            if out.len() >= MAX_LIST_ENTRIES {
+            if out.len() >= self.findings.bounds.list_entries {
                 self.note(FindingKind::ListCapped, el, "");
                 break;
             }
@@ -815,16 +857,6 @@ fn read_definition_text(tree: &XmlTree, defaults: &mut ObjectDefaults, findings:
         let mut r = PropertyReader::new(tree, PART, &limits, &mut noticed);
         definition_text(&mut r, defaults, findings).is_err()
     };
-    let mut carry = |kind: FindingKind, element: &str| {
-        findings.total = findings.total.saturating_add(1);
-        if findings.items.len() < MAX_FINDINGS {
-            findings.items.push(Finding {
-                kind,
-                element: element.to_owned(),
-                detail: "",
-            });
-        }
-    };
     for f in noticed.iter() {
         let kind = match f.kind {
             K::MissingRequired => FindingKind::MissingRequired,
@@ -835,10 +867,10 @@ fn read_definition_text(tree: &XmlTree, defaults: &mut ObjectDefaults, findings:
             K::Drawing(DrawingFinding::PercentRounded) => FindingKind::PercentRounded,
             _ => FindingKind::BadValue,
         };
-        carry(kind, &f.element);
+        findings.carry(kind, &f.element);
     }
     if capped {
-        carry(FindingKind::ListCapped, "objectDefaults");
+        findings.carry(FindingKind::ListCapped, "objectDefaults");
     }
 }
 

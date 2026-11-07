@@ -47,6 +47,7 @@ version = "0.0.0"
 name = "casual-slide-ooxml"
 version = "0.0.0"
 dependencies = [
+ "casual-slide-geometry",
  "casual-slide-package",
  "quick-xml",
  "zip",

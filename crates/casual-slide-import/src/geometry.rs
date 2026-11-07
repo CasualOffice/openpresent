@@ -40,6 +40,7 @@ impl Ctx<'_, '_> {
         Ok(Geometry::Custom(Box::new(g)))
     }
 
+    // spec-audit: owner=prstGeom
     fn preset_geometry(&mut self, el: &Elem) -> Res<PresetGeometry> {
         let mut e = el.clone();
         let preset: Option<casual_slide_model::geometry::ShapeType> = self.req(&mut e, "prst")?;
@@ -67,6 +68,7 @@ impl Ctx<'_, '_> {
         Ok(g)
     }
 
+    // spec-audit: owner=prstGeom,prstTxWarp
     fn adjust_child(&mut self, el: &Elem) -> Res<Option<Vec<GeomGuide>>> {
         let mut adjust = None;
         self.sequence(el, |c, kid| {
@@ -81,6 +83,7 @@ impl Ctx<'_, '_> {
     }
 
     /// `a:CT_PresetTextShape`, for a text body's reader.
+    // spec-audit: owner=prstTxWarp
     pub(crate) fn preset_text_shape(&mut self, el: &Elem) -> Res<PresetTextShape> {
         let mut e = el.clone();
         let preset: Option<casual_slide_model::geometry::TextShapeType> =
@@ -97,6 +100,7 @@ impl Ctx<'_, '_> {
         })
     }
 
+    // spec-audit: owner=avLst,gdLst,gd
     fn guides(&mut self, el: &Elem) -> Res<Vec<GeomGuide>> {
         self.r.finish(el);
         let mut out = Vec::new();
@@ -116,6 +120,7 @@ impl Ctx<'_, '_> {
         Ok(out)
     }
 
+    // spec-audit: owner=pt,pos
     fn adj_point(&mut self, el: &Elem) -> Res<AdjPoint> {
         let mut e = el.clone();
         let p = AdjPoint {
@@ -127,6 +132,7 @@ impl Ctx<'_, '_> {
         Ok(p)
     }
 
+    // spec-audit: owner=ahXY,ahPolar,cxn
     fn pos_child(&mut self, el: &Elem) -> Res<Option<AdjPoint>> {
         let mut pos = None;
         self.sequence(el, |c, kid| {
@@ -143,6 +149,7 @@ impl Ctx<'_, '_> {
         Ok(pos)
     }
 
+    // spec-audit: owner=custGeom,rect
     fn custom_geometry(&mut self, el: &Elem) -> Res<CustomGeometry> {
         self.r.finish(el);
         let mut g = CustomGeometry::default();
@@ -177,6 +184,7 @@ impl Ctx<'_, '_> {
         Ok(g)
     }
 
+    // spec-audit: owner=ahLst,ahXY,ahPolar
     fn handles(&mut self, el: &Elem) -> Res<Vec<AdjustHandle>> {
         self.r.finish(el);
         let mut out = Vec::new();
@@ -215,6 +223,7 @@ impl Ctx<'_, '_> {
         Ok(out)
     }
 
+    // spec-audit: owner=cxnLst,cxn
     fn sites(&mut self, el: &Elem) -> Res<Vec<ConnectionSite>> {
         self.r.finish(el);
         let mut out = Vec::new();
@@ -234,6 +243,7 @@ impl Ctx<'_, '_> {
         Ok(out)
     }
 
+    // spec-audit: owner=pathLst,path
     fn paths(&mut self, el: &Elem) -> Res<Vec<Path2D>> {
         self.r.finish(el);
         let mut out = Vec::new();
@@ -263,6 +273,7 @@ impl Ctx<'_, '_> {
         Ok(out)
     }
 
+    // spec-audit: owner=moveTo,lnTo,quadBezTo,cubicBezTo
     fn points(&mut self, el: &Elem, want: usize) -> Res<Vec<AdjPoint>> {
         self.r.finish(el);
         let mut pts = Vec::new();
@@ -279,6 +290,7 @@ impl Ctx<'_, '_> {
         Ok(pts)
     }
 
+    // spec-audit: owner=path,moveTo,lnTo,arcTo,quadBezTo,cubicBezTo,close
     fn command(&mut self, el: &Elem) -> Res<Option<PathCommand>> {
         if !el.in_namespace(ns::DML) {
             return Ok(None);

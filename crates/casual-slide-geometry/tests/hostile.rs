@@ -227,10 +227,7 @@ fn diagnostics_are_bounded_and_text_clipped() {
     let compiled = raw.compile().unwrap();
     assert_eq!(compiled.diagnostics.total(), limits::MAX_GUIDES);
     assert!(compiled.diagnostics.kept().len() <= 32);
-    let Diagnostic::UnknownGuide(subject) = &compiled.diagnostics.kept()[0] else {
-        panic!("{:?}", compiled.diagnostics.kept()[0]);
-    };
-    assert!(subject.len() <= 64);
+    assert_eq!(compiled.diagnostics.kept()[0], Diagnostic::UnknownGuide);
 }
 
 /// The long chain is the attack on a recursive evaluator: each guide names the one
@@ -496,10 +493,7 @@ fn bad_adjusts_on_a_preset_are_reported_not_fatal() {
     let ext = Extents::new(1000, 1000);
 
     let unknown = def.evaluate(ext, &[Adjust::val("nope", 1)]);
-    assert_eq!(
-        unknown.diagnostics.kept(),
-        &[Diagnostic::UnknownAdjust("nope".to_owned())]
-    );
+    assert_eq!(unknown.diagnostics.kept(), &[Diagnostic::UnknownAdjust]);
     assert_eq!(unknown.guide("adj"), Some(16667.0), "default survives");
 
     let bad = def.evaluate(ext, &[Adjust::formula("adj", "gibberish")]);
@@ -557,5 +551,39 @@ fn presets_survive_hostile_adjusts() {
                 );
             }
         }
+    }
+}
+
+/// `SEC-019`: a formula, a guide name and an adjust name are the part's to choose, and no
+/// diagnostic may repeat them. Nor any of this in a refusal.
+#[test]
+fn a_diagnostic_holds_no_text_from_the_file() {
+    const MARK: &str = "QzMarkerQz";
+    let raw = RawGeometry {
+        gd: vec![
+            guide("a", MARK),
+            guide("b", &format!("{MARK} 1 2")),
+            guide("c", &format!("val {MARK}")),
+            guide("d", &format!("*/ 1 2 3 {MARK}")),
+            guide("e", &format!("*/ {MARK}")),
+        ],
+        paths: vec![RawPath {
+            commands: vec![RawCommand::LineTo(pt(MARK, MARK))],
+            ..RawPath::default()
+        }],
+        ..RawGeometry::default()
+    };
+    let compiled = raw.compile().unwrap();
+    assert!(compiled.diagnostics.total() >= 5);
+    let adjusts = [Adjust::val(MARK, 1)];
+    let out = compiled
+        .def
+        .evaluate(Extents::new(914_400, 914_400), &adjusts);
+    assert!(!out.diagnostics.is_empty());
+    for text in [
+        format!("{:?}", compiled.diagnostics),
+        format!("{:?}", out.diagnostics),
+    ] {
+        assert!(!text.contains(MARK), "{text}");
     }
 }

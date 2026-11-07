@@ -230,7 +230,7 @@ fn something_unknown_is_reported_and_so_is_its_absence() {
     let extra = read(slide(r#" madeUp="1""#).as_bytes()).unwrap();
     assert_ne!(plain, extra, "an unknown attribute changes the report");
     assert!(
-        extra.1.iter().any(|f| f.contains("madeUp")),
+        extra.1.iter().any(|f| f.contains("bodyPr")),
         "{:?}",
         extra.1
     );

@@ -72,6 +72,7 @@ impl EffectScope {
 
 impl Ctx<'_, '_> {
     /// `effectLst` or `effectDag`, which the caller has checked it is.
+    // spec-audit: owner=effectLst,effectDag
     pub(crate) fn effect_properties(&mut self, el: &Elem) -> Res<EffectProperties> {
         if el.local == "effectLst" {
             self.r.finish(el);
@@ -93,6 +94,7 @@ impl Ctx<'_, '_> {
         Ok(EffectProperties::Dag(dag))
     }
 
+    // spec-audit: owner=cont,effectDag
     fn container(&mut self, el: &Elem) -> Res<EffectContainer> {
         self.enter()?;
         let mut e = el.clone();
@@ -173,6 +175,7 @@ impl Ctx<'_, '_> {
     }
 
     /// One effect. `None` if it is not one, or not one this place allows.
+    // spec-audit: owner=effectLst,effectDag,cont,blip,alphaMod,blend
     pub(crate) fn effect(&mut self, el: &Elem, scope: EffectScope) -> Res<Option<Effect>> {
         if !el.in_namespace(ns::DML) || !scope.allows(&el.local) {
             return Ok(None);
@@ -431,6 +434,7 @@ impl Ctx<'_, '_> {
     }
 
     /// `a14:imgProps`.
+    // spec-audit: owner=imgProps
     pub(crate) fn image_properties(&mut self, el: &Elem) -> Res<ImageProperties> {
         self.r.finish(el);
         let mut p = ImageProperties::default();
@@ -446,6 +450,7 @@ impl Ctx<'_, '_> {
         Ok(p)
     }
 
+    // spec-audit: owner=imgLayer
     fn image_layer(&mut self, el: &Elem) -> Res<ImageLayer> {
         let mut e = el.clone();
         let mut layer = ImageLayer {
@@ -480,6 +485,7 @@ impl Ctx<'_, '_> {
         Ok(layer)
     }
 
+    // spec-audit: owner=imgEffect
     fn picture_effect(&mut self, el: &Elem) -> Res<Option<PictureEffectKind>> {
         use ValueDomain as D;
         let mut e = el.clone();

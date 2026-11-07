@@ -5,19 +5,19 @@
 //! names an element and an attribute, never a value from the file.
 
 use casual_slide_model::color::{
-    Angle, Color, ColorChange, ColorTransform, ColorValue, MAX_COLOR_TRANSFORMS, Percentage,
-    PresetColor, Rgb, SchemeColor, SystemColor, TransformKind, ValueDomain, parse_int,
-    parse_percentage,
+    Angle, Color, ColorChange, ColorTransform, ColorValue, Percentage, PresetColor, Rgb,
+    SchemeColor, SystemColor, TransformKind, ValueDomain, parse_int, parse_percentage,
 };
-use casual_slide_ooxml::{ElementId, XmlTree};
+use casual_slide_ooxml::{ElementId, OoxmlLimits, XmlTree};
+
+use crate::properties::reportable_name;
 
 /// DrawingML, Transitional.
 pub const DML_TRANSITIONAL: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
 /// DrawingML, Strict.
 pub const DML_STRICT: &str = "http://purl.oclc.org/ooxml/drawingml/main";
 
-/// The most entries read from one list in a theme: custom colours, supplemental
-/// fonts, style matrix entries, gradient stops, extensions. Far beyond real use.
+/// The default for [`OoxmlLimits::max_theme_list_entries`]. Far beyond real use.
 pub const MAX_LIST_ENTRIES: usize = 4096;
 
 /// What was noticed. Codes are stable; none of these stops a deck opening.
@@ -25,7 +25,7 @@ pub const MAX_LIST_ENTRIES: usize = 4096;
 pub enum FindingKind {
     /// A colour's required attribute is absent or unreadable; the colour is absent.
     BadColorValue,
-    /// A colour has more than [`MAX_COLOR_TRANSFORMS`]; the colour is absent.
+    /// A colour has more than [`OoxmlLimits::max_color_transforms`]; the colour is absent.
     TooManyTransforms,
     /// A transform's value is absent or outside its type; that transform is
     /// dropped and the colour kept.
@@ -42,7 +42,8 @@ pub enum FindingKind {
     Duplicate,
     /// An element this reader does not model; preserved but not modelled.
     Unmodelled,
-    /// A list passed [`MAX_LIST_ENTRIES`]; the rest is preserved but not modelled.
+    /// A list passed [`OoxmlLimits::max_theme_list_entries`]; the rest is preserved but
+    /// not modelled.
     ListCapped,
 }
 
@@ -69,36 +70,86 @@ impl FindingKind {
 pub struct Finding {
     /// What.
     pub kind: FindingKind,
-    /// The element's qualified name, truncated. Schema names only by intent, but
-    /// a hostile part chooses this, so it is bounded.
+    /// The element's qualified name if the schemas have it, else
+    /// [`UNKNOWN_NAME`](crate::properties::UNKNOWN_NAME). A hostile part chooses it.
     pub element: String,
     /// The attribute or child concerned, if any; from the schema, not the file.
     pub detail: &'static str,
 }
 
-/// Findings, in document order and bounded: past [`MAX_FINDINGS`] only the count
-/// grows, so a hostile part cannot make the report the cost.
+/// The caps a read of colours and themes works under, from [`OoxmlLimits`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ColorBounds {
+    /// [`OoxmlLimits::max_color_transforms`].
+    pub transforms: usize,
+    /// [`OoxmlLimits::max_theme_list_entries`].
+    pub list_entries: usize,
+    /// [`OoxmlLimits::max_color_findings`].
+    pub findings: usize,
+}
+
+impl Default for ColorBounds {
+    fn default() -> Self {
+        Self::from(&OoxmlLimits::default())
+    }
+}
+
+impl From<&OoxmlLimits> for ColorBounds {
+    fn from(limits: &OoxmlLimits) -> Self {
+        Self {
+            transforms: limits.max_color_transforms,
+            list_entries: limits.max_theme_list_entries,
+            findings: limits.max_color_findings,
+        }
+    }
+}
+
+/// Findings, in document order and bounded: past their bound only the count grows, so a
+/// hostile part cannot make the report the cost. These travel with every read of a colour,
+/// so they carry the bounds that read is under.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Findings {
     /// The findings kept.
     pub items: Vec<Finding>,
     /// How many there were, kept or not.
     pub total: usize,
+    /// The caps this read is under.
+    pub bounds: ColorBounds,
 }
 
-/// The most findings kept for one part.
+/// The default for [`OoxmlLimits::max_color_findings`].
 pub const MAX_FINDINGS: usize = 1024;
 
 impl Findings {
+    /// An empty report for a read under these limits.
+    pub fn with_limits(limits: &OoxmlLimits) -> Self {
+        Self {
+            bounds: limits.into(),
+            ..Self::default()
+        }
+    }
+
     /// Note one.
     pub fn push(&mut self, kind: FindingKind, tree: &XmlTree, at: ElementId, detail: &'static str) {
         self.total = self.total.saturating_add(1);
-        if self.items.len() < MAX_FINDINGS {
-            let element = tree.qualified_name(at).chars().take(64).collect();
+        if self.items.len() < self.bounds.findings {
+            let element = reportable_name(tree.qualified_name(at)).to_owned();
             self.items.push(Finding {
                 kind,
                 element,
                 detail,
+            });
+        }
+    }
+
+    /// Carry over one another reader noticed, by the name it reported.
+    pub(crate) fn carry(&mut self, kind: FindingKind, element: &str) {
+        self.total = self.total.saturating_add(1);
+        if self.items.len() < self.bounds.findings {
+            self.items.push(Finding {
+                kind,
+                element: reportable_name(element).to_owned(),
+                detail: "",
             });
         }
     }
@@ -121,9 +172,10 @@ pub(crate) fn bounded_children(
     findings: &mut Findings,
 ) -> Vec<ElementId> {
     let mut children = tree.child_elements(el);
-    if children.len() > MAX_LIST_ENTRIES + 8 {
+    let bound = findings.bounds.list_entries.saturating_add(8);
+    if children.len() > bound {
         findings.push(FindingKind::ListCapped, tree, el, "");
-        children.truncate(MAX_LIST_ENTRIES + 8);
+        children.truncate(bound);
     }
     children
 }
@@ -206,7 +258,7 @@ pub fn read_color(tree: &XmlTree, el: ElementId, findings: &mut Findings) -> Opt
             continue;
         };
         seen += 1;
-        if seen > MAX_COLOR_TRANSFORMS {
+        if seen > findings.bounds.transforms {
             findings.push(FindingKind::TooManyTransforms, tree, el, "");
             return None;
         }
@@ -348,7 +400,7 @@ fn read_transform(
 pub fn read_color_mru(tree: &XmlTree, el: ElementId, findings: &mut Findings) -> Vec<Color> {
     let mut out = Vec::new();
     for child in bounded_children(tree, el, findings) {
-        if out.len() >= MAX_LIST_ENTRIES {
+        if out.len() >= findings.bounds.list_entries {
             findings.push(FindingKind::ListCapped, tree, el, "");
             break;
         }

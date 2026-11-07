@@ -8,6 +8,7 @@ use casual_slide_model::effect::{
 use crate::drawing::{Node, Space, color_node};
 use crate::fill::fill_node;
 
+// spec-audit: owner=cont,effectDag,alphaMod,blend
 fn container(local: &'static str, c: &EffectContainer) -> Node {
     Node::a(local)
         .lex("type", c.container_type.as_ref())
@@ -16,6 +17,7 @@ fn container(local: &'static str, c: &EffectContainer) -> Node {
 }
 
 /// One effect.
+// spec-audit: owner=effectLst,effectDag,cont,blip,alphaMod,blend
 pub(crate) fn effect_node(e: &Effect) -> Node {
     match e {
         Effect::Container(c) => container("cont", c),
@@ -125,6 +127,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
 }
 
 /// `effectLst` or `effectDag`.
+// spec-audit: owner=effectLst,effectDag
 pub(crate) fn effect_properties_node(p: &EffectProperties) -> Node {
     match p {
         EffectProperties::List(list) => Node::a("effectLst").list(list.iter().map(effect_node)),
@@ -132,6 +135,7 @@ pub(crate) fn effect_properties_node(p: &EffectProperties) -> Node {
     }
 }
 
+// spec-audit: owner=foregroundMark,backgroundMark
 fn mark(local: &'static str, m: &RemovalMark) -> Node {
     Node::new(Space::A14, local)
         .pct("x1", m.x1)
@@ -169,6 +173,7 @@ fn artistic_name(effect: ArtisticEffect) -> &'static str {
     }
 }
 
+// spec-audit: owner=imgEffect,imgLayer
 fn picture_effect(e: &PictureEffect) -> Node {
     let kind = e.kind.as_ref().map(|kind| match kind {
         PictureEffectKind::Artistic {
@@ -204,6 +209,7 @@ fn picture_effect(e: &PictureEffect) -> Node {
 }
 
 /// `a14:imgProps`.
+// spec-audit: owner=imgProps,imgLayer
 pub(crate) fn image_properties_node(p: &ImageProperties) -> Node {
     let layer = p.layer.as_ref().map(|l| {
         Node::new(Space::A14, "imgLayer")

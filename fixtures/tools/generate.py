@@ -171,6 +171,9 @@ def fixtures():
     yield "generated/percent-encoded-targets.pptx", zipped(deck(
         slide_rels=[("image", "../media/my%20image.png"), ("image", "../media/%c3%a9.png")],
         parts=[("ppt/media/my image.png", png), ("ppt/media/é.png", png)])), "open"
+    # PKG-02: a part's relationships under a percent-encoded entry name.
+    encoded_rels = [(n.replace("ppt/_rels/presentation.xml.rels", "ppt/_rels/pres%65ntation.xml.rels"), d) for n, d in deck()]
+    yield "generated/percent-encoded-rels.pptx", zipped(encoded_rels), "open"
     # MCE-01: a Choice this engine does not understand, in front of a valid Fallback.
     mc_ns = ('xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
              'xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" mc:Ignorable="p14"')
@@ -178,6 +181,14 @@ def fixtures():
                  f'<mc:Fallback>{TITLE % "Fallback"}</mc:Fallback></mc:AlternateContent>')
     yield "generated/mce-alternate-content.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
         f'{DECL}<p:sld {NS} {mc_ns}><p:cSld p14:ignored="1"><p:spTree>{TREE}{alternate}</p:spTree></p:cSld></p:sld>')), "open"
+    # SPEC-08: ProcessContent unwrapping an ignorable element, and MustUnderstand of a namespace
+    # we know, which are in no real deck. Apart, since the SDK refuses a deck for the second.
+    mc_decl = 'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
+    yield "generated/mce-process-content.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
+        f'{DECL}<p:sld {NS} {mc_decl} xmlns:x14="urn:openslide:fixture:ignorable" mc:ProcessContent="x14:wrap" '
+        f'mc:Ignorable="x14"><p:cSld><p:spTree>{TREE}<x14:wrap>{TITLE % "Inside"}</x14:wrap></p:spTree></p:cSld></p:sld>')), "open"
+    yield "generated/mce-must-understand.pptx", zipped(replace(deck(), "ppt/slides/slide1.xml",
+        f'{DECL}<p:sld {NS} {mc_decl} mc:MustUnderstand="p"><p:cSld><p:spTree>{TREE}</p:spTree></p:cSld></p:sld>')), "open"
     # STRICT-01: synthetic. The name says so, since no PowerPoint-saved Strict deck exists here yet.
     yield "generated/strict-synthetic.pptx", zipped(strict(deck(2))), "open"
 
@@ -201,6 +212,8 @@ def fixtures():
         "compound-file": (bytes.fromhex("d0cf11e0a1b11ae1") + b"\0" * 504, "refuse:CS-OPC-0005"),
         "not-a-zip": (b"this is not a package", "refuse:CS-PKG-0005"),
         "path-traversal": (zipped(deck(parts=[("../../etc/evil.xml", "<a/>")])), "refuse:CS-PKG-0004"),
+        # SEC-020: an ordinary name, one byte over max_path_bytes. Nothing else refuses it.
+        "path-too-long": (zipped(deck(parts=[("ppt/" + "a" * (4096 - len("ppt/") - len(".xml") + 1) + ".xml", "<a/>")])), "refuse:CS-PKG-0004"),
         "case-colliding-parts": (zipped(deck(parts=[("PPT/PRESENTATION.XML", "<a/>")])), "refuse:CS-PKG-0007"),
         "zip-bomb": (zipped(deck(parts=[("ppt/media/bomb.bin", b"\0" * (64 << 20))])), "refuse:CS-PKG-0003"),
         "percent-equivalent-parts": (zipped(deck(parts=[("ppt/media/a b.png", png), ("ppt/media/a%20b.png", b"other")])), "refuse:CS-PKG-0007"),
@@ -231,6 +244,7 @@ def fixtures():
         yield f"hostile/{name}.bin", data, expect, *limits
     yield from property_fixtures()
     yield "generated/slides-masters-layouts.pptx", zipped(slides_parts()), "open"
+    yield "generated/area-slide-values.pptx", zipped(slide_values_parts()), "open"
     yield "generated/slides-strict.pptx", zipped([(n, d) if isinstance(d, bytes) else strict([(n, d)])[0] for n, d in slides_parts()]), "open"
     # Lazy loading is measured on this: opening it must not read 500 slides.
     yield "generated/five-hundred-slides.pptx", zipped(deck(500)), "open"
@@ -464,9 +478,60 @@ def property_fixtures():
     }
     for name, parts in limits.items():
         yield f"hostile/import-limit-{name}.bin", zipped(full_deck(**parts)), "open"
-    # Over the bound on findings: distinct unknown elements, a report that must not grow without end.
+    # Unknown elements in numbers, which must not become a report of that size: made-up names are one finding (SEC-018).
     flood = "".join(f"<z{i}/>" for i in range(10_100))
     yield "hostile/import-findings-flood.bin", zipped(full_deck(pres_doc(f"<p:extLst/>{flood}"))), "open"
+    # T1D-03: one over each SlideLimits default a package can reach. max_parts cannot be, behind max_entries.
+    many_slides = "".join(f'<p:sldId id="{256 + i}" r:id="rId3"/>' for i in range(100_001))
+    yield "hostile/import-limit-structure-slides.bin", zipped(replace(deck(), "ppt/presentation.xml",
+        f'{DECL}<p:presentation {NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>'
+        f'<p:sldIdLst>{many_slides}</p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>')), "open"
+    yield "hostile/slide-limit-parts.bin", zipped(deck(slides=6)), "open"
+    master = dict(deck())["ppt/slideMasters/slideMaster1.xml"]
+    many_layouts = "".join(f'<p:sldLayoutId id="{2147483649 + i}" r:id="rId1"/>' for i in range(10_001))
+    yield "hostile/slide-limit-layout-ids.bin", zipped(replace(deck(), "ppt/slideMasters/slideMaster1.xml",
+        master.replace('<p:sldLayoutId id="2147483649" r:id="rId1"/>', many_layouts))), "open"
+
+    # COLOR-01: a theme past each colour bound in OoxmlLimits, which are capped and reported, not refused.
+    def theme_with(scheme="", tail=""):
+        names = ("dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink")
+        slots = "".join(f'<a:{n}>{scheme if n == "dk1" else ""}{"" if n == "dk1" and scheme else "<a:srgbClr val=" + chr(34) + "010203" + chr(34) + "/>"}</a:{n}>' for n in names)
+        return (f'{DECL}<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Hostile">'
+                f'<a:themeElements><a:clrScheme name="c">{slots}</a:clrScheme></a:themeElements>{tail}</a:theme>')
+
+    for name, theme in (
+        ("too-many-transforms", theme_with('<a:srgbClr val="010203">' + '<a:alpha val="50000"/>' * 65 + '</a:srgbClr>')),
+        ("list-capped", theme_with(tail='<a:custClrLst>' + '<a:custClr><a:srgbClr val="010203"/></a:custClr>' * 5000 + '</a:custClrLst>')),
+        ("findings-flood", theme_with(tail='<a:custClrLst>' + '<a:custClr><a:srgbClr val="bad"/></a:custClr>' * 2000 + '</a:custClrLst>')),
+    ):
+        yield f"hostile/color-{name}.bin", zipped(replace(deck(), "ppt/theme/theme1.xml", theme)), "open"
+
+    # GEO-04: custom geometry past each cap in casual-slide-geometry's `limits`, which the test reads itself.
+    def geometry(body):
+        shape = ('<p:sp><p:nvSpPr><p:cNvPr id="2" name="Custom"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+                 f'<p:spPr><a:custGeom>{body}</a:custGeom></p:spPr></p:sp>')
+        slide = f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{shape}</p:spTree></p:cSld></p:sld>'
+        return zipped(replace(deck(), "ppt/slides/slide1.xml", slide))
+
+    def repeated(item, count):
+        return "".join(item for _ in range(count))
+
+    pos = '<a:pos x="0" y="0"/>'
+    point = '<a:lnTo><a:pt x="0" y="0"/></a:lnTo>'
+    for name, body in (
+        ("too-many-guides", '<a:gdLst>' + repeated('<a:gd name="g" fmla="val 1"/>', 4097) + '</a:gdLst>'),
+        ("too-many-paths", '<a:pathLst>' + repeated('<a:path/>', 1025) + '</a:pathLst>'),
+        ("too-many-points", '<a:pathLst><a:path>' + repeated(point, 262_145) + '</a:path></a:pathLst>'),
+        ("too-many-handles", '<a:ahLst>' + repeated(f'<a:ahXY>{pos}</a:ahXY>', 257) + '</a:ahLst>'),
+        ("too-many-sites", '<a:cxnLst>' + repeated(f'<a:cxn ang="0">{pos}</a:cxn>', 4097) + '</a:cxnLst>'),
+        ("long-names", '<a:gdLst><a:gd name="' + "n" * 257 + '" fmla="val 1"/><a:gd name="b" fmla="' + "*/ 1 1 " * 147 + '"/></a:gdLst>'),
+        ("cycle", '<a:gdLst><a:gd name="ga" fmla="+- gb 1 0"/><a:gd name="gb" fmla="+- ga 1 0"/></a:gdLst>'),
+        ("huge-values", '<a:gdLst><a:gd name="a" fmla="*/ 9223372036854775807 9223372036854775807 0"/>'
+                        '<a:gd name="b" fmla="+- a a a"/></a:gdLst><a:pathLst><a:path><a:moveTo><a:pt x="b" y="b"/></a:moveTo>'
+                        '<a:arcTo wR="b" hR="b" stAng="b" swAng="b"/></a:path></a:pathLst>'),
+    ):
+        yield f"hostile/geometry-{name}.bin", geometry(body), "open"
+
     # Values that must be reported and left out, never coerced and never a panic.
     yield "hostile/import-bad-values.bin", zipped(full_deck(**bad_values())), "open"
 
@@ -496,6 +561,59 @@ def ph_tree(*shapes):
 
 
 LIST = '<a:lvl1pPr><a:defRPr sz="1800"/></a:lvl1pPr>'
+
+
+def slide_values_parts():
+    """T1D-03: the Tier 1D values and lock attributes no other deck has. Every
+    ST_SlideLayoutType as a layout of one master, and on one slide every ST_PlaceholderType,
+    every ST_BlackWhiteMode and every lock attribute. Values come from the schemas."""
+    from generate_presets import enum  # imports this module, so not at the top
+    layout_types = enum("ST_SlideLayoutType", "pml")
+    entries = deck()
+    base = dict(entries)
+    layout = base["ppt/slideLayouts/slideLayout1.xml"]
+    layout_rels = base["ppt/slideLayouts/_rels/slideLayout1.xml.rels"]
+    master = base["ppt/slideMasters/slideMaster1.xml"]
+    master_rels = base["ppt/slideMasters/_rels/slideMaster1.xml.rels"]
+    ids, rels, parts, types = "", "", [], []
+    for i, value in enumerate(layout_types):
+        n = i + 2
+        ids += f'<p:sldLayoutId id="{2147483650 + i}" r:id="rId{n + 100}"/>'
+        rels += (f'<Relationship Id="rId{n + 100}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" '
+                 f'Target="../slideLayouts/slideLayout{n}.xml"/>')
+        parts.append((f"ppt/slideLayouts/slideLayout{n}.xml", layout.replace('type="titleOnly"', f'type="{value}"')))
+        parts.append((f"ppt/slideLayouts/_rels/slideLayout{n}.xml.rels", layout_rels))
+        types.append((f"/ppt/slideLayouts/slideLayout{n}.xml", f"{PML}.slideLayout+xml"))
+    master = master.replace("</p:sldLayoutIdLst>", ids + "</p:sldLayoutIdLst>")
+    master_rels = master_rels.replace("</Relationships>", rels + "</Relationships>")
+
+    def shape(sid, name, ph="", props="", locks=""):
+        return (f'<p:sp><p:nvSpPr><p:cNvPr id="{sid}" name="{name}"/><p:cNvSpPr>{locks}</p:cNvSpPr><p:nvPr>{ph}</p:nvPr></p:nvSpPr>'
+                f'<p:spPr{props}/></p:sp>')
+
+    nodes, sid = [], 2
+    for i, value in enumerate(enum("ST_PlaceholderType", "pml")):
+        size = ' sz="full"' if i == 0 else ""
+        nodes.append(shape(sid, f"Placeholder {value}", f'<p:ph type="{value}"{size} idx="{100 + i}"/>'))
+        sid += 1
+    for value in enum("ST_BlackWhiteMode"):
+        nodes.append(shape(sid, f"Mode {value}", props=f' bwMode="{value}"'))
+        sid += 1
+    flags = ("noGrp", "noSelect", "noRot", "noChangeAspect", "noMove", "noResize", "noEditPoints", "noAdjustHandles",
+             "noChangeArrowheads", "noChangeShapeType")
+    every = "".join(f' {f}="1"' for f in flags)
+    nodes.append(shape(sid, "Locked", locks=f'<a:spLocks{every} noTextEdit="1"/>'))
+    group_flags = "".join(f' {f}="1"' for f in ("noGrp", "noUngrp", "noSelect", "noRot", "noChangeAspect", "noMove", "noResize"))
+    nodes.append(f'<p:grpSp><p:nvGrpSpPr><p:cNvPr id="{sid + 1}" name="Locked group"/><p:cNvGrpSpPr><a:grpSpLocks{group_flags}/></p:cNvGrpSpPr><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:grpSp>')
+    frame_flags = "".join(f' {f}="1"' for f in ("noGrp", "noDrilldown", "noSelect", "noChangeAspect", "noMove", "noResize"))
+    nodes.append(f'<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="{sid + 2}" name="Locked frame"/><p:cNvGraphicFramePr><a:graphicFrameLocks{frame_flags}/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>'
+                 '<p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>'
+                 '<a:graphic><a:graphicData uri="urn:openslide:fixture:empty"/></a:graphic></p:graphicFrame>')
+    slide = f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{"".join(nodes)}</p:spTree></p:cSld></p:sld>'
+    out = deck(parts=parts, types_extra=types)
+    out = replace(out, "ppt/slideMasters/slideMaster1.xml", master)
+    out = replace(out, "ppt/slideMasters/_rels/slideMaster1.xml.rels", master_rels)
+    return replace(out, "ppt/slides/slide1.xml", slide)
 
 
 def slides_parts():

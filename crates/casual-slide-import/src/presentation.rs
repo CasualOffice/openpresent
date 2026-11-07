@@ -18,7 +18,8 @@ use casual_slide_model::presentation::{
 };
 use casual_slide_model::properties::DocumentProperties;
 use casual_slide_ooxml::{
-    OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree, resolve_internal,
+    OoxmlError, PresentationPackage, Relationship, TargetMode, XmlTree, part_names_equivalent,
+    resolve_internal,
 };
 
 use crate::color::Findings as ColorFindings;
@@ -1076,10 +1077,10 @@ pub fn locate_part(
     };
     let name = rel_types[0].rsplit('/').next().unwrap_or_default();
     if found.next().is_some() {
-        findings.note(ImportFindingKind::DuplicateRelationship, source, name, None);
+        findings.note_role(ImportFindingKind::DuplicateRelationship, source, name);
     }
     let unusable = |findings: &mut Findings| {
-        findings.note(ImportFindingKind::UnusableRelationship, source, name, None);
+        findings.note_role(ImportFindingKind::UnusableRelationship, source, name);
         PartLocation::Unusable
     };
     if rel.mode != TargetMode::Internal {
@@ -1091,7 +1092,7 @@ pub fn locate_part(
     match package
         .part_names()
         .into_iter()
-        .find(|n| n.eq_ignore_ascii_case(&target))
+        .find(|n| part_names_equivalent(n, &target))
     {
         Some(actual) => PartLocation::At(actual),
         None => unusable(findings),

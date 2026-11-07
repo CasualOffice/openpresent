@@ -2,6 +2,7 @@
 """Each gate seen failing on a seeded gap. Run: python3 tools/spec-audit/test_audit.py"""
 import contextlib
 import csv
+import importlib.util
 import io
 import pathlib
 import shutil
@@ -16,6 +17,21 @@ import count  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CHECKLIST = REPO / "docs/spec/checklist.tsv"
+
+# Scanning the real corpus takes most of a minute and the answer cannot change in one run.
+_scan_fixtures = audit.scan_fixtures
+_scanned = {}
+
+
+def _cached_scan(folder, schema):
+    if pathlib.Path(folder).resolve() != (REPO / "fixtures").resolve():
+        return _scan_fixtures(folder, schema)
+    if folder not in _scanned:
+        _scanned[folder] = _scan_fixtures(folder, schema)
+    return _scanned[folder]
+
+
+audit.scan_fixtures = _cached_scan
 
 RUST = r'''
 const OFF: &str = "off";
@@ -60,20 +76,29 @@ mod tests {
 '''
 
 
-def make_crates(folder, importer=RUST, exporter="", model=""):
+# What the seeded crates' tests name, so a mark's only gap is the one a test seeds.
+NAMED_BY_TESTS = 'fn names() { let _ = "x y cx cy off algn just w round rotWithShape kumimoji"; }'
+
+
+def make_crates(folder, importer=RUST, exporter="", model="", tests=NAMED_BY_TESTS):
     for name, text in (("casual-slide-import", importer), ("casual-slide-export", exporter), ("casual-slide-model", model)):
         src = folder / name / "src"
         src.mkdir(parents=True)
         (src / "lib.rs").write_text(text, encoding="utf8")
+        (folder / name / "tests").mkdir()
+        (folder / name / "tests/names.rs").write_text(tests, encoding="utf8")
 
 
-def seed_checklist(target, marks):
-    """The real checklist, with status columns set for {row id: {column: value}}."""
+def seed_checklist(target, marks, keep=False):
+    """The real checklist, with status columns set for {row id: {column: value}}. Its own
+    marks rest on the real crates, so they are cleared unless `keep` says otherwise."""
     with open(CHECKLIST, encoding="utf8", newline="") as src, open(target, "w", encoding="utf8", newline="") as out:
         reader = csv.DictReader(src, delimiter="\t", quoting=csv.QUOTE_NONE)
         out.write("\t".join(reader.fieldnames) + "\n")
         seen = set()
         for row in reader:
+            if not keep:
+                row.update({c: "." for c in "MIE"})
             if row["id"] in marks:
                 row.update(marks[row["id"]])
                 seen.add(row["id"])
@@ -159,12 +184,45 @@ class CodeGate(unittest.TestCase):
         # Comments and test modules are not references.
         self.assertEqual(gaps["p:CT_SlideTransition/sndAc"]["import"], "none")
 
-    def test_strict_refuses_name_precision(self):
-        marks = {"a:CT_BlipFillProperties/@rotWithShape": {"I": "y"}}
-        self.assertEqual(self.audit(marks)[0], 0)
-        code, out = self.audit(marks, "--strict")
+    def test_name_precision_is_not_enough_for_a_mark(self):
+        code, out = self.audit({"a:CT_BlipFillProperties/@rotWithShape": {"I": "y"}})
         self.assertEqual(code, 1)
         self.assertIn("only `name` precision", out)
+
+    def test_a_mark_needs_a_test_that_names_it(self):
+        shutil.rmtree(self.dir / "crates")
+        make_crates(self.dir / "crates", tests='fn other() { let _ = "y"; /* x */ }')
+        code, out = self.audit({"a:CT_Point2D/@x": {"I": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("I=y, no test in casual-slide-import names it", out)
+
+    def test_a_test_module_in_the_source_counts_as_a_test(self):
+        shutil.rmtree(self.dir / "crates")
+        make_crates(self.dir / "crates", importer=RUST + '#[cfg(test)] mod more { fn t() { let _ = "x"; } }', tests="")
+        code, out = self.audit({"a:CT_Point2D/@x": {"I": "y"}})
+        self.assertEqual(code, 0, out[-800:])
+
+    def test_a_type_needs_everything_it_declares(self):
+        code, out = self.audit({"a:CT_Point2D": {"I": "y"}})
+        self.assertEqual(code, 1)  # `y` is not read in the seeded source
+        self.assertIn("a:CT_Point2D: I=y, not all it declares is done, such as a:CT_Point2D/@y", out)
+        shutil.rmtree(self.dir / "crates")
+        make_crates(self.dir / "crates", importer=RUST.replace('tree.attribute(id, "x");', 'tree.attribute(id, "x"); tree.attribute(id, "y");'))
+        code, out = self.audit({"a:CT_Point2D": {"I": "y"}})
+        self.assertEqual(code, 0, out[-800:])
+
+    def test_a_group_row_answers_for_the_group_it_includes(self):
+        code, out = self.audit({"a:CT_Color/EG_ColorChoice": {"I": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("not all it includes is done", out)
+
+    def test_an_extension_list_never_earns_a_mark(self):
+        shutil.rmtree(self.dir / "crates")
+        reads = 'pub fn read_cSld(t: &T, c: C) { match t.local_name(c) { "extLst" => {} _ => {} } }'
+        make_crates(self.dir / "crates", importer=reads, tests='fn t() { let _ = "extLst"; }')
+        code, out = self.audit({"p:CT_CommonSlideData/extLst": {"I": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("retained, not read", out)
 
     def test_each_crate_answers_for_its_own_column(self):
         code, out = self.audit({"a:CT_Point2D/@x": {"E": "y"}})
@@ -179,6 +237,275 @@ class CodeGate(unittest.TestCase):
         _, out = self.audit({row: {"I": "y"}})
         self.assertEqual(self.gaps()[row]["import"], "annotated")
         self.assertNotIn(f"FAIL {row}: I=y, no reference", out)
+
+
+class ModelGate(unittest.TestCase):
+    """M rests on a declaration, not on an identifier that happens to normalise to the name."""
+
+    MODEL = """
+token_enum!(
+    /// `a:ST_BlackWhiteMode`. How a shape renders.
+    BlackWhiteMode {
+        Clr = "clr",
+        Auto = "auto",
+    }
+);
+pub struct Kinsoku {
+    /// The language.
+    pub lang: Option<String>,
+    pub(crate) private_thing: u8,
+}
+pub struct Other {
+    pub invalid_st_chars: String,
+}
+fn f() { let invalid_end_chars = 1; let vert_bar_state = 2; }
+"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+        make_crates(self.dir / "crates", importer="", model=self.MODEL,
+                    tests='fn t() { let _ = "lang invalStChars invalEndChars vertBarState clr auto gray"; }')
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def audit(self, marks):
+        seed_checklist(self.dir / "c.tsv", marks)
+        return run_audit("--crates", self.dir / "crates", "--checklist", self.dir / "c.tsv", "--check")
+
+    def test_a_field_of_the_owners_struct_earns_it(self):
+        code, out = self.audit({"p:CT_Kinsoku/@lang": {"M": "y"}})
+        self.assertEqual(code, 0, out[-800:])
+
+    def test_a_field_of_another_struct_does_not(self):
+        code, out = self.audit({"p:CT_Kinsoku/@invalStChars": {"M": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("p:CT_Kinsoku/@invalStChars: M=y, no declaration", out)
+
+    def test_a_local_variable_does_not(self):
+        code, out = self.audit({"p:CT_NormalViewProperties/@vertBarState": {"M": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("M=y, no declaration", out)
+
+    def test_an_enum_value_must_be_in_the_enum_for_its_type(self):
+        self.assertEqual(self.audit({"a:ST_BlackWhiteMode/=auto": {"M": "y"}})[0], 0)
+        code, out = self.audit({"a:ST_BlackWhiteMode/=gray": {"M": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("a:ST_BlackWhiteMode/=gray: M=y, no declaration", out)
+
+    def test_a_doc_comment_declares_only_for_the_owner_it_names(self):
+        model = audit.ModelDeclarations.__new__(audit.ModelDeclarations)
+        model.enums, model.structs, model.documented = {}, {}, set()
+        model.read_docs(
+            "/// `a:CT_Thing`.\npub struct Thing {\n    /// `@wide` and `child/@deep`.\n    pub a: u8,\n}\n"
+            "pub enum Choice {\n    /// `glow`.\n    Glow {\n        /// `@rad`.\n        radius: u8,\n    },\n}\n"
+        )
+        row = lambda kind, name, owner: {"kind": kind, "name": name, "owner": owner}
+        self.assertTrue(model.declares(row("attribute", "@wide", "CT_Thing")))
+        self.assertTrue(model.declares(row("attribute", "@deep", "CT_Child"), ("child",)))
+        self.assertIsNone(model.declares(row("attribute", "@wide", "CT_Other")))
+        self.assertIsNone(model.declares(row("attribute", "@rad", "CT_Other")))
+        self.assertTrue(model.declares(row("attribute", "@rad", "CT_GlowEffect"), ("glow",)))
+        self.assertIsNone(model.declares(row("attribute", "@rad", "CT_BlurEffect"), ("blur",)))
+
+    def test_an_owner_note_places_a_helper_and_only_that_helper(self):
+        scan = audit.Scan({"bevelT"})
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "x.rs"
+            path.write_text('// spec-audit: owner=bevelT\nfn bevel(e: &E) {\n    e.lex("w", 1);\n}\nfn other(e: &E) {\n    e.lex("h", 1);\n}\n')
+            scan.scan_file(path, "x.rs", {})
+        refs = {r.value: r.ctx for r in scan.refs}
+        self.assertIn("bevelT", refs["w"])
+        self.assertNotIn("bevelT", refs["h"])
+
+    def test_the_builder_names_its_element_for_the_chain(self):
+        scan = audit.Scan({"glow"})
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "x.rs"
+            path.write_text('fn make() -> Node {\n    Node::a("glow").lex("rad", 1);\n    Node::a("blur").lex("grow", 1)\n}\n')
+            scan.scan_file(path, "x.rs", {})
+        refs = {r.value: r.ctx for r in scan.refs}
+        self.assertIn("glow", refs["rad"])
+        self.assertNotIn("glow", refs["grow"])
+
+    def test_a_value_needs_its_enum_and_an_attribute_placed_in_that_crate(self):
+        # In the enum, but no attribute of its type is read with a known owner in this tree.
+        code, out = self.audit({"a:ST_BlackWhiteMode/=auto": {"I": "y"}})
+        self.assertIn("a:ST_BlackWhiteMode/=auto", out if code else "a:ST_BlackWhiteMode/=auto")
+        code, out = self.audit({"a:ST_BlackWhiteMode/=gray": {"I": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("a:ST_BlackWhiteMode/=gray: I=y", out)
+
+    def test_a_simple_type_needs_all_its_values(self):
+        code, out = self.audit({"a:ST_BlackWhiteMode": {"M": "y"}})
+        self.assertEqual(code, 1)
+        self.assertIn("not all its values are done", out)
+
+
+class Marks(unittest.TestCase):
+    """STAT-01: what --propose earns, what --apply writes, and false marks on the real checklist."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+        self.copy = self.dir / "checklist.tsv"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def propose(self, crates, *extra):
+        seed_checklist(self.copy, {})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = audit.main(["--root", str(REPO), "--crates", str(crates), "--checklist", str(self.copy),
+                               "--propose", "1A,1B,1C,1D", *extra])
+        self.assertEqual(code, 0)
+        return dict(line.split("\t") for line in out.getvalue().splitlines())
+
+    def test_a_proposal_needs_context_a_test_and_a_fixture(self):
+        make_crates(self.dir / "crates")
+        marks = self.propose(self.dir / "crates")
+        self.assertEqual(marks.get("a:CT_Point2D/@x"), "I=y")     # all three
+        self.assertNotIn("a:CT_Point2D/@y", marks)                # not read
+        self.assertNotIn("a:CT_Point3D/@x", marks)                # another owner, and tier 1E
+        self.assertNotIn("a:CT_Point2D", marks)                   # only half of what it declares
+
+    def test_a_proposal_stays_inside_the_tiers_asked_for(self):
+        make_crates(self.dir / "crates")
+        marks = self.propose(self.dir / "crates")
+        self.assertNotIn("a:CT_LineProperties/@w", marks)         # LINE is Tier 1E, and has context
+
+    def test_an_unknown_tier_is_refused(self):
+        with contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(audit.main(["--root", str(REPO), "--propose", "9Z"]), 2)
+
+    def test_apply_writes_marks_that_pass_the_gate_and_nothing_else(self):
+        make_crates(self.dir / "crates")
+        marks = self.propose(self.dir / "crates", "--apply")
+        self.assertTrue(marks)
+        after = self.copy.read_text(encoding="utf8").splitlines()
+        for line in after[1:]:
+            cols = line.split("\t")
+            self.assertEqual(len(cols), 14)
+            if cols[0] in marks and "I=y" in marks[cols[0]]:
+                self.assertEqual(cols[10], "y")
+        code, out = run_audit("--crates", self.dir / "crates", "--checklist", self.copy, "--check")
+        self.assertEqual(code, 0, out[-800:])
+
+    def test_write_marks_keeps_the_rest_of_the_file_byte_for_byte(self):
+        path = self.dir / "t.tsv"
+        text = "id\tM\tI\tE\trest\nq\t.\t.\t.\tx y\nr\t.\tr\t.\tz\n"
+        path.write_text(text, encoding="utf8")
+        audit.write_marks(path, {"q": {"I": "y"}})
+        self.assertEqual(path.read_text(encoding="utf8"), text.replace("q\t.\t.", "q\t.\ty"))
+
+    def false_mark(self, marks):
+        seed_checklist(self.copy, marks, keep=True)
+        return run_audit("--checklist", self.copy, "--check")
+
+    def test_the_checklist_as_committed_passes(self):
+        code, out = run_audit("--check")
+        self.assertEqual(code, 0, out[-1500:])
+
+    def test_the_committed_marks_are_real_and_inside_their_tiers(self):
+        rows = audit.read_checklist(CHECKLIST)
+        marked = {r["area"] for r in rows if any(r[c] == "y" for c in "MIE")}
+        for tier, areas in audit.TIERS.items():
+            self.assertTrue(marked & set(areas), f"tier {tier} has no marks")
+
+    def test_a_false_mark_on_the_real_checklist_fails_check(self):
+        cases = {
+            # Nothing in the crates reads transitions yet.
+            "p:CT_SlideTransition/@spd": ("I", "no reference in casual-slide-import"),
+            # Import names it, but not where the audit can place an owner.
+            "p:CT_SlideSize/@cx": ("E", "casual-slide-export"),
+            # In code and in a fixture, and no model struct field holds it under that name.
+            "x:drawing/2010/main:CT_PictureEffectBlur/@radius": ("M", "M=y, no declaration"),
+            # Half of the type is not done.
+            "p:CT_Presentation": ("I", "not all it declares is done"),
+        }
+        for rid, (column, expected) in cases.items():
+            code, out = self.false_mark({rid: {column: "y"}})
+            self.assertEqual(code, 1, rid)
+            self.assertIn(f"FAIL {rid}: {column}=y", out)
+            self.assertIn(expected, out, rid)
+
+    def test_a_mark_with_code_and_no_fixture_fails_check(self):
+        rows = audit.read_checklist(CHECKLIST)
+        self.assertTrue(rows)
+        code, out = self.false_mark({"p:CT_Presentation/@firstSlideNum": {"I": "y"}})
+        self.assertEqual(code, 0, out[-800:])  # earned
+        make_crates(self.dir / "crates")
+        (self.dir / "fixtures/generated").mkdir(parents=True)
+        seed_checklist(self.copy, {"a:CT_Point2D/@x": {"I": "y"}})
+        code, out = run_audit("--crates", self.dir / "crates", "--checklist", self.copy,
+                              "--fixtures", self.dir / "fixtures", "--check")
+        self.assertEqual(code, 1)
+        self.assertIn("a:CT_Point2D/@x: I=y, no fixture exercises it", out)
+
+
+class MarkupCompatibility(unittest.TestCase):
+    """SPEC-08: rows no schema gives, kept by the generator and held to the same bar."""
+
+    NAMES = ("mc:<AlternateContent>", "mc:AlternateContent/Choice", "mc:AlternateContent/Fallback", "mc:Choice/@Requires",
+             "mc:@Ignorable", "mc:@ProcessContent", "mc:@MustUnderstand")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+        self.copy = self.dir / "checklist.tsv"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def generator(self):
+        spec = importlib.util.spec_from_file_location("spec_generate", REPO / "tools/spec-checklist/generate.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_the_rows_named_by_the_tracker_are_in_the_checklist(self):
+        rows = {r["id"]: r for r in audit.read_checklist(CHECKLIST)}
+        for name in self.NAMES:
+            self.assertEqual(rows[name]["area"], "MCE", name)
+        self.assertIn("BEH-18", (REPO / "docs/spec/MCE.md").read_text(encoding="utf8"))
+
+    def test_the_generator_keeps_them_and_their_status(self):
+        generator = self.generator()
+        rows, sources, skipped = generator.collect()
+        self.assertTrue(set(self.NAMES) <= {r["id"] for r in rows})
+        files = generator.render(rows, sources, skipped, {"mc:@Ignorable": {"I": "y"}})
+        line = next(ln for ln in files["checklist.tsv"].splitlines() if ln.startswith("mc:@Ignorable\t"))
+        self.assertEqual(line.split("\t")[10], "y")
+        self.assertIn("mc:", files["MCE.md"] + "mc:")
+        self.assertIn("BEH-18", files["MCE.md"])
+
+    def test_a_row_of_the_wrong_shape_stops_generation(self):
+        generator = self.generator()
+        path = self.dir / "t.tsv"
+        path.write_text("one\ttwo\n", encoding="utf8")
+        with self.assertRaises(SystemExit):
+            generator.hand_written_rows(path)
+
+    def test_the_count_and_the_schema_model_do_not_call_them_strays(self):
+        self.assertEqual(count.compare(REPO, CHECKLIST)[2], [])
+
+    def test_a_false_mark_on_one_fails_check(self):
+        rows = {r["id"]: r for r in audit.read_checklist(CHECKLIST)}
+        unexercised = next(n for n in ("mc:@PreserveElements", "mc:@PreserveAttributes") if rows[n]["I"] == ".")
+        seed_checklist(self.copy, {unexercised: {"I": "y"}, "mc:@Ignorable": {"E": "y"}}, keep=True)
+        code, out = run_audit("--checklist", self.copy, "--check")
+        self.assertEqual(code, 1)
+        self.assertIn(f"FAIL {unexercised}: I=y", out)
+        self.assertIn("FAIL mc:@Ignorable: E=y, only I applies", out)
+
+    def test_hostile_decks_do_not_earn_a_fixture(self):
+        (self.dir / "fixtures/hostile").mkdir(parents=True)
+        with zipfile.ZipFile(self.dir / "fixtures/hostile/h.bin", "w") as z:
+            z.writestr("a.xml", '<r xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable=""/>')
+        cov = audit.scan_fixtures(self.dir / "fixtures", audit.Schema(REPO))
+        self.assertEqual(cov.hits["mc:@Ignorable"], 0)
 
 
 class FixtureGate(unittest.TestCase):

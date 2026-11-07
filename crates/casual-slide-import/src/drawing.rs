@@ -479,6 +479,7 @@ impl<'c, 'r> Ctx<'c, 'r> {
         Ok(true)
     }
 
+    // spec-audit: owner=shadowObscured
     fn hidden(&mut self, el: &Elem) -> Res<Option<HiddenProperties>> {
         let mut h = HiddenProperties::default();
         let mut any = false;

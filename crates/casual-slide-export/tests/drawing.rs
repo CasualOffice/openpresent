@@ -1055,17 +1055,16 @@ fn unknown_attributes_children_and_extensions_survive_an_edit() {
         xml.replace(r#"val="112233""#, r#"val="AABBCC""#)
             .replace(r#"<a:ln w="1""#, r#"<a:ln w="2""#)
     );
-    // Each thing the reader could not model was named.
-    for name in ["n", "m", "keep", "keep2"] {
-        assert!(
-            r.findings.has(
-                casual_slide_import::properties::ImportFindingKind::RetainedElement,
-                name
-            ),
-            "{name}: {:?}",
-            r.findings
-        );
-    }
+    // What the reader could not model was reported, and under no name the part made up
+    // (`SEC-018`). The part keeps them, as the comparison above shows.
+    assert!(
+        r.findings.has(
+            casual_slide_import::properties::ImportFindingKind::RetainedElement,
+            "(unknown)"
+        ),
+        "{:?}",
+        r.findings
+    );
 }
 
 #[test]
@@ -1737,4 +1736,116 @@ fn the_shape_decks_rewrite_from_the_model_and_stay_valid() {
             std::fs::write(dir.join(format!("{deck}-stripped.pptx")), &stripped.bytes).unwrap();
         }
     }
+}
+
+/// Every element and attribute row of the areas survives being written from nothing: the
+/// deck that holds them all goes through the writer with its properties taken away and put
+/// back, and each row is in the part that comes out.
+#[test]
+fn every_row_of_the_areas_is_in_what_the_writer_writes() {
+    let source =
+        std::fs::read(repo().join("fixtures/generated/drawing-every-element.pptx")).unwrap();
+    let wanted = model(&source);
+    let ordinal = ordinal_of_slide(&wanted);
+    let mut emptied = wanted.clone();
+    fn strip(n: &mut ShapeNode) {
+        let picture = n.properties.picture.take();
+        let hidden = n.properties.hidden.take();
+        let blip = n
+            .properties
+            .fill
+            .take()
+            .filter(|f| matches!(f, Fill::Blip(_)));
+        n.properties = ShapeProperties {
+            picture,
+            hidden,
+            fill: blip,
+            ..ShapeProperties::default()
+        };
+        n.children.iter_mut().for_each(strip);
+    }
+    emptied
+        .get_mut(ordinal)
+        .unwrap()
+        .shape_tree_mut()
+        .unwrap()
+        .children
+        .iter_mut()
+        .for_each(strip);
+    let mut pkg = open(source);
+    let stripped = save_slide_parts(
+        &mut pkg,
+        &emptied.structure,
+        &[emptied.get(ordinal).unwrap()],
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    let mut pkg = open(stripped.bytes);
+    let rewritten = save_slide_parts(
+        &mut pkg,
+        &wanted.structure,
+        &[wanted.get(ordinal).unwrap()],
+        &SlideLimits::default(),
+        &ImportLimits::default(),
+    )
+    .unwrap();
+    let xml = String::from_utf8(parts(&rewritten.bytes)[PART].clone()).unwrap();
+    let text = std::fs::read_to_string(repo().join("docs/spec/checklist.tsv")).unwrap();
+    let mut checked = 0;
+    for line in text.lines() {
+        let cols: Vec<&str> = line.split('\t').collect();
+        let (Some(id), Some(area), Some(kind)) = (cols.first(), cols.get(1), cols.get(3)) else {
+            continue;
+        };
+        if !matches!(*area, "GEOM" | "FILL" | "LINE" | "EFFECT" | "D3") {
+            continue;
+        }
+        // In other decks, or other tiers': `the_shape_decks_rewrite_from_the_model_and_stay_valid`
+        // and casual-slide-import's `elsewhere` say which.
+        const NOT_HERE: &[&str] = &[
+            "CT_BackgroundFormatting",
+            "CT_WholeE2oFormatting",
+            "CT_FlatText",
+            "EG_Text3D",
+            "CT_PresetTextShape",
+            "EG_TextGeometry",
+            "CT_Connection",
+            "CT_TextMath",
+            "CT_ContentPartLocking",
+            "CT_NonVisualInkContentPartProperties",
+            "CT_GvmlContentPart",
+            "CT_CameraTool",
+            "CT_CompatExt",
+            "CT_IsGvmlCanvas",
+            "@legacySpreadsheetColorIndex",
+            "ST_LegacySpreadsheetColorIndex",
+            "<m>",
+            "<cameraTool>",
+            "<compatExt>",
+            "<isCanvas>",
+            "<contentPart>",
+            "extLst",
+        ];
+        if NOT_HERE.iter().any(|n| id.contains(n)) {
+            continue;
+        }
+        let tail = id.rsplit('/').next().unwrap();
+        let found = match *kind {
+            "attribute" => {
+                let name = tail.trim_start_matches('@').rsplit(':').next().unwrap();
+                xml.contains(&format!(" {name}=\"")) || xml.contains(&format!(":{name}=\""))
+            }
+            "element" => {
+                let name = tail.rsplit(':').next().unwrap();
+                xml.contains(&format!(":{name} "))
+                    || xml.contains(&format!(":{name}>"))
+                    || xml.contains(&format!(":{name}/>"))
+            }
+            _ => continue,
+        };
+        assert!(found, "{id} did not come back");
+        checked += 1;
+    }
+    assert!(checked > 300, "{checked}");
 }

@@ -1,4 +1,4 @@
-//! The generated table: completeness against the schema, GEO-01 to GEO-06, sanity of
+//! The generated table: completeness against the schema, GEO-01 and GEO-02a to GEO-02e, sanity of
 //! all 187 + 41, hand-computed goldens, reproducibility.
 
 use std::path::{Path, PathBuf};
@@ -211,7 +211,7 @@ fn every_definition_draws_at_a_normal_size() {
     }
 }
 
-/// GEO-05 is the rule this enforces for every shape: the text rectangle is never
+/// GEO-02d is the rule this enforces for every shape: the text rectangle is never
 /// inside out, here at the default adjusts.
 #[test]
 fn text_rectangles_are_not_inverted() {
@@ -256,7 +256,7 @@ fn arc_endpoints_meet_the_guides() {
 
 /// Geometry is homogeneous: scale a shape and each position scales with it, because
 /// guides combine lengths with dimensionless ratios. A guide that divides where it
-/// should subtract (GEO-06) breaks this and little else notices, since a wrong
+/// should subtract (GEO-02e) breaks this and little else notices, since a wrong
 /// coordinate near zero is well within the shape. Paths with their own w/h keep raw
 /// coordinates in path units, so those stay put.
 #[test]
@@ -299,7 +299,7 @@ fn every_position_scales_with_the_shape() {
     }
 }
 
-// ---------------------------------------------------------------- GEO-01 to GEO-06
+// ---------------------------------------------------------------- GEO-01 and GEO-02a to GEO-02e
 
 /// Reflection in the horizontal midline.
 fn mirrored(p: Point, h: f64) -> Point {
@@ -459,7 +459,7 @@ fn text_no_shape_exists_and_draws_nothing() {
     assert_rect(&g, 0.0, 0.0, 1000.0, 500.0);
 }
 
-/// GEO-03: `cd3` in the source is corrected to `cd2`.
+/// GEO-02b: `cd3` in the source is corrected to `cd2`.
 #[test]
 fn curved_left_arrow_site_faces_left() {
     let g = preset_shape("curvedLeftArrow")
@@ -470,7 +470,7 @@ fn curved_left_arrow_site_faces_left() {
     assert_eq!(site.pos.x, 0.0, "on the left edge");
 }
 
-/// GEO-04: the surplus operand is dropped, leaving `xH - dxB`.
+/// GEO-02c: the surplus operand is dropped, leaving `xH - dxB`.
 #[test]
 fn circular_arrow_surplus_operands_are_dropped() {
     let g = preset_shape("circularArrow")
@@ -510,7 +510,7 @@ fn circular_arrow_keeps_large_intermediates() {
     assert!((ordinary - largest).abs() < 1e-3, "{ordinary} vs {largest}");
 }
 
-/// GEO-05: pie's rectangle, by hand. idx = 1000000 cos 45 = 707106.78;
+/// GEO-02d: pie's rectangle, by hand. idx = 1000000 cos 45 = 707106.78;
 /// idy = 500000 sin 45 = 353553.39.
 #[test]
 fn pie_text_rectangle_is_corrected() {
@@ -526,7 +526,7 @@ fn pie_text_rectangle_is_corrected() {
     );
 }
 
-/// GEO-06: the gear sites are left-right pairs, reflected in the vertical midline.
+/// GEO-02e: the gear sites are left-right pairs, reflected in the vertical midline.
 #[test]
 fn gear_connection_sites_are_mirrored() {
     for (name, pairs) in [

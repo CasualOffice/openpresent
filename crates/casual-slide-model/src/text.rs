@@ -494,7 +494,7 @@ pub struct ParagraphProperties {
     pub bullet_font: Option<BulletFont>,
     /// The `EG_TextBullet` choice.
     pub bullet: Option<Bullet>,
-    /// `tabLst`.
+    /// `tabLst/tab`.
     pub tabs: Option<Vec<TabStop>>,
     /// `defRPr`.
     pub default_run: Option<Box<CharacterProperties>>,
@@ -630,6 +630,7 @@ pub struct TextField {
 }
 
 /// One child of a paragraph, in document order.
+/// In `EG_TextRun`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TextItem {
     /// `r`.
@@ -660,7 +661,8 @@ pub struct TextListStyle {
     /// `defPPr`. Kept for round trip, and not used in resolution: Office ignores it
     /// (`MS-OI29500`, the note on ECMA-376 Part 1 21.1.2.2.2).
     pub default: Option<Box<ParagraphProperties>>,
-    /// `lvl1pPr` to `lvl9pPr`, by level from 0.
+    /// `lvl1pPr`, `lvl2pPr`, `lvl3pPr`, `lvl4pPr`, `lvl5pPr`, `lvl6pPr`, `lvl7pPr`, `lvl8pPr`,
+    /// `lvl9pPr`, by level from 0.
     pub levels: [Option<Box<ParagraphProperties>>; 9],
 }
 

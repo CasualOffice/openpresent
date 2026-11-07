@@ -643,6 +643,7 @@ impl Patch<'_, '_> {
 }
 
 /// `a:CT_Connection`, a connector's end.
+// spec-audit: owner=stCxn,endCxn
 fn patch_connection(
     w: &mut Writer<'_>,
     el: &Elem,

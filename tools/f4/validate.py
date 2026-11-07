@@ -10,11 +10,20 @@ document type, and runs with --nonet. Files are never extracted under their own 
     python3 tools/f4/validate.py --json deck.pptx
     python3 tools/f4/validate.py --mce-report part.xml   # what the resolver decided
     python3 tools/f4/validate.py --print-tables          # its fixed namespace lists
+    python3 tools/f4/validate.py --print-allowances      # where we depart from Ecma's XSD
+    python3 tools/f4/validate.py --no-allowances ...     # Ecma's Transitional XSD unchanged
+    python3 tools/f4/validate.py --no-known ...          # recorded failures fail
 
 Status of a part: valid; invalid; refused (DOCTYPE or over a bound); malformed;
 must-understand (a namespace we do not know, per Part 3); no-schema (nothing vendored
 for its root, so it was not checked, which is reported and is not a pass);
-schema-error (the schema itself would not compile).
+schema-error (the schema itself would not compile); recorded (invalid, but every message
+is one recorded-failures.tsv explains).
+
+Transitional parts validate against the vendored XSD with allowances.tsv applied, in a
+private copy: PowerPoint writes things Ecma's XSD refuses (F4-02, F4-03). Each allowance
+is one exact edit that must apply as many times as it says, or the tool stops. Strict is
+never relaxed. schemas/ itself is not changed.
 
 Exit: 0 if nothing failed, 1 if a deck or part failed, 2 if the tool could not run.
 
@@ -22,6 +31,8 @@ The rules mirror crates/casual-slide-ooxml/src/mce.rs, and the tables mirror
 namespaces.rs. tests/corpus.rs holds the two together on the same inputs. Python here,
 since the engine has no business shelling out to a validator.
 """
+import atexit
+import fnmatch
 import json
 import os
 import pathlib
@@ -37,7 +48,10 @@ from xml.sax.saxutils import escape, quoteattr
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas"
-CATALOG = pathlib.Path(__file__).resolve().parent / "catalog.xml"
+HERE = pathlib.Path(__file__).resolve().parent
+CATALOG = HERE / "catalog.xml"
+ALLOWANCES = HERE / "allowances.tsv"
+RECORDED = HERE / "recorded-failures.tsv"
 DECK_SUFFIXES = {".pptx", ".ppsx", ".potx", ".pptm", ".ppsm", ".potm"}
 
 # Bounds, as OoxmlLimits has them or tighter. A validator is not a reason to be less careful.
@@ -106,6 +120,78 @@ for _strict, _transitional, _file in NAMESPACES:
 NO_COMPATIBILITY = {OPC_RELS, OPC_TYPES, OPC_CORE}
 
 LIST_SEPARATOR = re.compile(r"[ \t\n\r\f]+")
+
+
+def stop(message):
+    """The tool could not run, which is exit 2: a deck did not fail."""
+    print(f"f4: {message}", file=sys.stderr)
+    raise SystemExit(2)
+
+
+def tsv_rows(path, columns):
+    """A hand-kept table's rows, as dicts. A row of the wrong shape stops the tool."""
+    rows = []
+    for line in path.read_text(encoding="utf8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        cols = line.split("\t")
+        if len(cols) != len(columns):
+            stop(f"{path.name}: a row needs {len(columns)} tab-separated columns: {line[:60]}")
+        rows.append(dict(zip(columns, cols)))
+    return rows
+
+
+def allowances():
+    return tsv_rows(ALLOWANCES, ("id", "file", "count", "old", "new", "evidence", "reason"))
+
+
+def apply_allowances(texts, rows):
+    """The XSD files' text with each edit made. An edit that does not apply exactly as
+    often as it says means the schemas moved under it, so nothing is validated."""
+    for row in rows:
+        old, new = (row[k].replace("\\n", "\r\n") for k in ("old", "new"))
+        found = texts.get(row["file"], "").count(old)
+        if found != int(row["count"]):
+            stop(f"allowance {row['id']}: expected {row['count']} matches in {row['file']}, found {found}")
+        texts[row["file"]] = texts[row["file"]].replace(old, new)
+    return texts
+
+
+class Schemas:
+    """Where each schema is read from. Transitional is a private copy with the allowances."""
+
+    use_allowances = True
+    _overlay = None
+
+    @classmethod
+    def path(cls, schema):
+        if not schema.startswith("ooxml/") or not cls.use_allowances:
+            return SCHEMAS / schema
+        if cls._overlay is None:
+            cls._overlay = cls._build()
+        return cls._overlay / schema
+
+    @staticmethod
+    def _build():
+        work = pathlib.Path(tempfile.mkdtemp(prefix="f4-schemas-"))
+        atexit.register(shutil.rmtree, work, ignore_errors=True)
+        texts = {p.name: p.read_bytes().decode("utf8") for p in (SCHEMAS / "ooxml").glob("*.xsd")}
+        apply_allowances(texts, allowances())
+        target = work / "ooxml"
+        target.mkdir()
+        for name, text in texts.items():
+            (target / name).write_bytes(text.encode("utf8"))
+        return work
+
+
+def recorded_failures():
+    return tsv_rows(RECORDED, ("deck", "part", "message", "kind", "reason"))
+
+
+def explained_by(rows, deck, part, message):
+    """Does a recorded row cover this one message of this part?"""
+    return any(fnmatch.fnmatch(deck, row["deck"]) and fnmatch.fnmatch(part, row["part"])
+               and re.search(row["message"], message) for row in rows)
 
 
 class Refused(Exception):
@@ -493,13 +579,13 @@ def run_xmllint(schema, jobs, workdir):
     paths = [pathlib.Path(p).name for p in jobs]
     assert all(pathlib.Path(workdir) / name == pathlib.Path(p) for name, p in zip(paths, jobs))
     done = subprocess.run(
-        ["xmllint", "--noout", "--nonet", "--schema", str(SCHEMAS / schema), *paths],
+        ["xmllint", "--noout", "--nonet", "--schema", str(Schemas.path(schema)), *paths],
         capture_output=True, text=True, errors="replace", env=environment, cwd=workdir, timeout=600, check=False)
     output = done.stdout + done.stderr
     results = {}
     if "failed to compile" in output:
         message = redact(output)[-400:]
-        return {p: ("schema-error", [message]) for p in paths}
+        return {str(pathlib.Path(workdir) / p): ("schema-error", [message]) for p in paths}
     messages = {p: [] for p in paths}
     for line in output.splitlines():
         for p in paths:
@@ -554,7 +640,7 @@ def read_parts(path):
     return parts, other
 
 
-def validate_deck(path):
+def validate_deck(path, recorded=()):
     deck = pathlib.Path(path).name
     try:
         parts, other = read_parts(path)
@@ -600,8 +686,13 @@ def validate_deck(path):
             by_file[str(target)] = entry
         for schema, files in sorted(jobs.items()):
             for target, (status, messages) in run_xmllint(schema, files, workdir).items():
-                by_file[target].update(status=status, errors=messages[:MAX_REPORTED_ERRORS], error_count=len(messages))
-    failed = any(e["status"] not in ("valid", "no-schema") for e in results)
+                entry = by_file[target]
+                # Judged on every message, not only the ones kept for the report.
+                if status == "invalid" and messages and all(
+                        explained_by(recorded, deck, entry["part"], m) for m in messages):
+                    status = "recorded"
+                entry.update(status=status, errors=messages[:MAX_REPORTED_ERRORS], error_count=len(messages))
+    failed = any(e["status"] not in ("valid", "no-schema", "recorded") for e in results)
     return {"deck": deck, "status": "fail" if failed else "pass", "refused": None, "parts": results, "not_xml": other}
 
 
@@ -646,15 +737,22 @@ def main(argv):
             raise SystemExit(f"f4: refused: {err}") from err
         print(report.line())
         return 0
-    as_json = argv[:1] == ["--json"]
-    arguments = argv[1:] if as_json else argv
-    if not arguments or any(a.startswith("-") for a in arguments):
+    if argv[:1] == ["--print-allowances"]:
+        for row in allowances():
+            print(f"{row['id']}\t{row['file']}\t{row['reason']}")
+        return 0
+    options = {a for a in argv if a.startswith("-")}
+    arguments = [a for a in argv if not a.startswith("-")]
+    as_json = "--json" in options
+    Schemas.use_allowances = "--no-allowances" not in options
+    recorded = [] if "--no-known" in options else recorded_failures()
+    if not arguments or options - {"--json", "--no-allowances", "--no-known"}:
         print(__doc__, file=sys.stderr)
         return 2
     if shutil.which("xmllint") is None:
         print("f4: xmllint is not installed", file=sys.stderr)
         return 2
-    results = [validate_deck(path) for path in expand(arguments)]
+    results = [validate_deck(path, recorded) for path in expand(arguments)]
     if as_json:
         print(json.dumps(results, indent=1, sort_keys=True))
     else:

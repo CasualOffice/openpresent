@@ -108,9 +108,9 @@ pub struct DashStop {
 /// `EG_LineDashProperties`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LineDash {
-    /// `prstDash`, with its `@val`.
+    /// `prstDash/@val`.
     Preset(Option<PresetLineDash>),
-    /// `custDash`.
+    /// `custDash/ds`.
     Custom(Vec<DashStop>),
 }
 
@@ -121,7 +121,7 @@ pub enum LineJoin {
     Round,
     /// `bevel`.
     Bevel,
-    /// `miter`, with its `@lim`.
+    /// `miter/@lim`.
     Miter(Option<Percentage>),
 }
 

@@ -306,6 +306,17 @@ pub struct ShapeStyle {
     pub font: Option<FontRef>,
 }
 
+/// `CT_EffectReference`: `a:effect` in an effect list, naming an effect by `@ref`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EffectReference {
+    /// `@ref`, a token as written.
+    pub reference: Option<String>,
+}
+
+/// `a:themeManager`, `CT_EmptyElement`: the root of a part that holds nothing.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ThemeManager;
+
 /// `EG_ThemeableFillStyle`, `EG_ThemeableEffectStyle`: a reference into the
 /// format scheme, or an inline value that stays in the part.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -3,27 +3,41 @@
 
 /// Most diagnostics kept per compile or evaluation.
 const MAX_KEPT: usize = 32;
-/// Longest file-supplied text kept in a diagnostic, in bytes.
-const MAX_SUBJECT: usize = 64;
 
-/// One repair or omission.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// One repair or omission. Says what happened, and never holds text from the file
+/// (`SEC-019`): a formula and a guide name are the part's to choose. The part keeps them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Diagnostic {
     /// The formula's first token is no known operator. The guide evaluates to 0.
-    UnknownOperator(String),
+    UnknownOperator,
     /// Too few operands, so the guide evaluates to 0; or surplus, which are ignored.
-    WrongOperandCount(String),
+    WrongOperandCount,
     /// A name not defined at this point, which may be a forward reference. It reads
     /// as 0.
-    UnknownGuide(String),
+    UnknownGuide,
     /// A formula or guide name beyond the length limit. Treated as absent.
     TooLong,
     /// An adjust value naming no adjust of this geometry. Ignored.
-    UnknownAdjust(String),
+    UnknownAdjust,
     /// More adjust values than the guide cap. The rest are ignored.
     TooManyAdjusts,
     /// A path that draws before any `moveTo`. It starts at the origin.
     PathWithoutMoveTo,
+}
+
+impl Diagnostic {
+    /// The stable diagnostic code, in `docs/20`.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::UnknownOperator => "CS-GEF-0001",
+            Self::WrongOperandCount => "CS-GEF-0002",
+            Self::UnknownGuide => "CS-GEF-0003",
+            Self::TooLong => "CS-GEF-0004",
+            Self::UnknownAdjust => "CS-GEF-0005",
+            Self::TooManyAdjusts => "CS-GEF-0006",
+            Self::PathWithoutMoveTo => "CS-GEF-0007",
+        }
+    }
 }
 
 /// A bounded list of diagnostics.
@@ -56,13 +70,4 @@ impl Diagnostics {
     pub fn is_empty(&self) -> bool {
         self.total == 0
     }
-}
-
-/// File text, cut to the limit on a character boundary.
-pub(crate) fn clip(text: &str) -> String {
-    let mut end = text.len().min(MAX_SUBJECT);
-    while !text.is_char_boundary(end) {
-        end -= 1;
-    }
-    text.get(..end).unwrap_or_default().to_owned()
 }

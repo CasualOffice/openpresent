@@ -21,6 +21,13 @@ pub struct OoxmlLimits {
     pub max_total_relationships: usize,
     /// Maximum entries in `[Content_Types].xml`.
     pub max_content_types: usize,
+    /// Maximum transforms read on one colour. Past it the colour is absent.
+    pub max_color_transforms: usize,
+    /// Maximum entries read from one list in a theme: custom colours, supplemental
+    /// fonts, style matrix entries, gradient stops, extensions.
+    pub max_theme_list_entries: usize,
+    /// Maximum colour and theme findings kept for one part. The count stays exact.
+    pub max_color_findings: usize,
 }
 
 impl Default for OoxmlLimits {
@@ -34,6 +41,9 @@ impl Default for OoxmlLimits {
             max_part_relationships: 200_000,
             max_total_relationships: 2_000_000,
             max_content_types: 200_000,
+            max_color_transforms: 64,
+            max_theme_list_entries: 4096,
+            max_color_findings: 1024,
         }
     }
 }

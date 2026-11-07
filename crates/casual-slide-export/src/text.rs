@@ -210,6 +210,7 @@ fn bullet_percent(
 }
 
 /// `a:CT_TextBody`, under whichever element holds it.
+// spec-audit: owner=txBody,lstStyle
 pub(crate) fn patch_text_body(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -280,6 +281,7 @@ pub(crate) fn patch_text_body(
 }
 
 /// `a:CT_TextBodyProperties`.
+// spec-audit: owner=bodyPr,normAutofit
 fn patch_body_properties(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -376,6 +378,7 @@ fn text_3d_flat(t: Option<&Text3D>) -> Option<FlatText> {
 
 /// `scene3d` and the `EG_Text3D` choice. One the model could not hold (over a bound)
 /// goes when the choice is made the other way, or the reader would find both.
+// spec-audit: owner=bodyPr
 fn patch_body_3d(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -442,6 +445,16 @@ fn patch_body_3d(
 
 /// `a:CT_TextListStyle`, under whichever element holds it. Its children are in
 /// DrawingML whatever namespace the holder is in.
+// spec-audit: a:CT_TextListStyle/lvl1pPr
+// spec-audit: a:CT_TextListStyle/lvl2pPr
+// spec-audit: a:CT_TextListStyle/lvl3pPr
+// spec-audit: a:CT_TextListStyle/lvl4pPr
+// spec-audit: a:CT_TextListStyle/lvl5pPr
+// spec-audit: a:CT_TextListStyle/lvl6pPr
+// spec-audit: a:CT_TextListStyle/lvl7pPr
+// spec-audit: a:CT_TextListStyle/lvl8pPr
+// spec-audit: a:CT_TextListStyle/lvl9pPr
+// spec-audit: owner=lstStyle
 pub(crate) fn patch_list_style(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -501,6 +514,7 @@ fn boxed_character(
 }
 
 /// `a:CT_TextParagraphProperties`.
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buSzPct,buSzPts,buAutoNum,buChar,buFont,lnSpc
 fn patch_paragraph_properties(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -597,6 +611,7 @@ fn patch_paragraph_properties(
     )
 }
 
+// spec-audit: owner=lnSpc,spcBef,spcAft,spcPct,spcPts
 fn patch_spacing(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -624,6 +639,7 @@ fn patch_spacing(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr
 fn patch_bullet_color(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -647,6 +663,7 @@ fn patch_bullet_color(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buSzPct,buSzPts
 fn patch_bullet_size(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -681,6 +698,7 @@ fn patch_bullet_size(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buFont
 fn patch_bullet_font(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -707,6 +725,7 @@ fn patch_bullet_font(
     }
 }
 
+// spec-audit: owner=pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,buAutoNum,buChar,buBlip
 fn patch_bullet(w: &mut Writer<'_>, el: &Elem, b: Option<&Bullet>, a: Option<&Bullet>) -> Result {
     const GROUP: &[&str] = &["buNone", "buAutoNum", "buChar", "buBlip"];
     if b == a {
@@ -749,6 +768,7 @@ fn patch_bullet(w: &mut Writer<'_>, el: &Elem, b: Option<&Bullet>, a: Option<&Bu
 
 // `sync_ordered`'s value type is the field's own, `Vec` included.
 #[allow(clippy::ptr_arg)]
+// spec-audit: owner=tabLst,pPr,defPPr,lvl1pPr,lvl2pPr,lvl3pPr,lvl4pPr,lvl5pPr,lvl6pPr,lvl7pPr,lvl8pPr,lvl9pPr,tab
 fn patch_tabs(w: &mut Writer<'_>, el: &Elem, b: Option<&Vec<TabStop>>, a: &Vec<TabStop>) -> Result {
     let elements: Vec<Elem> = el
         .children(w.tree, w.part)?
@@ -854,6 +874,7 @@ fn patch_effects(
 }
 
 /// `a:CT_TextCharacterProperties`.
+// spec-audit: owner=rPr,defRPr,endParaRPr
 fn patch_character(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -995,6 +1016,7 @@ fn patch_character(
 
 // `sync_ordered`'s value type is the field's own, `Box` included.
 #[allow(clippy::borrowed_box)]
+// spec-audit: owner=hlinkClick,hlinkMouseOver
 fn patch_run_hyperlink(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1018,6 +1040,7 @@ fn patch_run_hyperlink(
     patch_hyperlink(w, el, &stated, a)
 }
 
+// spec-audit: owner=rPr,defRPr,endParaRPr
 fn patch_highlight(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1037,6 +1060,7 @@ fn patch_highlight(
     }
 }
 
+// spec-audit: owner=rPr,defRPr,endParaRPr
 fn patch_underline(
     w: &mut Writer<'_>,
     el: &Elem,
@@ -1083,6 +1107,7 @@ fn patch_underline(
 }
 
 /// `a:CT_TextParagraph`.
+// spec-audit: owner=p,pPr
 fn patch_paragraph(w: &mut Writer<'_>, el: &Elem, b: Option<&Paragraph>, a: &Paragraph) -> Result {
     let old_properties = b.and_then(|b| b.properties.as_ref());
     if old_properties != a.properties.as_ref() {
@@ -1121,6 +1146,7 @@ fn patch_paragraph(w: &mut Writer<'_>, el: &Elem, b: Option<&Paragraph>, a: &Par
     )
 }
 
+// spec-audit: owner=p
 fn patch_items(w: &mut Writer<'_>, el: &Elem, before: &[TextItem], after: &[TextItem]) -> Result {
     let elements: Vec<Elem> = el
         .children(w.tree, w.part)?
@@ -1175,6 +1201,7 @@ fn patch_items(w: &mut Writer<'_>, el: &Elem, before: &[TextItem], after: &[Text
     Ok(())
 }
 
+// spec-audit: owner=r
 fn patch_run(w: &mut Writer<'_>, el: &Elem, b: Option<&TextRun>, a: &TextRun) -> Result {
     if a.text.is_none() && b.is_none_or(|b| b.text.is_some()) {
         return Err(unsupported(w, "a run with no text element"));
@@ -1203,6 +1230,7 @@ fn patch_run(w: &mut Writer<'_>, el: &Elem, b: Option<&TextRun>, a: &TextRun) ->
     )
 }
 
+// spec-audit: owner=br
 fn patch_break(w: &mut Writer<'_>, el: &Elem, b: Option<&LineBreak>, a: &LineBreak) -> Result {
     sync_ordered(
         w,
@@ -1217,6 +1245,7 @@ fn patch_break(w: &mut Writer<'_>, el: &Elem, b: Option<&LineBreak>, a: &LineBre
     )
 }
 
+// spec-audit: owner=fld,pPr
 fn patch_field(w: &mut Writer<'_>, el: &Elem, b: Option<&TextField>, a: &TextField) -> Result {
     if a.id.is_none() && b.is_none_or(|b| b.id.is_some()) {
         return Err(unsupported(w, "a field with no id"));

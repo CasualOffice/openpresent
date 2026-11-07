@@ -19,6 +19,7 @@ Nothing has been released. Release tags and their dry-run default are described 
 - The text chain takes the theme's `txDef`, `lnDef` and `spDef`, and a shape's `fontRef`.
 - The writer refuses a new `ST_PositiveCoordinate` over 2147483647 and a new dash stop of zero or less, as `CS-EXP-0002`.
 - Fixtures: gradient and pattern fills on placed shapes, a body's warp and 3D, object defaults, `extLst` slots, path fill modes; six hostile decks; a silent-drop gate.
+- Status marks for GEOM, FILL, LINE, EFFECT, D3 and TEXT, by `tools/spec-audit`, which now sees enum values read through their enum, `Node::a` chains, `// spec-audit: owner=` helpers and model doc comments, and walks tests that read the checklist by area (`STAT-01`).
 
 **Added: text (`T1F-01`, `T1F-02`, `T1F-03`)**
 
