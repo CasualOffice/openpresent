@@ -109,6 +109,11 @@ import count as spec_count  # noqa: E402  (SPEC-03 lives beside this file)
 XS = "{http://www.w3.org/2001/XMLSchema}"
 MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
+# Attributes a schema leaves unqualified that PowerPoint writes qualified, as F4's allowances
+# record (tools/f4/allowances.tsv): a fixture exercises them in the form PowerPoint writes.
+QUALIFIED_BY_ALLOWANCE = frozenset((
+    "x:drawing/2014/chartex:CT_ExternalData/@autoUpdate",  # F4A-7: cx:autoUpdate (F4-07)
+))
 CRATES = {"I": "casual-slide-import", "E": "casual-slide-export", "M": "casual-slide-model"}
 RESOLVER_CRATE = "casual-slide-ooxml"
 GENERATED_SOURCES = ("schema_names.rs",)
@@ -294,11 +299,13 @@ class Schema:
                     out.append({"kind": "group", "row": row_id(owner, ch.get("ref").split(":")[-1]), "target": qname(ch.get("ref"))})
                 elif tag == "attribute":
                     raw = ch.get("name") or ch.get("ref")
+                    rid = row_id(owner, "@" + raw)
                     if ch.get("ref"):
                         q = qname(ch.get("ref"))
                     else:
-                        q = (tns if attr_qualified or ch.get("form") == "qualified" else "", ch.get("name"))
-                    out.append({"kind": "attribute", "row": row_id(owner, "@" + raw), "q": q, "ref": bool(ch.get("ref")),
+                        qualify = attr_qualified or ch.get("form") == "qualified" or rid in QUALIFIED_BY_ALLOWANCE
+                        q = (tns if qualify else "", ch.get("name"))
+                    out.append({"kind": "attribute", "row": rid, "q": q, "ref": bool(ch.get("ref")),
                                 "type": qname(ch.get("type")), "local": raw.split(":")[-1]})
                 elif tag == "attributeGroup" and ch.get("ref"):
                     out.append({"kind": "attrgroup", "row": row_id(owner, ch.get("ref").split(":")[-1]), "target": qname(ch.get("ref"))})
