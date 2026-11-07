@@ -45,7 +45,7 @@ pub(crate) fn line_node(l: &Line, space: Space, local: &'static str) -> Node {
         LineDash::Custom(stops) => Node::a("custDash").list(
             stops
                 .iter()
-                .map(|s| Node::a("ds").pct("d", s.dash).pct("sp", s.space)),
+                .map(|s| Node::a("ds").dash("d", s.dash).dash("sp", s.space)),
         ),
     });
     let join = l.join.map(|j| match j {

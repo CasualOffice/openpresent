@@ -21,7 +21,7 @@ pub const DML_STRICT: &str = "http://purl.oclc.org/ooxml/drawingml/main";
 pub const MAX_LIST_ENTRIES: usize = 4096;
 
 /// What was noticed. Codes are stable; none of these stops a deck opening.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FindingKind {
     /// A colour's required attribute is absent or unreadable; the colour is absent.
     BadColorValue,

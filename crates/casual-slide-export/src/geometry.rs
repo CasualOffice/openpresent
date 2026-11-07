@@ -2,6 +2,7 @@
 
 use casual_slide_model::geometry::{
     AdjPoint, AdjustHandle, CustomGeometry, GeomGuide, Geometry, Path2D, PathCommand,
+    PresetTextShape,
 };
 
 use crate::drawing::Node;
@@ -44,8 +45,8 @@ fn command(c: &PathCommand) -> Node {
 
 fn path(p: &Path2D) -> Node {
     Node::a("path")
-        .lex("w", p.w.as_ref())
-        .lex("h", p.h.as_ref())
+        .pos("w", p.w.as_ref())
+        .pos("h", p.h.as_ref())
         .lex("fill", p.fill.as_ref())
         .lex("stroke", p.stroke.as_ref())
         .lex("extrusionOk", p.extrusion_ok.as_ref())
@@ -110,4 +111,11 @@ pub(crate) fn geometry_node(g: &Geometry) -> Node {
             .opt(p.adjust.as_ref().map(|l| guides("avLst", l))),
         Geometry::Custom(c) => custom(c),
     }
+}
+
+/// `prstTxWarp`.
+pub(crate) fn warp_node(w: &PresetTextShape) -> Node {
+    Node::a("prstTxWarp")
+        .lex("prst", w.preset.as_ref())
+        .opt(w.adjust.as_ref().map(|list| guides("avLst", list)))
 }

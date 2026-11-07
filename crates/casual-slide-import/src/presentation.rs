@@ -525,6 +525,7 @@ pub fn import_presentation_with_colors(
                     rels: rel_list,
                     color: &mut *color,
                     counts: &mut TextCounts::default(),
+                    drawing: crate::drawing::DrawingLimits::default(),
                 };
                 p.default_text_style = Some(text.list_style(&el)?);
             }

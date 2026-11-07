@@ -292,6 +292,8 @@ pub enum ImportFindingKind {
     FindingsTruncated,
     /// What a drawing property's reader noticed, under its own codes.
     Drawing(crate::drawing::DrawingFinding),
+    /// What the colour reader noticed in a shape's properties, under its own codes.
+    Color(crate::color::FindingKind),
 }
 
 impl ImportFindingKind {
@@ -314,6 +316,7 @@ impl ImportFindingKind {
             Self::UnusableRelationship => "CS-IMF-0014",
             Self::FindingsTruncated => "CS-IMF-0015",
             Self::Drawing(finding) => finding.code(),
+            Self::Color(finding) => finding.code(),
         }
     }
 }

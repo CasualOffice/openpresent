@@ -5,14 +5,15 @@
 //! So what a run holds beyond the model stays with it, and a retained element, such as
 //! an equation's `mc:AlternateContent`, stays where it is.
 //!
-//! A run's fill, line, effects and underline go through Tier 1E's writer. A picture
-//! bullet can be kept or removed, and not made from here: asking for one is refused as
+//! A run's fill, line, effects and underline, and a body's warp and 3D, go through Tier
+//! 1E's writer. A picture bullet can be kept or removed, and not made from here: asking for one is refused as
 //! `CS-EXP-0009`, and nothing is saved.
 //! A change that would leave required content out (`bodyPr`, the last `p`, `a:t`) is
 //! refused the same way.
 
 use casual_slide_import::properties::{Elem, ns};
 use casual_slide_model::color::Color;
+use casual_slide_model::d3::{FlatText, Shape3D};
 use casual_slide_model::effect::EffectProperties;
 use casual_slide_model::fill::Fill;
 use casual_slide_model::line::Line;
@@ -21,13 +22,16 @@ use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::Hyperlink;
 use casual_slide_model::text::{
     Autofit, BodyProperties, BooleanElement, Bullet, BulletColor, BulletFont, BulletSize,
-    CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TabStop, TextBody, TextField,
-    TextItem, TextListStyle, TextRun, TextSpacing, TextWarp, UnderlineFill, UnderlineLine, Written,
+    CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TabStop, Text3D, TextBody,
+    TextField, TextItem, TextListStyle, TextRun, TextSpacing, UnderlineFill, UnderlineLine,
+    Written,
 };
 
+use crate::d3::{flat_text_node, scene3d_node, sp3d_node};
 use crate::drawing::{Space, patch};
 use crate::effect::effect_properties_node;
 use crate::fill::fill_node;
+use crate::geometry::warp_node;
 use crate::line::line_node;
 use crate::presentation::patch_text_font;
 use crate::properties::{ExportError, Writer};
@@ -317,14 +321,7 @@ fn patch_body_properties(
         "prstTxWarp",
         b.and_then(|b| b.warp.as_ref()),
         a.warp.as_ref(),
-        |w, el, before: Option<&TextWarp>, after| {
-            w.attr(
-                el,
-                "prst",
-                before.and_then(|b| b.preset.as_ref()),
-                after.preset.as_ref(),
-            )
-        },
+        |w, el, before, after| patch(w, el, before.map(warp_node).as_ref(), &warp_node(after)),
     )?;
     let before = b.and_then(|b| b.autofit.as_ref());
     if before != a.autofit.as_ref() {
@@ -360,7 +357,87 @@ fn patch_body_properties(
             }
         }
     }
-    Ok(())
+    patch_body_3d(w, el, b, a)
+}
+
+fn text_3d_shape(t: Option<&Text3D>) -> Option<&Shape3D> {
+    match t {
+        Some(Text3D::Shape(s)) => Some(s),
+        _ => None,
+    }
+}
+
+fn text_3d_flat(t: Option<&Text3D>) -> Option<FlatText> {
+    match t {
+        Some(Text3D::Flat(f)) => Some(*f),
+        _ => None,
+    }
+}
+
+/// `scene3d` and the `EG_Text3D` choice. One the model could not hold (over a bound)
+/// goes when the choice is made the other way, or the reader would find both.
+fn patch_body_3d(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&BodyProperties>,
+    a: &BodyProperties,
+) -> Result {
+    sync_ordered(
+        w,
+        el,
+        ns::DML,
+        "a",
+        BODY_PROPERTIES_ORDER,
+        "scene3d",
+        b.and_then(|b| b.scene3d.as_deref()),
+        a.scene3d.as_deref(),
+        |w, el, before, after| {
+            let node = |s| scene3d_node(s, Space::Dml, "scene3d");
+            patch(w, el, before.map(node).as_ref(), &node(after))
+        },
+    )?;
+    let before = b.and_then(|b| b.text_3d.as_ref());
+    if before == a.text_3d.as_ref() {
+        return Ok(());
+    }
+    match a.text_3d {
+        Some(Text3D::Shape(_)) => w.remove_all(el, ns::DML, "flatTx")?,
+        Some(Text3D::Flat(_)) => w.remove_all(el, ns::DML, "sp3d")?,
+        None => {}
+    }
+    sync_ordered(
+        w,
+        el,
+        ns::DML,
+        "a",
+        BODY_PROPERTIES_ORDER,
+        "sp3d",
+        text_3d_shape(before),
+        text_3d_shape(a.text_3d.as_ref()),
+        |w, el, before, after| {
+            let node = |s| sp3d_node(s, Space::Dml, "sp3d");
+            patch(w, el, before.map(node).as_ref(), &node(after))
+        },
+    )?;
+    let (old, new) = (text_3d_flat(before), text_3d_flat(a.text_3d.as_ref()));
+    sync_ordered(
+        w,
+        el,
+        ns::DML,
+        "a",
+        BODY_PROPERTIES_ORDER,
+        "flatTx",
+        old.as_ref(),
+        new.as_ref(),
+        |w, el, before, after| {
+            patch(
+                w,
+                el,
+                before.map(flat_text_node).as_ref(),
+                &flat_text_node(after),
+            )
+        },
+    )
 }
 
 /// `a:CT_TextListStyle`, under whichever element holds it. Its children are in

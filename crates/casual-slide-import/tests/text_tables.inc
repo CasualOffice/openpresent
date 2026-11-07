@@ -226,8 +226,6 @@ fn text_row(id: &str) -> Option<Row> {
         "CT_TextBodyProperties" => match name {
             "prstTxWarp" => body_row("", r#"<a:prstTxWarp prst="textPlain"/>"#),
             "scene3d" => {
-                outcome = Reported;
-                element = "scene3d";
                 body_row("", r#"<a:scene3d><a:camera prst="orthographicFront"/><a:lightRig rig="threePt" dir="t"/></a:scene3d>"#)
             }
             "extLst" => {

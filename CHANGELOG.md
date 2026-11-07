@@ -13,6 +13,13 @@ Nothing has been released. Release tags and their dry-run default are described 
 
 ### 2026-11-07
 
+**Added: closing Tiers 1E and 1F (`CLOSE-01`, `T1E-06`, `T1F-04`, `STYLE-01`, `DRAW-01`)**
+
+- A text body's `prstTxWarp` with `avLst`, `scene3d`, `sp3d` and `flatTx`, and `p:style` on shapes, connectors and pictures, modelled, read and written. Connector ends can be edited. `DrawingLimits` is carried by `SlideLimits`. Older `a14` namespace read. Colour findings on slide parts keep `CS-CLR`.
+- The text chain takes the theme's `txDef`, `lnDef` and `spDef`, and a shape's `fontRef`.
+- The writer refuses a new `ST_PositiveCoordinate` over 2147483647 and a new dash stop of zero or less, as `CS-EXP-0002`.
+- Fixtures: gradient and pattern fills on placed shapes, a body's warp and 3D, object defaults, `extLst` slots, path fill modes; six hostile decks; a silent-drop gate.
+
 **Added: text (`T1F-01`, `T1F-02`, `T1F-03`)**
 
 - Text bodies on shapes, `defaultTextStyle`, master text styles and `notesStyle`, modelled, imported and patched in place: every run and paragraph property, spacing, tabs, bullets, all 41 autonumber schemes, fonts as stated, hyperlinks on runs. `normAutofit`, `spAutoFit` and `noAutofit` stored as written.

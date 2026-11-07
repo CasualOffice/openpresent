@@ -29,13 +29,17 @@ use casual_slide_model::properties::Lexical;
 use casual_slide_ooxml::Relationship;
 
 use crate::color::{
-    FindingKind, Findings as ColorFindings, is_color_element, read_color_choice,
-    read_optional_color,
+    Findings as ColorFindings, is_color_element, read_color_choice, read_optional_color,
 };
 use crate::properties::{Elem, ImportError, ImportFindingKind as K, Reader, ns};
 
-/// `a14:`, Office 2010 drawing.
-pub const A14: &[&str] = &["http://schemas.microsoft.com/office/drawing/2010/main"];
+/// `a14:`, Office 2010 drawing, then the namespace pre-release Office 2010 wrote for the
+/// same elements: `fixtures/real/sdk-animation.pptx` holds `a14:useLocalDpi` in it, as
+/// the released one is written. Only the first is ever written new.
+pub const A14: &[&str] = &[
+    "http://schemas.microsoft.com/office/drawing/2010/main",
+    "http://schemas.microsoft.com/office/drawing/2007/7/7/main",
+];
 /// `ask:`, Office 2018 sketched lines.
 pub const ASK: &[&str] = &["http://schemas.microsoft.com/office/drawing/2018/sketchyshapes"];
 
@@ -192,28 +196,16 @@ impl<'c, 'r> Ctx<'c, 'r> {
         Ok(out)
     }
 
-    /// Carry what the colour reader noticed into this part's report. The colour
-    /// reader's own codes are for theme parts; a slide part reports in one list.
+    /// Carry what the colour reader noticed into this part's report, under the colour
+    /// reader's own codes: a slide part reports in one list, and `CS-CLR` says the same
+    /// thing there as on a theme part.
     fn drain_color(&mut self) {
         let kept = std::mem::take(&mut self.color);
         for f in kept.items {
-            let kind = match f.kind {
-                FindingKind::BadColorValue
-                | FindingKind::BadTransform
-                | FindingKind::MalformedAttributes
-                | FindingKind::BadValue => K::MalformedValue,
-                FindingKind::TooManyTransforms | FindingKind::ListCapped => {
-                    K::Drawing(DrawingFinding::OverLimit)
-                }
-                FindingKind::PercentRounded => K::Drawing(DrawingFinding::PercentRounded),
-                FindingKind::MissingRequired => K::MissingRequired,
-                FindingKind::Duplicate => K::DuplicateElement,
-                FindingKind::Unmodelled => K::RetainedElement,
-            };
             let attribute = (!f.detail.is_empty()).then_some(f.detail);
             self.r
                 .findings
-                .note(kind, self.r.part, &f.element, attribute);
+                .note(K::Color(f.kind), self.r.part, &f.element, attribute);
         }
     }
 
@@ -389,7 +381,8 @@ impl<'c, 'r> Ctx<'c, 'r> {
     }
 
     /// `ST_PositiveCoordinate`, by the schema. `MS-OI29500` 2.1.1330: PowerPoint itself
-    /// stops at 2147483647, which is not this reader's to enforce on a file.
+    /// stops at 2147483647. A file may say more and keeps it, and the writer will not
+    /// write a new value past that (`DRAW-01`).
     pub fn pos_coord(&mut self, e: &mut Elem, name: &str) -> Res<Option<Coordinate>> {
         Ok(self
             .r

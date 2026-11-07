@@ -2,7 +2,7 @@
 
 use casual_slide_model::color::ValueDomain;
 use casual_slide_model::d3::{
-    Backdrop, Bevel, Camera, LightRig, Point3D, Scene3D, Shape3D, SphereCoords, Vector3D,
+    Backdrop, Bevel, Camera, FlatText, LightRig, Point3D, Scene3D, Shape3D, SphereCoords, Vector3D,
 };
 
 use crate::drawing::{Ctx, Res};
@@ -138,6 +138,15 @@ impl Ctx<'_, '_> {
     }
 
     /// `a:CT_Shape3D`, under any name.
+    /// `a:CT_FlatText`, a text body's `flatTx`.
+    pub(crate) fn flat_text(&mut self, el: &Elem) -> Res<FlatText> {
+        let mut e = el.clone();
+        let z = self.coord(&mut e, "z")?;
+        self.r.finish(&e);
+        self.no_kids(el)?;
+        Ok(FlatText { z })
+    }
+
     pub(crate) fn sp3d(&mut self, el: &Elem) -> Res<Shape3D> {
         let mut e = el.clone();
         let mut s = Shape3D {

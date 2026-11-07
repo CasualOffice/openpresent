@@ -8,17 +8,19 @@
 //! time. Where a type's written form is a union, [`Written`] keeps what the file
 //! wrote beside the value, so a `normAutofit/@fontScale` of `62.5%` stays `62.5%`.
 //!
-//! A run's fill, line, effects and underline line and fill are Tier 1E's own types.
-//! What is still another tier's stays in the part's tree, preserved but not modelled,
-//! and named in the report: `scene3d`, `EG_Text3D`, a warp's `avLst`, a picture bullet's
-//! `a:blip` beyond its relationship, and `extLst`.
+//! A run's fill, line, effects and underline line and fill are Tier 1E's own types, as
+//! are a body's `prstTxWarp`, `scene3d` and `EG_Text3D`. What is still another tier's
+//! stays in the part's tree, preserved but not modelled, and named in the report: a
+//! picture bullet's `a:blip` beyond its relationship, and `extLst`.
 //!
 //! Text content is document data: it lives here and in the tree, and never reaches
 //! a diagnostic.
 
 use crate::color::Color;
+use crate::d3::{FlatText, Scene3D, Shape3D};
 use crate::effect::EffectProperties;
 use crate::fill::Fill;
+use crate::geometry::PresetTextShape;
 use crate::line::Line;
 use crate::presentation::{Coordinate, Percentage, TextFont};
 use crate::properties::{Lexical, token_enum, trim_xml};
@@ -323,15 +325,16 @@ pub enum Autofit {
     Shape,
 }
 
-/// `a:CT_PresetTextShape`, `prstTxWarp`. `avLst` stays in the tree.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct TextWarp {
-    /// `@prst`, as written; the name's values belong to the geometry tier.
-    pub preset: Option<String>,
+/// The `EG_Text3D` choice: a body's text is extruded, or flat at a height.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Text3D {
+    /// `sp3d`.
+    Shape(Box<Shape3D>),
+    /// `flatTx`.
+    Flat(FlatText),
 }
 
-/// `a:CT_TextBodyProperties`. `scene3d`, the `EG_Text3D` choice and `extLst` stay in
-/// the tree.
+/// `a:CT_TextBodyProperties`. `extLst` stays in the tree, and is reported.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BodyProperties {
     /// `@rot`, 60000ths of a degree.
@@ -372,10 +375,14 @@ pub struct BodyProperties {
     pub upright: Option<bool>,
     /// `@compatLnSpc`.
     pub compat_line_spacing: Option<bool>,
-    /// `prstTxWarp`.
-    pub warp: Option<TextWarp>,
+    /// `prstTxWarp`, with its `avLst`.
+    pub warp: Option<PresetTextShape>,
     /// The `EG_TextAutofit` choice.
     pub autofit: Option<Autofit>,
+    /// `scene3d`.
+    pub scene3d: Option<Box<Scene3D>>,
+    /// The `EG_Text3D` choice.
+    pub text_3d: Option<Text3D>,
 }
 
 /// `a:CT_TextSpacing`.

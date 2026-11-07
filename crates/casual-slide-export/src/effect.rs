@@ -38,7 +38,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             .lex("blend", blend.as_ref())
             .opt(c.as_ref().map(|c| container("cont", c))),
         Effect::Blur { radius, grow } => Node::a("blur")
-            .lex("rad", radius.as_ref())
+            .pos("rad", radius.as_ref())
             .lex("grow", grow.as_ref()),
         Effect::ColorChange {
             use_alpha,
@@ -55,7 +55,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             .lex("blend", blend.as_ref())
             .opt(fill.as_ref().map(fill_node)),
         Effect::Glow { radius, color } => Node::a("glow")
-            .lex("rad", radius.as_ref())
+            .pos("rad", radius.as_ref())
             .color(color.as_ref()),
         Effect::Grayscale => Node::a("grayscl"),
         Effect::Hsl { hue, sat, lum } => Node::a("hsl")
@@ -68,16 +68,16 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             direction,
             color,
         } => Node::a("innerShdw")
-            .lex("blurRad", blur_radius.as_ref())
-            .lex("dist", distance.as_ref())
+            .pos("blurRad", blur_radius.as_ref())
+            .pos("dist", distance.as_ref())
             .ang("dir", *direction)
             .color(color.as_ref()),
         Effect::Luminance { bright, contrast } => Node::a("lum")
             .pct("bright", *bright)
             .pct("contrast", *contrast),
         Effect::OuterShadow(s) => Node::a("outerShdw")
-            .lex("blurRad", s.blur_radius.as_ref())
-            .lex("dist", s.distance.as_ref())
+            .pos("blurRad", s.blur_radius.as_ref())
+            .pos("dist", s.distance.as_ref())
             .ang("dir", s.direction)
             .pct("sx", s.sx)
             .pct("sy", s.sy)
@@ -93,16 +93,16 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             color,
         } => Node::a("prstShdw")
             .lex("prst", preset.as_ref())
-            .lex("dist", distance.as_ref())
+            .pos("dist", distance.as_ref())
             .ang("dir", *direction)
             .color(color.as_ref()),
         Effect::Reflection(r) => Node::a("reflection")
-            .lex("blurRad", r.blur_radius.as_ref())
+            .pos("blurRad", r.blur_radius.as_ref())
             .pct("stA", r.start_alpha)
             .pct("stPos", r.start_position)
             .pct("endA", r.end_alpha)
             .pct("endPos", r.end_position)
-            .lex("dist", r.distance.as_ref())
+            .pos("dist", r.distance.as_ref())
             .ang("dir", r.direction)
             .ang("fadeDir", r.fade_direction)
             .pct("sx", r.sx)
@@ -112,7 +112,7 @@ pub(crate) fn effect_node(e: &Effect) -> Node {
             .lex("algn", r.align.as_ref())
             .lex("rotWithShape", r.rotate_with_shape.as_ref()),
         Effect::RelativeOffset { tx, ty } => Node::a("relOff").pct("tx", *tx).pct("ty", *ty),
-        Effect::SoftEdge(v) => Node::a("softEdge").lex("rad", v.as_ref()),
+        Effect::SoftEdge(v) => Node::a("softEdge").pos("rad", v.as_ref()),
         Effect::Tint { hue, amount } => Node::a("tint").ang("hue", *hue).pct("amt", *amount),
         Effect::Transform(t) => Node::a("xfrm")
             .pct("sx", t.sx)
