@@ -144,32 +144,31 @@
  "hostile": {
   "bound_ms": 60000,
   "broken": 0,
-  "commit": "04077dac2d20eb5354ae10a1336556633b574757",
-  "date": "2026-11-07T21:23Z",
-  "edited": 175,
+  "commit": "9f36310ccbe8500f790c832ce9ed74807a2b3959",
+  "date": "2026-11-07T23:13Z",
+  "edited": 176,
   "engine_uncommitted": false,
   "exit": 0,
   "fixtures": 178,
-  "fixtures_sha256": "6fdabf0ddc369dbddb7d28e60965cf1461174007a786af6ebd889ac55af48a1f",
+  "fixtures_sha256": "5ae2d080c4c2d4b4308838b0b0659810433bb73cc97d6fca2c9eda26fd3fd018",
   "load_after": [
-   5.8,
-   6.1,
-   7.8
+   10.4,
+   8.1,
+   7.7
   ],
   "load_before": [
-   5.7,
-   6.4,
-   8.3
+   3.9,
+   6.3,
+   7.1
   ],
   "machine": "Darwin arm64, 10 cores",
   "ok": true,
   "refusals": [
-   "import_slide_parts CS-TBL-0005: 1",
    "open CS-OPC-0005: 1",
    "open CS-PKG-0005: 1"
   ],
-  "refused": 3,
+  "refused": 2,
   "run": 178,
-  "slowest_ms": 29509
+  "slowest_ms": 28841
  }
 }
