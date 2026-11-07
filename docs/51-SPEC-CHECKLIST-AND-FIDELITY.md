@@ -81,7 +81,7 @@ Measured separately, since passing one says nothing of the next.
 | F4 Validity | Is the XML schema-valid? | `xmllint` against vendored XSD | — |
 | F5 Acceptance | Does PowerPoint open it with no repair prompt? | **PowerPoint itself**, by automation or by hand | `PV-01` |
 | F6 Pixels | Does it look like PowerPoint's rendering? | Perceptual compare against **PowerPoint's** PNG or PDF | `PV-01` |
-| F7 Second opinion | Does LibreOffice agree, where it differs? | Convert and compare; a difference is a question, not a verdict | Available |
+| F7 Second opinion | Does LibreOffice agree, where it differs? | Convert and compare; a difference is a question, not a verdict | Off on desktops (`FID-04`) |
 | F8 Edit | Does an edit look right in PowerPoint? | Scripted edit, reopen, compare with a PowerPoint-made equivalent | `PV-01` |
 
 **Thresholds are per fixture and set from evidence.** A global "95% similar" would hide a missing bullet, so

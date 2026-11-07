@@ -76,6 +76,8 @@ Industry-standard practice applies everywhere, with these specifics.
 
 **JavaScript** (`webapp/`): ES modules, no framework or bundler, as OpenCalc. `textContent` for document strings. Strict CSP. Every verb is a registered command.
 
+**Do not start LibreOffice** on this machine (owner instruction 23, `FID-04`). Tools refuse without `OPENPRESENT_ALLOW_SOFFICE=1`; do not set it.
+
 **Python** (`tools/`): standard library where possible; tools fail non-zero and name the problem. Parse untrusted XML only after refusing a DOCTYPE.
 
 **Git**
@@ -94,6 +96,8 @@ cargo check --target wasm32-unknown-unknown --workspace --locked
 python3 tools/check-repo.py
 python3 tools/spec-checklist/generate.py --check
 python3 fixtures/tools/generate.py --check
+python3 tools/spec-audit/audit.py --check
+python3 tools/ooxml-sdk/validate.py fixtures/generated   # when dotnet is present; CI always runs it
 ```
 
 ## Working in parallel

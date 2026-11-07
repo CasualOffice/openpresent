@@ -31,6 +31,7 @@ by saying so.
 | 20 | 2026-11-07 | Fonts and painting are not the priority. The foundation comes first: stop that work until the foundation is built. Supersedes the walking skeleton after Tier 1D | `SKEL-01` blocked, fonts removed, [06](06-ROADMAP-AND-DELIVERY.md) |
 | 21 | 2026-11-07 | Phase 0 is done, sign-off given. Start completing Phase 1 | [06](06-ROADMAP-AND-DELIVERY.md) |
 | 22 | 2026-11-07 | Do not leave work at "built". Complete it: a tier counts only when it meets its exit gate | [CLAUDE.md](../CLAUDE.md), [05](05-PHASES-AND-TASKS.md) |
+| 23 | 2026-11-07 | LibreOffice keeps crashing on the owner's machine: stop it. Tools must not start it unless asked on purpose | `OPENPRESENT_ALLOW_SOFFICE`, `FID-04` |
 
 ## Boundaries set by the environment
 
