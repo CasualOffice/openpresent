@@ -590,6 +590,76 @@ fn every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens() {
     }
 }
 
+/// Modern comments and their author list, one past their bound and exactly at it, at a
+/// lowered bound: the generated deck holds four comments and two authors.
+#[test]
+fn a_modern_comment_or_author_list_past_its_bound_is_set_aside() {
+    let read = |limits: ReviewLimits| {
+        let mut pkg = open(read_fixture("generated/comments-modern.pptx"));
+        let import = ImportLimits::default();
+        let d = import_deck(&mut pkg, &import).unwrap().deck;
+        import_review(&mut pkg, &d, &limits, &import)
+    };
+    let at = read(ReviewLimits {
+        max_comments_per_part: 4,
+        max_authors: 2,
+        ..ReviewLimits::default()
+    });
+    assert!(
+        at.comments.set_aside.is_empty(),
+        "{:?}",
+        at.comments.set_aside
+    );
+    let over = read(ReviewLimits {
+        max_comments_per_part: 3,
+        ..ReviewLimits::default()
+    });
+    assert_eq!(
+        over.comments.set_aside,
+        vec!["ppt/comments/modernComment_100_0.xml".to_owned()]
+    );
+    let over = read(ReviewLimits {
+        max_authors: 1,
+        ..ReviewLimits::default()
+    });
+    assert_eq!(over.comments.set_aside, vec!["ppt/authors.xml".to_owned()]);
+}
+
+/// Reactions under one holder are bounded two ways: too many `rxn`, and `rxn` with their
+/// `instance` counted together. At a lowered bound of two, each way alone refuses the part.
+#[test]
+fn reactions_past_their_bound_either_way_refuse_the_part() {
+    let limits = ReviewLimits {
+        max_reactions_per_holder: 2,
+        ..ReviewLimits::default()
+    };
+    let read = |reactions: &str| {
+        let xml = format!(
+            r#"<p188:cmLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:p188="http://schemas.microsoft.com/office/powerpoint/2018/8/main" xmlns:pc="http://schemas.microsoft.com/office/powerpoint/2013/main/command"><p188:cm id="{{0000000A-AAAA-4BBB-8CCC-000000000000}}" authorId="{{11111111-1111-4111-8111-111111111111}}" created="2024-03-17T08:00:00.000"><pc:sldMkLst><pc:docMk/><pc:sldMk cId="1" sldId="256"/></pc:sldMkLst><p188:txBody><a:bodyPr/><a:lstStyle/><a:p/></p188:txBody><p188:extLst><p:ext uri="{{6F9A3E12-4B5D-4C7E-8F01-23456789ABCD}}"><p223:reactions xmlns:p223="http://schemas.microsoft.com/office/powerpoint/2022/03/main">{reactions}</p223:reactions></p:ext></p188:extLst></p188:cm></p188:cmLst>"#
+        );
+        let tree = XmlTree::parse(xml.as_bytes(), "c", &OoxmlLimits::default()).unwrap();
+        casual_slide_import::comment::import_threaded_comments(
+            &tree,
+            "c",
+            &[],
+            &limits,
+            &ImportLimits::default(),
+            &mut Findings::new(100),
+            &mut casual_slide_import::color::Findings::default(),
+        )
+    };
+    let rxn = r#"<p223:rxn type="a"/>"#;
+    let instance = r#"<p223:instance time="2024-03-17T10:00:00" authorId="{22222222-2222-4222-8222-222222222222}"/>"#;
+    let with = |n: usize| format!(r#"<p223:rxn type="a">{}</p223:rxn>"#, instance.repeat(n));
+    // At the bound: two reactions, or one holding one instance.
+    assert!(read(&rxn.repeat(2)).is_ok());
+    assert!(read(&with(1)).is_ok());
+    // Three reactions, none with an instance.
+    assert_eq!(read(&rxn.repeat(3)).unwrap_err().code(), "CS-IMP-0001");
+    // One reaction and two instances: three together.
+    assert_eq!(read(&with(2)).unwrap_err().code(), "CS-IMP-0001");
+}
+
 /// One past each bound is what the hostile decks hold. Exactly at it, a part opens.
 #[test]
 fn a_part_exactly_at_its_bound_is_read() {

@@ -261,14 +261,14 @@ What is damaged but not over a bound is read as far as it goes and reported: `ho
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Partial: through the bounds below; guard not seen failing (`SEC-021`) |
-| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Partial: `hostile/graphics-limit-depth.bin`; guard not seen failing (`SEC-021`) |
-| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Partial: with the bound lowered: a deck crossing the default is too large to commit; guard not seen failing (`SEC-021`) |
-| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Partial: `hostile/graphics-limit-points.bin`; guard not seen failing (`SEC-021`) |
-| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Partial: `hostile/graphics-limit-connections.bin`; guard not seen failing (`SEC-021`) |
-| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Partial: `hostile/graphics-limit-layout-nodes.bin`; guard not seen failing (`SEC-021`) |
-| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Partial: `hostile/graphics-limit-drawing-shapes.bin`; guard not seen failing (`SEC-021`) |
-| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Partial: `hostile/graphics-limit-traces.bin`; guard not seen failing (`SEC-021`) |
+| `graphic` | `crate::diagram::GraphicLimits::default()` | The bounds below, in `ImportLimits` | See below | Tested: each bound below removed in turn and its test seen to fail (`SEC-021`) |
+| `max_depth` | `128` | Elements nested below a part's root | CS-GFX-0001 | Tested: `hostile/graphics-limit-depth.bin`, `hostile/graphics-limit-math-depth.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` and `an_equation_over_a_bound_stays_in_the_tree_and_is_reported` failed (`SEC-021`) |
+| `max_elements` | `4_194_304` | Elements read in one part, or across a slide's equations | CS-GFX-0002 | Tested: with the bound lowered, as a deck crossing the default is too large to commit; guard removed, `the_element_bound_and_each_bound_at_its_value` failed (`SEC-021`) |
+| `max_points` | `65_536` | `dgm:pt` in one part, `SEC-C12` | CS-GFX-0003 | Tested: `hostile/graphics-limit-points.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
+| `max_connections` | `131_072` | `dgm:cxn` in one part | CS-GFX-0004 | Tested: `hostile/graphics-limit-connections.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
+| `max_layout_nodes` | `65_536` | `dgm:layoutNode` in one part | CS-GFX-0005 | Tested: `hostile/graphics-limit-layout-nodes.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
+| `max_drawing_shapes` | `65_536` | `dsp:sp` in one part | CS-GFX-0006 | Tested: `hostile/graphics-limit-drawing-shapes.bin`; guard removed, `a_part_over_a_bound_is_set_aside_with_its_code` failed (`SEC-021`) |
+| `max_traces` | `262_144` | `inkml:trace` in one part | CS-GFX-0007 | Tested: `hostile/graphics-limit-traces.bin`; guard removed, `a_damaged_ink_part_is_set_aside_and_the_slide_stands` failed (`SEC-021`) |
 
 ## Export
 
@@ -297,19 +297,19 @@ Past one of these the part is set aside and named, or the list left out, and the
 
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
-| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Partial: `hostile/comment-limit-comments.bin`; guard not seen failing (`SEC-021`) |
-| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Partial: `hostile/comment-limit-authors.bin`; guard not seen failing (`SEC-021`) |
-| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Partial: `hostile/comment-limit-replies.bin`; guard not seen failing (`SEC-021`) |
-| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Partial: `hostile/comment-limit-reactions.bin`; guard not seen failing (`SEC-021`) |
-| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Partial: `hostile/comment-limit-task-events.bin`; guard not seen failing (`SEC-021`) |
-| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Partial: `hostile/comment-limit-monikers.bin`; guard not seen failing (`SEC-021`) |
-| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Partial: at a lowered bound: 100,001 parts is past `CS-PKG-0002` first; guard not seen failing (`SEC-021`) |
-| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Partial: `hostile/section-limit-sections.bin`; guard not seen failing (`SEC-021`) |
-| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Partial: `hostile/section-limit-slides.bin`; guard not seen failing (`SEC-021`) |
-| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Partial: `hostile/tags-limit-tags.bin`; guard not seen failing (`SEC-021`) |
-| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Partial: `hostile/marks-limit-part.bin`; guard not seen failing (`SEC-021`) |
-| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Partial: `hostile/custom-limit-schema-refs.bin`; guard not seen failing (`SEC-021`) |
-| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Partial: `hostile/custom-limit-labels.bin`; guard not seen failing (`SEC-021`) |
+| `max_comments_per_part` | `100_000` | `cm` in one part | CS-RVW-0001 | Tested: `hostile/comment-limit-comments.bin` (legacy) and a lowered bound (modern); each guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` and `a_modern_comment_or_author_list_past_its_bound_is_set_aside` failed (`SEC-021`) |
+| `max_authors` | `100_000` | `cmAuthor` or `author` in one list | CS-RVW-0001 | Tested: `hostile/comment-limit-authors.bin` (legacy) and a lowered bound (modern); each guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` and `a_modern_comment_or_author_list_past_its_bound_is_set_aside` failed (`SEC-021`) |
+| `max_replies_per_comment` | `100_000` | `reply` under one comment | CS-RVW-0001 | Tested: `hostile/comment-limit-replies.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_reactions_per_holder` | `10_000` | `rxn` and `instance` under one holder | CS-RVW-0001 | Tested: `hostile/comment-limit-reactions.bin` and a lowered bound; the `rxn` count and the combined count each removed, `reactions_past_their_bound_either_way_refuse_the_part` failed. The per-reaction `instance` pre-check is subsumed by the combined count, so removing it alone changes nothing (`SEC-021`) |
+| `max_task_events` | `100_000` | `event` in one task | CS-RVW-0001 | Tested: `hostile/comment-limit-task-events.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_monikers` | `1_024` | Monikers in one anchor | CS-RVW-0001 | Tested: `hostile/comment-limit-monikers.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_review_parts` | `100_000` | Comment parts, tag parts and custom XML items in one deck | CS-RVW-0001 | Partial: at a lowered bound: 100,001 parts is past `CS-PKG-0002` first; the legacy comment guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the modern comment, tag and custom XML guards removed, no test failed (`SEC-021`) |
+| `max_sections` | `10_000` | `section` in one list | CS-RVW-0001 | Tested: `hostile/section-limit-sections.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_section_slides` | `100_000` | `sldId` across one list | CS-RVW-0001 | Tested: `hostile/section-limit-slides.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed (`SEC-021`) |
+| `max_tags` | `100_000` | `tag` in one part | CS-RVW-0001 | Tested: `hostile/tags-limit-tags.bin`; guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` and `a_part_exactly_at_its_bound_is_read` failed (`SEC-021`) |
+| `max_marks_per_part` | `100_000` | Zooms, marks and `custDataLst` entries in one slide-like part. The rest stay in the tree | CS-RVW-0001 | Partial: `hostile/marks-limit-part.bin`; the element-collecting guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the mark walker's guard (`Marks::charge`) removed, no test failed (`SEC-021`) |
+| `max_schema_refs` | `10_000` | `schemaRef` or `schema` in one part | CS-RVW-0001 | Partial: `hostile/custom-limit-schema-refs.bin`; the `itemProps` guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the schema library guard removed, no test failed (`SEC-021`) |
+| `max_labels` | `1_024` | Sensitivity labels in one deck | CS-RVW-0001 | Partial: `hostile/custom-limit-labels.bin`; the `LabelInfo` guard removed, `every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens` failed; the custom-properties guard removed, no test failed (`SEC-021`) |
 
 ## Tools
 
