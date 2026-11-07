@@ -8,8 +8,8 @@ use casual_slide_import::color::{
 };
 use casual_slide_import::theme::{
     Imported, ThemeImportError, import_clipboard_style_sheet, import_theme, import_theme_limited,
-    import_theme_override, read_color_map, read_color_map_override, read_theme_parts,
-    read_themeable_font, read_themeable_style,
+    import_theme_manager, import_theme_override, read_color_map, read_color_map_override,
+    read_effect_reference, read_theme_parts, read_themeable_font, read_themeable_style,
 };
 use casual_slide_model::color::{
     Color, ColorTransform, ColorValue, MAX_COLOR_TRANSFORMS, Percentage, PresetColor,
@@ -828,4 +828,42 @@ fn mutated_themes_never_panic() {
         admitted > 100,
         "the campaign reached import {admitted} times"
     );
+}
+
+// --- T1C-01 ---------------------------------------------------------------------------
+
+/// `CT_EffectReference`: `@ref` names an effect by a token, and is required.
+#[test]
+fn an_effect_reference_reads_its_ref() {
+    let tree = parse(&format!(r#"<a:effect {A} ref="fillRef"/>"#));
+    let mut f = Findings::default();
+    let got = read_effect_reference(&tree, tree.root(), &mut f);
+    assert_eq!(got.reference.as_deref(), Some("fillRef"));
+    assert!(f.items.is_empty());
+
+    let tree = parse(&format!("<a:effect {A}/>"));
+    let mut f = Findings::default();
+    let got = read_effect_reference(&tree, tree.root(), &mut f);
+    assert_eq!(got.reference, None);
+    assert_eq!(codes(&f), ["CS-CLR-0007"]);
+}
+
+/// `a:themeManager` is `CT_EmptyElement`. A part with anything inside is reported.
+#[test]
+fn a_theme_manager_part_is_recognised_and_holds_nothing() {
+    let got = import_theme_manager(&parse(&format!("<a:themeManager {A}/>"))).unwrap();
+    assert!(got.findings.items.is_empty());
+
+    let got = import_theme_manager(&parse(&format!(
+        "<a:themeManager {A}><a:surprise/></a:themeManager>"
+    )))
+    .unwrap();
+    assert_eq!(codes(&got.findings), ["CS-CLR-0009"]);
+
+    assert!(matches!(
+        import_theme_manager(&parse(&format!("<a:theme {A}/>"))),
+        Err(ThemeImportError::WrongRoot {
+            expected: "themeManager"
+        })
+    ));
 }

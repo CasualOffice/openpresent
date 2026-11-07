@@ -6,9 +6,10 @@ use std::path::Path;
 use casual_slide_export::color::{ExportError, set_color};
 use casual_slide_export::theme::{
     FontRole, FontSlot, add_custom_color, part_edit, set_color_map_override, set_color_map_slot,
-    set_color_scheme_name, set_custom_color, set_extra_scheme_color, set_font_scheme_name,
-    set_format_scheme_name, set_override_scheme_color, set_scheme_color, set_supplemental_font,
-    set_theme_name, set_typeface,
+    set_color_scheme_name, set_custom_color, set_effect_reference, set_extra_scheme_color,
+    set_font_charset, set_font_panose, set_font_pitch_family, set_font_reference_index,
+    set_font_scheme_name, set_format_scheme_name, set_override_scheme_color, set_scheme_color,
+    set_style_matrix_index, set_supplemental_font, set_theme_name, set_typeface,
 };
 use casual_slide_import::color::Findings;
 use casual_slide_import::theme::{import_theme, read_color_map, read_theme_parts};
@@ -16,7 +17,9 @@ use casual_slide_model::color::{
     Angle, Color, ColorTransform, ColorValue, MAX_COLOR_TRANSFORMS, Percentage, Rgb, SchemeColor,
     SystemColor, TransformKind as K,
 };
-use casual_slide_model::theme::{ColorMapOverride, ColorMapSlot, ColorSchemeIndex as I, Theme};
+use casual_slide_model::theme::{
+    ColorMapOverride, ColorMapSlot, ColorSchemeIndex as I, FontCollectionIndex, Theme,
+};
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, XmlTree};
 use casual_slide_package::PartEdits;
 
@@ -669,4 +672,128 @@ fn edits_on_mutated_themes_never_panic_or_corrupt() {
         }
     }
     assert!(edited > 100, "{edited}");
+}
+
+// --- T1C-01 ---------------------------------------------------------------------------
+
+const FONTS: &str = "<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:themeElements><a:fontScheme name=\"f\">\
+    <a:majorFont><a:latin typeface=\"Arial\" other=\"kept\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/></a:majorFont>\
+    <a:minorFont><a:latin typeface=\"Arial\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/></a:minorFont>\
+    </a:fontScheme></a:themeElements></a:theme>";
+
+#[test]
+fn a_fonts_panose_pitch_and_charset_set_and_read_back() {
+    let mut tree = parse(FONTS);
+    let (major, latin) = (FontRole::Major, FontSlot::Latin);
+    assert!(set_font_panose(&mut tree, major, latin, Some("020B0604020202020204")).unwrap());
+    assert!(set_font_pitch_family(&mut tree, major, latin, Some(34)).unwrap());
+    assert!(set_font_charset(&mut tree, major, latin, Some(-127)).unwrap());
+    // The same value again is not an edit.
+    assert!(!set_font_charset(&mut tree, major, latin, Some(-127)).unwrap());
+
+    let font = model(&tree)
+        .elements
+        .unwrap()
+        .font_scheme
+        .unwrap()
+        .major
+        .unwrap()
+        .latin
+        .unwrap();
+    assert_eq!(font.typeface.as_deref(), Some("Arial"));
+    assert_eq!(font.panose.as_deref(), Some("020B0604020202020204"));
+    assert_eq!(font.pitch_family, Some(34));
+    assert_eq!(font.charset, Some(-127));
+    assert!(text(&tree).contains("other=\"kept\""));
+    assert!(text(&tree).contains("<a:minorFont><a:latin typeface=\"Arial\"/>"));
+
+    // Clearing leaves it absent, not a default.
+    assert!(set_font_panose(&mut tree, major, latin, None).unwrap());
+    assert!(set_font_pitch_family(&mut tree, major, latin, None).unwrap());
+    assert!(set_font_charset(&mut tree, major, latin, None).unwrap());
+    assert!(!set_font_charset(&mut tree, major, latin, None).unwrap());
+    assert!(!text(&tree).contains("panose"));
+    assert!(!text(&tree).contains("pitchFamily"));
+    assert!(!text(&tree).contains("charset"));
+    let unchanged = parse(FONTS);
+    assert_eq!(text(&tree), text(&unchanged));
+}
+
+#[test]
+fn a_panose_or_pitch_the_schema_refuses_changes_nothing() {
+    let mut tree = parse(FONTS);
+    let before = text(&tree);
+    let (major, latin) = (FontRole::Major, FontSlot::Latin);
+    for bad in [
+        "",
+        "020B",
+        "020B060402020202020G",
+        "020B06040202020202040",
+        "é20B0604020202020204",
+    ] {
+        assert_eq!(
+            set_font_panose(&mut tree, major, latin, Some(bad)),
+            Err(ExportError::InvalidValue("panose")),
+            "{bad}"
+        );
+    }
+    // ST_PitchFamily lists its values.
+    for bad in [3, 19, 35, -1, 96] {
+        assert_eq!(
+            set_font_pitch_family(&mut tree, major, latin, Some(bad)),
+            Err(ExportError::InvalidValue("pitchFamily")),
+            "{bad}"
+        );
+    }
+    assert_eq!(text(&tree), before);
+    assert_eq!(
+        set_font_panose(
+            &mut parse(
+                "<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"/>"
+            ),
+            major,
+            latin,
+            None
+        ),
+        Err(ExportError::NodeMissing("themeElements"))
+    );
+}
+
+#[test]
+fn a_style_references_index_sets_and_reads_back() {
+    let xml = format!(
+        "<p:style xmlns:p=\"urn:p\" {A}><a:lnRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:lnRef>\
+         <a:fillRef idx=\"0\"/><a:effectRef idx=\"0\"/><a:fontRef idx=\"minor\"/></p:style>"
+    );
+    let mut tree = parse(&xml);
+    let children = tree.child_elements(tree.root());
+    let (line, font) = (children[0], children[3]);
+    assert!(set_style_matrix_index(&mut tree, line, 3).unwrap());
+    assert!(!set_style_matrix_index(&mut tree, line, 3).unwrap());
+    assert!(set_font_reference_index(&mut tree, font, FontCollectionIndex::Major).unwrap());
+    let written = text(&tree);
+    assert!(written.contains("<a:lnRef idx=\"3\"><a:schemeClr val=\"accent1\"/></a:lnRef>"));
+    assert!(written.contains("<a:fontRef idx=\"major\"/>"));
+    let mut f = casual_slide_import::color::Findings::default();
+    let style = casual_slide_import::theme::read_shape_style(&tree, tree.root(), &mut f);
+    assert_eq!(style.line.unwrap().idx, Some(3));
+    assert_eq!(style.font.unwrap().idx, Some(FontCollectionIndex::Major));
+    assert!(f.items.is_empty());
+}
+
+/// `a:effect/@ref`, on the element that holds it.
+#[test]
+fn an_effect_reference_sets_and_refuses_what_is_no_token() {
+    let mut tree = parse(&format!("<a:effect {A} ref=\"fillRef\"/>"));
+    let root = tree.root();
+    assert!(set_effect_reference(&mut tree, root, "effectRef").unwrap());
+    assert!(!set_effect_reference(&mut tree, root, "effectRef").unwrap());
+    assert!(text(&tree).contains("ref=\"effectRef\""));
+    for bad in ["", " leading", "trailing ", "two  spaces", "a\tb"] {
+        assert_eq!(
+            set_effect_reference(&mut tree, root, bad),
+            Err(ExportError::InvalidValue("ref")),
+            "{bad:?}"
+        );
+    }
 }

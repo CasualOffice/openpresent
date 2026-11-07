@@ -7,10 +7,11 @@
 
 use casual_slide_model::theme::{
     BaseStyles, ClipboardStyleSheet, ColorMap, ColorMapOverride, ColorMapSlot, ColorScheme,
-    ColorSchemeIndex, CustomColor, ExtraColorScheme, FontCollection, FontCollectionIndex, FontRef,
-    FontScheme, FormatScheme, GradientStop, ObjectDefaults, ShapeDefinition, ShapeStyle,
-    StyleEffect, StyleFill, StyleLine, StyleMatrixRef, SupplementalFont, TextFont, Theme,
-    ThemeFamily, ThemeOverride, ThemeableFont, ThemeableStyle,
+    ColorSchemeIndex, CustomColor, EffectReference, ExtraColorScheme, FontCollection,
+    FontCollectionIndex, FontRef, FontScheme, FormatScheme, GradientStop, ObjectDefaults,
+    ShapeDefinition, ShapeStyle, StyleEffect, StyleFill, StyleLine, StyleMatrixRef,
+    SupplementalFont, TextFont, Theme, ThemeFamily, ThemeManager, ThemeOverride, ThemeableFont,
+    ThemeableStyle,
 };
 use casual_slide_ooxml::{ElementId, OoxmlError, OoxmlLimits, PresentationPackage, XmlTree};
 
@@ -143,6 +144,40 @@ pub fn import_theme_override(tree: &XmlTree) -> Result<Imported<ThemeOverride>, 
         }
     }
     Ok(Imported { value, findings })
+}
+
+/// Read a `themeManager` part, which by its schema holds nothing. Whatever it does hold
+/// stays in the part, and is reported.
+pub fn import_theme_manager(tree: &XmlTree) -> Result<Imported<ThemeManager>, ThemeImportError> {
+    let root = expect_root(tree, "themeManager")?;
+    let mut findings = Findings::default();
+    let mut r = Reader {
+        tree,
+        findings: &mut findings,
+    };
+    for child in r.children(root) {
+        r.unknown(child);
+    }
+    Ok(Imported {
+        value: ThemeManager,
+        findings,
+    })
+}
+
+/// Read `CT_EffectReference`, an `a:effect` that names an effect. A missing `@ref` is
+/// reported and left absent.
+pub fn read_effect_reference(
+    tree: &XmlTree,
+    el: ElementId,
+    findings: &mut Findings,
+) -> EffectReference {
+    let mut r = Reader { tree, findings };
+    let reference = if r.readable(el) {
+        r.required(el, "ref")
+    } else {
+        None
+    };
+    EffectReference { reference }
 }
 
 /// Read a `CT_ClipboardStyleSheet` root, by its schema shape.
