@@ -150,8 +150,8 @@ fn zoom_shape_properties(p: &ShapeProperties) -> Node {
 }
 
 // spec-audit: owner=zmPr
-fn zoom_props_node(p: &ZoomProperties) -> Node {
-    Node::new(P166, "zmPr")
+fn zoom_props_node(p: &ZoomProperties, space: Space) -> Node {
+    Node::new(space, "zmPr")
         .lex("id", p.id.as_ref())
         .lex("returnToParent", p.return_to_parent.as_ref())
         .lex(
@@ -169,14 +169,14 @@ fn slide_object_node(o: &SlideZoomObject) -> Node {
     Node::new(PSLZ, "sldZmObj")
         .lex("sldId", o.sld_id.as_ref())
         .lex("cId", o.c_id.as_ref())
-        .opt(o.zm_pr.as_ref().map(zoom_props_node))
+        .opt(o.zm_pr.as_ref().map(|p| zoom_props_node(p, PSLZ)))
 }
 
 // spec-audit: owner=sectionZmObj
 fn section_object_node(o: &SectionZoomObject) -> Node {
     Node::new(PSEZ, "sectionZmObj")
         .lex("sectionId", o.section_id.as_ref())
-        .opt(o.zm_pr.as_ref().map(zoom_props_node))
+        .opt(o.zm_pr.as_ref().map(|p| zoom_props_node(p, PSEZ)))
 }
 
 // spec-audit: owner=summaryZmObj
@@ -189,7 +189,7 @@ fn summary_object_node(o: &SummaryZoomObject) -> Node {
         .lex("offsetFactorY", o.offset_factor_y.as_ref())
         .lex("scaleFactorX", o.scale_factor_x.as_ref())
         .lex("scaleFactorY", o.scale_factor_y.as_ref())
-        .opt(o.zm_pr.as_ref().map(zoom_props_node))
+        .opt(o.zm_pr.as_ref().map(|p| zoom_props_node(p, PSUZ)))
 }
 
 // spec-audit: owner=sldZm,sectionZm,summaryZm
@@ -286,7 +286,10 @@ pub fn patch_part_marks(
         changes: 0,
     };
     if before.comment_rel != after.comment_rel || before.customer_data != after.customer_data {
-        return Err(unsupported(&w, "a relationship reference in a part's marks"));
+        return Err(unsupported(
+            &w,
+            "a relationship reference in a part's marks",
+        ));
     }
     if before.zooms.len() != after.zooms.len()
         || before.classifications.len() != after.classifications.len()
@@ -300,7 +303,11 @@ pub fn patch_part_marks(
     {
         return Err(malformed(&w));
     }
-    for ((el, _, _), (b, a)) in found.zooms.iter().zip(before.zooms.iter().zip(&after.zooms)) {
+    for ((el, _, _), (b, a)) in found
+        .zooms
+        .iter()
+        .zip(before.zooms.iter().zip(&after.zooms))
+    {
         if b.fallback != a.fallback || b.shape_id != a.shape_id {
             return Err(unsupported(&w, "a zoom's fallback or frame"));
         }

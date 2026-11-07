@@ -9,12 +9,14 @@
 //! must come with it, and is refused here as `CS-EXP-0009`.
 
 use casual_slide_import::comment::ReviewLimits;
-use casual_slide_import::properties::{Elem, Findings, ImportLimits};
 use casual_slide_import::custom_data::{
     DS, ImportedReview, SL, import_datastore_item, import_schema_library, import_tags,
 };
+use casual_slide_import::properties::{Elem, Findings, ImportLimits};
+use casual_slide_model::custom_data::{
+    DatastoreItem, DatastoreSchemaRef, Schema, SchemaLibrary, StringTag, TagList,
+};
 use casual_slide_model::properties::Lexical;
-use casual_slide_model::custom_data::{DatastoreItem, DatastoreSchemaRef, Schema, SchemaLibrary, StringTag, TagList};
 use casual_slide_ooxml::{Conformance, OoxmlLimits, PresentationPackage, XmlTree};
 use casual_slide_package::PartEdits;
 
@@ -48,8 +50,15 @@ pub fn patch_tags(
     import: &ImportLimits,
     xml: &OoxmlLimits,
 ) -> Result<usize> {
-    let read =
-        |t: &XmlTree| import_tags(t, part, limits, import, &mut Findings::new(import.max_findings));
+    let read = |t: &XmlTree| {
+        import_tags(
+            t,
+            part,
+            limits,
+            import,
+            &mut Findings::new(import.max_findings),
+        )
+    };
     let before = read(tree)?;
     if &before == after {
         return Ok(0);
@@ -104,7 +113,15 @@ fn patch_schema_ref(
     b: Option<&DatastoreSchemaRef>,
     a: &DatastoreSchemaRef,
 ) -> Result {
-    qualified_attr(w, el, DS, "ds", "uri", b.and_then(|b| b.uri.as_ref()), a.uri.as_ref())
+    qualified_attr(
+        w,
+        el,
+        DS,
+        "ds",
+        "uri",
+        b.and_then(|b| b.uri.as_ref()),
+        a.uri.as_ref(),
+    )
 }
 
 /// Patch a `customXmlProps` tree to say `after`. Returns the nodes changed.
@@ -120,7 +137,13 @@ pub fn patch_datastore_item(
     xml: &OoxmlLimits,
 ) -> Result<usize> {
     let read = |t: &XmlTree| {
-        import_datastore_item(t, part, limits, import, &mut Findings::new(import.max_findings))
+        import_datastore_item(
+            t,
+            part,
+            limits,
+            import,
+            &mut Findings::new(import.max_findings),
+        )
     };
     let before = read(tree)?;
     if &before == after {
@@ -135,7 +158,15 @@ pub fn patch_datastore_item(
         changes: 0,
     };
     let w = &mut w;
-    qualified_attr(w, &root, DS, "ds", "itemID", before.item_id.as_ref(), after.item_id.as_ref())?;
+    qualified_attr(
+        w,
+        &root,
+        DS,
+        "ds",
+        "itemID",
+        before.item_id.as_ref(),
+        after.item_id.as_ref(),
+    )?;
     if before.schema_refs != after.schema_refs {
         let found = root.first_child(w.tree, w.part, DS, "schemaRefs")?;
         match (found, after.schema_refs.as_ref()) {
@@ -224,7 +255,13 @@ pub fn patch_schema_library(
     xml: &OoxmlLimits,
 ) -> Result<usize> {
     let read = |t: &XmlTree| {
-        import_schema_library(t, part, limits, import, &mut Findings::new(import.max_findings))
+        import_schema_library(
+            t,
+            part,
+            limits,
+            import,
+            &mut Findings::new(import.max_findings),
+        )
     };
     let before = read(tree)?;
     if &before == after {
@@ -289,7 +326,11 @@ pub fn save_review(
     };
     let main = package.main_part().to_owned();
     if let Some(wanted) = &after.comments.comment_authors {
-        let Some(part) = first_target(package, &main, casual_slide_import::comment::COMMENT_AUTHORS_RELATIONSHIP) else {
+        let Some(part) = first_target(
+            package,
+            &main,
+            casual_slide_import::comment::COMMENT_AUTHORS_RELATIONSHIP,
+        ) else {
             return Err(new_part(&main));
         };
         let (mut tree, was) = read_tree(package, &part)?;
@@ -297,7 +338,11 @@ pub fn save_review(
         finish(&mut edits, &part, tree, n, was);
     }
     if let Some(wanted) = &after.comments.authors {
-        let Some(part) = first_target(package, &main, casual_slide_import::comment::AUTHORS_RELATIONSHIP) else {
+        let Some(part) = first_target(
+            package,
+            &main,
+            casual_slide_import::comment::AUTHORS_RELATIONSHIP,
+        ) else {
             return Err(new_part(&main));
         };
         let (mut tree, was) = read_tree(package, &part)?;
@@ -306,20 +351,37 @@ pub fn save_review(
     }
     for slide in &after.comments.legacy {
         let (mut tree, was) = read_tree(package, &slide.part)?;
-        let n = patch_comments(&mut tree, &slide.part, strict, &slide.list, limits, import, &xml)?;
+        let n = patch_comments(
+            &mut tree,
+            &slide.part,
+            strict,
+            &slide.list,
+            limits,
+            import,
+            &xml,
+        )?;
         finish(&mut edits, &slide.part, tree, n, was);
     }
     for slide in &after.comments.threaded {
         let rels = package.relationships_of(&slide.part).to_vec();
         let (mut tree, was) = read_tree(package, &slide.part)?;
         let n = patch_threaded_comments(
-            &mut tree, &slide.part, strict, &rels, &slide.list, limits, import, &xml,
+            &mut tree,
+            &slide.part,
+            strict,
+            &rels,
+            &slide.list,
+            limits,
+            import,
+            &xml,
         )?;
         finish(&mut edits, &slide.part, tree, n, was);
     }
     for tags in &after.custom.tags {
         let (mut tree, was) = read_tree(package, &tags.part)?;
-        let n = patch_tags(&mut tree, &tags.part, strict, &tags.list, limits, import, &xml)?;
+        let n = patch_tags(
+            &mut tree, &tags.part, strict, &tags.list, limits, import, &xml,
+        )?;
         finish(&mut edits, &tags.part, tree, n, was);
     }
     for item in &after.custom.custom_xml {
@@ -330,7 +392,8 @@ pub fn save_review(
         }
         if let Some(wanted) = &item.schema_library {
             let (mut tree, was) = read_tree(package, &item.part)?;
-            let n = patch_schema_library(&mut tree, &item.part, strict, wanted, limits, import, &xml)?;
+            let n =
+                patch_schema_library(&mut tree, &item.part, strict, wanted, limits, import, &xml)?;
             finish(&mut edits, &item.part, tree, n, was);
         }
     }

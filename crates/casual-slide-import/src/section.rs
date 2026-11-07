@@ -25,7 +25,9 @@ use casual_slide_ooxml::{Relationship, XmlTree};
 
 use crate::comment::{P14, ReviewFinding, ReviewLimits, extension_items, first, guid_attr};
 use crate::drawing::{Ctx, DrawingLimits, read_blip_fill};
-use crate::properties::{Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns};
+use crate::properties::{
+    Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns,
+};
 
 /// `p166:`.
 pub const P166: &[&str] = &["http://schemas.microsoft.com/office/powerpoint/2016/6/main"];
@@ -187,8 +189,14 @@ pub(crate) fn check_sections(p: &Presentation, part: &str, findings: &mut Findin
         }
     };
     say(!sync.unknown.is_empty(), ReviewFinding::SectionUnknownSlide);
-    say(!sync.unlisted.is_empty(), ReviewFinding::SectionUnlistedSlide);
-    say(!sync.repeated.is_empty(), ReviewFinding::SectionRepeatedSlide);
+    say(
+        !sync.unlisted.is_empty(),
+        ReviewFinding::SectionUnlistedSlide,
+    );
+    say(
+        !sync.repeated.is_empty(),
+        ReviewFinding::SectionRepeatedSlide,
+    );
     say(sync.out_of_order, ReviewFinding::SectionOutOfOrder);
 }
 
@@ -234,7 +242,10 @@ pub fn mark_elements(
     while let Some((el, shape, fallback)) = stack.pop() {
         let mut shape = own_shape_id(&el).or(shape);
         if el.local.starts_with("nv") && el.local.ends_with("Pr") {
-            let first_id = kids(&el)?.iter().find(|k| k.local == "cNvPr").and_then(own_shape_id);
+            let first_id = kids(&el)?
+                .iter()
+                .find(|k| k.local == "cNvPr")
+                .and_then(own_shape_id);
             shape = first_id.or(shape);
         }
         let mut held = fallback;
@@ -329,7 +340,8 @@ pub fn import_part_marks(
     for (el, id, fallback) in &found.zooms {
         let zoom = walk.zoom(el)?;
         if *fallback == ZoomFallback::Absent {
-            walk.r.note(K::Review(ReviewFinding::ZoomNoFallback), el, None);
+            walk.r
+                .note(K::Review(ReviewFinding::ZoomNoFallback), el, None);
         }
         walk.out.zooms.push(ZoomFrame {
             shape_id: *id,
@@ -508,7 +520,7 @@ impl Marks<'_, '_> {
         let out = SlideZoomObject {
             sld_id: self.r.required(&mut e, "sldId", |_: &u32| true)?,
             c_id: self.r.attr(&mut e, "cId")?,
-            zm_pr: self.zoom_child(el)?,
+            zm_pr: self.zoom_child(el, PSLZ)?,
         };
         self.r.finish(&e);
         Ok(out)
@@ -536,7 +548,7 @@ impl Marks<'_, '_> {
         let mut e = el.clone();
         let out = SectionZoomObject {
             section_id: self.r.required(&mut e, "sectionId", guid_attr)?,
-            zm_pr: self.zoom_child(el)?,
+            zm_pr: self.zoom_child(el, PSEZ)?,
         };
         self.r.finish(&e);
         Ok(out)
@@ -579,17 +591,22 @@ impl Marks<'_, '_> {
             offset_factor_y: r.attr::<Percentage>(&mut e, "offsetFactorY")?,
             scale_factor_x: r.attr::<Percentage>(&mut e, "scaleFactorX")?,
             scale_factor_y: r.attr::<Percentage>(&mut e, "scaleFactorY")?,
-            zm_pr: self.zoom_child(el)?,
+            zm_pr: self.zoom_child(el, PSUZ)?,
         };
         self.r.finish(&e);
         Ok(out)
     }
 
-    fn zoom_child(&mut self, el: &Elem) -> Result<Option<ZoomProperties>, ImportError> {
+    /// `zmPr`, in the namespace of the zoom that holds it, as the schemas qualify it.
+    fn zoom_child(
+        &mut self,
+        el: &Elem,
+        space: &[&str],
+    ) -> Result<Option<ZoomProperties>, ImportError> {
         let mut out = None;
         let mut seen = HashSet::new();
         for child in self.r.children(el)? {
-            if child.local == "zmPr" && child.in_namespace(P166) {
+            if child.is(space, "zmPr") {
                 if first(self.r, &mut seen, "zmPr", &child) {
                     out = Some(self.zoom_properties(&child)?);
                 }
@@ -687,7 +704,10 @@ fn zoom_in(tree: &XmlTree, part: &str, frame: &Elem) -> Result<Option<Elem>, Imp
                 continue;
             }
             for inner in data.children(tree, part)? {
-                if inner.is(PSLZ, "sldZm") || inner.is(PSEZ, "sectionZm") || inner.is(PSUZ, "summaryZm") {
+                if inner.is(PSLZ, "sldZm")
+                    || inner.is(PSEZ, "sectionZm")
+                    || inner.is(PSUZ, "summaryZm")
+                {
                     return Ok(Some(inner));
                 }
             }

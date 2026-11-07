@@ -8,12 +8,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use casual_slide_import::comment::{ReviewFinding, ReviewLimits};
+use casual_slide_import::custom_data::{
+    ImportedReview, import_datastore_item, import_label_info, import_review, import_schema_library,
+    import_tags,
+};
 use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::{Findings, ImportFindingKind as K, ImportLimits};
-use casual_slide_import::custom_data::{
-    ImportedReview, import_datastore_item, import_label_info, import_review,
-    import_schema_library, import_tags,
-};
 use casual_slide_import::section::import_part_marks;
 use casual_slide_model::comment::{CommentAnchor, CommentStatus, TaskAction};
 use casual_slide_model::custom_data::RetainedKind;
@@ -35,7 +35,13 @@ fn open(bytes: Vec<u8>) -> PresentationPackage {
     PresentationPackage::open(bytes, OoxmlLimits::default()).unwrap()
 }
 
-fn review_of(bytes: Vec<u8>) -> (casual_slide_model::presentation::Deck, Findings, ImportedReview) {
+fn review_of(
+    bytes: Vec<u8>,
+) -> (
+    casual_slide_model::presentation::Deck,
+    Findings,
+    ImportedReview,
+) {
     let mut pkg = open(bytes);
     let import = ImportLimits::default();
     let imported = import_deck(&mut pkg, &import).unwrap();
@@ -46,7 +52,15 @@ fn review_of(bytes: Vec<u8>) -> (casual_slide_model::presentation::Deck, Finding
 fn codes(findings: &Findings) -> Vec<String> {
     findings
         .iter()
-        .map(|f| format!("{} {} {} {:?}", f.kind.code(), f.part, f.element, f.attribute))
+        .map(|f| {
+            format!(
+                "{} {} {} {:?}",
+                f.kind.code(),
+                f.part,
+                f.element,
+                f.attribute
+            )
+        })
         .collect()
 }
 
@@ -71,7 +85,10 @@ fn legacy_comments_authors_presence_and_threads_read() {
     assert_eq!(first.author_id, Some(1));
     assert_eq!(first.idx, Some(1));
     assert_eq!(first.text.as_deref(), Some("First note"));
-    assert_eq!(first.dt.as_ref().unwrap().as_str(), "2024-03-17T08:18:03.526");
+    assert_eq!(
+        first.dt.as_ref().unwrap().as_str(),
+        "2024-03-17T08:18:03.526"
+    );
     assert_eq!(first.pos.unwrap().x.0, 10);
     assert_eq!(first.threading.as_ref().unwrap().time_zone_bias, Some(-330));
     let reply = &slide.list.comments[1];
@@ -85,7 +102,10 @@ fn legacy_comments_authors_presence_and_threads_read() {
 fn modern_comments_threads_mentions_reactions_and_tasks_read() {
     let (_, _, r) = review_of(read_fixture("generated/comments-modern.pptx"));
     let authors = r.comments.authors.as_ref().unwrap();
-    assert_eq!(authors.authors[0].user_id.as_deref(), Some("S::ann@example.org::1"));
+    assert_eq!(
+        authors.authors[0].user_id.as_deref(),
+        Some("S::ann@example.org::1")
+    );
     assert_eq!(authors.authors[0].provider_id.as_deref(), Some("AD"));
     assert_eq!(authors.authors[0].initials.as_deref(), Some("AL"));
     assert_eq!(authors.authors[1].initials, None);
@@ -106,9 +126,15 @@ fn modern_comments_threads_mentions_reactions_and_tasks_read() {
     assert!(replies[0].tx_body.is_some());
     let reaction = &first.reactions.as_ref().unwrap().rxn[0];
     assert_eq!(reaction.reaction_type.as_deref(), Some("\u{1F44D}"));
-    assert_eq!(reaction.instance[0].time.as_ref().unwrap().as_str(), "2024-03-17T10:00:00");
+    assert_eq!(
+        reaction.instance[0].time.as_ref().unwrap().as_str(),
+        "2024-03-17T10:00:00"
+    );
     assert!(reaction.instance[0].author_id.is_some());
-    assert!(matches!(list.comments[1].anchor, Some(CommentAnchor::Drawing(_))));
+    assert!(matches!(
+        list.comments[1].anchor,
+        Some(CommentAnchor::Drawing(_))
+    ));
     let task = &list.comments[2];
     assert_eq!(task.status, Some(CommentStatus::Closed));
     assert!(matches!(task.anchor, Some(CommentAnchor::Text(_))));
@@ -119,18 +145,39 @@ fn modern_comments_threads_mentions_reactions_and_tasks_read() {
     let events = &task.task.as_ref().unwrap().history.as_ref().unwrap().event;
     assert_eq!(events.len(), 8);
     assert!(events[0].atrbtn.is_some() && events[0].anchr.is_some() && events[0].id.is_some());
-    assert!(matches!(events[0].action, Some(TaskAction::Assign(Some(_)))));
+    assert!(matches!(
+        events[0].action,
+        Some(TaskAction::Assign(Some(_)))
+    ));
     assert!(matches!(events[1].action, Some(TaskAction::Add)));
-    assert!(matches!(&events[2].action, Some(TaskAction::Title(Some(t))) if t == "Check the numbers"));
-    assert!(matches!(events[3].action, Some(TaskAction::Date { st_dt: Some(_), end_dt: Some(_) })));
-    assert!(matches!(events[4].action, Some(TaskAction::PercentComplete(Some(_)))));
+    assert!(
+        matches!(&events[2].action, Some(TaskAction::Title(Some(t))) if t == "Check the numbers")
+    );
+    assert!(matches!(
+        events[3].action,
+        Some(TaskAction::Date {
+            st_dt: Some(_),
+            end_dt: Some(_)
+        })
+    ));
+    assert!(matches!(
+        events[4].action,
+        Some(TaskAction::PercentComplete(Some(_)))
+    ));
     assert!(matches!(events[5].action, Some(TaskAction::UnassignAll)));
     assert!(matches!(events[6].action, Some(TaskAction::Undo(Some(_)))));
     assert!(matches!(events[7].action, Some(TaskAction::Unknown)));
-    assert!(matches!(list.comments[3].anchor, Some(CommentAnchor::Unknown)));
+    assert!(matches!(
+        list.comments[3].anchor,
+        Some(CommentAnchor::Unknown)
+    ));
     assert_eq!(list.comments[3].status, None, "absent stays absent");
     assert_eq!(r.marks[0].1.comment_rel.as_deref(), Some("rId2"));
-    assert!(!codes(&r.findings).iter().any(|c| c.contains("CS-RVW")), "{:?}", codes(&r.findings));
+    assert!(
+        !codes(&r.findings).iter().any(|c| c.contains("CS-RVW")),
+        "{:?}",
+        codes(&r.findings)
+    );
 }
 
 #[test]
@@ -139,12 +186,23 @@ fn sections_read_and_agree_with_the_slide_list() {
     let list = deck.presentation.sections.as_ref().unwrap();
     assert_eq!(list.sections.len(), 3);
     assert_eq!(list.sections[0].name.as_deref(), Some("Opening"));
-    assert_eq!(list.sections[0].sld_id_lst.as_deref(), Some(&[256, 257][..]));
+    assert_eq!(
+        list.sections[0].sld_id_lst.as_deref(),
+        Some(&[256, 257][..])
+    );
     assert_eq!(list.sections[2].sld_id_lst.as_deref(), Some(&[][..]));
     assert!(list.check_against(&[256, 257, 258]).in_sync());
-    assert!(!codes(&findings).iter().any(|c| c.contains("CS-RVW")), "{:?}", codes(&findings));
+    assert!(
+        !codes(&findings).iter().any(|c| c.contains("CS-RVW")),
+        "{:?}",
+        codes(&findings)
+    );
     // The other `ext` in the list is kept, and said.
-    assert!(codes(&findings).iter().any(|c| c.contains("CS-IMF-0010") && c.contains("extLst")));
+    assert!(
+        codes(&findings)
+            .iter()
+            .any(|c| c.contains("CS-IMF-0010") && c.contains("extLst"))
+    );
 }
 
 #[test]
@@ -155,8 +213,13 @@ fn a_section_list_out_of_step_opens_and_each_way_is_reported() {
         )
     };
     let section = |ids: &[u32]| {
-        let entries: String = ids.iter().map(|i| format!(r#"<p14:sldId id="{i}"/>"#)).collect();
-        format!(r#"<p14:section name="s" id="{{AAAAAAA1-0000-4000-8000-000000000001}}"><p14:sldIdLst>{entries}</p14:sldIdLst></p14:section>"#)
+        let entries: String = ids
+            .iter()
+            .map(|i| format!(r#"<p14:sldId id="{i}"/>"#))
+            .collect();
+        format!(
+            r#"<p14:section name="s" id="{{AAAAAAA1-0000-4000-8000-000000000001}}"><p14:sldIdLst>{entries}</p14:sldIdLst></p14:section>"#
+        )
     };
     let report = |ids: &[u32]| {
         let xml = list(&section(ids));
@@ -164,7 +227,10 @@ fn a_section_list_out_of_step_opens_and_each_way_is_reported() {
         let import = ImportLimits::default();
         let mut f = Findings::new(100);
         let rels: Vec<casual_slide_ooxml::Relationship> = Vec::new();
-        let p = casual_slide_import::presentation::import_presentation(&tree, "p", &rels, &import, &mut f).unwrap();
+        let p = casual_slide_import::presentation::import_presentation(
+            &tree, "p", &rels, &import, &mut f,
+        )
+        .unwrap();
         p.sections.unwrap().check_against(&[256, 257])
     };
     assert!(report(&[256, 257]).in_sync());
@@ -182,9 +248,16 @@ fn a_section_list_out_of_step_opens_and_each_way_is_reported() {
 #[test]
 fn zooms_read_with_their_fallbacks() {
     let (_, _, r) = review_of(read_fixture("generated/sections-zoom-labels.pptx"));
-    let marks = &r.marks.iter().find(|(p, _)| p.ends_with("slide1.xml")).unwrap().1;
+    let marks = &r
+        .marks
+        .iter()
+        .find(|(p, _)| p.ends_with("slide1.xml"))
+        .unwrap()
+        .1;
     assert_eq!(marks.zooms.len(), 4);
-    let Zoom::Slide(Some(slide)) = &marks.zooms[0].zoom else { panic!() };
+    let Zoom::Slide(Some(slide)) = &marks.zooms[0].zoom else {
+        panic!()
+    };
     assert_eq!(slide.sld_id, Some(257));
     assert_eq!(slide.c_id, Some(42));
     let props = slide.zm_pr.as_ref().unwrap();
@@ -195,10 +268,17 @@ fn zooms_read_with_their_fallbacks() {
     assert!(props.id.is_some() && props.blip_fill.is_some() && props.sp_pr.is_some());
     assert_eq!(marks.zooms[0].fallback, ZoomFallback::Picture);
     assert_eq!(marks.zooms[0].shape_id, Some(5));
-    let Zoom::Section(Some(section)) = &marks.zooms[1].zoom else { panic!() };
+    let Zoom::Section(Some(section)) = &marks.zooms[1].zoom else {
+        panic!()
+    };
     assert!(section.section_id.is_some());
-    assert_eq!(section.zm_pr.as_ref().unwrap().image_type, Some(ZoomImageType::Cover));
-    let Zoom::Summary { objects, layout } = &marks.zooms[2].zoom else { panic!() };
+    assert_eq!(
+        section.zm_pr.as_ref().unwrap().image_type,
+        Some(ZoomImageType::Cover)
+    );
+    let Zoom::Summary { objects, layout } = &marks.zooms[2].zoom else {
+        panic!()
+    };
     assert_eq!(*layout, Some(SummaryLayout::Grid));
     assert_eq!(objects[0].title.as_deref(), Some("Opening"));
     assert_eq!(objects[0].descr.as_deref(), Some("First part"));
@@ -207,19 +287,42 @@ fn zooms_read_with_their_fallbacks() {
     assert_eq!(objects[0].scale_factor_x.unwrap().0, 90_000);
     assert_eq!(objects[0].scale_factor_y.unwrap().0, 80_000);
     assert_eq!(marks.zooms[2].fallback, ZoomFallback::Group);
-    let Zoom::Summary { layout, .. } = &marks.zooms[3].zoom else { panic!() };
+    let Zoom::Summary { layout, .. } = &marks.zooms[3].zoom else {
+        panic!()
+    };
     assert_eq!(*layout, Some(SummaryLayout::Fixed));
-    assert!(!codes(&r.findings).iter().any(|c| c.contains("CS-RVW-0009")), "{:?}", codes(&r.findings));
+    assert!(
+        !codes(&r.findings).iter().any(|c| c.contains("CS-RVW-0009")),
+        "{:?}",
+        codes(&r.findings)
+    );
 }
 
 #[test]
 fn classification_designer_and_custom_data_marks_read() {
     let (_, _, r) = review_of(read_fixture("generated/sections-zoom-labels.pptx"));
-    let marks = &r.marks.iter().find(|(p, _)| p.ends_with("slide1.xml")).unwrap().1;
-    let outcomes: Vec<_> = marks.classifications.iter().map(|m| (m.shape_id, m.outcome)).collect();
+    let marks = &r
+        .marks
+        .iter()
+        .find(|(p, _)| p.ends_with("slide1.xml"))
+        .unwrap()
+        .1;
+    let outcomes: Vec<_> = marks
+        .classifications
+        .iter()
+        .map(|m| (m.shape_id, m.outcome))
+        .collect();
     assert!(outcomes.contains(&(Some(9), Some(ClassificationOutcome::Header))));
     assert!(outcomes.contains(&(Some(9), Some(ClassificationOutcome::Footer))));
-    assert!(marks.designer.iter().any(|m| matches!(m, DesignerMark::DesignElement { val: Some(true), shape_id: Some(9) })));
+    assert!(outcomes.contains(&(Some(20), Some(ClassificationOutcome::None))));
+    assert!(outcomes.contains(&(Some(21), Some(ClassificationOutcome::Watermark))));
+    assert!(marks.designer.iter().any(|m| matches!(
+        m,
+        DesignerMark::DesignElement {
+            val: Some(true),
+            shape_id: Some(9)
+        }
+    )));
     assert!(marks.designer.iter().any(|m| matches!(m,
         DesignerMark::DrawingProperties { edt_design_elem: Some(true), design_tag_lst: Some(t), .. }
             if t[0].name.as_deref() == Some("a") && t[0].val.as_deref() == Some("b"))));
@@ -236,22 +339,41 @@ fn tags_custom_xml_and_labels_read_and_item_bodies_do_not() {
     assert_eq!(r.custom.custom_xml.len(), 2);
     let item = &r.custom.custom_xml[0];
     let props = item.properties.as_ref().unwrap();
-    assert_eq!(props.item_id.as_deref(), Some("{CCCCCCCC-0000-4000-8000-000000000001}"));
+    assert_eq!(
+        props.item_id.as_deref(),
+        Some("{CCCCCCCC-0000-4000-8000-000000000001}")
+    );
     let refs = props.schema_refs.as_ref().unwrap();
     assert_eq!(refs[0].uri.as_deref(), Some("urn:example:note"));
     assert_eq!(item.schema_library, None);
     let library = r.custom.custom_xml[1].schema_library.as_ref().unwrap();
     assert_eq!(library.schemas[0].uri.as_deref(), Some("urn:example:note"));
-    assert_eq!(library.schemas[0].manifest_location.as_deref(), Some("m.xml"));
+    assert_eq!(
+        library.schemas[0].manifest_location.as_deref(),
+        Some("m.xml")
+    );
     assert_eq!(library.schemas[0].schema_location.as_deref(), Some("n.xsd"));
     assert!(library.schemas[0].schema_language.is_some());
-    assert!(!format!("{r:?}").contains("Item text"), "an item's body stays out of the model");
-    let part = r.labels.labels.iter().find(|l| l.source == LabelSource::LabelPart).unwrap();
+    assert!(
+        !format!("{r:?}").contains("Item text"),
+        "an item's body stays out of the model"
+    );
+    let part = r
+        .labels
+        .labels
+        .iter()
+        .find(|l| l.source == LabelSource::LabelPart)
+        .unwrap();
     assert_eq!(part.enabled, Some(true));
     assert_eq!(part.method.as_deref(), Some("Standard"));
     assert_eq!(part.content_bits, Some(3));
     assert_eq!(part.removed, Some(false));
-    let props = r.labels.labels.iter().find(|l| l.source == LabelSource::CustomProperties).unwrap();
+    let props = r
+        .labels
+        .labels
+        .iter()
+        .find(|l| l.source == LabelSource::CustomProperties)
+        .unwrap();
     assert_eq!(props.name.as_deref(), Some("Confidential"));
     assert_eq!(props.enabled, Some(true));
 }
@@ -263,11 +385,29 @@ fn retained_whole_parts_are_named_and_reported() {
     assert!(kinds.contains(&RetainedKind::ChangesInfo));
     assert!(kinds.contains(&RetainedKind::RevisionInfo));
     let said = codes(&r.findings);
-    assert!(said.iter().any(|c| c.contains("CS-RVW-0012") && c.contains("changesInfo")), "{said:?}");
-    assert!(said.iter().any(|c| c.contains("CS-RVW-0012") && c.contains("revisionInfo")), "{said:?}");
+    assert!(
+        said.iter()
+            .any(|c| c.contains("CS-RVW-0012") && c.contains("changesInfo")),
+        "{said:?}"
+    );
+    assert!(
+        said.iter()
+            .any(|c| c.contains("CS-RVW-0012") && c.contains("revisionInfo")),
+        "{said:?}"
+    );
     let (_, _, custom) = review_of(read_fixture("generated/custom-tags-labels.pptx"));
-    assert!(custom.retained.iter().any(|p| p.kind == RetainedKind::CustomXml));
-    assert!(custom.retained.iter().any(|p| p.kind == RetainedKind::LabelInfo));
+    assert!(
+        custom
+            .retained
+            .iter()
+            .any(|p| p.kind == RetainedKind::CustomXml)
+    );
+    assert!(
+        custom
+            .retained
+            .iter()
+            .any(|p| p.kind == RetainedKind::LabelInfo)
+    );
 }
 
 /// What `fixtures/real` holds of this tier: both author lists and change records in one deck,
@@ -284,11 +424,22 @@ fn the_real_decks_of_this_tier_read_and_say_nothing_of_who_wrote_them() {
     assert!(kinds.contains(&RetainedKind::RevisionInfo));
     assert!(ko.comments.set_aside.is_empty());
     let said = format!("{:?}", codes(&ko.findings));
-    for private in ["Jieun", "JEONG", "sciencespo", "Petrinko", "Yearn", "528bff1fc84d75a6"] {
+    for private in [
+        "Jieun",
+        "JEONG",
+        "sciencespo",
+        "Petrinko",
+        "Yearn",
+        "528bff1fc84d75a6",
+    ] {
         assert!(!said.contains(private), "{private} reached a finding");
     }
     let (_, _, de) = review_of(read_fixture("real/z17310490-vierfelder-de.pptx"));
-    assert!(de.retained.iter().any(|p| p.kind == RetainedKind::ChangesInfo));
+    assert!(
+        de.retained
+            .iter()
+            .any(|p| p.kind == RetainedKind::ChangesInfo)
+    );
     let (_, _, sdk) = review_of(read_fixture("real/sdk-animation.pptx"));
     assert!(sdk.custom.custom_xml.iter().any(|i| i.properties.is_some()));
 }
@@ -297,7 +448,10 @@ fn the_real_decks_of_this_tier_read_and_say_nothing_of_who_wrote_them() {
 fn a_damaged_comment_part_is_set_aside_and_the_deck_opens() {
     for (name, broken) in [
         ("ppt/comments/comment1.xml", &b"<p:cmLst not xml"[..]),
-        ("ppt/comments/comment1.xml", &b"<a:wrong xmlns:a=\"urn:x\"/>"[..]),
+        (
+            "ppt/comments/comment1.xml",
+            &b"<a:wrong xmlns:a=\"urn:x\"/>"[..],
+        ),
         ("ppt/commentAuthors.xml", &b"\xff\xfe garbage"[..]),
     ] {
         let source = read_fixture("generated/comments-legacy.pptx");
@@ -305,7 +459,11 @@ fn a_damaged_comment_part_is_set_aside_and_the_deck_opens() {
         let (_, _, r) = review_of(deck);
         assert_eq!(r.comments.set_aside, vec![name.to_owned()]);
         let said = codes(&r.findings);
-        assert!(said.iter().any(|c| c.contains("CS-IMF-0012") && c.contains(name)), "{said:?}");
+        assert!(
+            said.iter()
+                .any(|c| c.contains("CS-IMF-0012") && c.contains(name)),
+            "{said:?}"
+        );
         // The other part is still read.
         if name.contains("comment1") {
             assert_eq!(r.comments.legacy.len(), 1);
@@ -326,8 +484,15 @@ fn a_damaged_tags_or_properties_part_is_set_aside_and_the_deck_opens() {
     }
     let source = read_fixture("generated/custom-tags-labels.pptx");
     let (_, _, r) = review_of(rezip(&source, "docMetadata/LabelInfo.xml", b"<not xml"));
-    assert_eq!(r.labels.set_aside.as_deref(), Some("docMetadata/LabelInfo.xml"));
-    assert_eq!(r.labels.labels.len(), 1, "the property labels are still read");
+    assert_eq!(
+        r.labels.set_aside.as_deref(),
+        Some("docMetadata/LabelInfo.xml")
+    );
+    assert_eq!(
+        r.labels.labels.len(),
+        1,
+        "the property labels are still read"
+    );
 }
 
 /// The bytes of a deck with one part changed, through this crate's own ZIP view.
@@ -341,42 +506,87 @@ fn rezip(source: &[u8], name: &str, data: &[u8]) -> Vec<u8> {
 #[test]
 fn every_bound_sets_its_part_aside_with_its_code_and_the_deck_opens() {
     for (deck, part) in [
-        ("hostile/comment-limit-comments.bin", "ppt/comments/comment1.xml"),
-        ("hostile/comment-limit-authors.bin", "ppt/commentAuthors.xml"),
-        ("hostile/comment-limit-replies.bin", "ppt/comments/modernComment_100_0.xml"),
-        ("hostile/comment-limit-reactions.bin", "ppt/comments/modernComment_100_0.xml"),
-        ("hostile/comment-limit-task-events.bin", "ppt/comments/modernComment_100_0.xml"),
-        ("hostile/comment-limit-monikers.bin", "ppt/comments/modernComment_100_0.xml"),
+        (
+            "hostile/comment-limit-comments.bin",
+            "ppt/comments/comment1.xml",
+        ),
+        (
+            "hostile/comment-limit-authors.bin",
+            "ppt/commentAuthors.xml",
+        ),
+        (
+            "hostile/comment-limit-replies.bin",
+            "ppt/comments/modernComment_100_0.xml",
+        ),
+        (
+            "hostile/comment-limit-reactions.bin",
+            "ppt/comments/modernComment_100_0.xml",
+        ),
+        (
+            "hostile/comment-limit-task-events.bin",
+            "ppt/comments/modernComment_100_0.xml",
+        ),
+        (
+            "hostile/comment-limit-monikers.bin",
+            "ppt/comments/modernComment_100_0.xml",
+        ),
     ] {
         let (_, _, r) = review_of(read_fixture(deck));
         assert!(r.comments.set_aside.iter().any(|p| p == part), "{deck}");
         let said = codes(&r.findings);
-        assert!(said.iter().any(|c| c.contains("CS-RVW-0001") && c.contains(part)), "{deck}: {said:?}");
+        assert!(
+            said.iter()
+                .any(|c| c.contains("CS-RVW-0001") && c.contains(part)),
+            "{deck}: {said:?}"
+        );
     }
     let (_, _, r) = review_of(read_fixture("hostile/tags-limit-tags.bin"));
     assert_eq!(r.custom.set_aside, vec!["ppt/tags/tag1.xml".to_owned()]);
     let (_, _, r) = review_of(read_fixture("hostile/custom-limit-schema-refs.bin"));
-    assert_eq!(r.custom.set_aside, vec!["customXml/itemProps1.xml".to_owned()]);
+    assert_eq!(
+        r.custom.set_aside,
+        vec!["customXml/itemProps1.xml".to_owned()]
+    );
     let (_, _, r) = review_of(read_fixture("hostile/custom-limit-labels.bin"));
-    assert_eq!(r.labels.set_aside.as_deref(), Some("docMetadata/LabelInfo.xml"));
+    assert_eq!(
+        r.labels.set_aside.as_deref(),
+        Some("docMetadata/LabelInfo.xml")
+    );
     // The marks of a part stop at their bound and stay in the tree: the part is still read.
     let (_, _, r) = review_of(read_fixture("hostile/marks-limit-part.bin"));
     assert_eq!(r.marks[0].1.customer_data.len(), 100_000);
-    assert!(codes(&r.findings).iter().any(|c| c.contains("CS-RVW-0001") && c.contains("slide1")));
+    assert!(
+        codes(&r.findings)
+            .iter()
+            .any(|c| c.contains("CS-RVW-0001") && c.contains("slide1"))
+    );
     // Parts past their bound: at a lowered bound, as 100,001 parts cross `CS-PKG-0002` first.
     let source = read_fixture("generated/comments-legacy.pptx");
     let mut pkg = open(source);
     let import = ImportLimits::default();
     let d = import_deck(&mut pkg, &import).unwrap().deck;
-    let few = ReviewLimits { max_review_parts: 1, ..ReviewLimits::default() };
+    let few = ReviewLimits {
+        max_review_parts: 1,
+        ..ReviewLimits::default()
+    };
     let r = import_review(&mut pkg, &d, &few, &import);
     assert_eq!(r.comments.legacy.len(), 1);
-    assert_eq!(r.comments.set_aside, vec!["ppt/comments/comment2.xml".to_owned()]);
-    for deck in ["hostile/section-limit-sections.bin", "hostile/section-limit-slides.bin"] {
+    assert_eq!(
+        r.comments.set_aside,
+        vec!["ppt/comments/comment2.xml".to_owned()]
+    );
+    for deck in [
+        "hostile/section-limit-sections.bin",
+        "hostile/section-limit-slides.bin",
+    ] {
         let (d, findings, _) = review_of(read_fixture(deck));
         assert_eq!(d.presentation.sections, None, "{deck}");
         let said = codes(&findings);
-        assert!(said.iter().any(|c| c.contains("CS-RVW-0001") && c.contains("sectionLst")), "{deck}: {said:?}");
+        assert!(
+            said.iter()
+                .any(|c| c.contains("CS-RVW-0001") && c.contains("sectionLst")),
+            "{deck}: {said:?}"
+        );
     }
 }
 
@@ -390,7 +600,9 @@ fn a_part_exactly_at_its_bound_is_read() {
     let import = ImportLimits::default();
     let read = |n: usize| {
         let tags = r#"<p:tag name="a" val="b"/>"#.repeat(n);
-        let xml = format!(r#"<p:tagLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">{tags}</p:tagLst>"#);
+        let xml = format!(
+            r#"<p:tagLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">{tags}</p:tagLst>"#
+        );
         let tree = XmlTree::parse(xml.as_bytes(), "t", &OoxmlLimits::default()).unwrap();
         import_tags(&tree, "t", &limits, &import, &mut Findings::new(10))
     };
@@ -410,11 +622,22 @@ fn hostile_values_are_reported_and_reach_no_finding() {
         let said = format!("{:?}{:?}", codes(&opened), codes(&r.findings));
         assert!(!said.contains(mark), "{deck}: {said}");
         assert!(!said.is_empty(), "{deck}");
-        assert!(said.contains("CS-IMF-0001") || said.contains("CS-RVW"), "{deck}: {said}");
+        assert!(
+            said.contains("CS-IMF-0001") || said.contains("CS-RVW"),
+            "{deck}: {said}"
+        );
     }
     let (_, _, r) = review_of(read_fixture("hostile/comment-bad-values.bin"));
     let said = codes(&r.findings);
-    for code in ["CS-IMF-0001", "CS-IMF-0003", "CS-IMF-0004", "CS-IMF-0010", "CS-IMF-0011", "CS-RVW-0002", "CS-RVW-0004"] {
+    for code in [
+        "CS-IMF-0001",
+        "CS-IMF-0003",
+        "CS-IMF-0004",
+        "CS-IMF-0010",
+        "CS-IMF-0011",
+        "CS-RVW-0002",
+        "CS-RVW-0004",
+    ] {
         assert!(said.iter().any(|c| c.contains(code)), "{code}: {said:?}");
     }
     let bad = &r.comments.threaded[0].list.comments[0];
@@ -431,7 +654,9 @@ fn a_zoom_with_no_fallback_or_no_target_is_reported() {
     let source = read_fixture("generated/sections-zoom-labels.pptx");
     let mut pkg = open(source.clone());
     let slide = String::from_utf8(pkg.read_part("ppt/slides/slide1.xml").unwrap()).unwrap();
-    let cut = slide.replace("<mc:Fallback>", "<mc:Fallback><!-- -->").replace(r#"sldId="257""#, r#"sldId="999""#);
+    let cut = slide
+        .replace("<mc:Fallback>", "<mc:Fallback><!-- -->")
+        .replace(r#"sldId="257""#, r#"sldId="999""#);
     let start = cut.find("<mc:Fallback>").unwrap();
     let end = cut.find("</mc:Fallback>").unwrap();
     let cut = format!("{}{}", &cut[..start], &cut[end + "</mc:Fallback>".len()..]);
@@ -457,8 +682,16 @@ fn a_comment_naming_nobody_is_reported() {
     let moved = LEGACY_ORPHAN.as_bytes();
     let (_, _, r) = review_of(rezip(&source, "ppt/comments/comment2.xml", moved));
     let said = codes(&r.findings);
-    assert!(said.iter().any(|c| c.contains("CS-RVW-0002") && c.contains("comment2")), "{said:?}");
-    assert!(said.iter().any(|c| c.contains("CS-RVW-0003") && c.contains("comment2")), "{said:?}");
+    assert!(
+        said.iter()
+            .any(|c| c.contains("CS-RVW-0002") && c.contains("comment2")),
+        "{said:?}"
+    );
+    assert!(
+        said.iter()
+            .any(|c| c.contains("CS-RVW-0003") && c.contains("comment2")),
+        "{said:?}"
+    );
 }
 
 const LEGACY_ORPHAN: &str = r#"<p:cmLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cm authorId="9" idx="1"><p:extLst><p:ext uri="x"><p15:threadingInfo xmlns:p15="http://schemas.microsoft.com/office/powerpoint/2012/main"><p15:parentCm authorId="9" idx="77"/></p15:threadingInfo></p:ext></p:extLst></p:cm></p:cmLst>"#;
@@ -485,62 +718,135 @@ fn lines(f: &Findings) -> Vec<String> {
 
 fn read_comments(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = casual_slide_import::comment::import_comments(tree, "p", &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = casual_slide_import::comment::import_comments(
+        tree,
+        "p",
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_cm_authors(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = casual_slide_import::comment::import_comment_authors(tree, "p", &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = casual_slide_import::comment::import_comment_authors(
+        tree,
+        "p",
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_authors(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = casual_slide_import::comment::import_authors(tree, "p", &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = casual_slide_import::comment::import_authors(
+        tree,
+        "p",
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_threaded(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
     let mut c = casual_slide_import::color::Findings::default();
-    let v = casual_slide_import::comment::import_threaded_comments(tree, "p", &[], &ReviewLimits::default(), &ImportLimits::default(), &mut f, &mut c).ok()?;
+    let v = casual_slide_import::comment::import_threaded_comments(
+        tree,
+        "p",
+        &[],
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+        &mut c,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_tags(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = import_tags(tree, "p", &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = import_tags(
+        tree,
+        "p",
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_store(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = import_datastore_item(tree, "p", &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = import_datastore_item(
+        tree,
+        "p",
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_library(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = import_schema_library(tree, "p", &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = import_schema_library(
+        tree,
+        "p",
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_labels(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = import_label_info(tree, "p", &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = import_label_info(
+        tree,
+        "p",
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_marks(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = import_part_marks(tree, "p", &[], &ReviewLimits::default(), &ImportLimits::default(), &mut f).ok()?;
+    let v = import_part_marks(
+        tree,
+        "p",
+        &[],
+        &ReviewLimits::default(),
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{v:?}"), lines(&f)))
 }
 
 fn read_presentation(tree: &XmlTree) -> Option<Read> {
     let mut f = Findings::new(1000);
-    let v = casual_slide_import::presentation::import_presentation(tree, "p", &[], &ImportLimits::default(), &mut f).ok()?;
+    let v = casual_slide_import::presentation::import_presentation(
+        tree,
+        "p",
+        &[],
+        &ImportLimits::default(),
+        &mut f,
+    )
+    .ok()?;
     Some((format!("{:?}", v.sections), lines(&f)))
 }
 
@@ -549,7 +855,8 @@ fn silent_in(xml: &[u8], read: PartReader, only: Option<&str>) -> Vec<String> {
     let whole = XmlTree::parse(xml, "p", &OoxmlLimits::default()).unwrap();
     let as_read = read(&whole).unwrap();
     let mut silent = Vec::new();
-    let mut stack: Vec<(ElementId, bool, Vec<String>)> = vec![(whole.root(), only.is_none(), Vec::new())];
+    let mut stack: Vec<(ElementId, bool, Vec<String>)> =
+        vec![(whole.root(), only.is_none(), Vec::new())];
     while let Some((parent, inside, above)) = stack.pop() {
         for kid in whole.child_elements(parent) {
             let name = whole.qualified_name(kid).to_owned();
@@ -564,7 +871,9 @@ fn silent_in(xml: &[u8], read: PartReader, only: Option<&str>) -> Vec<String> {
             let mut gone = whole.clone();
             gone.remove_child(parent, kid);
             let again = XmlTree::parse(&gone.to_bytes(), "p", &OoxmlLimits::default()).ok();
-            if again.as_ref().and_then(read).as_ref() == Some(&as_read) && !noticed_above(&as_read, &above, &name) {
+            if again.as_ref().and_then(read).as_ref() == Some(&as_read)
+                && !noticed_above(&as_read, &above, &name)
+            {
                 silent.push(format!("<{name}>"));
             }
             for (attr, _) in attrs {
@@ -602,34 +911,91 @@ fn part_of(deck: &str, part: &str) -> Vec<u8> {
 #[test]
 fn nothing_in_a_comment_or_custom_part_can_go_without_the_model_or_the_report_changing() {
     let cases: [(&str, &str, PartReader); 8] = [
-        ("generated/comments-legacy.pptx", "ppt/commentAuthors.xml", read_cm_authors),
-        ("generated/comments-legacy.pptx", "ppt/comments/comment1.xml", read_comments),
-        ("generated/comments-modern.pptx", "ppt/authors.xml", read_authors),
-        ("generated/comments-modern.pptx", "ppt/comments/modernComment_100_0.xml", read_threaded),
-        ("generated/custom-tags-labels.pptx", "ppt/tags/tag1.xml", read_tags),
-        ("generated/custom-tags-labels.pptx", "customXml/itemProps1.xml", read_store),
-        ("generated/custom-tags-labels.pptx", "customXml/item2.xml", read_library),
-        ("generated/custom-tags-labels.pptx", "docMetadata/LabelInfo.xml", read_labels),
+        (
+            "generated/comments-legacy.pptx",
+            "ppt/commentAuthors.xml",
+            read_cm_authors,
+        ),
+        (
+            "generated/comments-legacy.pptx",
+            "ppt/comments/comment1.xml",
+            read_comments,
+        ),
+        (
+            "generated/comments-modern.pptx",
+            "ppt/authors.xml",
+            read_authors,
+        ),
+        (
+            "generated/comments-modern.pptx",
+            "ppt/comments/modernComment_100_0.xml",
+            read_threaded,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "ppt/tags/tag1.xml",
+            read_tags,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "customXml/itemProps1.xml",
+            read_store,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "customXml/item2.xml",
+            read_library,
+        ),
+        (
+            "generated/custom-tags-labels.pptx",
+            "docMetadata/LabelInfo.xml",
+            read_labels,
+        ),
     ];
     let mut silent = Vec::new();
     for (deck, part, read) in cases {
-        silent.extend(silent_in(&part_of(deck, part), read, None).into_iter().map(|s| format!("{part}: {s}")));
+        silent.extend(
+            silent_in(&part_of(deck, part), read, None)
+                .into_iter()
+                .map(|s| format!("{part}: {s}")),
+        );
     }
     // What a moniker holds is read as it stands, by name, so it is in the model; that is its test.
-    assert!(silent.is_empty(), "{} read past:\n{}", silent.len(), silent.join("\n"));
+    assert!(
+        silent.is_empty(),
+        "{} read past:\n{}",
+        silent.len(),
+        silent.join("\n")
+    );
 }
 
 #[test]
 fn nothing_of_a_section_list_or_a_mark_can_go_unnoticed() {
     let deck = "generated/sections-zoom-labels.pptx";
-    let mut silent = silent_in(&part_of(deck, "ppt/presentation.xml"), read_presentation, Some("sectionLst"));
+    let mut silent = silent_in(
+        &part_of(deck, "ppt/presentation.xml"),
+        read_presentation,
+        Some("sectionLst"),
+    );
     let slide = part_of(deck, "ppt/slides/slide1.xml");
-    for holder in ["sldZm", "sectionZm", "summaryZm", "classification", "designElem", "designPr"] {
+    for holder in [
+        "sldZm",
+        "sectionZm",
+        "summaryZm",
+        "classification",
+        "designElem",
+        "designPr",
+    ] {
         silent.extend(silent_in(&slide, read_marks, Some(holder)));
     }
     let modern = part_of("generated/comments-modern.pptx", "ppt/slides/slide1.xml");
     silent.extend(silent_in(&modern, read_marks, Some("commentRel")));
-    assert!(silent.is_empty(), "{} read past:\n{}", silent.len(), silent.join("\n"));
+    assert!(
+        silent.is_empty(),
+        "{} read past:\n{}",
+        silent.len(),
+        silent.join("\n")
+    );
 }
 
 /// The check itself: something this reader has never heard of is noticed. A retained child
@@ -637,14 +1003,31 @@ fn nothing_of_a_section_list_or_a_mark_can_go_unnoticed() {
 #[test]
 fn something_unknown_in_a_comment_is_reported_and_so_is_its_absence() {
     let xml = |extra: &str| {
-        format!(r#"<p:cmLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cm authorId="1" idx="1"{extra}><p:madeUp/></p:cm></p:cmLst>"#)
+        format!(
+            r#"<p:cmLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cm authorId="1" idx="1"{extra}><p:madeUp/></p:cm></p:cmLst>"#
+        )
     };
     let plain = XmlTree::parse(xml("").as_bytes(), "p", &OoxmlLimits::default()).unwrap();
     let got = read_comments(&plain).unwrap();
-    assert!(got.1.iter().any(|l| l.starts_with("CS-IMF-0010")), "{:?}", got.1);
+    assert!(
+        got.1.iter().any(|l| l.starts_with("CS-IMF-0010")),
+        "{:?}",
+        got.1
+    );
     assert!(silent_in(xml("").as_bytes(), read_comments, None).is_empty());
-    let unknown = XmlTree::parse(xml(r#" madeUp="1""#).as_bytes(), "p", &OoxmlLimits::default()).unwrap();
-    assert!(read_comments(&unknown).unwrap().1.iter().any(|l| l.starts_with("CS-IMF-0011")));
+    let unknown = XmlTree::parse(
+        xml(r#" madeUp="1""#).as_bytes(),
+        "p",
+        &OoxmlLimits::default(),
+    )
+    .unwrap();
+    assert!(
+        read_comments(&unknown)
+            .unwrap()
+            .1
+            .iter()
+            .any(|l| l.starts_with("CS-IMF-0011"))
+    );
     assert!(silent_in(xml(r#" madeUp="1""#).as_bytes(), read_comments, None).is_empty());
 }
 
@@ -661,7 +1044,11 @@ fn taking_a_retained_part_away_changes_the_report() {
         .split_inclusive("/>")
         .filter(|r| !r.contains("revisionInfo"))
         .collect();
-    let (_, _, gone) = review_of(rezip(&read_fixture("generated/review-every-change.pptx"), name, cut.as_bytes()));
+    let (_, _, gone) = review_of(rezip(
+        &read_fixture("generated/review-every-change.pptx"),
+        name,
+        cut.as_bytes(),
+    ));
     assert_ne!(whole.retained, gone.retained);
     assert_ne!(codes(&whole.findings), codes(&gone.findings));
 }
@@ -674,47 +1061,61 @@ fn rows() -> Vec<BTreeMap<String, String>> {
     let mut lines = text.lines();
     let head: Vec<&str> = lines.next().unwrap().split('\t').collect();
     lines
-        .map(|l| head.iter().map(|h| (*h).to_owned()).zip(l.split('\t').map(str::to_owned)).collect())
-        .filter(|r: &BTreeMap<String, String>| ["COMMENT", "EXT", "REVIEW", "DESIGN", "CUSTOM"].contains(&r["area"].as_str()))
+        .map(|l| {
+            head.iter()
+                .map(|h| (*h).to_owned())
+                .zip(l.split('\t').map(str::to_owned))
+                .collect()
+        })
+        .filter(|r: &BTreeMap<String, String>| {
+            ["COMMENT", "EXT", "REVIEW", "DESIGN", "CUSTOM"].contains(&r["area"].as_str())
+        })
         .collect()
 }
 
-/// Rows the audit's schema walk cannot reach, as a moniker list's content is `xsd:any` and these
-/// types have no global element. They are in `fixtures/generated` and `fixtures/real` as text, and
-/// retained as text: `moniker_types_are_in_the_fixtures_and_kept` says so. Each keeps a blank
-/// mark for the audit, for this reason, and is named here so a new one fails.
-const WALK_CANNOT_REACH: [&str; 7] = [
-    "CT_SlideMoniker",
-    "CT_MainMasterMoniker",
-    "CT_SlideLayoutMoniker",
-    "CT_CommentMoniker",
-    "CT_CommentAuthorMoniker",
-    "CT_DocumentMoniker",
-    "ST_CreationId",
-];
-
-fn cannot_be_reached(row: &BTreeMap<String, String>) -> bool {
-    let owner = row.get("owner").map_or("", String::as_str);
-    WALK_CANNOT_REACH.contains(&owner) || WALK_CANNOT_REACH.contains(&row["name"].as_str())
+/// Blanks with their reason in `docs/spec/open-rows.tsv`, each naming a tracker row.
+fn open_rows() -> std::collections::BTreeSet<(String, char)> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/spec/open-rows.tsv");
+    let text = std::fs::read_to_string(path).unwrap();
+    let mut out = std::collections::BTreeSet::new();
+    for line in text.lines().skip(1) {
+        let mut cols = line.split('\t');
+        let (Some(id), Some(columns)) = (cols.next(), cols.next()) else {
+            continue;
+        };
+        out.extend(columns.chars().map(|c| (id.to_owned(), c)));
+    }
+    out
 }
 
-/// Every row of `COMMENT`, `EXT`, `REVIEW`, `DESIGN` and `CUSTOM` is marked, or is what a walk of
-/// the schema cannot reach. 876 rows, as `docs/06` says.
+/// Every row of `COMMENT`, `EXT`, `REVIEW`, `DESIGN` and `CUSTOM` is marked, or has a recorded
+/// reason. 876 rows, as `docs/06` says. The audit's fixture walk cannot reach the moniker types a
+/// list holds through `xsd:any`, so `moniker_types_are_in_the_fixtures_and_kept` answers for them.
 #[test]
 fn every_row_of_the_five_areas_is_accounted_for() {
     let rows = rows();
     assert_eq!(rows.len(), 876, "docs/06 says 876");
+    let open = open_rows();
     let mut blank = Vec::new();
     for row in &rows {
-        for column in ["M", "I", "E"] {
-            let mark = row[column].as_str();
-            assert!(matches!(mark, "y" | "r" | "."), "{}: {mark}", row["id"]);
-            if mark == "." && !cannot_be_reached(row) {
+        for column in ['M', 'I', 'E'] {
+            let mark = row[&column.to_string()].as_str();
+            assert!(
+                matches!(mark, "y" | "r" | "n/a" | "."),
+                "{}: {mark}",
+                row["id"]
+            );
+            if mark == "." && !open.contains(&(row["id"].clone(), column)) {
                 blank.push(format!("{} {column}", row["id"]));
             }
         }
     }
-    assert!(blank.is_empty(), "{} unaccounted:\n{}", blank.len(), blank.join("\n"));
+    assert!(
+        blank.is_empty(),
+        "{} unaccounted:\n{}",
+        blank.len(),
+        blank.join("\n")
+    );
     let y = rows.iter().filter(|r| r["I"] == "y").count();
     assert!(y > 100, "a tier that models this much, marked {y}");
 }
@@ -723,17 +1124,36 @@ fn every_row_of_the_five_areas_is_accounted_for() {
 #[test]
 fn moniker_types_are_in_the_fixtures_and_kept() {
     let mut pkg = open(read_fixture("generated/review-every-change.pptx"));
-    let bytes = String::from_utf8(pkg.read_part("ppt/changesInfos/changesInfo1.xml").unwrap()).unwrap();
-    for needle in ["<pc:docMk", "<pc:sldMk", "<pc:sldMasterMk", "<pc:sldLayoutMk", "<pc:cmMk", "<pc:cmAuthorMk", "cId=", "sldId=", "authorId=", "idx="] {
+    let bytes =
+        String::from_utf8(pkg.read_part("ppt/changesInfos/changesInfo1.xml").unwrap()).unwrap();
+    for needle in [
+        "<pc:docMk",
+        "<pc:sldMk",
+        "<pc:sldMasterMk",
+        "<pc:sldLayoutMk",
+        "<pc:cmMk",
+        "<pc:cmAuthorMk",
+        "cId=",
+        "sldId=",
+        "authorId=",
+        "idx=",
+    ] {
         assert!(bytes.contains(needle), "{needle}");
     }
     let mut real = open(read_fixture("real/z14230715-ddi-ko.pptx"));
-    let changes = String::from_utf8(real.read_part("ppt/changesInfos/changesInfo1.xml").unwrap()).unwrap();
-    assert!(changes.contains("<pc:sldMk") && changes.contains("cId="), "as PowerPoint writes them");
+    let changes =
+        String::from_utf8(real.read_part("ppt/changesInfos/changesInfo1.xml").unwrap()).unwrap();
+    assert!(
+        changes.contains("<pc:sldMk") && changes.contains("cId="),
+        "as PowerPoint writes them"
+    );
 }
 
 #[test]
 fn a_report_code_is_what_its_finding_says() {
     assert_eq!(K::Review(ReviewFinding::OverBound).code(), "CS-RVW-0001");
-    assert_eq!(K::Review(ReviewFinding::RetainedWhole).code(), "CS-RVW-0012");
+    assert_eq!(
+        K::Review(ReviewFinding::RetainedWhole).code(),
+        "CS-RVW-0012"
+    );
 }

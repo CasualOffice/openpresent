@@ -17,8 +17,7 @@ use std::collections::HashMap;
 
 use casual_slide_import::color::Findings as ColorFindings;
 use casual_slide_import::comment::{
-    ReviewLimits, import_authors, import_comment_authors, import_comments,
-    import_threaded_comments,
+    ReviewLimits, import_authors, import_comment_authors, import_comments, import_threaded_comments,
 };
 use casual_slide_import::properties::{Elem, Findings, ImportLimits, ns};
 use casual_slide_model::comment::{
@@ -184,7 +183,10 @@ pub(crate) fn sync_items<T: PartialEq>(
         .collect();
     let kept = source.iter().flatten();
     if kept.clone().zip(kept.skip(1)).any(|(x, y)| x > y) {
-        return Err(unsupported(w, "reordering a list that holds what the model cannot see"));
+        return Err(unsupported(
+            w,
+            "reordering a list that holds what the model cannot see",
+        ));
     }
     let mut used = vec![false; before.len()];
     for at in source.iter().flatten() {
@@ -273,13 +275,15 @@ pub(crate) fn patch_ext_item(
         (None, None) => Ok(()),
         (None, Some(a)) => {
             let Some(uri) = uri else {
-                return Err(unsupported(w, "adding this extension, whose uri is not known"));
+                return Err(unsupported(
+                    w,
+                    "adding this extension, whose uri is not known",
+                ));
             };
             let list = match list {
                 Some(list) => list,
                 None => {
-                    let list =
-                        w.new_child(el, list_space.uris(), list_space.prefix(), "extLst")?;
+                    let list = w.new_child(el, list_space.uris(), list_space.prefix(), "extLst")?;
                     w.tree.insert_child(el.id, None, list.id);
                     list
                 }
@@ -331,7 +335,9 @@ fn patch_cm_author(
         el,
         Space::Pml,
         Some(PRESENCE_URI),
-        b.and_then(|b| b.presence.as_ref()).map(presence_node).as_ref(),
+        b.and_then(|b| b.presence.as_ref())
+            .map(presence_node)
+            .as_ref(),
         a.presence.as_ref().map(presence_node).as_ref(),
         P15,
         "presenceInfo",
@@ -351,7 +357,13 @@ pub fn patch_comment_authors(
     xml: &OoxmlLimits,
 ) -> Result<usize> {
     let read = |t: &XmlTree| {
-        import_comment_authors(t, part, limits, import, &mut Findings::new(import.max_findings))
+        import_comment_authors(
+            t,
+            part,
+            limits,
+            import,
+            &mut Findings::new(import.max_findings),
+        )
     };
     let before = read(tree)?;
     if &before == after {
@@ -415,7 +427,9 @@ fn patch_legacy(w: &mut Writer<'_>, el: &Elem, b: Option<&Comment>, a: &Comment)
         el,
         Space::Pml,
         Some(THREADING_URI),
-        b.and_then(|b| b.threading.as_ref()).map(threading_node).as_ref(),
+        b.and_then(|b| b.threading.as_ref())
+            .map(threading_node)
+            .as_ref(),
         a.threading.as_ref().map(threading_node).as_ref(),
         P15,
         "threadingInfo",
@@ -435,7 +449,13 @@ pub fn patch_comments(
     xml: &OoxmlLimits,
 ) -> Result<usize> {
     let read = |t: &XmlTree| {
-        import_comments(t, part, limits, import, &mut Findings::new(import.max_findings))
+        import_comments(
+            t,
+            part,
+            limits,
+            import,
+            &mut Findings::new(import.max_findings),
+        )
     };
     let before = read(tree)?;
     if &before == after {
@@ -488,8 +508,15 @@ pub fn patch_authors(
     import: &ImportLimits,
     xml: &OoxmlLimits,
 ) -> Result<usize> {
-    let read =
-        |t: &XmlTree| import_authors(t, part, limits, import, &mut Findings::new(import.max_findings));
+    let read = |t: &XmlTree| {
+        import_authors(
+            t,
+            part,
+            limits,
+            import,
+            &mut Findings::new(import.max_findings),
+        )
+    };
     let before = read(tree)?;
     if &before == after {
         return Ok(0);
@@ -577,7 +604,10 @@ fn threaded_node(c: &ThreadedComment) -> Node {
         .lex("created", c.created.as_ref())
         .lex("startDate", c.start_date.as_ref())
         .lex("dueDate", c.due_date.as_ref())
-        .lex("assignedTo", c.assigned_to.as_ref().map(|l| l.join(" ")).as_ref())
+        .lex(
+            "assignedTo",
+            c.assigned_to.as_ref().map(|l| l.join(" ")).as_ref(),
+        )
         .lex("complete", c.complete.as_ref())
         .lex("title", c.title.as_ref())
         .opt(c.pos.as_ref().map(|p| point_node(P188, "pos", p)))
@@ -620,7 +650,12 @@ fn patch_body(
     }
 }
 
-fn patch_reply(w: &mut Writer<'_>, el: &Elem, b: Option<&CommentReply>, a: &CommentReply) -> Result {
+fn patch_reply(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&CommentReply>,
+    a: &CommentReply,
+) -> Result {
     patch(w, el, b.map(reply_node).as_ref(), &reply_node(a))?;
     patch_body(
         w,
@@ -634,7 +669,9 @@ fn patch_reply(w: &mut Writer<'_>, el: &Elem, b: Option<&CommentReply>, a: &Comm
         el,
         P188,
         None,
-        b.and_then(|b| b.reactions.as_ref()).map(reactions_node).as_ref(),
+        b.and_then(|b| b.reactions.as_ref())
+            .map(reactions_node)
+            .as_ref(),
         a.reactions.as_ref().map(reactions_node).as_ref(),
         P223,
         "reactions",
@@ -747,7 +784,9 @@ fn patch_threaded(
         el,
         P188,
         None,
-        b.and_then(|b| b.reactions.as_ref()).map(reactions_node).as_ref(),
+        b.and_then(|b| b.reactions.as_ref())
+            .map(reactions_node)
+            .as_ref(),
         a.reactions.as_ref().map(reactions_node).as_ref(),
         P223,
         "reactions",

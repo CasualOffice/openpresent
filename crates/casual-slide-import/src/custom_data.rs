@@ -15,14 +15,14 @@
 
 use std::collections::HashSet;
 
-use casual_slide_model::presentation::Deck;
-use casual_slide_model::properties::Variant;
+use casual_slide_model::comment::DeckComments;
 use casual_slide_model::custom_data::{
     CustomXmlItem, DatastoreItem, DatastoreSchemaRef, DeckCustomData, RetainedKind, RetainedPart,
     Schema, SchemaLibrary, StringTag, TagList, TagPart,
 };
+use casual_slide_model::presentation::Deck;
+use casual_slide_model::properties::Variant;
 use casual_slide_model::section::{DeckLabels, LabelSource, PartMarks, SensitivityLabel};
-use casual_slide_model::comment::DeckComments;
 use casual_slide_ooxml::{PresentationPackage, XmlTree};
 
 use crate::color::Findings as ColorFindings;
@@ -30,7 +30,9 @@ use crate::comment::{
     ReviewFinding, ReviewLimits, first, guid_attr, name_map, read_deck_comments,
     read_part_or_set_aside, targets_of,
 };
-use crate::properties::{Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns};
+use crate::properties::{
+    Elem, Findings, ImportError, ImportFindingKind as K, ImportLimits, Reader, ns,
+};
 use crate::section::{check_zoom_targets, import_part_marks};
 
 /// `ds:`.
@@ -279,7 +281,9 @@ pub fn labels_in_custom_properties(deck: &Deck, limits: &ReviewLimits) -> Vec<Se
                 out.len() - 1
             }
         };
-        let Some(label) = out.get_mut(at) else { continue };
+        let Some(label) = out.get_mut(at) else {
+            continue;
+        };
         let text = match &property.value {
             Some(Variant::Lpwstr(v) | Variant::Lpstr(v)) => Some(v.clone()),
             _ => None,
@@ -322,9 +326,10 @@ pub fn read_deck_custom_data(
                 set_aside.push(part);
                 continue;
             }
-            let read = read_part_or_set_aside(package, &part, findings, &mut set_aside, |t, _, f| {
-                import_tags(t, &part, limits, import, f)
-            });
+            let read =
+                read_part_or_set_aside(package, &part, findings, &mut set_aside, |t, _, f| {
+                    import_tags(t, &part, limits, import, f)
+                });
             if let Some(list) = read {
                 out.tags.push(TagPart { part, list });
             }
@@ -343,17 +348,29 @@ pub fn read_deck_custom_data(
             ..CustomXmlItem::default()
         };
         let item_rels = package.relationships_of(&part).to_vec();
-        let props = targets_of(&names, &part, &item_rels, CUSTOM_XML_PROPS_RELATIONSHIP, findings);
+        let props = targets_of(
+            &names,
+            &part,
+            &item_rels,
+            CUSTOM_XML_PROPS_RELATIONSHIP,
+            findings,
+        );
         if let Some(props) = props.first() {
             item.properties_part = Some(props.clone());
-            item.properties = read_part_or_set_aside(package, props, findings, &mut set_aside, |t, _, f| {
-                import_datastore_item(t, props, limits, import, f)
-            });
+            item.properties =
+                read_part_or_set_aside(package, props, findings, &mut set_aside, |t, _, f| {
+                    import_datastore_item(t, props, limits, import, f)
+                });
         }
         // An item is whatever its owner put there, so it may not be XML we can read, or
         // XML at all. That is not damage: nothing here needs it to be.
         item.schema_library = read_item_library(package, &part, limits, import, findings);
-        findings.note(K::Review(ReviewFinding::RetainedWhole), &part, "customXml", None);
+        findings.note(
+            K::Review(ReviewFinding::RetainedWhole),
+            &part,
+            "customXml",
+            None,
+        );
         out.custom_xml.push(item);
     }
     out.set_aside = set_aside;
@@ -385,13 +402,30 @@ pub fn retained_parts(package: &PresentationPackage, findings: &mut Findings) ->
     let mut out = Vec::new();
     let mut take = |types: &[&str], kind: RetainedKind, findings: &mut Findings| {
         for part in targets_of(&names, &main, &rels, types, findings) {
-            findings.note(K::Review(ReviewFinding::RetainedWhole), &part, kind.name(), None);
+            findings.note(
+                K::Review(ReviewFinding::RetainedWhole),
+                &part,
+                kind.name(),
+                None,
+            );
             out.push(RetainedPart { part, kind });
         }
     };
-    take(CHANGES_INFO_RELATIONSHIP, RetainedKind::ChangesInfo, findings);
-    take(REVISION_INFO_RELATIONSHIP, RetainedKind::RevisionInfo, findings);
-    take(CUSTOM_XML_RELATIONSHIP, RetainedKind::CustomXml, &mut Findings::new(0));
+    take(
+        CHANGES_INFO_RELATIONSHIP,
+        RetainedKind::ChangesInfo,
+        findings,
+    );
+    take(
+        REVISION_INFO_RELATIONSHIP,
+        RetainedKind::RevisionInfo,
+        findings,
+    );
+    take(
+        CUSTOM_XML_RELATIONSHIP,
+        RetainedKind::CustomXml,
+        &mut Findings::new(0),
+    );
     let root_rels = package.relationships_of("").to_vec();
     for part in targets_of(&names, "", &root_rels, LABELS_RELATIONSHIP, findings) {
         out.push(RetainedPart {
@@ -449,7 +483,13 @@ pub fn slide_like_parts(package: &PresentationPackage) -> Vec<String> {
                 continue;
             }
             let single = [rel.rel_type.as_str()];
-            for part in targets_of(&names, &source, std::slice::from_ref(rel), &single, &mut scratch) {
+            for part in targets_of(
+                &names,
+                &source,
+                std::slice::from_ref(rel),
+                &single,
+                &mut scratch,
+            ) {
                 if seen.insert(part.clone()) {
                     queue.push(part.clone());
                     out.push(part);
@@ -471,15 +511,26 @@ pub fn import_review(
     let mut findings = Findings::new(import.max_findings);
     let mut color = ColorFindings::default();
     let slide_parts = slide_like_parts(package);
-    let comments = read_deck_comments(package, &slide_parts, limits, import, &mut findings, &mut color);
+    let comments = read_deck_comments(
+        package,
+        &slide_parts,
+        limits,
+        import,
+        &mut findings,
+        &mut color,
+    );
     let custom = read_deck_custom_data(package, &slide_parts, limits, import, &mut findings);
     let retained = retained_parts(package, &mut findings);
     let mut marks = Vec::new();
     let mut marks_set_aside = Vec::new();
     for part in &slide_parts {
-        let read = read_part_or_set_aside(package, part, &mut findings, &mut marks_set_aside, |t, r, f| {
-            import_part_marks(t, part, r, limits, import, f)
-        });
+        let read = read_part_or_set_aside(
+            package,
+            part,
+            &mut findings,
+            &mut marks_set_aside,
+            |t, r, f| import_part_marks(t, part, r, limits, import, f),
+        );
         if let Some(m) = read
             && m != PartMarks::default()
         {
@@ -525,10 +576,16 @@ fn check_comment_rels(
     for (part, m) in marks {
         let Some(id) = &m.comment_rel else { continue };
         let good = package.relationships_of(part).iter().any(|r| {
-            &r.id == id && crate::comment::THREADED_COMMENTS_RELATIONSHIP.contains(&r.rel_type.as_str())
+            &r.id == id
+                && crate::comment::THREADED_COMMENTS_RELATIONSHIP.contains(&r.rel_type.as_str())
         });
         if !good {
-            findings.note(K::Review(ReviewFinding::CommentRelMismatch), part, "commentRel", Some("id"));
+            findings.note(
+                K::Review(ReviewFinding::CommentRelMismatch),
+                part,
+                "commentRel",
+                Some("id"),
+            );
         }
     }
 }

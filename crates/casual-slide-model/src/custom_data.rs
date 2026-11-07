@@ -26,6 +26,7 @@ pub struct StringTag {
 pub struct DatastoreItem {
     /// `@itemID`.
     pub item_id: Option<String>,
+    // spec-audit: ds:CT_DatastoreSchemaRefs/schemaRef
     /// `schemaRefs`, as `ds:CT_DatastoreSchemaRefs`.
     pub schema_refs: Option<Vec<DatastoreSchemaRef>>,
 }

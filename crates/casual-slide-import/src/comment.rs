@@ -307,11 +307,8 @@ pub fn import_comments(
         }
         list.comments.push(read_legacy_comment(r, &child)?);
     }
-    let known: HashSet<(Option<u32>, Option<u32>)> = list
-        .comments
-        .iter()
-        .map(|c| (c.author_id, c.idx))
-        .collect();
+    let known: HashSet<(Option<u32>, Option<u32>)> =
+        list.comments.iter().map(|c| (c.author_id, c.idx)).collect();
     let orphan = list.comments.iter().any(|c| {
         c.threading
             .as_ref()
@@ -319,8 +316,12 @@ pub fn import_comments(
             .is_some_and(|p| !known.contains(&(p.author_id, p.idx)))
     });
     if orphan {
-        r.findings
-            .note(K::Review(ReviewFinding::UnknownParent), part, "parentCm", None);
+        r.findings.note(
+            K::Review(ReviewFinding::UnknownParent),
+            part,
+            "parentCm",
+            None,
+        );
     }
     Ok(list)
 }
@@ -482,16 +483,19 @@ pub fn import_threaded_comments(
     };
     let mut list = ThreadedCommentList::default();
     let mut ids = HashSet::new();
-    for child in t
-        .r
-        .bounded_children(&root, limits.max_comments_per_part, "comments")?
+    for child in
+        t.r.bounded_children(&root, limits.max_comments_per_part, "comments")?
     {
         if !child.is(P188, "cm") {
             t.r.retained(&child);
             continue;
         }
         let comment = t.comment(&child)?;
-        let replies = comment.reply_lst.iter().flatten().filter_map(|c| c.id.as_ref());
+        let replies = comment
+            .reply_lst
+            .iter()
+            .flatten()
+            .filter_map(|c| c.id.as_ref());
         for id in comment.id.iter().chain(replies) {
             if !ids.insert(id.to_ascii_uppercase()) {
                 t.r.note(K::Review(ReviewFinding::RepeatedId), &child, Some("id"));
@@ -532,11 +536,20 @@ impl Threaded<'_, '_> {
         for child in r.children(el)? {
             let r = &mut *self.r;
             if child.is(PC, "sldMkLst") {
-                anchors.push((CommentAnchorKind::Slide, read_monikers(r, &child, self.limits)?));
+                anchors.push((
+                    CommentAnchorKind::Slide,
+                    read_monikers(r, &child, self.limits)?,
+                ));
             } else if child.is(AC, "deMkLst") {
-                anchors.push((CommentAnchorKind::Drawing, read_monikers(r, &child, self.limits)?));
+                anchors.push((
+                    CommentAnchorKind::Drawing,
+                    read_monikers(r, &child, self.limits)?,
+                ));
             } else if child.is(AC, "txMkLst") {
-                anchors.push((CommentAnchorKind::Text, read_monikers(r, &child, self.limits)?));
+                anchors.push((
+                    CommentAnchorKind::Text,
+                    read_monikers(r, &child, self.limits)?,
+                ));
             } else if child.is(P188, "unknownAnchor") {
                 r.finish(&child);
                 anchors.push((CommentAnchorKind::Unknown, Vec::new()));
@@ -912,7 +925,10 @@ pub(crate) fn targets_of(
     findings: &mut Findings,
 ) -> Vec<String> {
     let mut out = Vec::new();
-    for rel in rels.iter().filter(|r| rel_types.contains(&r.rel_type.as_str())) {
+    for rel in rels
+        .iter()
+        .filter(|r| rel_types.contains(&r.rel_type.as_str()))
+    {
         let target = (rel.mode == TargetMode::Internal)
             .then(|| resolve_internal(source, &rel.target))
             .flatten()
@@ -923,7 +939,10 @@ pub(crate) fn targets_of(
             None => findings.note_role(
                 K::UnusableRelationship,
                 source,
-                rel_types.first().and_then(|t| t.rsplit('/').next()).unwrap_or(""),
+                rel_types
+                    .first()
+                    .and_then(|t| t.rsplit('/').next())
+                    .unwrap_or(""),
             ),
         }
     }
@@ -988,9 +1007,10 @@ pub fn read_deck_comments(
     let legacy_authors = targets_of(&names, &main, &rels, COMMENT_AUTHORS_RELATIONSHIP, findings);
     if let Some(part) = legacy_authors.first() {
         let p = part.clone();
-        out.comment_authors = read_part_or_set_aside(package, &p, findings, &mut set_aside, |t, _, f| {
-            import_comment_authors(t, &p, limits, import, f)
-        });
+        out.comment_authors =
+            read_part_or_set_aside(package, &p, findings, &mut set_aside, |t, _, f| {
+                import_comment_authors(t, &p, limits, import, f)
+            });
     }
     let authors = targets_of(&names, &main, &rels, AUTHORS_RELATIONSHIP, findings);
     if let Some(part) = authors.first() {
@@ -1009,9 +1029,10 @@ pub fn read_deck_comments(
                 set_aside.push(part);
                 continue;
             }
-            let read = read_part_or_set_aside(package, &part, findings, &mut set_aside, |t, _, f| {
-                import_comments(t, &part, limits, import, f)
-            });
+            let read =
+                read_part_or_set_aside(package, &part, findings, &mut set_aside, |t, _, f| {
+                    import_comments(t, &part, limits, import, f)
+                });
             if let Some(list) = read {
                 out.legacy.push(SlideComments {
                     part,
@@ -1020,16 +1041,23 @@ pub fn read_deck_comments(
                 });
             }
         }
-        for part in targets_of(&names, slide, &rels, THREADED_COMMENTS_RELATIONSHIP, findings) {
+        for part in targets_of(
+            &names,
+            slide,
+            &rels,
+            THREADED_COMMENTS_RELATIONSHIP,
+            findings,
+        ) {
             count = count.saturating_add(1);
             if count > limits.max_review_parts {
                 findings.note(K::Review(ReviewFinding::OverBound), &part, "", None);
                 set_aside.push(part);
                 continue;
             }
-            let read = read_part_or_set_aside(package, &part, findings, &mut set_aside, |t, r, f| {
-                import_threaded_comments(t, &part, r, limits, import, f, color)
-            });
+            let read =
+                read_part_or_set_aside(package, &part, findings, &mut set_aside, |t, r, f| {
+                    import_threaded_comments(t, &part, r, limits, import, f, color)
+                });
             if let Some(list) = read {
                 out.threaded.push(SlideComments {
                     part,
@@ -1061,7 +1089,12 @@ fn check_authors(deck: &DeckComments, findings: &mut Findings) {
             .filter_map(|c| c.author_id)
             .any(|id| !legacy.contains(&id));
         if unknown {
-            findings.note(K::Review(ReviewFinding::UnknownAuthor), &slide.part, "cm", Some("authorId"));
+            findings.note(
+                K::Review(ReviewFinding::UnknownAuthor),
+                &slide.part,
+                "cm",
+                Some("authorId"),
+            );
         }
     }
     let modern: HashSet<String> = deck
@@ -1073,7 +1106,11 @@ fn check_authors(deck: &DeckComments, findings: &mut Findings) {
     let known = |id: &String| modern.contains(&id.to_ascii_uppercase());
     for slide in &deck.threaded {
         for c in &slide.list.comments {
-            let replies = c.reply_lst.iter().flatten().filter_map(|r| r.author_id.as_ref());
+            let replies = c
+                .reply_lst
+                .iter()
+                .flatten()
+                .filter_map(|r| r.author_id.as_ref());
             let assigned = c.assigned_to.iter().flatten();
             let unknown = c
                 .author_id
@@ -1082,7 +1119,12 @@ fn check_authors(deck: &DeckComments, findings: &mut Findings) {
                 .chain(assigned)
                 .any(|id| !known(id));
             if unknown {
-                findings.note(K::Review(ReviewFinding::UnknownAuthor), &slide.part, "cm", Some("authorId"));
+                findings.note(
+                    K::Review(ReviewFinding::UnknownAuthor),
+                    &slide.part,
+                    "cm",
+                    Some("authorId"),
+                );
             }
         }
     }

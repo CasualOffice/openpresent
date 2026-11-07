@@ -29,6 +29,8 @@ pub struct Section {
     pub name: Option<String>,
     /// `@id`.
     pub id: Option<String>,
+    // spec-audit: x:powerpoint/2010/main:CT_SectionSlideIdList/sldId
+    // spec-audit: x:powerpoint/2010/main:CT_SectionSlideIdListEntry/@id
     /// `sldIdLst`. `None` if the section has none, which the schema does not allow and a
     /// file can do.
     pub sld_id_lst: Option<Vec<u32>>,
@@ -66,7 +68,11 @@ impl SectionList {
         let mut times: HashMap<u32, usize> = HashMap::new();
         let mut sync = SectionSync::default();
         let mut order = Vec::new();
-        for id in self.sections.iter().flat_map(|s| s.sld_id_lst.iter().flatten()) {
+        for id in self
+            .sections
+            .iter()
+            .flat_map(|s| s.sld_id_lst.iter().flatten())
+        {
             let seen = times.entry(*id).or_insert(0);
             *seen = seen.saturating_add(1);
             if *seen == 2 {
@@ -216,6 +222,8 @@ pub enum ZoomFallback {
 pub struct ZoomFrame {
     /// The frame's `cNvPr/@id`.
     pub shape_id: Option<u32>,
+    // spec-audit: x:powerpoint/2016/slidezoom:CT_SlideZoom/sldZmObj
+    // spec-audit: x:powerpoint/2016/sectionzoom:CT_SectionZoom/sectionZmObj
     /// What it holds.
     pub zoom: Zoom,
     /// Its fallback.

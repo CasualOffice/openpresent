@@ -415,10 +415,12 @@ def section_list():
 PRES_EXT = f'<p:ext uri="{{EFAFB233-063F-42B5-8137-9DF3F51BA10A}}"><p15:sldGuideLst xmlns:p15="{P15}"/></p:ext>'
 
 
-def zoom_props(guid, image="preview"):
-    return (f'<p166:zmPr xmlns:p166="{P166}" id="{guid}" returnToParent="1" imageType="{image}" transitionDur="1000" showBg="0">'
+def zoom_props(prefix, guid, image="preview"):
+    # `zmPr` is a local element of the zoom's own schema, so it takes that namespace, and what
+    # it holds is `p166`'s (schemas/ms-extensions, `elementFormDefault="qualified"`).
+    return (f'<{prefix}:zmPr xmlns:p166="{P166}" id="{guid}" returnToParent="1" imageType="{image}" transitionDur="1000" showBg="0">'
             '<p166:blipFill><a:blip r:embed="rId2"/><a:stretch/></p166:blipFill>'
-            '<p166:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln w="3175"/></p166:spPr></p166:zmPr>')
+            f'<p166:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln w="3175"/></p166:spPr></{prefix}:zmPr>')
 
 
 def zoom_frame(sid, requires, uri, inner, kind):
@@ -433,11 +435,11 @@ def zoom_frame(sid, requires, uri, inner, kind):
 
 
 def zoom_slide():
-    slide_zm = f'<pslz:sldZm><pslz:sldZmObj sldId="257" cId="42">{zoom_props(GUID % 30)}</pslz:sldZmObj></pslz:sldZm>'
-    sect_zm = f'<psez:sectionZm><psez:sectionZmObj sectionId="{SECTION_2}">{zoom_props(GUID % 31, "cover")}</psez:sectionZmObj></psez:sectionZm>'
+    slide_zm = f'<pslz:sldZm><pslz:sldZmObj sldId="257" cId="42">{zoom_props("pslz", GUID % 30)}<pslz:extLst><p:ext uri="{{F0000000-0000-4000-8000-000000000001}}"><p16:designElem xmlns:p16="{P16}" val="1"/></p:ext></pslz:extLst></pslz:sldZmObj><pslz:extLst><p:ext uri="{{F0000000-0000-4000-8000-000000000002}}"><p16:designElem xmlns:p16="{P16}" val="1"/></p:ext></pslz:extLst></pslz:sldZm>'
+    sect_zm = f'<psez:sectionZm><psez:sectionZmObj sectionId="{SECTION_2}">{zoom_props("psez", GUID % 31, "cover")}<psez:extLst><p:ext uri="{{F0000000-0000-4000-8000-000000000003}}"><p16:designElem xmlns:p16="{P16}" val="1"/></p:ext></psez:extLst></psez:sectionZmObj><psez:extLst><p:ext uri="{{F0000000-0000-4000-8000-000000000004}}"><p16:designElem xmlns:p16="{P16}" val="1"/></p:ext></psez:extLst></psez:sectionZm>'
     summ_zm = ('<psuz:summaryZm>'
-               f'<psuz:summaryZmObj sectionId="{SECTION_1}" title="Opening" descr="First part" offsetFactorX="10000" offsetFactorY="20000" scaleFactorX="90000" scaleFactorY="80000">{zoom_props(GUID % 32)}</psuz:summaryZmObj>'
-               f'<psuz:summaryZmObj sectionId="{SECTION_2}">{zoom_props(GUID % 33)}</psuz:summaryZmObj><psuz:gridLayout/></psuz:summaryZm>')
+               f'<psuz:summaryZmObj sectionId="{SECTION_1}" title="Opening" descr="First part" offsetFactorX="10000" offsetFactorY="20000" scaleFactorX="90000" scaleFactorY="80000">{zoom_props("psuz", GUID % 32)}</psuz:summaryZmObj>'
+               f'<psuz:summaryZmObj sectionId="{SECTION_2}">{zoom_props("psuz", GUID % 33)}<psuz:extLst><p:ext uri="{{F0000000-0000-4000-8000-000000000005}}"><p16:designElem xmlns:p16="{P16}" val="1"/></p:ext></psuz:extLst></psuz:summaryZmObj><psuz:gridLayout/><psuz:extLst><p:ext uri="{{F0000000-0000-4000-8000-000000000006}}"><p16:designElem xmlns:p16="{P16}" val="1"/></p:ext></psuz:extLst></psuz:summaryZm>')
     summ_fixed = '<psuz:summaryZm><psuz:fixedLayout/></psuz:summaryZm>'
     classified = ('<p:sp><p:nvSpPr><p:cNvPr id="9" name="Label"><a:extLst><a:ext uri="{C183D7F6-B498-43B3-948B-1728B52AA6E4}">'
                   f'<p16:designElem xmlns:p16="{P16}" val="1"/></a:ext>'
@@ -447,6 +449,14 @@ def zoom_slide():
                   f'<p202:designPr xmlns:p202="{P202}" edtDesignElem="1"><p202:designTagLst><p202:designTag name="a" val="b"/></p202:designTagLst></p202:designPr></p:ext>'
                   '<p:ext uri="{1B2C3D4E-5F60-4718-9A0B-1C2D3E4F5061}">'
                   f'<p184:classification xmlns:p184="{P184}" val="ftr"/></p:ext></p:extLst></p:nvPr></p:nvSpPr><p:spPr/></p:sp>')
+    # Every value of both classification types, each on a shape of its own.
+    for i, value in enumerate(("none", "watermark")):
+        classified += (f'<p:sp><p:nvSpPr><p:cNvPr id="{20 + i}" name="Mark {i}"><a:extLst><a:ext uri="{{4F2E7C6D-3B1A-4D5E-9F80-1A2B3C4D5E6F}}">'
+                       f'<acs:classification xmlns:acs="{ACS}" classificationOutcomeType="{value}"/></a:ext>'
+                       f'<a:ext uri="{{1B2C3D4E-5F60-4718-9A0B-1C2D3E4F5061}}"><p184:classification xmlns:p184="{P184}" val="{value}"/></a:ext></a:extLst></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/></p:sp>')
+    classified += (f'<p:sp><p:nvSpPr><p:cNvPr id="22" name="Mark 2"><a:extLst><a:ext uri="{{4F2E7C6D-3B1A-4D5E-9F80-1A2B3C4D5E6F}}">'
+                   f'<acs:classification xmlns:acs="{ACS}" classificationOutcomeType="ftr"/></a:ext>'
+                   f'<a:ext uri="{{1B2C3D4E-5F60-4718-9A0B-1C2D3E4F5061}}"><p184:classification xmlns:p184="{P184}" val="hdr"/></a:ext></a:extLst></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/></p:sp>')
     frames = (zoom_frame(5, "pslz", PSLZ, slide_zm, "pic") + zoom_frame(6, "psez", PSEZ, sect_zm, "pic")
               + zoom_frame(7, "psuz", PSUZ, summ_zm, "group") + zoom_frame(8, "psuz", PSUZ, summ_fixed, "group"))
     return f'{DECL}<p:sld {NS}><p:cSld><p:spTree>{TREE}{TITLE % "Zoom"}{frames}{classified}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>'
