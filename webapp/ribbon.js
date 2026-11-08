@@ -521,6 +521,24 @@ function buildBackstage() {
     for (const sec of entry.sections || []) {
       const block = h("div", "rb-section");
       if (sec.title) block.appendChild(h("h2", "rb-section-title", sec.title));
+      // A row of tiles, as PowerPoint's New page shows Blank Presentation.
+      if (sec.tiles) {
+        const row = h("div", "rb-tiles");
+        for (const it of sec.items) {
+          const b = h("button", "rb-tile");
+          b.type = "button";
+          b.dataset.opProxy = it.id;
+          b.title = it.desc;
+          const art = h("span", "rb-tile-art rb-tile-slide");
+          art.append(h("span", "rb-tile-title", "Click to add title"), h("span", "rb-tile-sub", "Click to add subtitle"));
+          b.append(art, h("span", "rb-tile-label", it.label));
+          b.addEventListener("click", () => { closeBackstage(); run(it.id); queueSync(); });
+          row.appendChild(b);
+        }
+        block.appendChild(row);
+        page.appendChild(block);
+        continue;
+      }
       const list = h("div", "rb-page-list");
       for (const it of sec.items) {
         const b = h("button", "rb-page-item");

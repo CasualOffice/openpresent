@@ -246,7 +246,7 @@ export const TABS = [
 const F = (id, icon, label, desc) => ({ id, icon, label, desc });
 export const FILE_RAIL = [
   { id: "new", label: "New", icon: "document_add", sections: [
-    { items: [F("file.new", "slide_add", "Blank Presentation", "Start a new presentation with one title slide")] },
+    { tiles: true, items: [F("file.new", "slide_add", "Blank Presentation", "Start a new presentation with one title slide")] },
   ] },
   { id: "open", label: "Open", icon: "folder_open", sections: [
     { items: [F("file.open", "folder_open", "Browse", "Open a PowerPoint presentation (.pptx) from this device. It stays in this browser")] },

@@ -242,7 +242,7 @@
   display: flex; align-items: stretch; height: 70px; margin: 3px 2px 0; box-sizing: border-box;
   border: 1px solid var(--op-border-color); border-radius: 4px; background: var(--op-background-color);
 }
-.rb-gal-tiles { display: flex; gap: 2px; padding: 3px; overflow: hidden; max-width: 420px; }
+.rb-gal-tiles { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2px; padding: 3px; overflow: hidden; max-width: 392px; }
 .rb-gal-tile {
   flex: none; width: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   padding: 2px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: var(--op-text-color);
@@ -388,6 +388,17 @@
 .rb-tile:hover .rb-tile-art { border-color: var(--op-accent-color); }
 .rb-tile:focus-visible .rb-tile-art { outline: 2px solid var(--op-accent-color); outline-offset: 2px; }
 .rb-tile-label { font-size: 13px; }
+/* Blank Presentation: a title slide in miniature, our own drawing. */
+.rb-tile-slide { flex-direction: column; gap: 6px; background: #fff; color: #5f6368; }
+.rb-tile-title { font-size: 12px; padding: 2px 8px; border: 1px dashed #c3c9cc; }
+.rb-tile-sub { font-size: 8px; padding: 1px 6px; border: 1px dashed #d5d9dc; }
+/* PowerPoint's File rail is a band of the app's colour with white text; ours
+ * is the accent, deepened, per `DEC-03`. */
+.rb-rail { background: var(--rb-accent-fill); color: var(--rb-on-accent); border-right: 0; }
+.rb-rail .rb-back, .rb-rail .rb-rail-item, .rb-rail .rb-rail-item .rb-ico { color: var(--rb-on-accent); }
+.rb-rail .rb-back:hover, .rb-rail .rb-rail-item:hover { background: rgba(255, 255, 255, .14); }
+.rb-rail .rb-rail-item.is-on { background: rgba(0, 0, 0, .22); }
+.rb-rail .rb-back:focus-visible, .rb-rail .rb-rail-item:focus-visible { outline-color: #fff; }
 
 /* Described choices: icon, name, one line of what it does. */
 .rb-page-list {

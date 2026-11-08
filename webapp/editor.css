@@ -307,7 +307,7 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .fp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 28px; font-size: 12.5px; }
 .fp-label { flex: 1; min-width: 0; }
 .fp-input {
-  width: 96px; height: 26px; box-sizing: border-box; padding: 0 6px; border: 1px solid var(--op-control-border-color); border-radius: 4px;
+  width: 112px; height: 26px; box-sizing: border-box; padding: 0 6px; border: 1px solid var(--op-control-border-color); border-radius: 4px;
   background: var(--op-background-color); color: var(--op-text-color); font: inherit; font-size: 12.5px;
 }
 .fp-input:read-only { background: var(--op-surface-color); }
