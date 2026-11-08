@@ -7,7 +7,8 @@
 //! `docs/24-OPERATIONS-AND-COLLABORATION.md`: from the Text family, insert text, delete
 //! a range and format a range over one shape's text body (`VS-05`); from the Properties
 //! and Tree families, set a node's transform and delete or insert a node (`VS-06`, moved
-//! here from `casual-slide-wasm`'s `txn.rs`); from the Deck family, add, list, remove,
+//! here from `casual-slide-wasm`'s `txn.rs`), and set a shape's look, its geometry,
+//! adjust values, fill, line and style (`SHAPE-01`); from the Deck family, add, list, remove,
 //! move and hide slides (`VS-08`). One op set, one undo stack.
 //!
 //! # Positions
@@ -26,11 +27,13 @@
 //!
 //! Nothing here reads a file; offsets come from the host and are checked, never trusted.
 
+use casual_slide_model::drawing::ShapeProperties;
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
     CharacterProperties, LineBreak, Paragraph, TextBody, TextItem, TextRun, UnderlineType,
 };
+use casual_slide_model::theme::ShapeStyle;
 
 /// An error applying an operation. Each has a stable code (`docs/20`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,6 +159,17 @@ pub enum Operation {
         /// What it becomes.
         transform: Option<Transform>,
     },
+    /// Properties: give a node this `spPr`, all but its transform, and this `style`:
+    /// its geometry and adjust values, fill, line and effects, and its theme style
+    /// references (`docs/24`). The inverse is the same operation with what it had.
+    SetLook {
+        /// The node.
+        node: ObjectId,
+        /// Its `spPr`, but `xfrm`, which [`Operation::SetTransform`] owns.
+        properties: Box<ShapeProperties>,
+        /// Its `p:style`. `None` removes it.
+        style: Option<Box<ShapeStyle>>,
+    },
     /// Tree: remove a node and everything under it.
     DeleteNode {
         /// The node.
@@ -265,7 +279,9 @@ impl Operation {
     /// The shape the operation edits; for a batch, its first member's.
     pub fn object(&self) -> Option<ObjectId> {
         match self {
-            Self::SetTransform { node, .. } | Self::DeleteNode { node } => Some(*node),
+            Self::SetTransform { node, .. }
+            | Self::SetLook { node, .. }
+            | Self::DeleteNode { node } => Some(*node),
             Self::InsertNode { node, .. } => Some(node.id),
             Self::InsertText { object, .. }
             | Self::DeleteRange { object, .. }
@@ -306,6 +322,7 @@ impl Operation {
     pub fn label(&self) -> &'static str {
         match self {
             Self::SetTransform { .. } => "Move",
+            Self::SetLook { .. } => "Format Shape",
             Self::DeleteNode { .. } => "Delete",
             Self::InsertNode { .. } => "Insert",
             Self::InsertText { .. } => "Typing",
@@ -786,6 +803,27 @@ fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnErro
                 Operation::SetTransform {
                     node,
                     transform: before,
+                },
+                changed,
+            ))
+        }
+        Operation::SetLook {
+            node,
+            properties,
+            style,
+        } => {
+            let shape = parts
+                .get_mut(node.part)
+                .and_then(|p| p.node_mut(node))
+                .ok_or(TxnError::NoSuchObject(node))?;
+            let changed = shape.properties != *properties || shape.style != style;
+            let before = core::mem::replace(&mut shape.properties, *properties);
+            let before_style = core::mem::replace(&mut shape.style, style);
+            Ok((
+                Operation::SetLook {
+                    node,
+                    properties: Box::new(before),
+                    style: before_style,
                 },
                 changed,
             ))

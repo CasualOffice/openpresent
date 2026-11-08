@@ -34,6 +34,9 @@ casual-slide-import = { path = "../casual-slide-import" }
 casual-slide-model = { path = "../casual-slide-model" }
 casual-slide-style = { path = "../casual-slide-style" }
 casual-slide-text = { path = "../casual-slide-text" }
+# The Shapes gallery's icons and the adjust handles (`SHAPE-01`): presets evaluated by
+# the one geometry engine, as `-render` draws them.
+casual-slide-geometry = { path = "../casual-slide-geometry" }
 # RGBA output: the PNG `-render` writes, decoded by the same backend (already in
 # the tree through `-render`, ADR-019).
 tiny-skia = { version = "0.11", default-features = false, features = ["std", "png-format"] }
