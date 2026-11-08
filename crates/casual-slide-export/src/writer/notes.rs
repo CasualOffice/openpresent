@@ -85,6 +85,12 @@ fn placeholder_copy(next_id: u64, layout: &XmlTree, ph: ElementId) -> Option<Str
     ))
 }
 
+/// The part a new slide on this layout starts as, exactly as [`super::Op::AddSlide`]
+/// writes it, for a host that shows the slide before it is saved (`VS-08`).
+pub fn new_slide_part(conformance: Conformance, layout: &XmlTree) -> Vec<u8> {
+    new_slide_xml(conformance, layout).into_bytes()
+}
+
 /// A new slide on `layout`, with an empty copy of each of its placeholders. Layout
 /// placeholders inside a group or an `mc:AlternateContent` are not copied, since a slide
 /// is free to leave any placeholder out.

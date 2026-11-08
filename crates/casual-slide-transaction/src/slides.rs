@@ -40,11 +40,7 @@ pub(crate) fn drop_part(parts: &mut SlideParts, ordinal: u32) -> Result<Applied,
         .structure
         .entry(ordinal)
         .is_some_and(|e| e.kind == SlideKind::Slide);
-    if ordinal != last
-        || listed
-        || !is_slide
-        || parts.structure.parts.len() != parts.parts.len()
-    {
+    if ordinal != last || listed || !is_slide || parts.structure.parts.len() != parts.parts.len() {
         return Err(TxnError::BadPart(ordinal));
     }
     let entry = parts
@@ -96,7 +92,11 @@ pub(crate) fn remove_slide(parts: &mut SlideParts, index: usize) -> Result<Appli
 }
 
 /// Move the slide at `from` to `to`.
-pub(crate) fn move_slide(parts: &mut SlideParts, from: usize, to: usize) -> Result<Applied, TxnError> {
+pub(crate) fn move_slide(
+    parts: &mut SlideParts,
+    from: usize,
+    to: usize,
+) -> Result<Applied, TxnError> {
     let len = parts.structure.slides.len();
     if from >= len {
         return Err(TxnError::NoSuchSlide(from));

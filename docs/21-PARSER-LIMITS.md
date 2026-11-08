@@ -314,6 +314,7 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | --- | --- | --- | --- | --- |
 | `MAX_WIDTH_PX` | `4096` | Pixels wide a host may ask one slide to be drawn | CS-WSM-0002 | Untested: `refuses_a_width_of_zero_or_past_the_bound` runs on CI |
 | `MAX_PIXELS` | `4096 * 4096` | Pixels in one drawn slide; past it the width is reduced, not refused | None: the picture is smaller | Untested: `the_pixel_bound_shrinks_the_width_rather_than_refusing` runs on CI |
+| `MAX_PICTURE_BYTES` | `64 * 1024 * 1024` | Bytes of one picture Insert > Picture takes, as the writer's media bound (`VS-08`) | CS-WSM-0008 | Untested: no test inserts a picture past it |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
 
