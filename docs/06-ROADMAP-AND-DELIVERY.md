@@ -19,7 +19,7 @@ modelling come first. After Phase 1, work runs as **vertical slices** (owner ins
 | 0 Foundation | **Closed** 2026-11-07 | Signed off by the owner. Seeded violations were run locally on macOS, not on GitHub's runners. Fonts measured in `SPK-01` left the repo and return in Phase 2 |
 | 1 Model, import, export | **Open** | See the Phase 1 plan below |
 | 2 Layout and render | **Open** under instruction 43's waiver | Its tiers are the render backlog for slices 1 and 2 |
-| Slices 1 to 13 | 1 and 2 in progress | Replace Phases 3 to 10; see §After Phase 1 |
+| Slices 1 to 13 | 1 and 2 in progress; 4 built (`VS-04`), for the owner to sign | Replace Phases 3 to 10; see §After Phase 1 |
 
 ### Waivers
 

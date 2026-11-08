@@ -168,11 +168,17 @@ export const FILE_RAIL = [
       I("file.properties", "info", "Properties", "Title, author and other properties saved with the presentation"),
     ] },
   ] },
-  { id: "save", label: "Save a Copy", icon: "save", sections: [
-    { items: [I("file.save-copy", "save", "Save a copy", "Saving arrives with editing")] },
+  { id: "save", label: "Save", icon: "save", sections: [
+    { items: [
+      I("file.save", "save", "Save", "Download this presentation (.pptx). Unedited, it is the file you opened, byte for byte (Ctrl+S)"),
+      I("file.save-copy", "save", "Save a copy", "Download a copy of this presentation (.pptx)"),
+    ] },
   ] },
   { id: "export", label: "Export", icon: "document_pdf", sections: [
-    { items: [I("file.export-pdf", "document_pdf", "Create PDF", "Save the slides as a PDF document")] },
+    { items: [
+      I("file.export-pdf", "document_pdf", "Create PDF", "Save every slide as one PDF document, with text you can search and copy"),
+      I("file.export-png", "image", "Export slide as PNG", "Save the current slide as a PNG picture, 1920 pixels wide"),
+    ] },
   ] },
   { id: "print", label: "Print", icon: "print", sections: [
     { items: [I("file.print", "print", "Print", "Print the slides (Ctrl+P)")] },

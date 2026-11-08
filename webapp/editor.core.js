@@ -8,13 +8,14 @@
 // a 500-slide deck must not freeze the window while its thumbnails draw.
 //
 // This is the first vertical slice (owner instruction 44): open a deck and view
-// its slides. Every other PowerPoint command the ribbon names is registered
+// its slides; slice 4 (`VS-04`) adds Save, Export to PDF and the slide as PNG.
+// Every other PowerPoint command the ribbon names is registered
 // disabled, saying so, and arrives working with its own slice.
 
 import { register, run, all as allCommands } from "./commands.js";
 import { start as startRibbon, queueSync, openBackstage, icon } from "./ribbon.js";
 import { TABS, FILE_RAIL, modelCommandIds } from "./ribbon.model.js";
-import { initFiles, openFilePicker } from "./editor.files.js";
+import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
@@ -141,6 +142,50 @@ export async function openDeck(name, bytes) {
 /* ── Commands ───────────────────────────────────────────────────────────── */
 
 const hasDeck = () => !!state.deck;
+
+/* ── Save and export (`VS-04`) ──────────────────────────────────────────────
+ *
+ * Each asks the engine for the bytes and hands them to `download`, which the
+ * desktop shell intercepts. Save goes through the one writer: unedited, which is
+ * all this build can be, the file comes back byte for byte as it was opened. */
+
+/// The width a slide is exported at, in pixels: PowerPoint's default, 1920.
+const EXPORT_WIDTH_PX = 1920;
+
+const baseName = () => (state.deck?.name || "Presentation").replace(/\.[^.]+$/, "");
+let busy = false;
+
+async function produce(what, msg, name, type) {
+  if (busy || !state.deck) return;
+  busy = true;
+  changed();
+  status(`${what}…`);
+  try {
+    const r = await request(msg, { priority: 5 });
+    const written = await download(new Uint8Array(r.bytes || r.png), name, type);
+    status(written === null ? `${what} cancelled` : `${what}: ${written}`);
+  } catch (e) {
+    status(`${what} failed`);
+    errorDialog(`OpenPresent could not finish: ${what.toLowerCase()}.`, e.message);
+  } finally {
+    busy = false;
+    changed();
+  }
+}
+
+export function saveDeck() {
+  const name = state.deck?.name || "Presentation.pptx";
+  return produce("Saving", { op: "save" }, name, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+}
+
+export function exportPdf() {
+  return produce("Exporting PDF", { op: "pdf" }, `${baseName()}.pdf`, "application/pdf");
+}
+
+export function exportPng() {
+  const index = state.current;
+  return produce("Exporting PNG", { op: "png", index, width: EXPORT_WIDTH_PX }, `${baseName()}-slide-${index + 1}.png`, "image/png");
+}
 const NOT_YET = "not available yet. This build opens and shows presentations";
 
 function setTheme(v) {
@@ -151,6 +196,11 @@ function setTheme(v) {
 
 function registerCommands() {
   register("file.open", { label: "Open", shortcut: "Ctrl+O", run: openFilePicker });
+  const canProduce = () => hasDeck() && !busy;
+  register("file.save", { label: "Save", shortcut: "Ctrl+S", enabled: canProduce, run: saveDeck });
+  register("file.save-copy", { label: "Save a Copy", enabled: canProduce, run: saveDeck });
+  register("file.export-pdf", { label: "Create PDF", enabled: canProduce, run: exportPdf });
+  register("file.export-png", { label: "Export Slide as PNG", enabled: canProduce, run: exportPng });
   register("file.render-report", { label: "What this slide leaves out", enabled: hasDeck, run: () => reportDialog(state.current) });
 
   register("slide.next", { label: "Next Slide", shortcut: "Page Down", enabled: () => hasDeck() && state.current < state.deck.count - 1, run: () => slides.go(state.current + 1) });
@@ -206,6 +256,7 @@ function bindKeys() {
     if (!byId("op-modal").hidden || document.documentElement.classList.contains("op-backstage-open")) return;
     const mod = e.ctrlKey || e.metaKey;
     if (mod && !e.altKey && (e.key === "o" || e.key === "O")) { e.preventDefault(); openFilePicker(); return; }
+    if (mod && !e.altKey && (e.key === "s" || e.key === "S")) { e.preventDefault(); run("file.save"); return; }
     if (e.key === "F5") { e.preventDefault(); if (state.deck) slides.startShow(e.shiftKey ? state.current : 0); return; }
     if (mod || e.altKey || !state.deck) return;
     // Over the ribbon's own controls the arrows are theirs.

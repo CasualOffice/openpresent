@@ -9,6 +9,32 @@
 const byId = (id) => document.getElementById(id);
 let onOpen = null;
 
+/// Hand a produced file to whatever can put it somewhere (`VS-04`).
+///
+/// Copied from OpenCalc's `download` in `webapp/editor.clipboard.js` at `b23c67c`
+/// (webapp/README.md), with its native hook renamed: Save and every Export funnel
+/// through here, so the desktop shell intercepts at this one point. When the
+/// shell has installed `window.__openpresentNative`, the bytes and the extension
+/// cross to it, never a path, and its `save` decides where the file goes; its
+/// promise resolves to the written name, or `null` if the user cancelled. In a
+/// browser tab it is an anchor download, and resolves at once.
+export function download(data, name, type) {
+  const native = window.__openpresentNative;
+  if (native && typeof native.save === "function") {
+    const dot = name.lastIndexOf(".");
+    const ext = dot === -1 ? "" : name.slice(dot + 1);
+    return Promise.resolve(native.save(data, ext, name));
+  }
+  const blob = new Blob([data], { type });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  // Revoked on the next task, once the click has started the download.
+  setTimeout(() => URL.revokeObjectURL(a.href), 0);
+  return Promise.resolve(name);
+}
+
 /// Show the file picker.
 export function openFilePicker() {
   const input = byId("file-input");

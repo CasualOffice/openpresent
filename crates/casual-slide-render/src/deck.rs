@@ -210,6 +210,11 @@ impl Deck {
         build_slide(scene, ordinal)
     }
 
+    /// The file's bytes exactly as they arrived, for a save that starts from them.
+    pub fn source_bytes(&self) -> Vec<u8> {
+        self.package.save_unedited()
+    }
+
     /// The deck's slide-like parts, as read.
     pub fn parts(&self) -> &SlideParts {
         &self.parts

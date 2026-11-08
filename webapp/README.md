@@ -22,10 +22,10 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `editor.html` | The editor page: title bar, ribbon anchor, thumbnail pane, stage, notes pane, status bar. Strict CSP |
 | `editor.js` | The one module the page names |
 | `editor.core.js` | State, the engine client and its priority queue, every command registered, keys, boot |
-| `editor.files.js` | File picker, drag and drop |
+| `editor.files.js` | File picker, drag and drop; `download`, through which Save and every Export pass (the desktop shell's hook, `window.__openpresentNative.save(bytes, ext, name)`) |
 | `editor.slides.js` | Thumbnails, the stage, zoom, Reading View, the slide show |
 | `editor.dialogs.js` | The modal: errors, the per-slide report, shortcuts, about |
-| `render.worker.js` | The engine in a worker: open, draw a slide to PNG, report |
+| `render.worker.js` | The engine in a worker: open, draw a slide to PNG, report, save, PDF |
 | `commands.js` | The command registry |
 | `ribbon.js`, `ribbon.model.js` | The ribbon, File page and Quick Access Toolbar, drawn from the model |
 | `editor.css`, `ribbon.css`, `ribbon.tokens.css` | Tokens (accent `DEC-03`), regions, the ribbon |

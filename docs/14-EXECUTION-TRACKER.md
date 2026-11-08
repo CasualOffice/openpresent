@@ -359,7 +359,7 @@ The plan is in [06](06-ROADMAP-AND-DELIVERY.md) §Phase 2 plan, awaiting the own
 | T2I-01 | Ink, OLE and VML fallbacks | Open | P1 | Lane A. Ink traces; OLE preview pictures; VML fallbacks. **Box:** 1 | Every retained object in the corpus draws a fallback or is reported |
 | T2J-01 | SmartArt from its drawing | Open | P1 | Lane A. Draw the stored drawing part; a reported placeholder when none, per `DEC-20`. **Box:** 0.5 | SmartArt decks render; one with no drawing is reported |
 | T2K-01 | Equations from their fallback | Open | P1 | Lane A. Draw the stored fallback picture; a reported placeholder when none, per `DEC-20`. **Box:** 0.5 | Equation decks render; one with no fallback is reported |
-| T2G-01 | PDF backend | Open | P0 | Lane C. OpenCalc's PDF writer and subsetter copied with provenance; a page per slide; real, extractable text. **Box:** 1.5 | Text extracted from each page equals the slide's text; R5 holds for PDF |
+| T2G-01 | PDF backend | In progress | P0 | Lane C. OpenCalc's PDF writer and subsetter copied with provenance; a page per slide; real, extractable text. **Box:** 1.5 | Text extracted from each page equals the slide's text; R5 holds for PDF |
 | T2G-02 | Tagged PDF, JPEG, print | Open | P1 | Lane B. Tags in reading order, alt text, links, JPEG, handouts and notes pages. **Box:** 2 | Tags and alt text checked on CI; each print layout renders |
 | P2X-01 | Phase 2 exit run | Open | P0 | All lanes, last. Measure and assert R1 to R12 on GitHub CI; assemble evidence for the owner. **Box:** 1 | Every Phase 2 exit criterion has evidence |
 
@@ -371,7 +371,7 @@ The plan is in [06](06-ROADMAP-AND-DELIVERY.md) §After Phase 1, which gives eac
 | --- | --- | --- | --- | --- | --- |
 | VS-02 | Slice 2: tables, charts, effects in render | In progress | P0 | Through `T2E-04`, `T2F-01`, `T2H-01`, `T2C-01`. **Box:** 8 | Those rows' gates met |
 | VS-03 | Slice 3: desktop window | Open | P0 | Tauri shell from OpenCalc. **Box:** 2 | Bundles on three OSs in CI; draws as the web does |
-| VS-04 | Slice 4: save and export | Open | P0 | Unedited save, PDF, desktop Save. **Box:** 3 | Byte-identical unedited save; PDF text extracts |
+| VS-04 | Slice 4: save and export | Done | P0 | Unedited save, PDF, desktop Save. File → Save and Ctrl+S download the deck through `SavePlan`; File → Export → Create PDF (`-render`'s PDF backend, copied from OpenCalc: a page per slide, subset faces, `ToUnicode` and `/ActualText`) and Export slide as PNG at 1920 px. All go through `download` in `webapp/editor.files.js`, which hands the bytes to `window.__openpresentNative.save` when the desktop shell installs it, so desktop Save is the shell's hook (`VS-03`). Example `export-pdf`. **Box:** 3 | Byte-identical unedited save (`casual-slide-wasm` `an_unedited_save_gives_back_the_bytes_that_were_opened`); PDF text extracts and a page per slide (`casual-slide-render/tests/pdf.rs`) |
 | VS-05 | Slice 5: edit text | Open | P0 | Caret, type, delete, bold, undo, save. **Box:** 6 | Round-trip, only edited node changes, SDK validator clean |
 | VS-06 | Slice 6: move and resize shapes | Open | P0 | Select, drag, resize, rotate, delete, undo. **Box:** 4 | Ops inverse-tested; drag budget |
 | VS-07 | Slice 7: present | Open | P1 | Full-screen show, presenter view, notes. **Box:** 3 | Runs on web and desktop in CI |
