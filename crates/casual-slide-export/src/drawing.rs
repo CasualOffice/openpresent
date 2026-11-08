@@ -383,6 +383,20 @@ fn rank(parent: &str, local: &str) -> Option<usize> {
             "extLst",
         ],
         "pic" => &["nvPicPr", "blipFill", "spPr", "style", "extLst"],
+        // `VS-12`: a background's choice, its fill and effects, and where it sits in `cSld`.
+        "bg" => &["bgPr", "bgRef"],
+        "bgPr" => &[
+            "noFill",
+            "solidFill",
+            "gradFill",
+            "blipFill",
+            "pattFill",
+            "grpFill",
+            "effectLst",
+            "effectDag",
+            "extLst",
+        ],
+        "cSld" => &["bg", "spTree", "custDataLst", "controls", "extLst"],
         "fmtScheme" => &[
             "fillStyleLst",
             "lnStyleLst",
@@ -942,6 +956,26 @@ pub(crate) fn check_svg_fallback(
         return Err(out_of_range(w, "an SVG with no fallback"));
     }
     Ok(())
+}
+
+/// `p:CT_Background`, `cSld/bg` (`VS-12`). `bgPr` carries its fill and, where the part
+/// had effects, an `effectLst` that stands for them: patched against the same, they are
+/// left as read. A new background gets an empty one, which the schema requires.
+// spec-audit: owner=bg,bgPr,bgRef
+pub(crate) fn background_node(b: &casual_slide_model::slide::Background) -> Node {
+    use casual_slide_model::slide::BackgroundFill;
+    let choice = b.fill.as_ref().map(|f| match f {
+        BackgroundFill::Properties(p) => Node::new(Space::Pml, "bgPr")
+            .lex("shadeToTitle", p.shade_to_title.as_ref())
+            .opt(p.fill.as_ref().map(crate::fill::fill_node))
+            .opt(p.has_effects.then(|| Node::a("effectLst"))),
+        BackgroundFill::Reference(r) => Node::new(Space::Pml, "bgRef")
+            .lex("idx", r.idx.as_ref())
+            .color(r.color.as_ref()),
+    });
+    Node::new(Space::Pml, "bg")
+        .lex("bwMode", b.bw_mode.as_ref())
+        .opt(choice)
 }
 
 fn matrix_ref(local: &'static str, r: &StyleMatrixRef) -> Node {

@@ -327,3 +327,22 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .show.is-white::before { background: #fff; }
 .show.is-end::after { content: attr(data-end); color: #fff; font-size: 16px; position: absolute; top: 24px; left: 0; right: 0; text-align: center; cursor: default; }
 .show.is-end { cursor: default; }
+
+/* ── Design (`VS-12`): the theme and variant galleries, Slide Size, Format Background ── */
+
+.dz-grid { display: grid; grid-template-columns: repeat(3, 132px); gap: 10px; margin-top: 6px; }
+.dz-card {
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px;
+  border: 1px solid var(--op-control-border-color); border-radius: 6px; background: transparent;
+  color: var(--op-text-color); cursor: pointer; font: inherit;
+}
+.dz-card:hover { border-color: var(--op-accent-color); }
+.dz-card:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 2px; }
+.dz-face { display: block; height: 52px; line-height: 52px; font-size: 22px; text-align: center; border-radius: 3px; }
+.dz-swatches { display: flex; gap: 2px; }
+.dz-swatch { flex: 1; height: 10px; border-radius: 1px; }
+.dz-name { font-size: 12px; text-align: center; }
+.dz-field { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 8px; }
+.dz-field input[type="number"] { width: 96px; }
+.dz-field[hidden] { display: none; }
+.dz-radios { display: flex; gap: 16px; margin: 0 0 10px; }

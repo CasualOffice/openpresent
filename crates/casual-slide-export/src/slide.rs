@@ -10,9 +10,9 @@
 //! `useBgFill`, `bwMode`, through `drawing.rs` its geometry, fill, line, effects
 //! and 3D, through `text.rs` its text body, and through `table.rs` a frame's table; a
 //! part's root attributes,
-//! `cSld/@name`, `clrMap` slots, `clrMapOvr`, `hf`, `txStyles` and `notesStyle`.
-//! Anything else that differs (a node added, removed
-//! or reordered, a background, a layout list) is refused as `CS-SLE-0001`, and
+//! `cSld/@name`, `cSld/bg` (`VS-12`), `clrMap` slots, `clrMapOvr`, `hf`, `txStyles` and
+//! `notesStyle`. Anything else that differs (a node added, removed
+//! or reordered, a layout list) is refused as `CS-SLE-0001`, and
 //! nothing is saved: those edits belong to the writer tier (1N) and to Phase 4.
 
 use std::collections::HashSet;
@@ -345,7 +345,7 @@ impl Patch<'_, '_> {
                 let el = self.need(el, "cSld")?;
                 self.w.attr(&el, "name", b.name.as_ref(), a.name.as_ref())?;
                 if b.background != a.background {
-                    return Err(self.unsupported("a background"));
+                    self.background(&el, b.background.as_ref(), a.background.as_ref())?;
                 }
                 if !crate::retained::controls_unchanged(&b.controls, &a.controls) {
                     return Err(self.unsupported("a retained control"));
@@ -360,6 +360,47 @@ impl Patch<'_, '_> {
                 return Err(self.unsupported("adding or removing cSld"));
             }
             _ => {}
+        }
+        Ok(())
+    }
+
+    /// `cSld/bg` (`VS-12`): patched node by node from what was read, put first in `cSld`
+    /// when the part had none, or taken away so the part inherits again.
+    fn background(
+        &mut self,
+        c_sld: &Elem,
+        before: Option<&casual_slide_model::slide::Background>,
+        after: Option<&casual_slide_model::slide::Background>,
+    ) -> Result<()> {
+        use crate::drawing::{background_node, insert_new, patch};
+        let existing = self.child(c_sld, ns::PML, "bg")?;
+        match (existing, before, after) {
+            (_, _, None) => self.w.remove_all(c_sld, ns::PML, "bg")?,
+            (Some(el), Some(b), Some(a)) => {
+                use casual_slide_model::slide::BackgroundFill;
+                let unread = match &b.fill {
+                    None => true,
+                    Some(BackgroundFill::Properties(p)) => p.has_fill && p.fill.is_none(),
+                    Some(BackgroundFill::Reference(_)) => false,
+                };
+                if unread
+                    || self.child(&el, ns::PML, "bgPr")?.is_some_and(|p| {
+                        p.children(self.w.tree, self.w.part)
+                            .is_ok_and(|k| k.iter().any(|k| k.local == "effectDag"))
+                    })
+                {
+                    // What stands for the read background would not pair with the file's.
+                    return Err(self.unsupported("a background the model did not read whole"));
+                }
+                patch(
+                    &mut self.w,
+                    &el,
+                    Some(&background_node(b)),
+                    &background_node(a),
+                )?;
+            }
+            (None, None, Some(a)) => insert_new(&mut self.w, c_sld, None, &background_node(a))?,
+            _ => return Err(self.unsupported("a background the model did not read")),
         }
         Ok(())
     }

@@ -380,6 +380,8 @@ async function history(op) {
   try {
     const r = await request({ op }, { priority: 9 });
     afterEdit(r);
+    // A theme, the slide size or several backgrounds (`VS-12`): every slide is drawn again.
+    if (r.slide === -2 && r.count === state.deck.count) { slides.redrawAll(r.size); return; }
     // A slide added, deleted, moved or hidden comes back too (`VS-08`): the pane is
     // read again whenever the count changed or no single slide was named.
     if (typeof r.count === "number" && (r.count !== state.deck.count || r.slide < 0)) {

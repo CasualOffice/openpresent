@@ -508,7 +508,30 @@ impl Viewer {
     pub(crate) fn save_built(&self) -> Result<Vec<u8>, BridgeError> {
         let bytes = self.slides_pass(self.deck.source_bytes())?;
         let bytes = self.shapes_pass(bytes)?;
-        self.patch_pass(bytes)
+        let bytes = self.patch_pass(bytes)?;
+        self.design_pass(bytes)
+    }
+
+    /// What Design changed in themes and the slide size (`VS-12`), last, on the file the
+    /// other passes left.
+    fn design_pass(&self, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
+        let mut package = PresentationPackage::open(bytes.clone(), OoxmlLimits::default())
+            .map_err(|e| BridgeError::Save(e.code()))?;
+        let edits = self.design_edits(&mut package)?;
+        if edits.is_empty() {
+            return Ok(bytes);
+        }
+        let mut plan = SavePlan::new();
+        for edit in edits {
+            plan = match edit {
+                crate::DesignEdit::Op(op) => plan.op(op),
+                crate::DesignEdit::Replace(part, bytes) => plan.replace_part(part, bytes),
+            };
+        }
+        Ok(plan
+            .save(&mut package)
+            .map_err(|e| BridgeError::Save(e.code()))?
+            .bytes)
     }
 
     fn run(plan: &SavePlan<'_>, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
@@ -663,9 +686,33 @@ impl Viewer {
     fn patch_pass(&self, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
         let file = Deck::open(bytes.clone())?;
         let mut changed: Vec<SlidePart> = Vec::new();
-        for (_, f, m) in self.pairs(file.parts())? {
+        let mut pairs = self.pairs(file.parts())?;
+        // Layouts and masters, by name: Slide Size scales their shapes too (`VS-12`).
+        let model = self.deck.parts();
+        for entry in &file.parts().structure.parts {
+            if !matches!(entry.kind, SlideKind::Layout | SlideKind::Master) {
+                continue;
+            }
+            let Some(m) = model
+                .structure
+                .parts
+                .iter()
+                .find(|e| e.kind == entry.kind && e.part == entry.part)
+                .and_then(|e| model.get(e.id.part))
+            else {
+                continue;
+            };
+            if let Some(f) = file.parts().get(entry.id.part) {
+                pairs.push((entry.part.clone(), f, m));
+            }
+        }
+        for (_, f, m) in pairs {
             let mut after = f.clone();
             after.show = m.show;
+            // A background set by Format Background (`VS-12`).
+            if let (Some(c), Some(k)) = (after.common.as_mut(), m.common.as_ref()) {
+                c.background.clone_from(&k.background);
+            }
             if let (Some(root), Some(model_root)) = (after.shape_tree_mut(), m.shape_tree()) {
                 overlay(root, model_root);
             }
