@@ -147,7 +147,7 @@ jobs:
           set -uo pipefail
           venv="$RUNNER_TEMP/score-venv"
           if python3 -m venv "$venv" \
-             && "$venv/bin/pip" install --quiet --only-binary=:all: numpy==2.2.6 pillow==11.3.0 \
+             && "$venv/bin/pip" install --quiet --only-binary=:all: "numpy>=2.3,<3" "pillow>=11.3,<13" \
              && "$venv/bin/python" tools/fidelity/score.py gallery \
                   --lo-version "$(cat "$RUNNER_TEMP/lo-version.txt")" --commit "$GITHUB_SHA" \
                   --summary "$GITHUB_STEP_SUMMARY"; then
