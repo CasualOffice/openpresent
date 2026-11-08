@@ -180,6 +180,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "casual-slide-wasm"
+version = "0.0.0"
+dependencies = [
+ "casual-slide-render",
+ "tiny-skia",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

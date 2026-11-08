@@ -303,6 +303,13 @@ Past one of these the picture, shape or slide is not drawn, and the render repor
 | `MAX_GROUP_DEPTH` | `64` | Groups walked inside one another, beyond import's own bound | Report: group nested too deep | Untested |
 | `MAX_SEGMENTS_PER_SHAPE` | `200_000` | Path segments drawn for one shape | Report: geometry over the segment budget | Untested |
 
+The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it to draw. The width comes from the host, the aspect ratio from the deck.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `MAX_WIDTH_PX` | `4096` | Pixels wide a host may ask one slide to be drawn | CS-WSM-0002 | Untested: `refuses_a_width_of_zero_or_past_the_bound` runs on CI |
+| `MAX_PIXELS` | `4096 * 4096` | Pixels in one drawn slide; past it the width is reduced, not refused | None: the picture is smaller | Untested: `the_pixel_bound_shrinks_the_width_rather_than_refusing` runs on CI |
+
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
 
 Past one of these the part is set aside and named, or the list left out, and the deck opens (owner instruction 24): the bytes stay, and the report says `CS-RVW-0001`.
