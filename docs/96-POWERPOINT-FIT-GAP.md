@@ -517,13 +517,13 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 | | Works | Partial | Disabled | Faked | Absent | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| The 318 rows above | 50 (15.7%) | 50 (15.7%) | 41 (12.9%) | 0 | 177 (55.7%) | 318 |
-| With the 34 shell rows | 63 (17.9%) | 57 (16.2%) | 47 (13.4%) | 0 | 185 (52.6%) | 352 |
-| Of those, the 280 we build (Edit, Render, Retain) | 63 (22.5%) | 56 (20.0%) | 36 (12.9%) | 0 | 125 (44.6%) | 280 |
+| The 318 rows above | 52 (16.4%) | 49 (15.4%) | 40 (12.6%) | 0 | 177 (55.7%) | 318 |
+| With the 34 shell rows | 65 (18.5%) | 56 (15.9%) | 46 (13.1%) | 0 | 185 (52.6%) | 352 |
+| Of those, the 280 we build (Edit, Render, Retain) | 65 (23.2%) | 55 (19.6%) | 35 (12.5%) | 0 | 125 (44.6%) | 280 |
 
-**Plainly: of the 280 features we mean to build, 63 work (22.5%), 56 work in part (20.0%), and 161 are missing (57.5%),** whether drawn disabled or not there at all. **Of all 352, 63 work (17.9%), after the ribbon commands and the text effects (`PAR-20`, `PAR-67`) of `UX-006`.** Of the 60 that work, 11 are file facts kept on save rather than verbs a user runs.
+**Plainly: of the 280 features we mean to build, 65 work (23.2%), 55 work in part (19.6%), and 160 are missing (57.1%),** whether drawn disabled or not there at all. **Of all 352, 65 work (18.5%), after Group and Ungroup (`PAR-03`).** Of the 65 that work, 11 are file facts kept on save rather than verbs a user runs.
 
-**Largest gaps a PowerPoint user hits first:** no Group; no change of layout; links on shapes only; slides cannot be copied between browser tabs; no z-order; no alt text.
+**Largest gaps a PowerPoint user hits first:** no change of layout; links on shapes only; slides cannot be copied between browser tabs; no alt text. Group and Ungroup work (`PAR-03`); z-order works (`UX-006`).
 
 **Re-audit, 2026-11-09 (`PAR-01`).** Merged after `7539ea5` and clicked in Chrome on `127.0.0.1` with `pptxts-modern-comments.pptx`: the File tab (`FILE-01`): New, Open, Info with editable properties, Save As with `.pptx`, `.potx` and `.ppsx`, Print, and rename in the title bar; autosave and the recovery bar (`SAVE-01`), a draft seen written after quiet; the Comments pane (`UX-011`), a deck's thread shown, a reply posted, saved and reopened; notes typed, saved and reopened; the Selection Pane; a hidden slide's struck, dimmed thumbnail; the lists, selection, rich paste, keys, slide copy and smart guides rows `PAR-06` and `PAR-10` to `PAR-15` had already updated. Found and fixed in the same pass: New Slide failed on every deck that had a slide (the engine's `i64` layout reached the page as a BigInt), and closing the tab gave no warning. The ribbon session's Arrange, Find, Outline, Slide Sorter, WordArt and Symbol were not on `main` and are not counted.
 
@@ -608,9 +608,9 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-075 | Merge Shapes: Union, Combine, Fragment, Intersect, Subtract | Edit | Absent | No Merge Shapes | 4 advanced | `PAR-58` |
 | PP-FIT-076 | Connectors, glued to sites | Edit | Partial | Connectors draw point to point; not glued to connection sites, so they do not follow moved shapes | 2 formatting | `PAR-28` |
 | PP-FIT-077 | Align, distribute | Edit | Works | Align left, centre, right, top, middle, bottom; distribute; one undo step |  |  |
-| PP-FIT-078 | Group, ungroup | Edit | Disabled | Group and Ungroup (Ctrl+G) disabled; the keys do nothing | 1 everyday editing | `PAR-03` |
+| PP-FIT-078 | Group, ungroup | Edit | Works | Group (Ctrl+G) puts two or more selected shapes into one group at the frontmost's place, nothing moving; the group moves as one; Ungroup (Ctrl+Shift+G) puts its shapes back where they were drawn, a nested group's into its parent; each one undo step, saved as `p:grpSp` with the shapes' own elements moved into it (`PAR-03`). As PowerPoint, placeholders, tables, `noGrp` shapes and `noUngrp` groups refuse. No Regroup; refused in a shared session | | `PAR-03` |
 | PP-FIT-079 | Rotate, flip | Edit | Works | Rotate by handle, in Size & Position, Rotate Right and Left 90°, Flip Vertical and Horizontal (`UX-006`) | 2 formatting | `PAR-24` |
-| PP-FIT-080 | Select individual objects | Edit | Partial | Click, Shift or Ctrl-click, marquee, Tab; cannot select a shape inside a group | 1 everyday editing | `PAR-03` |
+| PP-FIT-080 | Select individual objects | Edit | Works | Click, Shift or Ctrl-click, marquee, Tab; a second click selects a shape inside a group and a click or typing edits its text (`UX-015`) | | `PAR-03` |
 | PP-FIT-081 | Selection pane | Edit | Works | Selection Pane lists the slide's shapes front first; rename, show and hide, Show All, Hide All, drag to reorder; saves the name, `@hidden` and the order (`UX-011`) |  |  |
 | PP-FIT-082 | Format Painter | Edit | Disabled | Format Painter disabled; no Ctrl+Shift+C/V | 2 formatting | `PAR-26` |
 | PP-FIT-083 | Eyedropper | Edit | Absent | No eyedropper in colour menus | 2 formatting | `PAR-27` |
@@ -863,7 +863,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-330 | Status bar: Slide x of y, language, accessibility (Status bar) | Edit | Partial | Slide count shown; no language or accessibility indicator | 4 advanced | `PAR-61` |
 | PP-FIT-331 | Ribbon Display Options: Classic, Simplified, show tabs only, Ctrl+F1 (Ribbon) | Edit | Works | Toggle and Ctrl+F1 |  |  |
 | PP-FIT-332 | KeyTips (Alt, Alt+Period) (Keys) | Edit | Works | Letters over tabs and commands (`UX-003`) |  |  |
-| PP-FIT-333 | Right-click menus for slide, thumbnail, shape and text (Menus) | Edit | Partial | Present; Layout, Reset Slide, Add Section, Edit Text, Edit Points, Group, Bring to Front, Link, Alt Text, Font…, Paragraph…, Numbering and New Comment disabled | 1 everyday editing | `PAR-07`, `PAR-14` |
+| PP-FIT-333 | Right-click menus for slide, thumbnail, shape and text (Menus) | Edit | Partial | Present; Layout, Reset Slide, Add Section, Edit Text, Edit Points, Bring to Front, Link, Alt Text, Font…, Paragraph…, Numbering and New Comment disabled | 1 everyday editing | `PAR-07`, `PAR-14` |
 | PP-FIT-334 | Shift+F10 menu and Ctrl+F6 region cycling (Keys) | Edit | Works | Both registered |  |  |
 | PP-FIT-335 | Editing, Reviewing, Viewing modes (Tab row) | Edit | Disabled | Only Editing; the other two disabled | 3 review and sharing | `PAR-48` |
 | PP-FIT-336 | Rename the file from the title bar (Title bar) | Edit | Works | Click the name in the title bar, type, Enter: Save, Save As and Export use it (`FILE-01`) |  |  |

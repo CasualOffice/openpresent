@@ -731,6 +731,9 @@ impl Viewer {
     /// The deck as a file: see the module's notes.
     pub(crate) fn save_built(&self) -> Result<Vec<u8>, BridgeError> {
         let bytes = self.slides_pass(self.deck.source_bytes())?;
+        // Group and Ungroup move the file's own elements before shapes are added or
+        // removed at the top of the tree (`PAR-03`).
+        let bytes = self.group_pass(bytes)?;
         let bytes = self.shapes_pass(bytes)?;
         let bytes = self.order_pass(bytes)?;
         let bytes = self.notes_pass(bytes)?;

@@ -44,6 +44,7 @@ mod group;
 #[cfg(test)]
 mod home_tests;
 mod picture;
+mod regroup;
 pub use picture::{MAX_CROP, MAX_PAD, PICTURE_STYLES};
 mod review;
 mod rich;
@@ -2953,4 +2954,27 @@ pub fn set_shape_transforms(index: u32, boxes: Vec<f64>) -> Result<(), JsError> 
 #[wasm_bindgen]
 pub fn delete_shapes(index: u32, nodes: Vec<u32>) -> Result<(), JsError> {
     with_viewer(|v| v.delete_shapes(index as usize, &nodes))
+}
+
+/// Group the top-level shapes `nodes` of slide `index` (`PAR-03`, Ctrl+G): one undo
+/// step. Returns the new group's node.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for fewer than two shapes, a placeholder or a table; `CS-TXN-0015` in
+/// a shared session.
+#[wasm_bindgen]
+pub fn group_selection(index: u32, nodes: Vec<u32>) -> Result<u32, JsError> {
+    with_viewer(|v| v.group(index as usize, &nodes))
+}
+
+/// Ungroup group `node` of slide `index` (`PAR-03`, Ctrl+Shift+G): one undo step.
+/// Returns the children's nodes, back to front.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a node that is not a group; `CS-TXN-0015` in a shared session.
+#[wasm_bindgen]
+pub fn ungroup_shape(index: u32, node: u32) -> Result<Vec<u32>, JsError> {
+    with_viewer(|v| v.ungroup(index as usize, node))
 }
