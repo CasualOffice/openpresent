@@ -25,7 +25,7 @@
 // serialized form, so a recovered deck opens with an empty undo stack, and the bar
 // says so (`SAVE-09`).
 
-import { state, request, status, openDeck } from "./editor.core.js";
+import { state, request, status, openDeck, editsNow } from "./editor.core.js";
 import { showModal, closeModal } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -282,6 +282,45 @@ function stopScheduler() {
   timer = null;
 }
 
+/* ── The leave warning (`PAR-01`) ─────────────────────────────────────── */
+
+/// A draft restored into this tab and not saved since.
+let recoveredUnsaved = false;
+/// The counter at the last save of the deck on screen; a deck just opened is at 0.
+let leaveBaseline = 0;
+let baselineDeck = null;
+
+/// Whether closing the tab now would lose an edit: the deck on screen has changed
+/// since it was opened or saved. A recovered draft counts, as OpenCalc's does: it
+/// has no file behind it.
+export function isDirty() {
+  if (!state.deck) return false;
+  if (recoveredUnsaved) return true;
+  // The counter as of the engine's latest answer, so an edit made a moment ago
+  // counts, against the last save.
+  if (baselineDeck !== state.deck) { baselineDeck = state.deck; leaveBaseline = 0; }
+  const now = editsNow();
+  return Number.isFinite(now) && now !== leaveBaseline;
+}
+
+/// Copied from OpenCalc's `webapp/editor.core.js` `main()` at `b23c67c` (owner
+/// instruction 42): the browser decides the wording and ignores any we supply; all a
+/// page can do is say there is something to lose. Nothing is asked when the deck is
+/// unedited, so this never becomes the dialog everybody clicks through.
+function armLeaveWarning() {
+  // The save's own answer carried the counter, so `editsNow()` is the saved state.
+  document.addEventListener("op-saved", () => {
+    recoveredUnsaved = false;
+    baselineDeck = state.deck;
+    leaveBaseline = editsNow();
+  });
+  window.addEventListener("beforeunload", (e) => {
+    if (!isDirty()) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+}
+
 /* ── The recovery bar ──────────────────────────────────────────────────── */
 
 const dismissed = new Set();
@@ -371,6 +410,7 @@ async function loadHere(meta) {
   await openDeck(meta.name || "Recovered.pptx", buffer);
   if (state.deck?.name !== meta.name) return;
   openedDraftId = meta.id;
+  recoveredUnsaved = true;
   // The restored deck has no file behind it: keep writing to the draft it came from.
   if (mySlot === null && leasePromise === null) claimSlot();
   status(`Recovered ${meta.name} from ${timeLabel(meta.at)}. Undo history is not recovered`);
@@ -403,6 +443,7 @@ function discard(meta) {
 
 /// Start autosave for this page. Never throws: a failure here must not stop the editor.
 export async function initDrafts() {
+  armLeaveWarning();
   // Embedded in another page, the host owns the document: no copy in this browser.
   if (window.top !== window.self) return { autosave: false, why: "this editor is part of another page" };
   const asked = new URLSearchParams(location.search).get("draft");

@@ -73,8 +73,13 @@ function pump() {
   worker.postMessage({ id: inFlight.id, ...inFlight.msg }, inFlight.transfer || []);
 }
 
+/// The engine's edit counter in its latest answer (`PAR-01`); `NaN` before any.
+let lastEditsNow = Number.NaN;
+export function editsNow() { return lastEditsNow; }
+
 worker.onmessage = (e) => {
   const r = e.data || {};
+  if (r.ok && Number.isFinite(r.editsNow)) lastEditsNow = r.editsNow;
   const job = inFlight;
   inFlight = null;
   if (job && job.id === r.id) {

@@ -119,6 +119,17 @@ function failure(e) {
   return "the engine stopped unexpectedly";
 }
 
+// Every successful answer carries the engine's edit counter as it stands
+// (`editsNow`), so the page knows an edit happened the moment it did, without a
+// poll: the leave warning reads it (`PAR-01`). Before a deck is open there is none.
+const post = self.postMessage.bind(self);
+self.postMessage = (m, transfer) => {
+  if (m && m.ok) {
+    try { m.editsNow = edits_applied(); } catch { /* no deck yet */ }
+  }
+  post(m, transfer);
+};
+
 self.onmessage = async (event) => {
   const msg = event.data || {};
   const { id } = msg;
@@ -220,6 +231,10 @@ self.onmessage = async (event) => {
       if (msg.fn === "copy_slides") args[0] = new Uint32Array(args[0] || []);
       let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
+      // An engine `i64` (`slide_layout`) arrives as a BigInt, which no page caller
+      // expects and which a `u32` argument refuses: New Slide failed on every deck
+      // with slides (`PAR-16`). Every such value fits a double.
+      if (typeof value === "bigint") value = Number(value);
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
     } else if (msg.op === "undo" || msg.op === "redo") {
       const slide = msg.op === "undo" ? undo() : redo();

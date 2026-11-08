@@ -67,6 +67,7 @@ by saying so.
 | 56 | 2026-11-08 | Find every PowerPoint gap, not only the examples the owner names: audit all features and work from a ranked backlog | [96](96-POWERPOINT-FIT-GAP.md), [14](14-EXECUTION-TRACKER.md) |
 | 57 | 2026-11-08 | "Rename and file properties are still pending": rename in the title bar and File > Rename, File > Info properties and Advanced Properties saved into `docProps`, Save As, Download a Copy, Export, Print, and autosave with crash recovery, as PowerPoint for the web does them | `webapp/editor.file.js`, `webapp/editor.drafts.js`, `FILE-01`, `SAVE-01` |
 | 58 | 2026-11-09 | "Docs are not updated or maintained": make every document true to the code and to git today, README first (what works, live links, status, how to run, build, self-host and co-edit, measured fidelity and parity numbers); remove what the code does not do; never claim a PowerPoint match; say which commit the docs are true as of | Every document; `DOC-011`; the `openslide-docs` skill |
+| 59 | 2026-11-09 | Approved target: PowerPoint parity from 9.9% toward 40% of the 352 features working. Re-audit what merged since `7539ea5` in the real editor first, then work the ranked `PAR` backlog in order, skipping rows another session owns; each row to its end point (undoable, saved valid, through the command registry, checked in a browser, engine tests seen to fail first), committed and counted in docs/96 as it lands | [96](96-POWERPOINT-FIT-GAP.md) §Parity today, `PAR-*` in [14](14-EXECUTION-TRACKER.md) |
 
 ## Boundaries set by the environment
 

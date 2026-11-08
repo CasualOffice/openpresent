@@ -73,7 +73,7 @@ Since then the work runs as **vertical slices** ([roadmap](docs/06-ROADMAP-AND-D
 
 **Fidelity, measured.** On every push to `main`, CI draws each gallery slide with our renderer and with LibreOffice and compares them ([docs/51](docs/51-SPEC-CHECKLIST-AND-FIDELITY.md)). At `1ba6443` (run 42511686894, LibreOffice 26.2.6.3, 111 slides): **on average 5.4% of pixels differ (94.6% agree)**, median 4.4%, SSIM 0.869; 64 slides within 5%, 14 within 1%. This is **agreement with LibreOffice, not a PowerPoint match**: PowerPoint itself has not yet checked our output (`PV-01`), and until it has nothing here claims to match it. See the [gallery](https://casualoffice.github.io/openpresent/gallery/).
 
-**PowerPoint parity, audited.** The parity audit ([docs/96](docs/96-POWERPOINT-FIT-GAP.md) §Parity today, at `7539ea5`) marks 352 PowerPoint features against the live editor: **35 work (9.9%)**, 52 work in part, 68 are present but disabled, 197 are absent, none faked. Of the 280 we mean to build, 35 work (12.5%). The File tab, autosave, comments, notes and the Selection Pane landed after the audit and are not yet re-counted.
+**PowerPoint parity, audited.** The parity audit ([docs/96](docs/96-POWERPOINT-FIT-GAP.md) §Parity today, first at `7539ea5`, re-audited and kept current since) marks 352 PowerPoint features against the live editor: **48 work (13.6%)**, 54 work in part, 63 are present but disabled, 187 are absent, none faked. Of the 280 we mean to build, 48 work (17.1%). The first audit found 35 (9.9%).
 
 ## Try it
 
