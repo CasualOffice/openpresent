@@ -4,11 +4,12 @@
 // also keeps the deck open and draws its slides on request.
 //
 // Messages in: `{ id, op: "open", bytes }`, `{ id, op: "png", index, width }`,
-// `{ id, op: "report", index }`. Out: `{ id, ok: true, ... }` or
+// `{ id, op: "report", index }`, `{ id, op: "save" }` (the deck through the writer)
+// and `{ id, op: "pdf" }` (every slide as one PDF). Out: `{ id, ok: true, ... }` or
 // `{ id, ok: false, error }`, where `error` is the engine's message with its code.
 // Nothing here fetches anything but the engine itself, from this origin.
 
-import init, { open, slide_count, slide_size, render_slide_png, slide_report, version } from "./pkg/casual_slide_wasm.js";
+import init, { open, slide_count, slide_size, render_slide_png, slide_report, save_deck, export_pdf, version } from "./pkg/casual_slide_wasm.js";
 
 const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });
 
@@ -31,6 +32,12 @@ self.onmessage = async (event) => {
     } else if (msg.op === "png") {
       const png = render_slide_png(msg.index, msg.width);
       self.postMessage({ id, ok: true, png: png.buffer }, [png.buffer]);
+    } else if (msg.op === "save") {
+      const bytes = save_deck();
+      self.postMessage({ id, ok: true, bytes: bytes.buffer }, [bytes.buffer]);
+    } else if (msg.op === "pdf") {
+      const bytes = export_pdf();
+      self.postMessage({ id, ok: true, bytes: bytes.buffer }, [bytes.buffer]);
     } else if (msg.op === "report") {
       self.postMessage({ id, ok: true, lines: slide_report(msg.index) });
     } else {

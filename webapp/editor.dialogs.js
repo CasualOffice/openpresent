@@ -79,6 +79,7 @@ export async function reportDialog(index) {
 
 const SHORTCUTS = [
   ["Open a presentation", "Ctrl+O"],
+  ["Save", "Ctrl+S"],
   ["Next slide", "→ ↓ Page Down Space"],
   ["Previous slide", "← ↑ Page Up"],
   ["First and last slide", "Home, End"],

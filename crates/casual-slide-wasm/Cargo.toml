@@ -20,6 +20,11 @@ wasm-opt = false
 # An interim edge until `-sdk` exists (docs/19): the bridge opens and draws a deck
 # through `-render`'s `Deck`, which is where `-sdk` will take it from.
 casual-slide-render = { path = "../casual-slide-render" }
+# Save (`VS-04`): the one writer, `SavePlan`, over a package opened from the deck's
+# own bytes; with nothing edited it gives those bytes back. An interim edge until
+# `-sdk` exists, as `-render` is (docs/19).
+casual-slide-export = { path = "../casual-slide-export" }
+casual-slide-ooxml = { path = "../casual-slide-ooxml" }
 # RGBA output: the PNG `-render` writes, decoded by the same backend (already in
 # the tree through `-render`, ADR-019).
 tiny-skia = { version = "0.11", default-features = false, features = ["std", "png-format"] }

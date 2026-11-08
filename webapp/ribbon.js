@@ -247,7 +247,7 @@ function buildTitleBar() {
   const qat = h("div", "rb-qat");
   qat.setAttribute("role", "toolbar");
   qat.setAttribute("aria-label", "Quick Access Toolbar");
-  for (const [id, ic, label] of [["file.save-copy", "save", "Save (Ctrl+S)"], ["edit.undo", "arrow_undo", "Undo (Ctrl+Z)"], ["edit.redo", "arrow_redo", "Redo (Ctrl+Y)"], ["slideshow.from-beginning", "play", "Start From Beginning (F5)"]]) {
+  for (const [id, ic, label] of [["file.save", "save", "Save (Ctrl+S)"], ["edit.undo", "arrow_undo", "Undo (Ctrl+Z)"], ["edit.redo", "arrow_redo", "Redo (Ctrl+Y)"], ["slideshow.from-beginning", "play", "Start From Beginning (F5)"]]) {
     qat.appendChild(button({ id, icon: ic, label }, "s"));
   }
   (logo ? logo.after(qat) : header.prepend(qat));

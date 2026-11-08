@@ -640,6 +640,7 @@ impl<'a> Builder<'a> {
                     b: run.color.b,
                     a: run.color.a,
                 }),
+                text: run.text,
             });
         }
     }

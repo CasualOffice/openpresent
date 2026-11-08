@@ -23,6 +23,12 @@ tiny-skia = { version = "0.11", default-features = false, features = ["std", "pn
 # JPEG only, named: every codec is a decoder reached by a deck's own bytes (ADR-019).
 # PNG is tiny-skia's own. Other formats are reported by name, never drawn wrongly.
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
+# The PDF backend (`pdf.rs`, `VS-04`), as OpenCalc's: face metrics and widths for
+# `/W` and the subsetter. Already in the tree through `-text`, same version.
+skrifa = "0.46"
+# `/FlateDecode` for pictures and font programs in a PDF. Already in the tree
+# through `-package`, with the same pure-Rust backend, so wasm32 builds.
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 
 [lints]
 workspace = true

@@ -5,7 +5,8 @@
 //! thread-local session, so the browser keeps no model of its own. Here the session
 //! is a [`Deck`] opened by `casual-slide-render`, and the surface is the first
 //! vertical slice (owner instruction 44): open a deck, count its slides, draw one at
-//! a given width, and say what that drawing left out.
+//! a given width, and say what that drawing left out. Slice 4 (`VS-04`) adds Save,
+//! through the one writer, and PDF export, through `-render`'s PDF backend.
 //!
 //! Everything runs inside the page. Nothing here fetches, and the deck's bytes
 //! never leave the browser.
@@ -16,7 +17,9 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
-use casual_slide_render::{Deck, RenderError};
+use casual_slide_export::writer::SavePlan;
+use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
+use casual_slide_render::{Deck, PdfMetadata, RenderError};
 use wasm_bindgen::prelude::*;
 
 /// The widest picture a host may ask for, in pixels. Twice a 2K screen, which is
@@ -43,6 +46,8 @@ pub enum BridgeError {
     Decode,
     /// The renderer's own error, with its own code.
     Render(RenderError),
+    /// The writer refused to save; its own code (`CS-SAV-*`, or the reader's).
+    Save(&'static str),
 }
 
 impl BridgeError {
@@ -53,6 +58,7 @@ impl BridgeError {
             Self::InvalidWidth(_) => "CS-WSM-0002",
             Self::Decode => "CS-WSM-0003",
             Self::Render(e) => e.code(),
+            Self::Save(code) => code,
         }
     }
 }
@@ -72,6 +78,7 @@ impl core::fmt::Display for BridgeError {
                 self.code()
             ),
             Self::Render(e) => e.fmt(f),
+            Self::Save(code) => write!(f, "[{code}] the presentation could not be saved"),
         }
     }
 }
@@ -151,6 +158,28 @@ impl Viewer {
             out.extend_from_slice(&[c.red(), c.green(), c.blue(), c.alpha()]);
         }
         Ok((pixmap.width(), out))
+    }
+
+    /// The deck as a file, through the one writer (`SavePlan`). With nothing
+    /// edited, which is all this slice can do, the bytes that were opened.
+    pub fn save(&self) -> Result<Vec<u8>, BridgeError> {
+        let mut package =
+            PresentationPackage::open(self.deck.source_bytes(), OoxmlLimits::default())
+                .map_err(|e| BridgeError::Save(e.code()))?;
+        let outcome = SavePlan::new()
+            .save(&mut package)
+            .map_err(|e| BridgeError::Save(e.code()))?;
+        Ok(outcome.bytes)
+    }
+
+    /// Every slide as one PDF, a page per slide, with real text. What each page
+    /// left out replaces that slide's report.
+    pub fn export_pdf(&mut self) -> Result<Vec<u8>, BridgeError> {
+        let (pdf, reports) = self.deck.render_pdf(&PdfMetadata::default())?;
+        for (index, report) in reports.iter().enumerate() {
+            self.reports.insert(index, report.lines());
+        }
+        Ok(pdf)
     }
 
     /// What slide `index` left out, as plain lines with counts and feature names
@@ -255,6 +284,27 @@ pub fn render_slide_rgba(index: u32, width: u32) -> Result<Vec<u8>, JsError> {
     })
 }
 
+/// The open deck as a `.pptx` file, through the writer. Unedited, it is the file
+/// that was opened, byte for byte.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; the writer's own code if it refuses.
+#[wasm_bindgen]
+pub fn save_deck() -> Result<Vec<u8>, JsError> {
+    with_viewer(|v| v.save())
+}
+
+/// Every slide of the open deck as one PDF, a page per slide, with real text.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn export_pdf() -> Result<Vec<u8>, JsError> {
+    with_viewer(|v| v.export_pdf())
+}
+
 thread_local! {
     static LAST_RGBA_WIDTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
 }
@@ -334,6 +384,36 @@ mod tests {
         assert!(v.reports.is_empty());
         v.report(0).unwrap();
         assert!(v.reports.contains_key(&0));
+    }
+
+    #[test]
+    fn an_unedited_save_gives_back_the_bytes_that_were_opened() {
+        for name in [
+            "area-text.pptx",
+            "image.pptx",
+            "minimal.pptx",
+            "chart-families.pptx",
+            "comments-modern.pptx",
+            "rr-notes.pptx",
+            "graphics-diagram-every-row.pptx",
+            "media-every-reference.pptx",
+        ] {
+            let bytes = fixture(name);
+            let mut v = Viewer::open(bytes.clone()).unwrap();
+            // Drawing first must not change what is saved.
+            v.render_png(0, 64).unwrap();
+            assert!(v.save().unwrap() == bytes, "{name}: byte-identical");
+        }
+    }
+
+    #[test]
+    fn the_pdf_has_a_page_per_slide_and_replaces_the_reports() {
+        let mut v = Viewer::open(fixture("area-text.pptx")).unwrap();
+        let pdf = v.export_pdf().unwrap();
+        assert!(pdf.starts_with(b"%PDF-"));
+        let text = String::from_utf8_lossy(&pdf);
+        assert_eq!(text.matches("/Type /Page ").count(), v.slide_count());
+        assert_eq!(v.reports.len(), v.slide_count());
     }
 
     #[test]

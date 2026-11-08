@@ -265,6 +265,9 @@ pub enum DisplayItem {
         glyphs: Vec<Glyph>,
         /// Their fill.
         fill: Paint,
+        /// The characters these glyphs draw, so a backend that keeps text (PDF)
+        /// can give it back to a reader. Document data: never logged or reported.
+        text: String,
     },
 }
 
