@@ -181,6 +181,9 @@ function onSelection(s) {
   sel = s;
   const isPic = pictureSelected();
   if (cropping && (!s || s.node !== cropping.node)) endCrop();
+  // The selection paints again when the slide frame changes size (a zoom, a pane
+  // opening): the crop handles are in pixels, so they follow it (`UX-013`).
+  else if (cropping && !drag) paintCrop();
   // As PowerPoint opens Picture Format when a picture is picked.
   if (isPic && !wasPicture) requestAnimationFrame(() => requestAnimationFrame(() => selectTab("picture-format")));
   wasPicture = isPic;
