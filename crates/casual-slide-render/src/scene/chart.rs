@@ -1802,13 +1802,14 @@ mod tests {
             err_bars: Some(Box::default()),
             ..Default::default()
         };
+        // Names come in walk order: each family's series parts, then its markers.
         assert_eq!(
             undrawn_parts(&line_space(line, yes())),
             [
                 "chart data labels",
-                "chart line markers",
                 "chart trendlines",
-                "chart error bars"
+                "chart error bars",
+                "chart line markers"
             ]
         );
     }
