@@ -33,5 +33,16 @@ Copied, and changed only where slides need it:
 
 New here: `src/scene.rs`, `src/scene/table.rs` (a slide's shapes to a display list) and `src/deck.rs`.
 
-Not yet copied: glyph outlining and shaping (`shape.rs`, the text crate's, lane B), the
-PDF writer (`pdf.rs`, `subset.rs`).
+- `src/pdf.rs` from `casual-calc-render/src/pdf.rs` at `b23c67c` (`VS-04`): the object
+  store and cross-reference table, `num`, the Type0 / Identity-H fonts with `/W` and
+  `ToUnicode` (`write_faces`, `to_unicode_cmap`), `/ActualText` for a run whose glyphs
+  do not pair one to one with its characters, and `TJ` adjustments from the rounded `/W`
+  widths. Changes: the page executes the slide display list (paths with transforms,
+  axial and radial shadings, pictures as Flate-compressed image XObjects with a soft
+  mask, transparency through `ExtGState`), rather than cell items; a run's glyphs come
+  positioned from `-text`, so nothing is shaped here; faces are found by the run's key;
+  font programs are Flate-compressed; the title is UTF-16.
+- `src/subset.rs` from `casual-calc-render/src/subset.rs` at `b23c67c`, unchanged but for
+  checked reads in the composite reader and the `head` patch.
+
+Not copied: glyph outlining and shaping (`shape.rs`), which live in the text crate.

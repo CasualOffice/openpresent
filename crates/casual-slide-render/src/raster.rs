@@ -416,6 +416,7 @@ mod tests {
                 y: 0.0,
             }],
             fill: Paint::Solid(RED),
+            text: String::new(),
         };
         let (_, report) =
             render_pixmap(&two_by_one_inch(vec![run]), 10.0, &NoImages, None).unwrap();
@@ -461,6 +462,7 @@ mod tests {
                 },
             ],
             fill: Paint::Solid(RED),
+            text: String::new(),
         };
         let (p, report) = render_pixmap(
             &two_by_one_inch(vec![run]),

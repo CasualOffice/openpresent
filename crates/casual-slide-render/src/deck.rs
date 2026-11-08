@@ -241,6 +241,40 @@ impl Deck {
         }
     }
 
+    /// Write every slide as one PDF, a page per slide, with real text in embedded,
+    /// subset faces. Returns the file and, per slide, what it did not draw or drew
+    /// approximately.
+    ///
+    /// # Errors
+    ///
+    /// [`RenderError::InvalidSize`] only if the slide size were zero, which
+    /// [`Deck::open`] never leaves it.
+    pub fn render_pdf(
+        &mut self,
+        meta: &crate::pdf::PdfMetadata,
+    ) -> Result<(Vec<u8>, Vec<RenderReport>), RenderError> {
+        let mut lists = Vec::with_capacity(self.slide_count());
+        let mut scenes = Vec::with_capacity(self.slide_count());
+        for index in 0..self.slide_count() {
+            let (list, scene) = self.display_list(index)?;
+            self.load_media(&list);
+            lists.push(list);
+            scenes.push(scene);
+        }
+        let refs: Vec<&DisplayList> = lists.iter().collect();
+        let (pdf, mut reports) = crate::pdf::write_pdf(&refs, &self.media, meta)?;
+        for (report, scene) in reports.iter_mut().zip(scenes) {
+            // The writer's own notes join the scene's, which come first.
+            let own = std::mem::take(&mut report.scene.features);
+            report.scene = scene;
+            for (feature, n) in own {
+                let total = report.scene.features.entry(feature).or_insert(0);
+                *total = total.saturating_add(n);
+            }
+        }
+        Ok((pdf, reports))
+    }
+
     /// Render slide `index` to PNG at `dpi`. Glyphs are outlined by `glyphs` if
     /// given, else from `casual-slide-text`'s faces.
     pub fn render_slide_png(

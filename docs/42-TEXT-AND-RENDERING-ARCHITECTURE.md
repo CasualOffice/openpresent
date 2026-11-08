@@ -45,7 +45,7 @@ different, because this is general vector art rather than grid decoration.
 | Item | Carries |
 | --- | --- |
 | `Path` | Geometry, fill (solid, gradient, pattern, picture), stroke (dash, cap, join, arrowheads) |
-| `GlyphRun` | Face, size, glyph ids and positions, fill, and the source range for hit testing |
+| `GlyphRun` | Face, size, glyph ids and positions, fill, the characters drawn (so the PDF backend keeps text extractable, `VS-04`), and the source range for hit testing |
 | `Image` | Frame, crop, recolour, part hash |
 | `Group` | Transform, opacity, clip, effect list, stable object id, for caching |
 | `Effect` | Shadow, glow, soft edge, reflection, blur |

@@ -152,7 +152,9 @@ dependencies = [
  "casual-slide-ooxml",
  "casual-slide-style",
  "casual-slide-text",
+ "flate2",
  "image",
+ "skrifa",
  "tiny-skia",
 ]
 

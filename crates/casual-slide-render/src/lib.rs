@@ -10,7 +10,9 @@
 //! - [`scene`]: a slide's resolved shapes to that list, through `casual-slide-style`
 //!   and `casual-slide-geometry`.
 //! - [`raster`]: the list onto a `tiny-skia` pixmap, then PNG.
-//! - [`Deck`]: a deck's bytes opened for all three.
+//! - [`pdf`]: the same list as PDF, one page per slide, with real, extractable text
+//!   in embedded, subset faces.
+//! - [`Deck`]: a deck's bytes opened for all of them.
 //!
 //! Text is laid out by `casual-slide-text` into [`DisplayItem::GlyphRun`]s and
 //! outlined from its faces ([`raster::BundledOutlines`]); a body that lays out to no
@@ -21,8 +23,10 @@ pub mod deck;
 mod diagram;
 pub mod display;
 mod images;
+pub mod pdf;
 pub mod raster;
 pub mod scene;
+mod subset;
 
 pub use deck::Deck;
 pub use display::{DisplayItem, DisplayList};
@@ -30,6 +34,7 @@ pub use images::{
     ImageReport, ImageSource, MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE, NoImages, UndrawnImage,
     UndrawnReason,
 };
+pub use pdf::{PdfMetadata, write_pdf};
 pub use raster::{BundledOutlines, GlyphOutlines, render_pixmap, render_png};
 pub use scene::{MediaResolver, NoMedia, SceneReport, SlideScene, build_slide};
 
