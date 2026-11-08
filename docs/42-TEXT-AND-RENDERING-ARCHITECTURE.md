@@ -78,6 +78,12 @@ That is OpenCalc's way with cell fills and gridlines, and what poppler's Splash 
 LibreOffice reference by stroke adjustment. Curves, slanted lines, dashes, gradients and pictures
 keep smoothed edges; round corners and ends are adjusted only up to 2 px wide. The PDF backend
 leaves this to the viewer.
+A line's height is the tallest of its runs' faces, each run counting its substituted face and,
+when it names an East Asian font (`ea`, theme references followed) that it does not draw in, that
+font's face too: Times New Roman text with `ea` Calibri is spaced at Carlito's 1.22 em, not
+Liberation Serif's 1.11 (`FH-06`; Inferred from LibreOffice, which spaces it so, and from Office
+opening Latin lines under a tall East Asian theme font; unmeasured on PowerPoint, `PV-01`).
+
 Likewise each glyph of an upright, unskewed run is placed at the nearest whole device pixel, so
 its edges meet the grid the same way wherever its line falls, as Splash places glyphs and GDI a
 baseline; outlines are still unhinted and smoothed, and rotated runs keep exact positions.

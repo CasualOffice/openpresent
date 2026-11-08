@@ -344,10 +344,12 @@ fn run_style<'a>(
             .run(props, paragraph, |c| c.lang.as_deref())
             .map(|r| r.value),
     );
+    let ea = run_family(chain, props, paragraph, FontScript::EastAsian, fonts);
     let family = east_asian
-        .then(|| run_family(chain, props, paragraph, FontScript::EastAsian, fonts))
+        .then(|| ea.clone())
         .flatten()
         .or_else(|| run_family(chain, props, paragraph, FontScript::Latin, fonts));
+    let east_asian_family = ea.filter(|e| Some(e) != family.as_ref());
     if let Some(f) = &family {
         fonts.record(f);
     }
@@ -385,6 +387,7 @@ fn run_style<'a>(
             .run(props, paragraph, |c| c.highlight.as_ref())
             .and_then(|h| h.value.clone())
             .map(|c| color_of(&Fill::Solid(Some(c)), fonts.env)),
+        east_asian_family,
     }
 }
 
@@ -692,6 +695,7 @@ fn bullet<'a>(
             // PowerPoint does not underline or highlight a bullet.
             underline: None,
             highlight: None,
+            east_asian_family: None,
         },
     })
 }
