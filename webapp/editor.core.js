@@ -23,6 +23,7 @@ import * as menus from "./editor.menus.js";
 import * as panes from "./editor.panes.js";
 import * as comments from "./editor.comments.js";
 import * as selpane from "./editor.selpane.js";
+import * as alttext from "./editor.alttext.js";
 import * as notes from "./editor.notes.js";
 import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
@@ -464,6 +465,7 @@ async function boot() {
   clipboard.init();  // Cut, Copy, Paste and Duplicate (`UX-003`)
   comments.init();   // the Comments pane and markers (`UX-011`)
   selpane.init();    // the Selection Pane (`UX-011`)
+  alttext.init();    // the Alt Text pane (`PAR-44`)
   views.init();      // Outline View, Slide Sorter, Notes Page (`UX-006`)
   arrange.init();    // Arrange: order, rotate, flip (`UX-006`)
   find.init();       // Find, Replace, Reset Slide (`UX-006`)

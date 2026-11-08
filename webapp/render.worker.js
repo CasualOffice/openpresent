@@ -24,7 +24,7 @@
 
 import init, {
   open, slide_count, slide_size, render_slide_png, slide_report, save_deck, export_pdf, version,
-  slide_shapes, group_shapes, group_selection, ungroup_shape, set_shape_transform, delete_shape, undo, redo, undo_state,
+  slide_shapes, group_shapes, group_selection, ungroup_shape, shape_alt_text, set_shape_alt_text, set_shape_transform, delete_shape, undo, redo, undo_state,
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   show_plan, show_advance, slide_transition, transition_direction, slide_notes,
@@ -113,6 +113,8 @@ const BUILD = {
   slide_sections, section_add, section_rename, section_remove, header_footer,
   // A second click inside a group (`UX-015`); Group and Ungroup (`PAR-03`).
   group_shapes, group_selection, ungroup_shape,
+  // The Alt Text pane (`PAR-44`).
+  shape_alt_text, set_shape_alt_text,
   // Tables and charts (`VS-11`): `editor.objects.js` asks for them as `build`; they sat
   // under `animate`, so every table and chart call was refused (`UX-015`).
   insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,

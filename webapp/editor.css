@@ -739,3 +739,8 @@ button.doc-name:focus-visible { outline: 2px solid var(--op-accent-color); outli
 .thumb.sec-collapsed > :not(.thumb-sec) { display: none; }
 .thumb.sec-hidden { display: none; }
 .op-view-sorter .thumb.has-sec { flex-direction: column-reverse; }
+
+/* The Alt Text pane (`PAR-44`). */
+.alt-pane { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.alt-label { font-size: 12.5px; line-height: 1.4; }
+.alt-box { width: 100%; box-sizing: border-box; resize: vertical; min-height: 96px; font: inherit; }

@@ -38,6 +38,7 @@ mod clipboard;
 mod edit;
 mod file;
 pub use file::{CustomKind, PROPERTY_KEYS};
+mod alt;
 mod fonts;
 mod format;
 mod group;
@@ -2977,4 +2978,25 @@ pub fn group_selection(index: u32, nodes: Vec<u32>) -> Result<u32, JsError> {
 #[wasm_bindgen]
 pub fn ungroup_shape(index: u32, node: u32) -> Result<Vec<u32>, JsError> {
     with_viewer(|v| v.ungroup(index as usize, node))
+}
+
+/// Shape `node` of slide `index`'s alt text (`PAR-44`); empty when it has none.
+///
+/// # Errors
+///
+/// `CS-TXN-0001` for no such shape.
+#[wasm_bindgen]
+pub fn shape_alt_text(index: u32, node: u32) -> Result<String, JsError> {
+    with_viewer(|v| v.alt_text(index as usize, node))
+}
+
+/// Give shape `node` of slide `index` this alt text (`PAR-44`); empty removes it. One
+/// undo step.
+///
+/// # Errors
+///
+/// `CS-TXN-0001` for no such shape.
+#[wasm_bindgen]
+pub fn set_shape_alt_text(index: u32, node: u32, text: &str) -> Result<bool, JsError> {
+    with_viewer(|v| v.set_alt_text(index as usize, node, text))
 }
