@@ -647,7 +647,18 @@ fn real_decks_are_modelled_and_what_is_not_is_named() {
         }
     }
     eprintln!("decks {decks}\ncensus {census:#?}\ncodes {codes:#?}\nretained {retained:#?}");
-    assert_eq!(decks, 16);
+    // Every committed real deck was read: the count follows fixtures/real, not a fixed number.
+    let committed = std::fs::read_dir(repo().join("fixtures/real"))
+        .unwrap()
+        .filter(|e| {
+            e.as_ref()
+                .unwrap()
+                .path()
+                .extension()
+                .is_some_and(|x| x == "pptx")
+        })
+        .count();
+    assert_eq!(decks, committed);
     for name in [
         "preset", "custom", "solid", "line", "effects", "hidden", "picture",
     ] {
