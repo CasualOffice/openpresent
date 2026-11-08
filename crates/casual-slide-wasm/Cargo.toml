@@ -1,0 +1,30 @@
+[package]
+name = "casual-slide-wasm"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+# Started from OpenCalc's `casual-calc-wasm`: see PROVENANCE.md.
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# As OpenCalc: skip the optional wasm-opt post-pass, since modern Rust emits
+# bulk-memory ops that some cached wasm-opt binaries reject.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[dependencies]
+# An interim edge until `-sdk` exists (docs/19): the bridge opens and draws a deck
+# through `-render`'s `Deck`, which is where `-sdk` will take it from.
+casual-slide-render = { path = "../casual-slide-render" }
+# RGBA output: the PNG `-render` writes, decoded by the same backend (already in
+# the tree through `-render`, ADR-019).
+tiny-skia = { version = "0.11", default-features = false, features = ["std", "png-format"] }
+# The browser transport, as OpenCalc (MIT or Apache-2.0).
+wasm-bindgen = "0.2"
+
+[lints]
+workspace = true

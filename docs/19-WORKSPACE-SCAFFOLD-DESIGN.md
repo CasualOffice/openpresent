@@ -26,9 +26,11 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
 
 `-style` exists from Tier 1D and depends on `-model` alone; its tests read fixtures through `-import` and `-ooxml` as dev-dependencies only, which the DAG allows because nothing ships them. `-layout` is its first product consumer (Phase 2).
 
-**Nine crates exist today** (2026-11-08): `-package`, `-ooxml`, `-model`, `-style`, `-geometry`, `-import`, `-export`, and `-text` and `-render` from Phase 2. The rest in the table below are planned and arrive with a first consumer.
+**Ten crates exist today** (2026-11-08): `-package`, `-ooxml`, `-model`, `-style`, `-geometry`, `-import`, `-export`, and `-text`, `-render` and `-wasm` from Phase 2. The rest in the table below are planned and arrive with a first consumer.
 
 **Added in Phase 2.** `-render` (`SKEL-01`, owner instruction 43), started from OpenCalc's `casual-calc-render` with a `PROVENANCE.md`. It holds the display list, the scene that builds one from a slide's resolved shapes, and the tiny-skia PNG backend; its `render-deck` example writes one PNG per slide. Its dependencies are `-model`, `-style`, `-geometry`, and, as an **interim edge** that the diagram does not show, `-import` and `-ooxml`: `Deck` opens a package for drawing, and the scene compiles a custom geometry with import's `compile_custom`. When `-layout` arrives, the scene and the custom-geometry conversion move down into it and `Deck` to `-sdk`, and the edge goes (`SKEL-03`). External: `tiny-skia` 0.11 (BSD-3-Clause) and `image` 0.25 with only `jpeg` (MIT or Apache-2.0, bringing `zune-jpeg` and `moxcms`), per ADR-019. `-render` also depends on `-text`, which lays out text bodies into glyph runs and outlines their glyphs through the `GlyphOutlines` trait.
+
+**`-wasm` added for the first vertical slice** (`VS-01`, owner instruction 44), started from OpenCalc's `casual-calc-wasm` with a `PROVENANCE.md`: open a deck, count and draw its slides, and report what each leaves out, for `webapp/`. Its first consumer is `webapp/render.worker.js`. Until `-sdk` exists it depends on `-render` directly, an **interim edge** the diagram does not show, which goes when `-sdk` takes `Deck` (`SKEL-03`). External: `wasm-bindgen` 0.2 (MIT or Apache-2.0), as OpenCalc's, and `tiny-skia`, already in the tree through `-render`, to decode its PNG for RGBA output. It compiles natively too, so its tests run on CI without a browser.
 
 **Added in Phase 1, by tier.**
 - `-package` takes `flate2` (`zlib-rs` backend, Apache-2.0 or MIT, already in the lockfile through `zip`) as a direct dependency for the recovering reader, `salvage.rs` (ADR-015, Tier 1R).
@@ -60,14 +62,14 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
 | `-export` | Applying dirty model values to the part tree, and package bookkeeping. The byte repackager itself is `Package::rewrite` | Parsing | New |
 | `-render` | PNG (tiny-skia) and PDF backends; for now also the display list and the scene that builds it, until `-layout` exists | Layout decisions, once `-layout` exists | Started from calc's `casual-calc-render`, 2026-11-08 |
 | `-sdk` | Host-facing session API and format dispatch | Internals exposure | New |
-| `-wasm` | `wasm-bindgen` transport over the SDK | Logic | New |
+| `-wasm` | `wasm-bindgen` transport over the SDK; over `-render` until `-sdk` exists | Logic | Started from calc's `casual-calc-wasm`, 2026-11-08 |
 
 Not created: `-selection` (lives in `-transaction`, since presence must map it through
 ops), and `-odp` until Phase 10. No crate exists without a first consumer, except skeletons created to let parallel tiers start, which must gain one when their tier lands.
 
 ```
 server/    casual-slide-collab-server, -host, -wopi, -mcp, -secrets
-webapp/    editor; ribbon, command registry and tokens ported from opencalc
+webapp/    editor and site; ribbon, command registry and tokens ported from opencalc (webapp/README.md)
 desktop/   Tauri, Phase 10
 sdk/       @openslide/deck and friends, Phase 10
 schemas/   vendored standards, see schemas/README.md

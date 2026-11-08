@@ -54,6 +54,7 @@ by saying so.
 | 43 | 2026-11-08 | A visible outcome within 3 hours: start Phase 2 now with the plan's recommended decisions, aiming at real slides rendered to images the owner can see. This waives the rule that rendering waits for Phase 1's sign-off | [06](06-ROADMAP-AND-DELIVERY.md), `DEC-16` to `DEC-20` |
 | 44 | 2026-11-08 | Plan vertically: ship thin end-to-end slices a user can see and use, then deepen them, instead of perfecting each layer before the next | [06](06-ROADMAP-AND-DELIVERY.md), [05](05-PHASES-AND-TASKS.md) |
 | 45 | 2026-11-08 | The webapp is built like OpenCalc's: same structure, modules, command registry and look, as a PowerPoint clone the way OpenCalc clones Excel | `webapp/`, [CLAUDE.md](../CLAUDE.md) |
+| 46 | 2026-11-08 | Detail of 45: build the web app the way OpenCalc's is: its structure, file layout (`editor.*.js`, `commands.js` registry, CSS, dialogs, files, deploy and download pages), conventions and look, copied with provenance, changing only what a presentation needs: PowerPoint's ribbon tabs (Home, Insert, Design, Transitions, Animations, Slide Show, Review, View), the thumbnail pane, slide canvas, notes pane and status bar. Wire only what works; show other commands present but disabled through the registry, never faked. Read OpenCalc's UI docs first. This reverses OpenCalc's rule (its docs/91 §8) of leaving unbuilt commands out | `webapp/`, `VS-01` |
 
 ## Boundaries set by the environment
 

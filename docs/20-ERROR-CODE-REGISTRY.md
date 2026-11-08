@@ -25,6 +25,8 @@ Findings, which do not stop a deck opening: CS-FND-0001 external content; 0002 u
 
 Rendering, from `casual-slide-render` (`RenderError`): CS-RND-0001 the surface would be of no size or over 16384 pixels a side; 0002 PNG encoding failed; 0003 no slide at that index. A deck that cannot be opened for drawing carries its reader's own code. What a render leaves out is not an error: `RenderReport` names it by feature, with counts and part names only.
 
+The browser bridge, from `casual-slide-wasm` (`BridgeError`, `VS-01`): CS-WSM-0001 a call that needs a deck came before one was opened; 0002 a width of zero or past `MAX_WIDTH_PX`; 0003 the drawn picture could not be read back as RGBA. A render error carries its `CS-RND` code, and a deck that cannot be opened its reader's own.
+
 Geometry refusals, from `RawGeometry::compile`: CS-GEO-0001 too many guides; 0002 too many paths; 0003 too many path points; 0004 too many handles; 0005 too many sites. Geometry repairs, which do not stop anything: CS-GEF-0001 unknown operator; 0002 wrong operand count; 0003 unknown guide; 0004 a formula or name over its length; 0005 unknown adjust; 0006 too many adjusts; 0007 a path with no `moveTo`. They hold no text from the file (`SEC-019`).
 
 Import refusals: CS-IMP-0001 a count over `ImportLimits`; 0002 a value over its length; 0003 a part's root is not what its role requires. Slide refusals, from `casual-slide-import/src/slide.rs`: CS-SLD-0001 too many shapes in a part; 0002 groups nested too deep; 0003 too many slides; 0004 too many slide-like parts or layout ids; 0005 no part has this ordinal.

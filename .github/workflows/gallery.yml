@@ -2,6 +2,10 @@
 # fixtures/generated, rendered by our `render-deck` and by LibreOffice, side by side in one
 # static index.html. The reference is labelled "LibreOffice", never "PowerPoint".
 #
+# The viewer (VS-01, owner instruction 44) rides along: `casual-slide-wasm` built with
+# wasm-pack and `webapp/` copied to `app/` beside the gallery, so the same Pages site lets
+# anyone open their own deck in the browser. The deck never leaves that browser.
+#
 # LibreOffice comes from apt and runs headless under `unshare --net`, only here on the
 # runner, never on the owner's machine (owner instructions 23, 33, 38).
 name: gallery
@@ -30,6 +34,12 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # First, so a viewer that does not build fails the job by name before the long renders.
+      - name: Build the viewer's engine to WebAssembly (VS-01)
+        run: |
+          set -euo pipefail
+          cargo install wasm-pack --version 0.14.0 --locked
+          wasm-pack build crates/casual-slide-wasm --release --target web --out-dir "$RUNNER_TEMP/pkg"
       # Fails, naming the reason, until lane A's `render-deck` exists: an empty gallery
       # must not pass.
       - name: Build render-deck
@@ -76,6 +86,20 @@ jobs:
           done
       - name: Build index.html
         run: python3 tools/gallery/build.py site --lo-version "$(cat "$RUNNER_TEMP/lo-version.txt")" --commit "$GITHUB_SHA"
+      # After the gallery's index, which reads every folder of site/ as a deck.
+      - name: Add the viewer to the site (VS-01)
+        run: |
+          set -euo pipefail
+          mkdir -p site/app/pkg
+          cp webapp/*.html webapp/*.js webapp/*.css webapp/*.svg site/app/
+          cp "$RUNNER_TEMP/pkg/casual_slide_wasm.js" "$RUNNER_TEMP/pkg/casual_slide_wasm_bg.wasm" site/app/pkg/
+          for f in index.html editor.html deploy.html download.html editor.js editor.core.js \
+                   editor.files.js editor.slides.js editor.dialogs.js render.worker.js commands.js \
+                   ribbon.js ribbon.model.js editor.css ribbon.css ribbon.tokens.css style.css \
+                   icons.fluent.svg pkg/casual_slide_wasm.js pkg/casual_slide_wasm_bg.wasm; do
+            [ -s "site/app/$f" ] || { echo "::error::site/app/$f is missing or empty"; exit 1; }
+          done
+          echo "viewer: $(du -sh site/app | cut -f1), engine $(du -h site/app/pkg/casual_slide_wasm_bg.wasm | cut -f1)"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gallery

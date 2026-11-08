@@ -1,0 +1,330 @@
+/* The ribbon shell. Copied from OpenCalc's `webapp/ribbon.css` at `b23c67c`
+ * (webapp/README.md, owner instruction 42) and trimmed to what this viewer
+ * draws: the parked menu bar and toolbar, combos, the phone command bar,
+ * colour swatches and the embed rules are not here yet. OpenCalc's notes:
+ *
+ * The Excel shell (UX-SHELL-07, its docs/95), built to its owner-approved
+ * prototype.
+ *
+ * Metrics are Excel's proportions, not invented ones: a 44px title bar, a 34px
+ * tab strip, a ribbon card whose Classic band is three 24px rows (72px) plus
+ * padding, 16px icons in small controls and 24px icons in a large button's
+ * 72px column. Simplified is one 32px row.
+ *
+ * Every colour is a token `editor.css` defines, so both themes and an
+ * integrator's accent apply. Nothing here names a colour.
+ *
+ * Loaded always, active only under `.op-chrome-ribbon`. */
+
+.op-ribbon { display: none; }
+
+/* A filled accent surface carries white text in both themes. The dark theme's
+ * accent is a light blue meant for text and outlines, and its paired text
+ * colour is near-black — black on blue, which read badly. Deepened a quarter
+ * toward black, the accent holds white at about 5:1 in dark and well above in
+ * light, the same treatment `.op-btn.primary` uses. Tokens: ribbon.tokens.css. */
+
+/* ── Title bar ─────────────────────────────────────────────────────────── */
+
+/* No `display` here: hiding the header (a host's `hide: header`, the desktop
+ * shell, an embed, the collapse button) is decided by `editor.css`, and a
+ * display value at this specificity would silently override every one. */
+.op-chrome-ribbon .app-header {
+  height: 44px; box-sizing: border-box; align-items: center; gap: 4px;
+  padding: 0 12px; background: var(--op-surface-color); border-bottom: 0;
+}
+.op-chrome-ribbon .app-header .doc-identity { display: flex; align-items: baseline; gap: 8px; margin-left: 8px; min-width: 0; }
+.op-chrome-ribbon .app-header button.doc-name { font-weight: 600; font-size: 13px; }
+.op-chrome-ribbon .app-header .doc-state { font-size: 12px; color: var(--op-muted-text-color); }
+.op-chrome-ribbon .app-header .header-right { display: flex; align-items: center; gap: 8px; margin-left: 0; }
+
+.rb-qat { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
+.rb-qat .rb-btn.rb-s { min-width: 30px; height: 30px; }
+
+.rb-search {
+  flex: 1 1 0; min-width: 0; max-width: 420px; margin: 0 auto; height: 30px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; padding: 0 10px;
+  background: var(--op-background-color); border: 1px solid var(--op-control-border-color); border-radius: 6px;
+  color: var(--op-muted-text-color);
+}
+.rb-search:focus-within { border-color: var(--op-accent-color); box-shadow: 0 0 0 2px var(--op-accent-ring); }
+.rb-search-input {
+  flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+  font: inherit; font-size: 13px; color: var(--op-text-color);
+}
+.rb-search-input::-webkit-search-cancel-button { display: none; }
+
+.rb-share {
+  height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px;
+  border: 0; border-radius: 6px; background: var(--rb-accent-fill); color: var(--rb-on-accent);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.rb-share[hidden] { display: none; }
+.rb-share:hover { background: color-mix(in srgb, var(--op-accent-color), #000 35%); }
+.rb-share:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 2px; }
+
+/* ── Tab strip ─────────────────────────────────────────────────────────── */
+
+.op-chrome-ribbon .op-ribbon { display: block; background: var(--op-surface-color); user-select: none; }
+
+.op-chrome-ribbon .rb-tabs {
+  height: 34px; display: flex; align-items: flex-end; gap: 2px; padding: 0 12px;
+}
+/* The roster, when a host has hidden the title bar it normally sits in. */
+.op-chrome-ribbon .rb-tabs > .presence { align-self: center; flex: none; }
+.op-chrome-ribbon .rb-tablist { display: flex; align-items: flex-end; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.op-chrome-ribbon .rb-tablist::-webkit-scrollbar { display: none; }
+.op-chrome-ribbon .rb-file,
+.op-chrome-ribbon .rb-tab {
+  position: relative; height: 30px; padding: 0 12px; border: 0; border-radius: 6px 6px 0 0;
+  background: transparent; color: var(--op-text-color); font: inherit; font-size: 13px;
+  white-space: nowrap; cursor: pointer;
+}
+.op-chrome-ribbon .rb-file { color: var(--op-accent-color); font-weight: 600; }
+.op-chrome-ribbon .rb-file:hover,
+.op-chrome-ribbon .rb-tab:hover { background: var(--op-border-color); }
+.op-chrome-ribbon .rb-tab.is-on { color: var(--op-accent-color); font-weight: 600; box-shadow: inset 0 -3px 0 var(--op-accent-color); }
+.op-chrome-ribbon .rb-file:focus-visible,
+.op-chrome-ribbon .rb-tab:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: -2px; }
+
+/* ── Ribbon band ───────────────────────────────────────────────────────── */
+
+.op-chrome-ribbon .rb-band {
+  position: relative; margin: 0 8px; background: var(--op-background-color);
+  border: 1px solid var(--op-border-color); border-radius: 8px;
+}
+.op-chrome-ribbon .rb-panel {
+  display: flex; align-items: stretch; height: 78px; box-sizing: border-box;
+  padding: 3px 36px 3px 8px; overflow: hidden;
+}
+.op-chrome-ribbon .rb-panel[hidden] { display: none; }
+.op-chrome-ribbon .op-ribbon.rb-labels-captions .rb-panel { height: 96px; }
+
+.op-chrome-ribbon .rb-group {
+  position: relative; display: flex; flex-direction: column; flex: none;
+  padding: 0 8px; border-right: 1px solid var(--op-border-color);
+}
+.op-chrome-ribbon .rb-group:last-child { border-right: 0; }
+.op-chrome-ribbon .rb-items { display: flex; align-items: center; gap: 4px; flex: 1; }
+/* Group names are kept in the DOM as the accessible name and drawn only when
+ * File > Options > Ribbon labels asks for them (docs/95 rule 1). */
+.op-chrome-ribbon .rb-cap {
+  display: none; height: 18px; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--op-muted-text-color); white-space: nowrap;
+}
+.op-chrome-ribbon .op-ribbon.rb-labels-captions .rb-cap { display: flex; }
+.op-chrome-ribbon .rb-launch { display: none; }
+/* A launcher sits in the caption row, as in Excel; with names off it would sit
+ * on top of the group's last button, so it goes with them. Format Cells is
+ * still Ctrl+1 and on the right-click menu. */
+.op-chrome-ribbon .op-ribbon.rb-labels-captions .rb-launch { display: flex; }
+.op-chrome-ribbon .rb-launch {
+  position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px; padding: 0;
+  align-items: center; justify-content: center;
+  border: 0; border-radius: 3px; background: transparent; color: var(--op-muted-text-color); cursor: pointer;
+}
+.op-chrome-ribbon .rb-launch svg { transform: rotate(-45deg); }
+.op-chrome-ribbon .rb-launch:hover { background: var(--op-surface-color); color: var(--op-text-color); }
+
+.op-chrome-ribbon .rb-rows { display: flex; flex-direction: column; justify-content: center; gap: 6px; height: 72px; }
+.op-chrome-ribbon .rb-rows[data-rows="3"] { gap: 0; }
+.op-chrome-ribbon .rb-row { display: flex; align-items: center; gap: 2px; }
+
+/* Buttons */
+.op-chrome-ribbon .rb-btn,
+.rb-qat .rb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  border: 0; border-radius: 4px; background: transparent; color: var(--op-text-color);
+  font: inherit; cursor: pointer; padding: 0 4px; box-sizing: border-box;
+}
+.op-chrome-ribbon .rb-btn[hidden] { display: none; }
+.op-chrome-ribbon .rb-s { height: 24px; min-width: 28px; }
+.op-chrome-ribbon .rb-s[aria-haspopup] { min-width: 36px; }
+.op-chrome-ribbon .rb-l {
+  flex-direction: column; justify-content: center; gap: 4px;
+  min-width: 40px; max-width: 72px; height: 72px; padding: 4px;
+}
+.op-chrome-ribbon .rb-label { display: none; font-size: 11px; line-height: 13px; text-align: center; }
+.op-chrome-ribbon .op-ribbon.rb-labels-full .rb-l .rb-label { display: block; }
+.op-chrome-ribbon .rb-btn:hover:not(:disabled),
+.rb-qat .rb-btn:hover:not(:disabled) { background: var(--op-surface-color); }
+.op-chrome-ribbon .rb-btn:active:not(:disabled) { background: var(--op-border-color); }
+.op-chrome-ribbon .rb-btn:focus-visible,
+.rb-qat .rb-btn:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: -2px; }
+.op-chrome-ribbon .rb-btn[aria-pressed="true"] { background: var(--op-accent-soft); color: var(--op-accent-color); }
+.op-chrome-ribbon .rb-btn:disabled,
+.rb-qat .rb-btn:disabled { opacity: 0.4; cursor: default; }
+.rb-ico { display: block; flex: none; fill: currentColor; }
+.rb-caret { display: block; flex: none; fill: currentColor; color: var(--op-muted-text-color); }
+
+/* Ribbon Display Options, bottom right of the band (XL-UX-093): Excel's ˅. */
+.op-chrome-ribbon .rb-layout {
+  position: absolute; right: 6px; bottom: 6px; width: 24px; height: 24px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 4px; background: transparent; color: var(--op-muted-text-color); cursor: pointer;
+}
+.op-chrome-ribbon .rb-layout:hover { background: var(--op-surface-color); }
+/* Ribbon Display Options (XL-UX-093). Tabs only: the band leaves the layout,
+ * so the grid gets its height; a clicked tab floats it over the grid. */
+.op-chrome-ribbon .op-ribbon { position: relative; }
+.op-chrome-ribbon .op-ribbon.rb-tabs-only .rb-band { display: none; }
+.op-chrome-ribbon .op-ribbon.rb-tabs-only.rb-peek .rb-band {
+  display: block; position: absolute; left: 0; right: 0; top: 100%; z-index: 30;
+  box-shadow: var(--op-popover-shadow);
+}
+.rb-pop-sep { height: 1px; margin: 4px 0; background: var(--op-border-color); }
+
+/* Folding: a group that does not fit becomes one large button. */
+.op-chrome-ribbon .rb-folded { display: none; }
+.op-chrome-ribbon .rb-group.is-folded > .rb-items,
+.op-chrome-ribbon .rb-group.is-folded > .rb-cap,
+.op-chrome-ribbon .rb-group.is-folded > .rb-launch { display: none; }
+.op-chrome-ribbon .rb-group.is-folded > .rb-folded { display: inline-flex; }
+/* A folded group is named, as in Excel: the name is a group's, not a button
+ * label, so it shows whenever group names do. */
+.op-chrome-ribbon .op-ribbon.rb-labels-captions .rb-folded .rb-label { display: block; }
+.rb-fold-pop { padding: 8px; }
+.rb-fold-pop .rb-items { display: flex; align-items: center; gap: 4px; }
+
+/* Simplified: one row, every control small, no captions. */
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-panel { height: 44px; padding-top: 6px; padding-bottom: 6px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-cap,
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-launch,
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-label { display: none; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-group { padding: 0 6px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-rows,
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-row { display: contents; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-items { gap: 2px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-btn { height: 32px; min-width: 32px; flex-direction: row; max-width: none; padding: 0 4px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-l .rb-ico { width: 18px; height: 18px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-folded .rb-ico { width: 18px; height: 18px; }
+
+/* KeyTips */
+.op-chrome-ribbon .rb-tip {
+  position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
+  min-width: 16px; padding: 1px 4px; border-radius: 3px; z-index: 2;
+  background: var(--op-text-color); color: var(--op-background-color);
+  font-size: 11px; font-weight: 600; line-height: 14px; text-align: center;
+}
+
+/* ── Popovers (dropdowns, combos, search results) ─────────────────────── */
+
+.rb-pop { position: fixed; min-width: 180px; max-height: 60vh; }
+.rb-pop-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--op-text-color); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+.rb-pop-item:hover:not(:disabled), .rb-pop-item:focus-visible { background: var(--op-surface-color); outline: none; }
+.rb-pop-item:disabled { opacity: 0.45; cursor: default; }
+.rb-pop-item[aria-checked="true"], .rb-pop-item[aria-selected="true"] { color: var(--op-accent-color); font-weight: 600; }
+.rb-pop-key { color: var(--op-muted-text-color); font-size: 12px; }
+.rb-pop-empty { padding: 8px 10px; color: var(--op-muted-text-color); font-size: 13px; }
+
+/* ── File page ─────────────────────────────────────────────────────────
+ * Excel's Backstage: a rail of destinations and a page of described choices.
+ * The rail is a soft tint of the accent over the surface, not a slab of it —
+ * a full-strength accent rail read as a glaring block in dark mode and left
+ * its labels and Back arrow at poor contrast. The accent marks only the page
+ * that is open. */
+.rb-backstage {
+  position: fixed; inset: 0; z-index: 70; display: flex;
+  background: var(--op-background-color); color: var(--op-text-color);
+}
+.rb-backstage[hidden] { display: none; }
+.rb-rail {
+  width: 232px; flex: none; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px;
+  background: color-mix(in srgb, var(--op-accent-color) 9%, var(--op-surface-color));
+  border-right: 1px solid var(--op-border-color); color: var(--op-text-color);
+}
+.rb-back {
+  width: 36px; height: 36px; margin: 0 0 12px 2px; display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; background: transparent; color: var(--op-text-color); cursor: pointer;
+}
+.rb-back:hover, .rb-rail-item:hover { background: color-mix(in srgb, var(--op-accent-color) 14%, transparent); }
+.rb-rail-item {
+  height: 40px; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--op-text-color);
+  font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.rb-rail-item .rb-ico { color: var(--op-muted-text-color); }
+.rb-rail-item.is-on { background: var(--rb-accent-fill); color: var(--rb-on-accent); font-weight: 600; }
+.rb-rail-item.is-on .rb-ico { color: inherit; }
+.rb-back:focus-visible, .rb-rail-item:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+
+.rb-pane { flex: 1; min-width: 0; padding: 36px 56px; overflow: auto; }
+.rb-page { max-width: 720px; }
+.rb-page[hidden] { display: none; }
+.rb-page-title { margin: 0 0 24px; font-size: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.rb-section { display: flex; flex-direction: column; gap: 8px; }
+.rb-section + .rb-section { margin-top: 28px; }
+.rb-section-title { margin: 0 0 2px; font-size: 13px; font-weight: 600; color: var(--op-muted-text-color); }
+
+/* New: template tiles. */
+.rb-tiles { display: flex; flex-wrap: wrap; gap: 16px; }
+.rb-tile {
+  width: 168px; display: flex; flex-direction: column; gap: 8px; padding: 0;
+  border: 0; background: transparent; color: var(--op-text-color); font: inherit; text-align: left; cursor: pointer;
+}
+.rb-tile-art {
+  width: 168px; height: 118px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--op-control-border-color); border-radius: 8px; color: var(--op-accent-color);
+  background: var(--op-surface-color);
+}
+.rb-tile:hover .rb-tile-art { border-color: var(--op-accent-color); }
+.rb-tile:focus-visible .rb-tile-art { outline: 2px solid var(--op-accent-color); outline-offset: 2px; }
+.rb-tile-label { font-size: 13px; }
+
+/* Described choices: icon, name, one line of what it does. */
+.rb-page-list {
+  display: flex; flex-direction: column; border: 1px solid var(--op-border-color); border-radius: 8px;
+  background: var(--op-background-color); overflow: hidden;
+}
+.rb-page-item {
+  min-height: 56px; display: flex; align-items: center; gap: 14px; padding: 10px 16px;
+  border: 0; background: transparent; color: var(--op-text-color);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.rb-page-item + .rb-page-item { border-top: 1px solid var(--op-border-color); }
+.rb-page-item > .rb-ico { color: var(--op-accent-color); }
+.rb-page-item:hover { background: var(--op-surface-color); }
+.rb-page-item:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: -2px; }
+.rb-item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rb-item-label { font-size: 14px; font-weight: 500; }
+.rb-item-desc { font-size: 12.5px; color: var(--op-muted-text-color); }
+
+/* Options: a label and one control per row. */
+.rb-options { display: flex; flex-direction: column; }
+.rb-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 16px; border: 1px solid var(--op-border-color); border-radius: 8px; background: var(--op-background-color);
+}
+.rb-option-label { font-size: 14px; font-weight: 500; }
+.rb-seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--op-surface-color); border: 1px solid var(--op-border-color); }
+.rb-seg-btn {
+  height: 30px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--op-text-color); font: inherit; font-size: 13px; cursor: pointer;
+}
+.rb-seg-btn:hover { background: color-mix(in srgb, var(--op-accent-color) 10%, transparent); }
+.rb-seg-btn[aria-checked="true"] { background: var(--op-background-color); color: var(--op-accent-color); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 18, 22, .12); }
+.rb-seg-btn:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+
+@media (max-width: 600px) {
+  .rb-backstage { flex-direction: column; }
+  .rb-rail { width: auto; flex-direction: row; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 1px solid var(--op-border-color); }
+  .rb-back { margin: 0 4px 0 0; flex: none; }
+  .rb-rail-item { flex: none; }
+  .rb-pane { padding: 20px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-chrome-ribbon .rb-layout svg { transition: none; }
+}
+
+/* Phones: the band scrolls sideways rather than overflowing the page. */
+@media (max-width: 600px) {
+  .rb-search, .rb-share span { display: none; }
+  .op-chrome-ribbon .rb-panel { overflow-x: auto; scrollbar-width: none; }
+  .op-chrome-ribbon .rb-panel::-webkit-scrollbar { display: none; }
+}
+

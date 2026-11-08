@@ -1,0 +1,277 @@
+/* The editor's own stylesheet: the design tokens, then the page's regions.
+ *
+ * The token block is OpenCalc's (`webapp/editor.css` at `b23c67c`,
+ * webapp/README.md), renamed `--oc-` to `--op-`, with one change: the accent is
+ * this product's cyan (`DEC-03`, owner 2026-11-07), `#0e7490`, 5.36:1 on white.
+ * `ribbon.tokens.css` aliases its names onto these, so the ribbon follows.
+ *
+ * The regions are PowerPoint's Normal view: title bar, ribbon, a thumbnail pane
+ * on the left, the slide on a grey stage, the notes pane under it, and the
+ * status bar. Nothing here names a colour outside the token blocks. */
+
+:root {
+  --op-background-color: #ffffff;
+  --op-text-color: #1f1f1f;
+  --op-icon-color: #5f6368;
+  --op-muted-text-color: #5f6368;
+  /* 5.08:1 on white, OpenCalc's correction of a 2.63:1 grey. */
+  --op-faint-text-color: #666e7c;
+  --op-disabled-color: #b6bcc7;
+  --op-border-color: #e1e4e6;
+  --op-control-border-color: #cbd1d4;
+  --op-border-hover-color: #c3c9cc;
+  --op-surface-color: #f0f2f3;
+  --op-popover-background-color: #ffffff;
+  /* The stage behind the slide: PowerPoint's light grey workspace. */
+  --op-stage-color: #e6e8ea;
+  /* OpenPresent cyan (`DEC-03`). Not PowerPoint's orange-red, not OpenCalc's green. */
+  --op-accent-color: #0e7490;
+  --op-accent-hover-color: #0b5f76;
+  --op-accent-contrast-color: #ffffff;
+  --op-accent-fill-color: #0e7490;
+  --op-danger-color: #e5484d;
+  --op-tooltip-background-color: #1f2430;
+  --op-tooltip-text-color: #ffffff;
+  --op-control-shadow: 0 1px 2px rgba(11, 13, 18, .08);
+  --op-popover-shadow: 0 1px 2px rgba(11, 13, 18, .06), 0 14px 34px rgba(11, 13, 18, .14);
+  --op-slide-shadow: 0 1px 3px rgba(11, 13, 18, .18), 0 6px 18px rgba(11, 13, 18, .10);
+  --op-elevation-raised: var(--op-control-shadow);
+  --op-elevation-overlay: var(--op-popover-shadow);
+  --op-accent-ring: color-mix(in srgb, var(--op-accent-color) 32%, transparent);
+  --op-accent-soft: color-mix(in srgb, var(--op-accent-color) 18%, transparent);
+}
+:root[data-theme="dark"] {
+  --op-background-color: #0f1216;
+  --op-text-color: #e7ebf0;
+  --op-icon-color: #b3bccb;
+  --op-muted-text-color: #9aa6b4;
+  --op-faint-text-color: #7b8797;
+  --op-disabled-color: #454e5c;
+  --op-border-color: #262c34;
+  --op-control-border-color: #2c333d;
+  --op-border-hover-color: #3a434f;
+  --op-surface-color: #1a1f27;
+  --op-popover-background-color: #171b21;
+  --op-stage-color: #090b0e;
+  --op-accent-color: #4fc3dc;
+  --op-accent-hover-color: #82d6e8;
+  --op-accent-contrast-color: #0b0d12;
+  --op-accent-fill-color: #0e7490;
+  --op-danger-color: #ff6b6b;
+  --op-tooltip-background-color: #eef1f6;
+  --op-tooltip-text-color: #10131a;
+  --op-control-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  --op-popover-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 40px rgba(0, 0, 0, .55);
+  --op-slide-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+  --op-accent-ring: color-mix(in srgb, var(--op-accent-color) 32%, transparent);
+  --op-accent-soft: color-mix(in srgb, var(--op-accent-color) 18%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --op-background-color: #0f1216;
+    --op-text-color: #e7ebf0;
+    --op-icon-color: #b3bccb;
+    --op-muted-text-color: #9aa6b4;
+    --op-faint-text-color: #7b8797;
+    --op-disabled-color: #454e5c;
+    --op-border-color: #262c34;
+    --op-control-border-color: #2c333d;
+    --op-border-hover-color: #3a434f;
+    --op-surface-color: #1a1f27;
+    --op-popover-background-color: #171b21;
+    --op-stage-color: #090b0e;
+    --op-accent-color: #4fc3dc;
+    --op-accent-hover-color: #82d6e8;
+    --op-accent-contrast-color: #0b0d12;
+    --op-accent-fill-color: #0e7490;
+    --op-danger-color: #ff6b6b;
+    --op-tooltip-background-color: #eef1f6;
+    --op-tooltip-text-color: #10131a;
+    --op-control-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    --op-popover-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 40px rgba(0, 0, 0, .55);
+    --op-slide-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+    --op-accent-ring: color-mix(in srgb, var(--op-accent-color) 32%, transparent);
+    --op-accent-soft: color-mix(in srgb, var(--op-accent-color) 18%, transparent);
+  }
+}
+
+/* ── Page ───────────────────────────────────────────────────────────────── */
+
+body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--op-text-color);
+  background: var(--op-background-color);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--op-accent-soft); }
+.editor-body { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip-link { position: absolute; left: -9999px; top: 0; }
+.skip-link:focus { left: 8px; top: 8px; z-index: 400; padding: 6px 10px; background: var(--op-background-color); border: 2px solid var(--op-accent-color); border-radius: 6px; }
+/* The icon sprite: present for `<use>`, never drawn. A style attribute would
+   be refused by the CSP, so it is hidden here. */
+.op-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+[hidden] { display: none !important; }
+
+/* ── Title bar ──────────────────────────────────────────────────────────── */
+
+.app-header { display: flex; flex: none; height: 44px; align-items: center; gap: 4px; padding: 0 12px; background: var(--op-surface-color); }
+.brand-logo { flex: none; }
+.brand-ground { fill: var(--op-accent-fill-color); }
+.brand-line { fill: none; stroke: #fff; stroke-width: 2.4; }
+.doc-identity { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.doc-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.doc-state { color: var(--op-muted-text-color); font-size: 12px; white-space: nowrap; }
+.header-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.rb-share:disabled { opacity: .55; cursor: default; }
+
+/* ── Workspace ──────────────────────────────────────────────────────────── */
+
+.workspace { flex: 1; min-height: 0; display: flex; background: var(--op-stage-color); border-top: 1px solid var(--op-border-color); margin-top: 6px; }
+.slide-pane {
+  flex: none; width: 216px; overflow-y: auto; overflow-x: hidden;
+  background: var(--op-surface-color); border-right: 1px solid var(--op-border-color);
+}
+.op-has-deck .slide-pane { display: block; }
+.thumbs { list-style: none; margin: 0; padding: 10px 10px 24px 0; outline: none; }
+.thumb { display: flex; align-items: flex-start; gap: 6px; padding: 6px 0; cursor: pointer; }
+.thumb-num { width: 26px; flex: none; text-align: right; font-size: 12px; color: var(--op-muted-text-color); padding-top: 2px; }
+.thumb-frame {
+  position: relative; display: block; width: 168px; background: var(--op-background-color);
+  border: 1px solid var(--op-control-border-color); border-radius: 2px; overflow: hidden;
+}
+.thumb-frame img { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .12s; }
+.thumb-frame img.is-drawn { opacity: 1; }
+.thumb:hover .thumb-frame { border-color: var(--op-border-hover-color); }
+.thumb[aria-selected="true"] .thumb-frame { border-color: var(--op-accent-color); box-shadow: 0 0 0 2px var(--op-accent-color); }
+.thumb[aria-selected="true"] .thumb-num { color: var(--op-accent-color); font-weight: 600; }
+.thumbs:focus-visible .thumb[aria-selected="true"] .thumb-frame { box-shadow: 0 0 0 2px var(--op-accent-color), 0 0 0 5px var(--op-accent-ring); }
+
+.stage-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.stage {
+  position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; outline: none;
+}
+.stage.is-zoomed { overflow: auto; display: block; padding: 24px; box-sizing: border-box; }
+.stage.is-zoomed .slide-frame { margin: 0 auto; }
+.stage:focus-visible { box-shadow: inset 0 0 0 2px var(--op-accent-ring); }
+.slide-frame { flex: none; background: #fff; box-shadow: var(--op-slide-shadow); }
+.slide-img { display: block; width: 100%; height: 100%; user-select: none; }
+
+.empty-state { display: flex; align-items: center; justify-content: center; padding: 24px; }
+.empty-card {
+  max-width: 420px; padding: 32px 36px; text-align: center; background: var(--op-background-color);
+  border: 1px solid var(--op-border-color); border-radius: 12px; box-shadow: var(--op-popover-shadow);
+}
+.empty-art {
+  display: block; width: 72px; height: 48px; margin: 0 auto 16px; border-radius: 4px;
+  border: 3px solid var(--op-accent-color); box-sizing: border-box; position: relative;
+}
+.empty-art::after { content: ""; position: absolute; left: 12px; right: 12px; top: 12px; height: 6px; border-radius: 2px; background: var(--op-accent-soft); }
+.empty-title { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+.empty-text { margin: 0 0 20px; color: var(--op-muted-text-color); }
+.drop-veil {
+  position: absolute; inset: 12px; z-index: 5; display: flex; align-items: center; justify-content: center;
+  border: 2px dashed var(--op-accent-color); border-radius: 12px; background: color-mix(in srgb, var(--op-background-color) 80%, transparent);
+  font-size: 16px; font-weight: 600; color: var(--op-accent-color); pointer-events: none;
+}
+
+.notes-pane {
+  flex: none; height: 72px; overflow: auto; padding: 8px 16px; box-sizing: border-box;
+  background: var(--op-background-color); border-top: 1px solid var(--op-border-color);
+}
+.notes-text { margin: 0; color: var(--op-faint-text-color); }
+
+/* Without a deck the panes have nothing to show. */
+html:not(.op-has-deck) .slide-pane,
+html:not(.op-has-deck) .notes-pane { display: none; }
+
+/* Reading View: the slide and the status bar, nothing else. */
+.op-reading .op-ribbon,
+.op-reading .app-header,
+.op-reading .slide-pane,
+.op-reading .notes-pane { display: none; }
+.op-reading .workspace { margin-top: 0; }
+
+/* ── Status bar ─────────────────────────────────────────────────────────── */
+
+.bottom-bar {
+  flex: none; height: 28px; display: flex; align-items: center; gap: 14px; padding: 0 10px;
+  background: var(--op-surface-color); border-top: 1px solid var(--op-border-color);
+  font-size: 12px; color: var(--op-muted-text-color); white-space: nowrap;
+}
+.slide-indicator { color: var(--op-text-color); }
+.tb-status { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bottom-status .dot { display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--op-accent-color); vertical-align: 1px; }
+.bar-spacer { flex: 1; }
+.bar-btn, .report-btn {
+  height: 22px; min-width: 22px; padding: 0 6px; border: 0; border-radius: 4px;
+  background: transparent; color: var(--op-text-color); font: inherit; font-size: 12px; cursor: pointer;
+}
+.bar-btn:hover:not(:disabled), .report-btn:hover { background: var(--op-border-color); }
+.bar-btn:disabled { color: var(--op-disabled-color); cursor: default; }
+.bar-btn:focus-visible, .report-btn:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: -2px; }
+.bar-btn[aria-pressed="true"] { color: var(--op-accent-color); font-weight: 600; }
+.report-btn { color: var(--op-accent-color); text-decoration: underline; }
+.view-switch, .zoom { display: flex; align-items: center; gap: 2px; }
+.view-switch .bar-btn { display: inline-flex; align-items: center; }
+.zoom-level { min-width: 44px; }
+#zoom-fit { display: inline-flex; align-items: center; }
+@media (max-width: 720px) {
+  .bottom-status-more, .tb-status { display: none; }
+  .slide-pane { width: 120px; }
+  .thumb-frame { width: 84px; }
+}
+
+/* ── Modal (OpenCalc's `.oc-modal`) ─────────────────────────────────────── */
+
+.op-modal { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; background: rgba(15, 18, 22, .32); }
+.op-modal-box {
+  position: relative; box-sizing: border-box; min-width: min(360px, 92vw); max-width: min(92vw, 560px); max-height: 80vh; overflow: auto;
+  padding: 20px 24px; background: var(--op-popover-background-color); color: var(--op-text-color);
+  border: 1px solid var(--op-control-border-color); border-radius: 8px; box-shadow: var(--op-popover-shadow);
+}
+.op-modal-x {
+  position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 6px; background: transparent; color: var(--op-muted-text-color); cursor: pointer;
+}
+.op-modal-x:hover { background: var(--op-surface-color); color: var(--op-text-color); }
+.op-modal-x:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+.op-modal-title { margin: 0 0 14px; padding-right: 32px; font-size: 15px; font-weight: 600; line-height: 1.35; }
+.op-modal-body { font-size: 13px; line-height: 1.55; }
+.op-modal-body p { margin: 0 0 10px; }
+.op-modal-body kbd { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--op-muted-text-color); }
+.op-modal-body .kb-row { display: flex; justify-content: space-between; gap: 20px; padding: 3px 0; }
+.op-muted { color: var(--op-muted-text-color); }
+.op-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.op-report { margin: 0; padding-left: 18px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+
+.op-btn {
+  height: 32px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--op-control-border-color);
+  background: var(--op-background-color); color: var(--op-text-color); font: inherit; font-size: 13px; cursor: pointer;
+}
+.op-btn:hover { border-color: var(--op-border-hover-color); }
+.op-btn.primary { background: var(--op-accent-fill-color); border-color: var(--op-accent-fill-color); color: #fff; font-weight: 600; }
+.op-btn.primary:hover { background: color-mix(in srgb, var(--op-accent-fill-color), #000 15%); }
+.op-btn:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 2px; }
+
+/* Popovers (the ribbon's dropdowns): OpenCalc's `.popmenu` surface. */
+.popmenu {
+  z-index: 60; display: flex; flex-direction: column; padding: 4px; overflow: auto;
+  background: var(--op-popover-background-color); border: 1px solid var(--op-control-border-color);
+  border-radius: 8px; box-shadow: var(--op-popover-shadow);
+}
+
+/* ── Slide show ─────────────────────────────────────────────────────────── */
+
+.show { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; background: #000; outline: none; cursor: none; }
+.show-img { display: block; max-width: 100%; max-height: 100%; user-select: none; }
+.show.is-end::after { content: attr(data-end); color: #fff; font-size: 16px; position: absolute; top: 24px; left: 0; right: 0; text-align: center; cursor: default; }
+.show.is-end { cursor: default; }
