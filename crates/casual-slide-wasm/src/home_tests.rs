@@ -394,3 +394,39 @@ fn a_duplicated_or_pasted_placeholder_keeps_its_inherited_look_saved_and_read_ba
     v.undo().unwrap();
     assert_eq!(v.shapes(0).unwrap().len(), 2);
 }
+
+/// Paths of `object` filled in pure yellow, drawn before its first glyph run.
+fn yellow_boxes_behind_text(v: &Viewer, object: ObjectId) -> usize {
+    use casual_slide_render::display::{DisplayItem, Paint, Rgba};
+    let (list, _) = v.deck.display_list(0).unwrap();
+    let mine = |o: &Option<ObjectId>| *o == Some(object);
+    let first_glyph = list
+        .items
+        .iter()
+        .position(|i| matches!(i, DisplayItem::GlyphRun { object, .. } if mine(object)))
+        .unwrap();
+    list.items[..first_glyph]
+        .iter()
+        .filter(|i| {
+            matches!(i, DisplayItem::Path {
+                object,
+                fill: Some(Paint::Solid(Rgba { r: 255, g: 255, b: 0, a: 255 })),
+                ..
+            } if mine(object))
+        })
+        .count()
+}
+
+#[test]
+fn a_highlighted_run_draws_its_colour_behind_the_glyphs() {
+    let mut v = Viewer::open(fixture("area-text.pptx")).unwrap();
+    let (object, len) = text_box(&v);
+    assert_eq!(yellow_boxes_behind_text(&v, object), 0);
+    assert!(
+        v.set_run(object, (0, len), RunSetting::Highlight, "srgb FFFF00")
+            .unwrap()
+    );
+    assert!(yellow_boxes_behind_text(&v, object) > 0);
+    v.undo().unwrap();
+    assert_eq!(yellow_boxes_behind_text(&v, object), 0);
+}

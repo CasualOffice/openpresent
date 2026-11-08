@@ -334,6 +334,10 @@ fn run_style<'a>(
             .map(|u| u.value)
             .filter(|u| *u != UnderlineType::None)
             .or(link.then_some(UnderlineType::Sng)),
+        highlight: chain
+            .run(props, paragraph, |c| c.highlight.as_ref())
+            .and_then(|h| h.value.clone())
+            .map(|c| color_of(&Fill::Solid(Some(c)), fonts.env)),
     }
 }
 
@@ -634,8 +638,9 @@ fn bullet<'a>(
             bold: text_style.bold,
             italic: false,
             color,
-            // PowerPoint does not underline a bullet.
+            // PowerPoint does not underline or highlight a bullet.
             underline: None,
+            highlight: None,
         },
     })
 }

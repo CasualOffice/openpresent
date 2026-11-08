@@ -592,6 +592,7 @@ impl<'a> Builder<'a> {
                 a: color.a,
             },
             underline: None,
+            highlight: None,
         };
         let body = BodyLayout {
             wrap: false,

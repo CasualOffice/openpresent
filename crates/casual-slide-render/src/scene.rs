@@ -971,6 +971,30 @@ impl<'a> Builder<'a> {
         for _ in &layout.missing_scripts {
             self.report.note("script with no face");
         }
+        // Highlights first, so no run's glyphs fall under the next run's (`UX-005`).
+        for mark in layout.runs.iter().filter_map(|r| r.highlight) {
+            let pt = |v: f32| f64::from(v) * EMU_PER_POINT;
+            let (x0, x1, t, b) = (pt(mark.x0), pt(mark.x1), pt(mark.top), pt(mark.bottom));
+            self.items.push(DisplayItem::Path {
+                object: Some(node.id),
+                layer,
+                transform,
+                path: vec![
+                    PathCmd::MoveTo(x0, t),
+                    PathCmd::LineTo(x1, t),
+                    PathCmd::LineTo(x1, b),
+                    PathCmd::LineTo(x0, b),
+                    PathCmd::Close,
+                ],
+                fill: Some(Paint::Solid(Rgba {
+                    r: mark.color.r,
+                    g: mark.color.g,
+                    b: mark.color.b,
+                    a: mark.color.a,
+                })),
+                stroke: None,
+            });
+        }
         for run in layout.runs {
             if run.synthetic_bold {
                 self.report.note("synthetic bold (drawn regular)");

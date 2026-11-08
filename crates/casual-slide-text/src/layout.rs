@@ -18,6 +18,7 @@
 //! | A word wider than the line breaks between characters | **Inferred** |
 //! | `just` and `dist` anchoring are laid out as top | Not yet modelled: `T2D4-01` |
 //! | An underline runs under each glyph run, trailing spaces of the line excluded, at the face's `post` underline position and thickness, in the run's colour | ECMA-376 21.1.2.3.9 names the kinds; the metrics are **Inferred** from how PowerPoint draws (`VS-18`) |
+//! | A highlight fills each glyph run's advance, from the face's ascent above the baseline to its descent below, behind every glyph of the body | ECMA-376 21.1.2.3.4 names `highlight`; the extent is **Inferred** from how PowerPoint draws, not measured (`UX-005`) |
 //!
 //! Not yet here: tabs, columns, vertical and rotated text, autofit's scale,
 //! kinsoku, bidi reordering across runs. Each is a row in `docs/14`.
@@ -82,6 +83,8 @@ pub struct RunStyle {
     /// `u`: the underline kind; `None` draws none. [`UnderlineType::None`] is never
     /// stored here: the caller maps it to `None`.
     pub underline: Option<UnderlineType>,
+    /// `highlight`: the colour drawn behind the glyphs; `None` draws none.
+    pub highlight: Option<Rgba>,
 }
 
 /// Text with one style. A line break inside a paragraph is a `\n` in `text`.
@@ -218,6 +221,26 @@ pub struct GlyphRun {
     pub text: String,
     /// The run's underline, if it has one.
     pub underline: Option<Underline>,
+    /// The run's highlight, if it has one.
+    pub highlight: Option<Highlight>,
+}
+
+/// The box a run's highlight fills, behind its glyphs, points, in the layout's space:
+/// from the first glyph's pen position to the last one's advance, and from the face's
+/// ascent above the baseline to its descent below (`UX-005`). PowerPoint's own extent
+/// is **Inferred** from how it draws, not measured.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Highlight {
+    /// The colour.
+    pub color: Rgba,
+    /// Start.
+    pub x0: f32,
+    /// End.
+    pub x1: f32,
+    /// Top, `y` down.
+    pub top: f32,
+    /// Bottom.
+    pub bottom: f32,
 }
 
 /// Where an underline is drawn under one [`GlyphRun`], points, in the layout's space.
@@ -779,6 +802,10 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
         for line in runs.iter_mut().filter_map(|r| r.underline.as_mut()) {
             line.y += offset;
         }
+        for mark in runs.iter_mut().filter_map(|r| r.highlight.as_mut()) {
+            mark.top += offset;
+            mark.bottom += offset;
+        }
         for line in &mut carets {
             line.top += offset;
             line.bottom += offset;
@@ -857,6 +884,16 @@ fn emit(
                     thickness,
                 }
             });
+            let highlight = style.highlight.map(|color| {
+                let m = metrics(face, style.size);
+                Highlight {
+                    color,
+                    x0: x_start,
+                    x1: at.origin_x + *pen,
+                    top: at.baseline - m.ascent,
+                    bottom: at.baseline + m.descent,
+                }
+            });
             out.push(GlyphRun {
                 face,
                 face_key: crate::outline::face_key(face),
@@ -870,6 +907,7 @@ fn emit(
                     .unwrap_or_default()
                     .to_owned(),
                 underline,
+                highlight,
             });
         }
     }
