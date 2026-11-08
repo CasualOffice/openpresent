@@ -1,7 +1,7 @@
 # 08 — ADR register
 
 ADR ids here are this repository's own; OpenCalc's are always cited as "its ADR-n".
-ADR-001 to ADR-015 are Accepted, on the owner's go-ahead and delegation of 2026-11-07; ADR-016, ADR-017 and ADR-019 are Phase 2 proposals; The number between them is skipped, so that OpenCalc's, cited in 02 and 42 as its ADR-018, is never read as ours. ADR-004 and ADR-005 followed `SPK-01`. **Proposed unless marked.** Status moves to Accepted when the owner agrees, or when
+ADR-001 to ADR-015 are Accepted, on the owner's go-ahead and delegation of 2026-11-07; ADR-016 and ADR-017 are Phase 2 proposals, and ADR-019 is Accepted under owner instruction 43, which starts Phase 2 with the plan's recommended decisions; The number between them is skipped, so that OpenCalc's, cited in 02 and 42 as its ADR-018, is never read as ours. ADR-004 and ADR-005 followed `SPK-01`. **Proposed unless marked.** Status moves to Accepted when the owner agrees, or when
 a spike named in the row has confirmed it.
 
 **Write an ADR when a decision touches:** public API; a crate boundary or the DAG; a
@@ -26,4 +26,4 @@ the WASM bundle; the fidelity contract; a new dependency in the engine.
 | ADR-015 | Recover before refusing: malformed input gets a best reading, and hostile constructs are neutralized, not obeyed. A host may choose strict. Damage is repaired into one clean image in memory, so readers and the writer have no second path. `flate2` joins as a direct dependency of `casual-slide-package`: `zip` merges duplicate names and refuses damage, and `flate2` with `zlib-rs` is its own deflate backend, already in the lockfile, pure Rust, and Apache-2.0 or MIT | Accepted, owner instruction 24 | [29](29-RECOVERY.md) |
 | ADR-016 | Fonts that ship, and the font seam for faces we may not ship | Proposed, waits on `DEC-16` | [06](06-ROADMAP-AND-DELIVERY.md) §Phase 2 plan, [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md) |
 | ADR-017 | Rendering reference and fidelity method until `PV-01`: LibreOffice on GitHub's runner, labelled; PowerPoint PDF exports where the owner supplies them | Proposed, waits on `DEC-17` | [06](06-ROADMAP-AND-DELIVERY.md) §Phase 2 plan, [51](51-SPEC-CHECKLIST-AND-FIDELITY.md) |
-| ADR-019 | Render dependencies: tiny-skia, harfrust, skrifa, `image`, resvg; our own PDF writer and EMF reader | Proposed, waits on `DEC-18` | [06](06-ROADMAP-AND-DELIVERY.md) §Phase 2 plan, [19](19-WORKSPACE-SCAFFOLD-DESIGN.md) |
+| ADR-019 | Render dependencies: tiny-skia, harfrust, skrifa, `image`, resvg; our own PDF writer and EMF reader. Each joins with its first consumer: `casual-slide-render` takes tiny-skia 0.11 (PNG) and `image` 0.25 with only its `jpeg` feature | Accepted, owner instruction 43 (`DEC-18` as recommended) | [06](06-ROADMAP-AND-DELIVERY.md) §Phase 2 plan, [19](19-WORKSPACE-SCAFFOLD-DESIGN.md) |

@@ -1,0 +1,192 @@
+//! Real decks to display lists and PNGs. Runs on GitHub CI (owner instruction 38).
+
+use std::path::{Path, PathBuf};
+
+use casual_slide_render::display::{DisplayItem, Layer, Paint, Rgba};
+use casual_slide_render::raster::pixel_size;
+use casual_slide_render::{Deck, NoImages, render_pixmap};
+
+fn generated(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/generated")
+        .join(name)
+}
+
+fn open(name: &str) -> Deck {
+    Deck::open(std::fs::read(generated(name)).unwrap()).unwrap()
+}
+
+fn pixel(png: &[u8], x: u32, y: u32) -> [u8; 4] {
+    let p = tiny_skia::Pixmap::decode_png(png).unwrap();
+    let c = p.pixel(x, y).unwrap().demultiply();
+    [c.red(), c.green(), c.blue(), c.alpha()]
+}
+
+/// Every slide of every generated deck the readers open renders, at a low DPI so the
+/// sweep stays quick. No panic, no error, the size the slide asks for.
+#[test]
+fn every_slide_of_every_generated_deck_renders() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/generated");
+    let mut decks: Vec<PathBuf> = std::fs::read_dir(&dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| {
+            p.extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| e.starts_with("pp") || e.starts_with("po"))
+        })
+        .collect();
+    decks.sort();
+    let mut slides = 0usize;
+    for path in &decks {
+        let Ok(mut deck) = Deck::open(std::fs::read(path).unwrap()) else {
+            continue;
+        };
+        for i in 0..deck.slide_count().min(20) {
+            let (png, _) = deck
+                .render_slide_png(i, 8.0, None)
+                .unwrap_or_else(|e| panic!("{} slide {i}: {e}", path.display()));
+            assert!(png.starts_with(&[0x89, b'P', b'N', b'G']));
+            slides += 1;
+        }
+    }
+    assert!(slides > 100, "only {slides} slides rendered");
+}
+
+#[test]
+fn a_gradient_fill_reaches_the_display_list_and_the_pixels() {
+    let mut deck = open("shape-fills.pptx");
+    let (list, _) = deck.display_list(0).unwrap();
+    let gradient = list.items.iter().any(|i| {
+        matches!(
+            i,
+            DisplayItem::Path {
+                fill: Some(Paint::Linear { .. }),
+                layer: Layer::Slide,
+                ..
+            }
+        )
+    });
+    assert!(gradient, "no linear gradient in {:?}", list.items.len());
+    // "Linear down" sits at 150000,100000 EMU, 1400000 by 620000, red at its top.
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    let x = ((150_000.0 + 700_000.0) * 96.0 / 914_400.0) as u32;
+    let y = ((100_000.0 + 20_000.0) * 96.0 / 914_400.0) as u32;
+    let [r, g, b, _] = pixel(&png, x, y);
+    assert!(r > 150 && g < 80 && b < 80, "{r},{g},{b}");
+}
+
+#[test]
+fn text_is_reported_not_drawn_until_the_text_crate_joins() {
+    let mut deck = open("shape-fills.pptx");
+    let (_, report) = deck.render_slide_png(0, 12.0, None).unwrap();
+    assert!(report.scene.text_bodies_undrawn > 0);
+    assert!(report.lines().iter().any(|l| l.starts_with("text: ")));
+}
+
+#[test]
+fn a_picture_is_drawn_from_its_media_part() {
+    let mut deck = open("area-pic.pptx");
+    let (list, _) = deck.display_list(0).unwrap();
+    let part = list.items.iter().find_map(|i| match i {
+        DisplayItem::Path {
+            fill: Some(Paint::Picture { part, .. }),
+            ..
+        } => Some(part.clone()),
+        _ => None,
+    });
+    assert_eq!(part.as_deref(), Some("ppt/media/image1.png"));
+    let (_, report) = deck.render_slide_png(0, 48.0, None).unwrap();
+    assert!(report.images.drawn >= 1, "{:?}", report.images);
+    assert!(report.images.is_complete(), "{:?}", report.images);
+}
+
+#[test]
+fn a_picture_with_no_media_supplied_is_reported_by_part() {
+    let deck = open("area-pic.pptx");
+    let (list, _) = deck.display_list(0).unwrap();
+    let (_, report) = render_pixmap(&list, 12.0, &NoImages, None).unwrap();
+    assert_eq!(report.images.drawn, 0);
+    assert_eq!(report.images.undrawn.len(), 1);
+    assert_eq!(report.images.undrawn[0].part, "ppt/media/image1.png");
+}
+
+#[test]
+fn the_master_background_reference_is_drawn_behind_everything() {
+    let deck = open("slides-masters-layouts.pptx");
+    let (list, _) = deck.display_list(0).unwrap();
+    assert!(
+        matches!(
+            list.items.first(),
+            Some(DisplayItem::Path {
+                layer: Layer::Background,
+                fill: Some(Paint::Solid(_)),
+                ..
+            })
+        ),
+        "{:?}",
+        list.items.first()
+    );
+}
+
+#[test]
+fn a_layout_background_fill_is_read_and_drawn() {
+    let deck = open("slides-masters-layouts.pptx");
+    let layout = deck
+        .parts()
+        .structure
+        .parts
+        .iter()
+        .find(|e| e.part == "ppt/slideLayouts/slideLayout3.xml")
+        .unwrap()
+        .id
+        .part;
+    let (list, _) = deck.display_list_of_part(layout);
+    let Some(DisplayItem::Path {
+        layer: Layer::Background,
+        fill: Some(Paint::Solid(c)),
+        ..
+    }) = list.items.first()
+    else {
+        panic!("no background: {:?}", list.items.first());
+    };
+    assert_eq!(
+        *c,
+        Rgba {
+            r: 0x1f,
+            g: 0x1f,
+            b: 0x1f,
+            a: 255
+        }
+    );
+}
+
+#[test]
+fn a_slide_background_of_no_fill_overrides_its_layout() {
+    let deck = open("slides-masters-layouts.pptx");
+    let (list, _) = deck.display_list(2).unwrap();
+    assert!(!list.items.iter().any(|i| matches!(
+        i,
+        DisplayItem::Path {
+            layer: Layer::Background,
+            ..
+        }
+    )));
+}
+
+#[test]
+fn preset_shapes_become_paths_at_the_slide_size() {
+    let mut deck = open("preset-shapes.pptx");
+    let (list, _) = deck.display_list(0).unwrap();
+    assert!(list.items.len() > 1);
+    let (png, _) = deck.render_slide_png(0, 24.0, None).unwrap();
+    let p = tiny_skia::Pixmap::decode_png(&png).unwrap();
+    assert_eq!((p.width(), p.height()), pixel_size(&list, 24.0));
+}
+
+#[test]
+fn a_slide_index_past_the_end_is_an_error_with_a_code() {
+    let mut deck = open("minimal.pptx");
+    let err = deck.render_slide_png(99, 12.0, None).unwrap_err();
+    assert_eq!(err.code(), "CS-RND-0003");
+}

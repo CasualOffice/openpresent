@@ -462,7 +462,13 @@ fn read_common(
             continue;
         }
         if child.local == "bg" {
-            common.background = Some(read_background(shapes.r, &child, shapes.color)?);
+            common.background = Some(read_background(
+                shapes.r,
+                shapes.rels,
+                shapes.limits.drawing,
+                &child,
+                shapes.color,
+            )?);
         } else {
             common.shape_tree = Some(shapes.tree(&child)?);
         }
@@ -485,6 +491,8 @@ const FILLS: &[&str] = &[
 // spec-audit: owner=bg
 fn read_background(
     r: &mut Reader<'_>,
+    rels: &[Relationship],
+    drawing: DrawingLimits,
     el: &Elem,
     color: &mut ColorFindings,
 ) -> Result<Background, SlideError> {
@@ -520,10 +528,16 @@ fn read_background(
         for item in r.children(&pr)? {
             if item.in_namespace(ns::DML) {
                 let name = item.local.as_str();
-                props.has_fill |= FILLS.contains(&name);
+                let is_fill = FILLS.contains(&name);
+                props.has_fill |= is_fill;
                 props.has_effects |= matches!(name, "effectLst" | "effectDag");
+                // The fill as a value, for drawing (`casual-slide-render`). The first
+                // one, as the schema allows only one.
+                if is_fill && props.fill.is_none() {
+                    props.fill = crate::drawing::read_fill(r, rels, drawing, &item)?;
+                }
             }
-            // The fill and effects themselves are Tier 1E.
+            // The elements stay in the tree, and are written back from there.
             r.retained(&item);
         }
         bg.fill = Some(BackgroundFill::Properties(props));

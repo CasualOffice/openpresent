@@ -287,9 +287,21 @@ Each of these is a known gap with an owner, not an oversight:
 - **Time.** The package asks a host-supplied predicate before every read of a decompressing part, and stops with `CS-PKG-0010` (`SEC-P10`, `Package::set_cancel`). Import does not yet pass one through, and parsing after decompression has no time bound of its own.
 - **Embedded packages.** An embedded deck or workbook is retained, never opened; opening one
   will be a separate admission with an inherited budget (`SEC-P09`).
-- **Layout and rendering** limits arrive with Tier 2D: glyphs per frame, image pixel dimensions
-  before decode.
+- **Layout** limits arrive with Tier 2D: glyphs per frame. Rendering's are below.
 - **Legacy `.ppt`** has no reader; a Compound File is refused as `CS-OPC-0005` (`CFB-01`, `PPT-01`).
+
+## Rendering (`casual-slide-render`, `SKEL-01`)
+
+Past one of these the picture, shape or slide is not drawn, and the render report names it; nothing stops the deck. The picture bounds follow OpenCalc's `casual-calc-render`, checked against the header before any allocation.
+
+| Limit | Default | Bounds | Code | Status |
+| --- | --- | --- | --- | --- |
+| `MAX_IMAGE_PIXELS` | `40_000_000` | Pixels a picture may declare before it is decoded | Report: image over the pixel limit | Partial: `a_png_declaring_too_many_pixels_is_refused_before_decoding` |
+| `MAX_IMAGE_SIDE` | `20_000` | Pixels on one side of a JPEG, given to the decoder as its limit | Report: image over the pixel limit | Untested |
+| `MAX_MEDIA_BYTES` | `64 * 1024 * 1024` | Bytes of one media part read for drawing | Report: media not supplied | Untested |
+| `MAX_SIDE_PX` | `16_384` | Pixels on one side of a rendered slide | CS-RND-0001 | Untested |
+| `MAX_GROUP_DEPTH` | `64` | Groups walked inside one another, beyond import's own bound | Report: group nested too deep | Untested |
+| `MAX_SEGMENTS_PER_SHAPE` | `200_000` | Path segments drawn for one shape | Report: geometry over the segment budget | Untested |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
 

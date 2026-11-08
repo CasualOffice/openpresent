@@ -1,0 +1,26 @@
+[package]
+name = "casual-slide-render"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+# Started from OpenCalc's `casual-calc-render`: see PROVENANCE.md.
+
+[dependencies]
+casual-slide-geometry = { path = "../casual-slide-geometry" }
+# Reading a deck (`deck.rs`), and compiling a custom geometry the way import does
+# (`custom_to_raw`). An interim edge until `-layout` exists: docs/19.
+casual-slide-import = { path = "../casual-slide-import" }
+casual-slide-model = { path = "../casual-slide-model" }
+casual-slide-ooxml = { path = "../casual-slide-ooxml" }
+casual-slide-style = { path = "../casual-slide-style" }
+# The PNG backend, as OpenCalc (ADR-019).
+tiny-skia = { version = "0.11", default-features = false, features = ["std", "png-format"] }
+# JPEG only, named: every codec is a decoder reached by a deck's own bytes (ADR-019).
+# PNG is tiny-skia's own. Other formats are reported by name, never drawn wrongly.
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+
+[lints]
+workspace = true

@@ -143,14 +143,16 @@ pub struct HeaderFooter {
     pub date_time: Option<bool>,
 }
 
-/// `p:CT_BackgroundProperties`. The fill and effects are Tier 1E, and stay in the
-/// tree; what is here is whether each is stated.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+/// `p:CT_BackgroundProperties`. The fill is read as a value, for drawing; its element
+/// stays in the tree as well, as the effects do, and is written back from there.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BackgroundProperties {
     /// `@shadeToTitle`.
     pub shade_to_title: Option<bool>,
     /// An `EG_FillProperties` child is present.
     pub has_fill: bool,
+    /// That fill, as read. `None` if absent, or over a drawing bound.
+    pub fill: Option<crate::fill::Fill>,
     /// An `EG_EffectProperties` child is present.
     pub has_effects: bool,
 }
