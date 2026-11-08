@@ -81,7 +81,7 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | Insert / Camera, Forms, Add-ins, Media | | Cameo, Forms, Add-ins, Video, Audio | `RIB-05` |
 | Insert / Links | | Link, Action | `RIB-04` |
 | Insert / Comments | | Comment (the comments session's) | `COL` rows |
-| Insert / Text | Text Box | Header & Footer, WordArt | `RIB-04` |
+| Insert / Text | Text Box, WordArt (eight styles: fill, outline, text warp) | Header & Footer | `RIB-04` |
 | Insert / Symbols | Symbol | Equation | `RIB-05` |
 | Draw / all | | Select, Lasso, Eraser, Pen, Highlighter, Ink to Shape, Ink to Math, Ink Replay | `RIB-06` |
 | Design / all | Themes, Variants, Slide Size (3), Format Background | Designer | `RIB-09` |

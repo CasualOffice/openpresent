@@ -43,7 +43,7 @@ pub use picture::{MAX_CROP, MAX_PAD, PICTURE_STYLES};
 mod rich;
 mod shapes;
 pub use animate::AnimationItem;
-pub use build::{Ends, Insert, MAX_PICTURE_BYTES};
+pub use build::{Ends, Insert, MAX_PICTURE_BYTES, WORDART_STYLES};
 pub use clipboard::{Clip, MAX_CLIP_SHAPES, PASTE_OFFSET};
 pub use edit::{Move, Toggle};
 pub use format::{MAX_FONT_POINTS, MIN_FONT_POINTS, RunSetting, SIZE_LADDER, step_size};
@@ -2471,6 +2471,43 @@ pub fn replace_text_one(
 #[wasm_bindgen]
 pub fn reset_slide(index: u32) -> Result<bool, JsError> {
     with_viewer(|v| v.reset_slide(index as usize))
+}
+
+/// Insert > WordArt (`UX-006`): style `style` of [`WORDART_STYLES`] at this box
+/// (EMU) on slide `index`, on top: one undo step. Returns its node.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a style that is not one.
+#[wasm_bindgen]
+pub fn insert_wordart(
+    index: u32,
+    style: u32,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        let n = style as usize;
+        if n >= build::WORDART_STYLES.len() {
+            return Err(BridgeError::BadArgument);
+        }
+        v.insert_shape(
+            index as usize,
+            Insert::WordArt(n),
+            [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
+}
+
+/// The WordArt gallery's names, in order, for the page (`UX-006`).
+#[wasm_bindgen]
+pub fn wordart_styles() -> Vec<String> {
+    build::WORDART_STYLES
+        .iter()
+        .map(|s| s.0.to_owned())
+        .collect()
 }
 
 /// Slide `index` in Outline View (`UX-006`): `[part, title, body]`, a node being -1

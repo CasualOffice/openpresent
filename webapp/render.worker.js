@@ -44,6 +44,7 @@ import init, {
   font_families, font_css_stack, font_face_bytes,
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
+  insert_wordart, wordart_styles,
   arrange_order, arrange_flip, find_text, replace_text_all, replace_text_one, reset_slide,
 } from "./pkg/casual_slide_wasm.js";
 
@@ -81,8 +82,8 @@ const BUILD = {
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
   // Picture Format (`UX-003`).
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
-  // Arrange and Reset Slide (`UX-006`).
-  arrange_order, arrange_flip, reset_slide,
+  // Arrange, Reset Slide and WordArt (`UX-006`).
+  arrange_order, arrange_flip, reset_slide, insert_wordart, wordart_styles,
 };
 
 /// Arguments that cross as typed arrays: the bridge takes `Vec<u32>` and `Vec<f64>`.

@@ -69,7 +69,34 @@ pub enum Insert {
     /// `ST_ShapeType` token (`SHAPE-01`). A line preset is a connector; its ends are
     /// [`Ends`].
     Preset(&'static str, Ends),
+    /// Insert > WordArt (`UX-006`): a text box holding "Your text here" in style
+    /// [`WORDART_STYLES`]`[n]`, its fill, outline and text warp.
+    WordArt(usize),
 }
+
+/// The WordArt gallery (`UX-006`), our own simple styles by name: the text's fill and
+/// outline as `RRGGBB` (empty for none), and its `prstTxWarp` (`textNoShape` for none).
+/// Bold, 54 point, centred, as PowerPoint inserts WordArt.
+pub const WORDART_STYLES: [(&str, &str, &str, &str); 8] = [
+    ("Fill: Black", "000000", "", "textNoShape"),
+    ("Fill: Blue", "156082", "", "textNoShape"),
+    (
+        "Fill: Gray; Outline: Blue",
+        "595959",
+        "156082",
+        "textNoShape",
+    ),
+    (
+        "Fill: Orange; Outline: Black",
+        "E97132",
+        "000000",
+        "textNoShape",
+    ),
+    ("Arch Up", "156082", "", "textArchUp"),
+    ("Wave", "196B24", "", "textWave1"),
+    ("Inflate", "A02B93", "", "textInflate"),
+    ("Chevron Up", "E97132", "", "textChevron"),
+];
 
 /// The arrowheads a line preset is drawn with, as the Lines gallery offers it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -136,6 +163,7 @@ impl Insert {
             Self::Line => "Straight Connector",
             Self::Arrow => "Straight Arrow Connector",
             Self::Preset(..) => "Shape",
+            Self::WordArt(_) => "TextBox",
         }
     }
 }
@@ -253,6 +281,23 @@ fn shape_xml(
                 "<p:cNvPicPr><a:picLocks noChangeAspect=\"1\"/></p:cNvPicPr>"
             )
         ),
+        (Insert::WordArt(n), None) => {
+            let (_, fill, line, warp) = WORDART_STYLES.get(n).copied().unwrap_or(WORDART_STYLES[0]);
+            let ln = if line.is_empty() {
+                String::new()
+            } else {
+                format!(
+                    "<a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"{line}\"/></a:solidFill></a:ln>"
+                )
+            };
+            format!(
+                "<p:sp>{}<p:spPr>{xfrm}<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>\
+                 <p:txBody><a:bodyPr wrap=\"none\" rtlCol=\"0\"><a:prstTxWarp prst=\"{warp}\"><a:avLst/></a:prstTxWarp>\
+                 <a:spAutoFit/></a:bodyPr><a:lstStyle/><a:p><a:pPr algn=\"ctr\"/><a:r><a:rPr lang=\"en-US\" sz=\"5400\" b=\"1\" dirty=\"0\">\
+                 {ln}<a:solidFill><a:srgbClr val=\"{fill}\"/></a:solidFill></a:rPr><a:t>Your text here</a:t></a:r></a:p></p:txBody></p:sp>",
+                nv("nvSpPr", "<p:cNvSpPr txBox=\"1\"/>")
+            )
+        }
         (Insert::TextBox, None) => format!(
             "<p:sp>{}<p:spPr>{xfrm}<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>\
              <p:txBody><a:bodyPr wrap=\"square\" rtlCol=\"0\"><a:spAutoFit/></a:bodyPr><a:lstStyle/>\

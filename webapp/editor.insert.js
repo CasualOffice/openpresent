@@ -1,6 +1,11 @@
 // Insert > Symbols > Symbol (`UX-006`): a grid of common symbols. With a text box
 // open the symbol goes in at the caret, as typing; otherwise a new text box holding
 // it is placed on the slide, as PowerPoint inserts a symbol with nothing selected.
+//
+// Insert > Text > WordArt (`UX-006`): the engine's styles (`WORDART_STYLES`), each a
+// text box saying "Your text here" with its fill, outline and text warp, placed in the
+// middle of the slide and selected, one undo step. The warp is saved; this build's
+// renderer draws the text unwarped.
 
 import { register } from "./commands.js";
 import { state, request } from "./editor.core.js";
@@ -60,6 +65,40 @@ function symbolDialog() {
   });
 }
 
+async function wordartDialog() {
+  let names = [];
+  try { names = (await request({ op: "build", fn: "wordart_styles", args: [] }, { priority: 9 })).value; } catch (e) { errorDialog("OpenPresent could not list the WordArt styles.", e.message); return; }
+  showModal("WordArt", (body) => {
+    const grid = document.createElement("div");
+    grid.className = "op-layouts";
+    names.forEach((name, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "op-btn op-layout";
+      b.textContent = name;
+      b.addEventListener("click", () => { closeModal(); insertWordArt(i); });
+      grid.appendChild(b);
+    });
+    body.appendChild(grid);
+  });
+}
+
+async function insertWordArt(style) {
+  const index = state.current;
+  try {
+    const W = state.deck.width, H = state.deck.height;
+    const box = [W * 0.15, H * 0.4, W * 0.7, H * 0.2].map(Math.round);
+    const r = await request({ op: "build", fn: "insert_wordart", args: [index, style, ...box] }, { priority: 9 });
+    if (r.undo) selection.noteUndoState(r.undo);
+    selection.selectNode(r.value);
+    await slides.redrawSlide(index);
+    await selection.refresh();
+  } catch (e) {
+    errorDialog("OpenPresent could not insert the WordArt.", e.message);
+  }
+}
+
 export function init() {
+  register("insert.wordart", { label: "WordArt", enabled: () => !!state.deck && state.deck.count > 0, run: wordartDialog });
   register("insert.symbol", { label: "Symbol", enabled: () => !!state.deck && state.deck.count > 0, run: symbolDialog });
 }
