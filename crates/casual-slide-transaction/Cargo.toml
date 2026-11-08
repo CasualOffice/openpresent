@@ -10,6 +10,10 @@ publish = false
 
 [dependencies]
 casual-slide-model = { path = "../casual-slide-model" }
+# Collaboration (`VS-09`, ADR-020): the wire operations and protocol messages both the
+# server and the browser client speak, derived as OpenCalc's are (MIT or Apache-2.0).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [lints]
 workspace = true

@@ -39,6 +39,7 @@ use casual_slide_model::theme::{ColorScheme, FontScheme, ShapeStyle};
 use casual_slide_model::timing::{SlideTiming, Slot};
 use casual_slide_model::transition::SlideTransition;
 
+pub mod collab;
 mod design;
 pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE};
 pub mod rich;
@@ -91,6 +92,8 @@ pub enum TxnError {
     TableShape,
     /// No chart part of this name is in the document (`VS-11`).
     NoChart(String),
+    /// A shared session cannot send this edit yet, so it was not applied (`VS-09`).
+    NotShared,
 }
 
 impl TxnError {
@@ -111,6 +114,7 @@ impl TxnError {
             Self::NoTable(_) => "CS-TXN-0012",
             Self::TableShape => "CS-TXN-0013",
             Self::NoChart(_) => "CS-TXN-0014",
+            Self::NotShared => "CS-TXN-0015",
         }
     }
 }
@@ -190,6 +194,11 @@ impl core::fmt::Display for TxnError {
                 self.code()
             ),
             Self::NoChart(_) => write!(f, "[{}] no such chart part", self.code()),
+            Self::NotShared => write!(
+                f,
+                "[{}] this edit cannot be shared with other editors yet",
+                self.code()
+            ),
         }
     }
 }
@@ -675,6 +684,32 @@ fn typing_properties(p: &Paragraph, c: usize) -> Option<Box<CharacterProperties>
         .map(Box::new)
 }
 
+/// Whether text typed at `offset` of `body` takes the format of what follows rather
+/// than of the character before: no run holds the character before, as at a
+/// paragraph's start or after a line break or field. Collaboration needs it to grow a
+/// concurrent format over typed text exactly as applying them in either order would
+/// (`collab::wire`).
+pub fn typing_takes_after(body: &TextBody, offset: usize) -> bool {
+    let Ok((p, c)) = locate(body, offset) else {
+        return false;
+    };
+    let Some(p) = body.paragraphs.get(p) else {
+        return false;
+    };
+    let mut acc = 0usize;
+    for item in &p.items {
+        let len = item_length(item);
+        if matches!(item, TextItem::Run(_)) && acc < c && c <= acc.saturating_add(len) {
+            return false;
+        }
+        acc = acc.saturating_add(len);
+        if acc >= c {
+            break;
+        }
+    }
+    true
+}
+
 /// Insert plain text, with no break in it, at `c` of a paragraph.
 fn insert_plain(p: &mut Paragraph, c: usize, text: &str) {
     if text.is_empty() {
@@ -736,7 +771,7 @@ fn split_paragraph(p: &mut Paragraph, c: usize) -> Paragraph {
 }
 
 /// Whether XML can hold the character, as text a user typed.
-fn keep_char(ch: char) -> bool {
+pub(crate) fn keep_char(ch: char) -> bool {
     !(ch.is_control() && ch != '\t' || matches!(ch, '\u{FFFE}' | '\u{FFFF}'))
 }
 
@@ -1161,6 +1196,11 @@ pub struct History {
     applied: u64,
     pushes: u64,
     sealed: u64,
+    /// In a shared session: what may be applied (`VS-09`).
+    gate: Option<fn(&Operation) -> bool>,
+    /// In a shared session: every operation applied, with its inverse, in order, for
+    /// the host to send.
+    journal: Option<Vec<(Operation, Operation)>>,
 }
 
 impl History {
@@ -1174,6 +1214,42 @@ impl History {
         Self {
             depth,
             ..Self::default()
+        }
+    }
+
+    /// Start or stop a shared session (`VS-09`): while `gate` is set, an operation it
+    /// refuses is not applied, by edit, undo or redo, and fails with
+    /// [`TxnError::NotShared`]; and every operation applied is journaled with its
+    /// inverse for [`History::take_journal`].
+    pub fn share(&mut self, gate: Option<fn(&Operation) -> bool>) {
+        self.gate = gate;
+        self.journal = gate.map(|_| Vec::new());
+    }
+
+    /// Whether a shared session is on.
+    #[must_use]
+    pub fn is_shared(&self) -> bool {
+        self.gate.is_some()
+    }
+
+    /// Every operation applied since the last call, with its inverse, in order.
+    pub fn take_journal(&mut self) -> Vec<(Operation, Operation)> {
+        self.journal
+            .as_mut()
+            .map(core::mem::take)
+            .unwrap_or_default()
+    }
+
+    fn admit(&self, op: &Operation) -> Result<(), TxnError> {
+        match self.gate {
+            Some(gate) if !gate(op) => Err(TxnError::NotShared),
+            _ => Ok(()),
+        }
+    }
+
+    fn note(&mut self, op: Operation, inverse: &Operation) {
+        if let Some(journal) = self.journal.as_mut() {
+            journal.push((op, inverse.clone()));
         }
     }
 
@@ -1196,9 +1272,14 @@ impl History {
         doc: &mut D,
         op: Operation,
     ) -> Result<bool, TxnError> {
+        self.admit(&op)?;
+        let journaled = self.journal.is_some().then(|| op.clone());
         let (inverse, changed) = apply_inner(doc, op)?;
         if !changed {
             return Ok(false);
+        }
+        if let Some(op) = journaled {
+            self.note(op, &inverse);
         }
         self.applied = self.applied.saturating_add(1);
         self.pushes = self.pushes.saturating_add(1);
@@ -1265,6 +1346,10 @@ impl History {
         let Some(op) = self.undo.pop() else {
             return Ok(None);
         };
+        if let Err(e) = self.admit(&op) {
+            self.undo.push(op);
+            return Err(e);
+        }
         let applied = op.clone();
         let inverse = match apply(doc, op) {
             Ok(i) => i,
@@ -1273,6 +1358,7 @@ impl History {
                 return Err(e);
             }
         };
+        self.note(applied.clone(), &inverse);
         self.seal();
         self.applied = self.applied.saturating_add(1);
         self.redo.push(inverse);
@@ -1287,6 +1373,10 @@ impl History {
         let Some(op) = self.redo.pop() else {
             return Ok(None);
         };
+        if let Err(e) = self.admit(&op) {
+            self.redo.push(op);
+            return Err(e);
+        }
         let applied = op.clone();
         let inverse = match apply(doc, op) {
             Ok(i) => i,
@@ -1295,6 +1385,7 @@ impl History {
                 return Err(e);
             }
         };
+        self.note(applied.clone(), &inverse);
         self.seal();
         self.applied = self.applied.saturating_add(1);
         self.undo.push(inverse);
