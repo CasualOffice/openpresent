@@ -475,6 +475,49 @@ fn a_japanese_deck_draws_its_text_from_the_slices_its_characters_name() {
     assert!(ink > 100, "{ink} dark pixels in the title");
 }
 
+/// Arabic text draws, right to left from the right edge of a right-to-left paragraph
+/// (`T2D1-04`). Slide 2 of `z20089741-tasamoh-ar` drew only its bullets, at the left:
+/// no bundled face covered Arabic, and `pPr/@rtl` was not read.
+#[test]
+fn an_arabic_paragraph_draws_its_text_at_the_right() {
+    let mut deck = open_real("z20089741-tasamoh-ar.pptx");
+    let (png, _) = deck.render_slide_png(1, 96.0, None).unwrap();
+    let image = tiny_skia::Pixmap::decode_png(&png).unwrap();
+    let pixel = |_: &[u8], x: u32, y: u32| {
+        let c = image.pixel(x, y).unwrap().demultiply();
+        [c.red(), c.green(), c.blue(), c.alpha()]
+    };
+    let dark = |x0: u32, x1: u32, y0: u32, y1: u32| {
+        let mut ink = 0;
+        for y in (y0..y1).step_by(2) {
+            for x in (x0..x1).step_by(2) {
+                let [r, g, b, _] = pixel(&png, x, y);
+                if r.max(g).max(b) < 140 {
+                    ink += 1;
+                }
+            }
+        }
+        ink
+    };
+    // The list's five numbered lines, right-aligned against the bullets at about
+    // x 950 of 1280, as LibreOffice draws them.
+    let right = dark(640, 930, 200, 410);
+    assert!(right > 300, "{right} dark pixels in the list's right half");
+    // Nothing of it at the left, where the text drew before.
+    let left = dark(100, 400, 200, 410);
+    assert!(left < 20, "{left} dark pixels at the left");
+    // The bullet numbers sit right of the text.
+    let numbers = (200..410)
+        .step_by(2)
+        .flat_map(|y| (935..975).step_by(2).map(move |x| (x, y)))
+        .filter(|&(x, y)| {
+            let [r, g, _, _] = pixel(&png, x, y);
+            r > 120 && g < 90
+        })
+        .count();
+    assert!(numbers > 10, "{numbers} accent pixels where the numbers go");
+}
+
 /// A group's scale places its children but never thickens their lines. This deck's
 /// groups map a child space of master units onto EMU, 1587.5 times; scaling a 4.5 pt
 /// line by that painted the slide black (FH-01, gallery run 42492516147).

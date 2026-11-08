@@ -19,7 +19,8 @@
 // `{ op: "design", fn, args }` and `{ op: "themes" }`. Shapes (`SHAPE-01`): `{ op: "icons",
 // size }`, every preset's name and icon path. Out: `{ id, ok: true, ... }` or
 // `{ id, ok: false, error }`, where `error` is the engine's message with its code.
-// Nothing here fetches anything but the engine itself, from this origin.
+// Nothing here fetches anything but the engine itself and the CJK font slices under
+// `fonts/cjk/` a drawn slide asks for (`T2D1-04`), from this origin.
 
 import init, {
   open, slide_count, slide_size, render_slide_png, slide_report, save_deck, export_pdf, version,
@@ -53,6 +54,7 @@ import init, {
   notes_body, text_body_runs, selection_list, rename_shape, set_shape_hidden, move_shape_z,
   document_info, set_document_property, set_custom_property, remove_custom_property,
   save_deck_as, edits_applied,
+  slide_font_needs, register_font_slice, set_cjk_default_region,
 } from "./pkg/casual_slide_wasm.js";
 
 // The File tab (`FILE-01`, `editor.file.js`): `{ id, op: "file", fn, args }` calls one of
@@ -129,7 +131,108 @@ const ANIMATE = {
   set_animation, paint_animation,
 };
 
-const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });
+const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) })
+  // Han text in a Latin font takes the viewer's region, as OpenCalc's editor sets it.
+  .then((r) => { try { set_cjk_default_region(self.navigator?.language || ""); } catch {} return r; });
+
+// ---------------------------------------------------------------------------
+// Japanese, Chinese and Korean faces (`T2D1-04`)
+//
+// From OpenCalc's `editor.paint.js` and its PDF export's font loop: the faces are
+// WOFF2 slices under `fonts/cjk/`, never in the WebAssembly binary, and the
+// manifest says which characters each slice holds. The engine draws the slide here,
+// so after a drawing the worker asks which slices it wanted (`slide_font_needs`),
+// fetches those files, registers them and draws again. A deployment without the
+// slices draws as before, with the characters left blank and reported.
+// ---------------------------------------------------------------------------
+
+const CJK_BASE = new URL("./fonts/cjk/", import.meta.url);
+let cjkManifest = null;
+const cjkRegistered = new Set();
+const cjkTried = new Set();
+const cjkRanges = new Map();
+
+function loadCjkManifest() {
+  cjkManifest ??= fetch(new URL("manifest.json", CJK_BASE))
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+  return cjkManifest;
+}
+
+/// The slice of `region` holding code point `cp`, or -1: a binary search over the
+/// manifest's ranges, parsed once per region.
+function sliceFor(manifest, region, cp) {
+  let spans = cjkRanges.get(region);
+  if (!spans) {
+    spans = [];
+    (manifest.regions?.[region] || []).forEach((line, i) => {
+      for (const part of String(line || "").split(",")) {
+        const [a, b] = part.split("-");
+        const lo = parseInt(a, 16);
+        const hi = b === undefined ? lo : parseInt(b, 16);
+        if (Number.isFinite(lo) && Number.isFinite(hi) && lo <= hi) spans.push([lo, hi, i]);
+      }
+    });
+    spans.sort((x, y) => x[0] - y[0]);
+    cjkRanges.set(region, spans);
+  }
+  let lo = 0, hi = spans.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (spans[mid][0] <= cp) lo = mid + 1; else hi = mid;
+  }
+  const s = spans[lo - 1];
+  return s && cp <= s[1] ? s[2] : -1;
+}
+
+/// Fetch and register the slices `needs` names (`[{chain, chars}]`). Each character
+/// is looked for once per variant, so a slice the deployment lacks is not asked for
+/// on every drawing. Whether anything new was registered.
+async function loadCjkFor(needs) {
+  const m = await loadCjkManifest();
+  if (!m || !m.variants) return false;
+  const files = new Map();
+  for (const { chain, chars } of needs) {
+    if (!Array.isArray(chain) || typeof chars !== "string") continue;
+    for (const ch of chars) {
+      const asked = chain[0] + "\u0000" + ch;
+      if (cjkTried.has(asked)) continue;
+      cjkTried.add(asked);
+      const cp = ch.codePointAt(0);
+      for (const key of chain) {
+        const v = m.variants[key];
+        if (!v) continue;
+        const i = sliceFor(m, v.region, cp);
+        if (i < 0) continue;
+        const file = `${key}/${String(i).padStart(3, "0")}`;
+        if (!cjkRegistered.has(file)) files.set(file, [key, i]);
+        break;
+      }
+    }
+  }
+  let added = false;
+  await Promise.all([...files].map(async ([file, [key, i]]) => {
+    try {
+      const sha = m.variants[key]?.sha256_16?.[i] ?? "";
+      const r = await fetch(new URL(`${file}.woff2${sha ? `?h=${sha}` : ""}`, CJK_BASE));
+      if (!r.ok) return;
+      register_font_slice(key, new Uint8Array(await r.arrayBuffer()));
+      cjkRegistered.add(file);
+      added = true;
+    } catch { /* left blank and reported, as before */ }
+  }));
+  return added;
+}
+
+/// Draw with `draw`, and once more if the drawing wanted CJK slices that have now
+/// been loaded.
+async function drawWithFonts(draw) {
+  const png = draw();
+  let needs = [];
+  try { needs = JSON.parse(slide_font_needs()); } catch { needs = []; }
+  if (needs.length && (await loadCjkFor(needs))) return draw();
+  return png;
+}
 
 function failure(e) {
   // A `JsError` from the bridge carries `[CS-…] what happened`; anything else
@@ -161,10 +264,11 @@ self.onmessage = async (event) => {
       const size = slide_size();
       self.postMessage({ id, ok: true, count: slide_count(), width: size[0], height: size[1], version: version() });
     } else if (msg.op === "png") {
-      const png = render_slide_png(msg.index, msg.width);
+      const png = await drawWithFonts(() => render_slide_png(msg.index, msg.width));
       self.postMessage({ id, ok: true, png: png.buffer }, [png.buffer]);
     } else if (msg.op === "png-hiding") {
-      const png = render_slide_png_hiding(msg.index, msg.width, new Uint32Array(msg.nodes || []));
+      const nodes = new Uint32Array(msg.nodes || []);
+      const png = await drawWithFonts(() => render_slide_png_hiding(msg.index, msg.width, nodes));
       self.postMessage({ id, ok: true, png: png.buffer }, [png.buffer]);
     } else if (msg.op === "animate") {
       const fn = Object.hasOwn(ANIMATE, msg.fn) ? ANIMATE[msg.fn] : null;

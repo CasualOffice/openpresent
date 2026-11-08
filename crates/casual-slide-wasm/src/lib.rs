@@ -38,6 +38,7 @@ mod clipboard;
 mod edit;
 mod file;
 pub use file::{CustomKind, PROPERTY_KEYS};
+mod fonts;
 mod format;
 mod group;
 #[cfg(test)]
@@ -295,6 +296,8 @@ pub struct Viewer {
     original_review: casual_slide_transaction::Review,
     /// Where each slide's comment part and the author list were found, as opened.
     review_parts: review::ReviewParts,
+    /// The CJK characters the last drawn slide had no slice for (`T2D1-04`).
+    cjk_wanted: std::collections::BTreeSet<(casual_slide_text::cjk::Variant, char)>,
 }
 
 impl Viewer {
@@ -330,6 +333,7 @@ impl Viewer {
             review: original_review.clone(),
             original_review,
             review_parts,
+            cjk_wanted: std::collections::BTreeSet::new(),
         })
     }
 
@@ -368,6 +372,7 @@ impl Viewer {
         let dpi = self.dpi_for(width)?;
         let (png, report) = self.deck.render_slide_png(index, dpi, None)?;
         self.reports.insert(index, report.lines());
+        self.cjk_wanted = report.scene.cjk_wanted;
         Ok(png)
     }
 

@@ -194,6 +194,12 @@ pub struct ParagraphLayout {
     pub runs: Vec<StyledText>,
     /// The paragraph mark's style, which sizes an empty paragraph.
     pub end: RunStyle,
+    /// `pPr/@rtl`: the paragraph reads right to left. Its margins and indent are
+    /// measured from the right edge, its bullet sits at the right, and its runs are
+    /// ordered by [`crate::bidi`] with a right-to-left base (`T2D1-04`). The
+    /// alignment stays as written: `r` is the right edge either way, as PowerPoint
+    /// and LibreOffice draw it.
+    pub rtl: bool,
 }
 
 /// Vertical anchoring of the text in its frame.
@@ -340,6 +346,10 @@ pub struct TextLayout {
     /// Where a caret can stand on each line, in reading order: what an editor
     /// places a caret and hit-tests with (`VS-05`).
     pub carets: Vec<CaretLine>,
+    /// Each East Asian character and the CJK slice variant meant to draw it that
+    /// is not loaded: what a host fetches and registers before drawing again, as
+    /// OpenCalc's PDF export asks (`T2D1-04`). Empty when every slice is in.
+    pub cjk_wanted: std::collections::BTreeSet<(crate::cjk::Variant, char)>,
 }
 
 /// One laid-out line's caret stops, in the frame's space, points.
@@ -484,6 +494,8 @@ struct Item {
     face: Option<&'static [u8]>,
     style: usize,
     synthetic_bold: bool,
+    /// Bidi embedding level: odd is right to left (`T2D1-04`).
+    level: u8,
     glyphs: Vec<Shaped>,
 }
 
@@ -494,6 +506,8 @@ struct Prepared<'a> {
     items: Vec<Item>,
     /// Byte length of the bullet's text at the start of `text`; zero without one.
     bullet_len: usize,
+    /// CJK characters whose slice is not loaded, with the variant meant for them.
+    wanted: std::collections::BTreeSet<(crate::cjk::Variant, char)>,
 }
 
 fn same_face(a: Option<&'static [u8]>, b: Option<&'static [u8]>) -> bool {
@@ -510,6 +524,7 @@ fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
         styles: Vec::new(),
         items: Vec::new(),
         bullet_len: 0,
+        wanted: std::collections::BTreeSet::new(),
     };
     let bullet = paragraph.bullet.iter().filter(|b| !b.text.is_empty());
     let has_text = paragraph.runs.iter().any(|r| !r.text.is_empty());
@@ -517,6 +532,23 @@ fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
         .clone()
         .filter(|_| has_text)
         .chain(paragraph.runs.iter());
+    // Bidi levels over the paragraph's whole text, bullet included, by byte offset
+    // (`T2D1-04`). All zero, and no work, for a left-to-right paragraph with no
+    // right-to-left character, so Latin text lays out exactly as before.
+    let whole: String = runs.clone().map(|r| r.text.as_str()).collect();
+    let byte_levels: Vec<u8> = if paragraph.rtl || crate::bidi::has_rtl(&whole) {
+        let levels = crate::bidi::levels(&whole, paragraph.rtl);
+        let mut out = vec![0u8; whole.len()];
+        for ((offset, ch), level) in whole.char_indices().zip(levels) {
+            if let Some(slots) = out.get_mut(offset..offset + ch.len_utf8()) {
+                slots.fill(level);
+            }
+        }
+        out
+    } else {
+        Vec::new()
+    };
+    let level_at = |offset: usize| byte_levels.get(offset).copied().unwrap_or(0);
     for (index, run) in runs.enumerate() {
         let base = prepared.text.len();
         prepared.text.push_str(&run.text);
@@ -537,7 +569,7 @@ fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
             run.style.italic,
             &run.text,
         );
-        // Split the run where the face drawing it changes.
+        // Split the run where the face drawing it, or its bidi level, changes.
         let mut segment: Option<(usize, Option<&'static [u8]>, bool)> = None;
         let mut close = |from: usize, to: usize, face: Option<&'static [u8]>, synth: bool| {
             if to > from {
@@ -547,15 +579,22 @@ fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
                     face,
                     style,
                     synthetic_bold: synth,
+                    level: level_at(base + from),
                     glyphs: Vec::new(),
                 });
             }
         };
         for (offset, ch) in run.text.char_indices() {
             let resolved = faces.resolve(ch);
+            if let Some(variant) = resolved.wanted.filter(|_| crate::cjk::is_cjk(ch)) {
+                prepared.wanted.insert((variant, ch));
+            }
             // A line feed is never drawn; it stands alone so it shapes to nothing.
             let face = if ch == '\n' { None } else { resolved.face };
-            let breaks_segment = ch == '\n' || segment.is_some_and(|(_, f, _)| !same_face(f, face));
+            let breaks_segment = ch == '\n'
+                || segment.is_some_and(|(from, f, _)| {
+                    !same_face(f, face) || level_at(base + from) != level_at(base + offset)
+                });
             if breaks_segment && let Some((from, f, s)) = segment.take() {
                 close(from, offset, f, s);
             }
@@ -581,17 +620,23 @@ fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
         };
         let size = style.drawn_size();
         item.glyphs = match item.face {
-            Some(face) => crate::shape::run(face, text, size)
-                .unwrap_or_default()
-                .into_iter()
-                .map(|g| Shaped {
-                    id: g.id,
-                    cluster: item.start.saturating_add(g.cluster as usize),
-                    advance: g.advance,
-                    x_offset: g.x_offset,
-                    y_offset: g.y_offset,
-                })
-                .collect(),
+            Some(face) => crate::shape::run_directed(
+                face,
+                text,
+                size,
+                // Guessed, as before, where no bidi ran; else as the level says.
+                (!byte_levels.is_empty()).then_some(item.level % 2 == 1),
+            )
+            .unwrap_or_default()
+            .into_iter()
+            .map(|g| Shaped {
+                id: g.id,
+                cluster: item.start.saturating_add(g.cluster as usize),
+                advance: g.advance,
+                x_offset: g.x_offset,
+                y_offset: g.y_offset,
+            })
+            .collect(),
             // Nothing can draw it: it advances by the width it would have, and
             // draws nothing, so the rest of the line is where it should be.
             None => text
@@ -734,8 +779,10 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
     let mut lines_total = 0usize;
     let count = body.paragraphs.len();
 
+    let mut cjk_wanted = std::collections::BTreeSet::new();
     for (index, paragraph) in body.paragraphs.iter().enumerate() {
-        let prepared = prepare(paragraph);
+        let mut prepared = prepare(paragraph);
+        cjk_wanted.append(&mut prepared.wanted);
         let prefix = prefix_widths(&prepared);
         let bullet_width = width(&prefix, 0, prepared.bullet_len);
         let first_x = paragraph.margin_left + paragraph.indent;
@@ -822,7 +869,15 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
             };
             let is_last = line_index + 1 == spans.len();
             let slack = avail - line_w;
-            let (mut pen, gap_extra) = match paragraph.align {
+            // Positions are worked out from the paragraph's start edge, and a
+            // right-to-left paragraph's start is the right: there `r` is flush with
+            // the start and `l` with the end (`T2D1-04`).
+            let align = match (paragraph.rtl, paragraph.align) {
+                (true, Align::Left) => Align::Right,
+                (true, Align::Right) => Align::Left,
+                (_, a) => a,
+            };
+            let (mut pen, gap_extra) = match align {
                 Align::Left => (line_x, 0.0),
                 Align::Center => (line_x + slack / 2.0, 0.0),
                 Align::Right => (line_x + slack, 0.0),
@@ -841,7 +896,11 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
             let baseline = top + baseline;
             // The bullet, on the first line only, at the first line's indent.
             if line_index == 0 && prepared.bullet_len > 0 {
-                let mut bullet_pen = first_x;
+                let mut bullet_pen = if paragraph.rtl {
+                    inner_width - first_x - bullet_width
+                } else {
+                    first_x
+                };
                 let at = LinePlace {
                     origin_x: left,
                     baseline,
@@ -870,12 +929,36 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
                 .get(prepared.bullet_len..caret_from)
                 .map_or(0, |t| t.chars().count());
             let mut stops = Vec::with_capacity(text_tail.len().saturating_add(1));
-            let pen_x = left + pen;
+            // A right-to-left line's caret moves leftwards from its start edge.
+            // Mixed-direction lines place it by logical width, which is right for
+            // each single-direction stretch and approximate across them.
+            let (pen_x, sign) = if paragraph.rtl {
+                (left + inner_width - pen, -1.0)
+            } else {
+                (left + pen, 1.0)
+            };
             stops.push((chars_before, pen_x));
             for (offset, ch) in text_tail.char_indices() {
                 let after = caret_from + offset + ch.len_utf8();
                 chars_before += 1;
-                stops.push((chars_before, pen_x + width(&prefix, caret_from, after)));
+                stops.push((
+                    chars_before,
+                    pen_x + sign * width(&prefix, caret_from, after),
+                ));
+            }
+            if paragraph.rtl {
+                // From the start edge to the line's left end, which is where its
+                // glyphs are drawn from.
+                let gaps = if gap_extra == 0.0 {
+                    0.0
+                } else {
+                    prepared
+                        .text
+                        .get(start..trimmed)
+                        .map_or(0, |s| s.chars().filter(|c| *c == ' ').count())
+                        as f32
+                };
+                pen = inner_width - pen - line_w - gap_extra * gaps;
             }
             carets.push(CaretLine {
                 paragraph: index,
@@ -929,6 +1012,7 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
         substitutions: Vec::new(),
         missing_scripts: Vec::new(),
         carets,
+        cjk_wanted,
     }
 }
 
@@ -952,10 +1036,16 @@ fn emit(
     out: &mut Vec<GlyphRun>,
 ) {
     let (from, to) = span;
-    for item in &prepared.items {
-        if item.end <= from || item.start >= to {
-            continue;
-        }
+    // The line's pieces in the order they are drawn, left to right (UAX #9 L2,
+    // `T2D1-04`); logical order when every level is zero.
+    let pieces: Vec<&Item> = prepared
+        .items
+        .iter()
+        .filter(|item| item.end > from && item.start < to)
+        .collect();
+    let levels: Vec<u8> = pieces.iter().map(|item| item.level).collect();
+    let order = crate::bidi::visual_order(&levels);
+    for item in order.iter().filter_map(|&i| pieces.get(i).copied()) {
         let Some(style) = prepared.styles.get(item.style) else {
             continue;
         };

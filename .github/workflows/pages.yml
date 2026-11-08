@@ -75,6 +75,9 @@ jobs:
           mkdir -p site/pkg site/shots
           cp webapp/*.html webapp/*.js webapp/*.css webapp/*.svg site/
           cp "$RUNNER_TEMP/pkg/casual_slide_wasm.js" "$RUNNER_TEMP/pkg/casual_slide_wasm_bg.wasm" site/pkg/
+          # The CJK slices the editor's worker fetches as a slide asks (T2D1-04): without
+          # them the site drew no Japanese, Chinese or Korean. As OpenCalc's pages.yml.
+          cp -r webapp/fonts site/fonts
           mkdir -p site/samples
           cp "fixtures/real/$SAMPLE_DECK.pptx" site/samples/sample-deck.pptx
       - name: Draw the front page's slides with our renderer

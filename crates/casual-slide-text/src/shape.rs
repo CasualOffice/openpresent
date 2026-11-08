@@ -23,7 +23,7 @@
 //! of tables, and a single `read-fonts` in the lock file rather than two
 //! libraries kept in step by luck.
 
-use harfrust::{FontRef, ShapeOptions, ShaperData, UnicodeBuffer};
+use harfrust::{Direction, FontRef, ShapeOptions, ShaperData, UnicodeBuffer};
 
 /// One glyph, placed.
 ///
@@ -55,6 +55,22 @@ pub struct Placed {
 /// what makes Arabic render as words rather than as letters in reverse.
 #[must_use]
 pub fn run(bytes: &[u8], text: &str, size_px: f32) -> Option<Vec<Placed>> {
+    run_directed(bytes, text, size_px, None)
+}
+
+/// [`run`], in the direction the bidi levels gave the text (`Some(true)` right to
+/// left), or guessed from it with `None`.
+///
+/// New here (`T2D1-04`): a slide paragraph's runs are split by bidi level first,
+/// so digits or spaces inside Arabic text are shaped in the direction their level
+/// says, not the one their own characters would suggest.
+#[must_use]
+pub fn run_directed(
+    bytes: &[u8],
+    text: &str,
+    size_px: f32,
+    rtl: Option<bool>,
+) -> Option<Vec<Placed>> {
     let font = FontRef::from_index(bytes, 0).ok()?;
 
     // Built per call rather than cached. The tables it derives are a real cost
@@ -74,6 +90,13 @@ pub fn run(bytes: &[u8], text: &str, size_px: f32) -> Option<Vec<Placed>> {
 
     let mut buffer = UnicodeBuffer::new();
     buffer.push_str(text);
+    if let Some(rtl) = rtl {
+        buffer.set_direction(if rtl {
+            Direction::RightToLeft
+        } else {
+            Direction::LeftToRight
+        });
+    }
     // Direction and script are guessed from the text itself. Deliberately: the
     // alternative is a per-cell setting nobody fills in, and a wrong guess is
     // visible while an unset field is not.
@@ -147,7 +170,8 @@ mod tests {
     ///
     /// Shaping is necessary and not sufficient: a script also needs a font that
     /// covers it, and the bundled families — Caladea, Carlito, Liberation,
-    /// Roboto — cover Latin and Hebrew and not Arabic, Devanagari, Thai or CJK.
+    /// Roboto — cover Latin and Hebrew and not Devanagari, Thai or CJK; Arabic has
+    /// the Noto Arabic faces since `T2D1-04`.
     /// Those render as `.notdef` today and would still do so with a shaper,
     /// because there are no glyphs to shape.
     #[test]
@@ -162,11 +186,9 @@ mod tests {
         // CJK is not in this list: its faces ship as slices a host supplies
         // (`XL-FEAT-140`), so whether `中` is covered depends on what this
         // process has registered, which another test in this binary does.
-        for (script, ch) in [
-            ("Arabic", '\u{0645}'),
-            ("Devanagari", '\u{0915}'),
-            ("Thai", '\u{0e01}'),
-        ] {
+        // Arabic is covered since `T2D1-04` (Noto Sans and Naskh Arabic).
+        assert!(covered('\u{0645}'), "Arabic");
+        for (script, ch) in [("Devanagari", '\u{0915}'), ("Thai", '\u{0e01}')] {
             assert!(!covered(ch), "{script} is now covered — update ADR-018");
         }
     }

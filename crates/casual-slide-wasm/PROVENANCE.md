@@ -25,3 +25,7 @@ The edit ops and their undo history live in `casual-slide-transaction` (its own
 there beside slice 5's text ops (`VS-05`), so there is one op set and one undo stack.
 `src/edit.rs` (`VS-05`) is new: hit-testing a click into a text box, caret and selection
 geometry from `casual-slide-text`'s caret lines, and the text edits through the history.
+`src/fonts.rs` (`T2D1-04`): `register_font_slice` and `set_cjk_default_region` copied
+from OpenCalc's `crates/casual-calc-wasm/src/fonts.rs` at `b23c67c`; `slide_font_needs`
+gives OpenCalc's `session_export_pdf_font_needs` JSON for the last drawn slide, since
+here the engine, not the browser, draws the slide's text.

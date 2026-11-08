@@ -188,6 +188,7 @@ pub fn resolve_body<'a>(
             bullet,
             runs,
             end,
+            rtl: chain.paragraph(p, |pp| pp.rtl).is_some_and(|r| r.value),
         });
     }
     (out, fonts.substitutions)
@@ -212,6 +213,9 @@ fn script_tag(lang: Option<&str>) -> Option<&'static str> {
     match primary {
         "ja" => Some("Jpan"),
         "ko" => Some("Hang"),
+        // Right-to-left scripts, for a theme's `cs` font by script (`T2D1-04`).
+        "ar" | "fa" | "ur" | "ps" | "sd" | "ug" => Some("Arab"),
+        "he" | "yi" => Some("Hebr"),
         "zh" => {
             let traditional = rest
                 .iter()
@@ -345,9 +349,17 @@ fn run_style<'a>(
             .map(|r| r.value),
     );
     let ea = run_family(chain, props, paragraph, FontScript::EastAsian, fonts);
+    // Arabic and Hebrew text is drawn in the run's `cs` font, as PowerPoint draws
+    // complex scripts (`T2D1-04`); its Latin font when it names none.
+    let complex = !east_asian && crate::bidi::has_rtl(text);
     let family = east_asian
         .then(|| ea.clone())
         .flatten()
+        .or_else(|| {
+            complex
+                .then(|| run_family(chain, props, paragraph, FontScript::ComplexScript, fonts))
+                .flatten()
+        })
         .or_else(|| run_family(chain, props, paragraph, FontScript::Latin, fonts));
     let east_asian_family = ea.filter(|e| Some(e) != family.as_ref());
     if let Some(f) = &family {

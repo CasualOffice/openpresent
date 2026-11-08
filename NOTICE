@@ -111,6 +111,16 @@ written for this project, not copies; see tools/f4/validate.py.
                    SIL OFL-1.1     Red Hat and Google (github.com/liberationfonts/liberation-fonts),
                                    liberation-fonts-ttf-2.1.5
 
+  crates/casual-slide-text/fonts/noto/   added here on 2026-11-09 (T2D1-04), from
+                                    Google's official Noto releases, unhinted
+                                    static faces, unmodified
+
+  Noto Sans Arabic SIL OFL-1.1     The Noto Project Authors (github.com/notofonts/arabic),
+                                   release NotoSansArabic-v2.013
+  Noto Naskh Arabic
+                   SIL OFL-1.1     The Noto Project Authors (github.com/notofonts/arabic),
+                                   release NotoNaskhArabic-v2.021
+
 The OFL texts ship unmodified beside the fonts, in
 crates/casual-slide-text/fonts/LICENSES/. The OFL governs the font files only and
 has no effect on the licence of this repository's code. The fonts are

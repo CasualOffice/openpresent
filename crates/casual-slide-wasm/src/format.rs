@@ -1155,7 +1155,7 @@ fn lines_text(thousandths: i32) -> String {
     s.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
-fn json_string(s: &str) -> String {
+pub(crate) fn json_string(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
     out.push('"');
     for c in s.chars() {
