@@ -57,6 +57,8 @@ by saying so.
 | 46 | 2026-11-08 | Detail of 45: build the web app the way OpenCalc's is: its structure, file layout (`editor.*.js`, `commands.js` registry, CSS, dialogs, files, deploy and download pages), conventions and look, copied with provenance, changing only what a presentation needs: PowerPoint's ribbon tabs (Home, Insert, Design, Transitions, Animations, Slide Show, Review, View), the thumbnail pane, slide canvas, notes pane and status bar. Wire only what works; show other commands present but disabled through the registry, never faked. Read OpenCalc's UI docs first. This reverses OpenCalc's rule (its docs/91 §8) of leaving unbuilt commands out | `webapp/`, `VS-01` |
 | 47 | 2026-11-08 | A marketing site and the editor, deployed on GitHub Pages exactly as OpenCalc does it: its landing, docs, download and deploy pages copied with provenance and adapted, in the cyan accent; every claim true today and none of a PowerPoint match; real renders, never mock-ups; one workflow deploys, with the gallery folded in. Pages is switched on with source "GitHub Actions" at https://casualoffice.github.io/openpresent/ | `SITE-01`, `webapp/`, `.github/workflows/pages.yml` |
 | 48 | 2026-11-08 | Fixing CI must be quick: run only the failing tests locally, one by one, to reproduce and confirm a fix; never the full suite on this machine. Time boxes are short: 30 minutes for CI fixes | [CLAUDE.md](../CLAUDE.md) |
+| 49 | 2026-11-08 | Run CI only on `main`'s newest commit: a new push cancels every older run, in every workflow | `.github/workflows` |
+| 50 | 2026-11-08 | The editor opens with a blank presentation and one blank slide, as PowerPoint does | `webapp/`, `VS-08` |
 
 ## Boundaries set by the environment
 

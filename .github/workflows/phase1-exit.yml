@@ -28,7 +28,7 @@ permissions:
 # cancelled, even while queued; a pull request's superseded run is.
 concurrency:
   group: phase1-exit-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always

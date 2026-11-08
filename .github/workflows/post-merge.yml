@@ -19,7 +19,7 @@ permissions:
 # name, so a queued run is not displaced by a newer one either.
 concurrency:
   group: post-merge-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   gates:
