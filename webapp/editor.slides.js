@@ -1,5 +1,5 @@
-// The slides: the thumbnail pane, the slide on the stage, zoom, and the slide
-// show. This module is to a deck what OpenCalc's `editor.sheets.js` is to a
+// The slides: the thumbnail pane, the slide on the stage, zoom, and the notes
+// pane; the slide show is `editor.show.js`. This module is to a deck what OpenCalc's `editor.sheets.js` is to a
 // workbook's sheets: it draws what the engine reports and keeps no model.
 //
 // Every picture is drawn by the engine (`casual-slide-render` through the
@@ -10,6 +10,7 @@ import { state, request, dropQueued, changed, status } from "./editor.core.js";
 import { reportDialog } from "./editor.dialogs.js";
 import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
+import * as show from "./editor.show.js";
 
 const byId = (id) => document.getElementById(id);
 const EMU_PER_INCH = 914400;
@@ -197,6 +198,7 @@ export function go(i) {
   markThumb();
   changed();
   drawStage();
+  drawNotes();
 }
 
 export function setZoom(z) {
@@ -232,66 +234,34 @@ export function load() {
   markThumb();
   changed();
   drawStage();
+  drawNotes();
   byId("stage").focus({ preventScroll: true });
 }
 
-/* ── Slide show ─────────────────────────────────────────────────────────── */
+/* ── Slide show (`editor.show.js`, `VS-07`) ───────────────────────────── */
 
-let showIndex = 0;
-let showUrl = null;
-let showToken = 0;
+export function showing() { return show.showing(); }
 
-export function showing() { return !byId("show").hidden; }
+/// Start the slide show at slide `from`; with `presenterView`, Presenter View too.
+export function startShow(from, opts) { return show.start(from, opts); }
 
-async function drawShow() {
-  const show = byId("show");
-  const img = byId("show-img");
-  const token = ++showToken;
-  if (showIndex >= state.deck.count) {
-    // PowerPoint's last screen: black, saying the show is over.
-    img.hidden = true;
-    show.dataset.end = "End of slide show, click to exit.";
-    show.classList.add("is-end");
-    return;
+/* ── Notes (`VS-07`) ────────────────────────────────────────────────────── */
+
+let notesToken = 0;
+
+/// The notes pane under the stage: the current slide's speaker notes, as text.
+async function drawNotes() {
+  const box = byId("notes-text");
+  const t = ++notesToken;
+  const index = state.current;
+  try {
+    const r = await request({ op: "notes", index }, { priority: 3 });
+    if (t !== notesToken) return;
+    box.textContent = r.notes || "This slide has no speaker notes.";
+    box.classList.toggle("is-empty", !r.notes);
+  } catch {
+    if (t === notesToken) box.textContent = "";
   }
-  show.classList.remove("is-end");
-  img.hidden = false;
-  const w = Math.min(show.clientWidth || window.innerWidth, (show.clientHeight || window.innerHeight) / aspect());
-  const url = await draw(showIndex, w * dpr(), 6);
-  if (!url || token !== showToken) { if (url) URL.revokeObjectURL(url); return; }
-  img.src = url;
-  img.alt = `Slide ${showIndex + 1}`;
-  if (showUrl) URL.revokeObjectURL(showUrl);
-  showUrl = url;
-}
-
-/// Start the slide show at slide `from`.
-export async function startShow(from) {
-  if (!state.deck) return;
-  const show = byId("show");
-  showIndex = from;
-  show.hidden = false;
-  show.focus();
-  try { await show.requestFullscreen?.(); } catch { /* shown as a window-filling layer instead */ }
-  drawShow();
-}
-
-function endShow() {
-  const show = byId("show");
-  if (show.hidden) return;
-  show.hidden = true;
-  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-  if (showUrl) { URL.revokeObjectURL(showUrl); showUrl = null; }
-  byId("show-img").removeAttribute("src");
-  go(Math.min(showIndex, state.deck.count - 1));
-  byId("stage").focus({ preventScroll: true });
-}
-
-function showStep(d) {
-  if (showIndex + d < 0) return;
-  if (showIndex >= state.deck.count && d > 0) { endShow(); return; }
-  showIndex += d;
-  drawShow();
 }
 
 /* ── Wiring ─────────────────────────────────────────────────────────────── */
@@ -324,18 +294,8 @@ export function init() {
     go(state.current + (e.deltaY > 0 ? 1 : -1));
   }, { passive: false });
 
-  const show = byId("show");
-  show.addEventListener("click", () => showStep(1));
-  show.addEventListener("contextmenu", (e) => { e.preventDefault(); showStep(-1); });
-  show.addEventListener("keydown", (e) => {
-    e.stopPropagation();
-    if (e.key === "Escape") { e.preventDefault(); endShow(); return; }
-    const step = { ArrowRight: 1, ArrowDown: 1, PageDown: 1, " ": 1, Enter: 1, n: 1, ArrowLeft: -1, ArrowUp: -1, PageUp: -1, Backspace: -1, p: -1 }[e.key];
-    if (step) { e.preventDefault(); showStep(step); }
-    else if (e.key === "Home") { e.preventDefault(); showIndex = 0; drawShow(); }
-    else if (e.key === "End") { e.preventDefault(); showIndex = state.deck.count - 1; drawShow(); }
+  show.init((last) => {
+    go(last);
+    byId("stage").focus({ preventScroll: true });
   });
-  // Leaving full screen with the browser's own Escape ends the show too.
-  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && showing()) endShow(); });
-  window.addEventListener("resize", () => { if (showing()) drawShow(); });
 }

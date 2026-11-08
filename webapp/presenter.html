@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Presenter View (`VS-07`), opened by the editor's slide show. The same strict
+         policy as the editor: no inline script or style, nothing from another
+         origin. The slides are `blob:` pictures the editor drew; the notes arrive
+         as text and are set with `textContent`. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; img-src 'self' blob:; style-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Presenter View - OpenPresent</title>
+    <link rel="stylesheet" href="./presenter.css" />
+  </head>
+  <body class="pv">
+    <header class="pv-top">
+      <span class="pv-timer" id="pv-timer" aria-label="Time presenting">0:00:00</span>
+      <button class="pv-btn" id="pv-pause" type="button">Pause</button>
+      <button class="pv-btn" id="pv-reset" type="button">Restart timer</button>
+      <span class="pv-spacer"></span>
+      <span class="pv-clock" id="pv-clock" aria-label="Time of day"></span>
+    </header>
+    <main class="pv-main">
+      <section class="pv-current" aria-label="Current slide">
+        <div class="pv-frame" id="pv-current-frame">
+          <img class="pv-img" id="pv-current" alt="" />
+          <span class="pv-blank" id="pv-blank" hidden></span>
+        </div>
+        <p class="pv-effect" id="pv-effect" hidden></p>
+      </section>
+      <aside class="pv-side">
+        <h2 class="pv-label" id="pv-next-label">Next slide</h2>
+        <div class="pv-frame pv-next-frame"><img class="pv-img" id="pv-next" alt="" /></div>
+        <h2 class="pv-label">Notes</h2>
+        <div class="pv-notes" id="pv-notes" aria-live="polite"></div>
+      </aside>
+    </main>
+    <footer class="pv-bar">
+      <button class="pv-btn" id="pv-prev" type="button" aria-label="Previous slide">&#9664; Previous</button>
+      <span class="pv-count" id="pv-count" role="status"></span>
+      <button class="pv-btn" id="pv-next-btn" type="button" aria-label="Next slide">Next &#9654;</button>
+      <span class="pv-spacer"></span>
+      <button class="pv-btn" id="pv-black" type="button" title="Black or unblack the screen (B)">Black screen</button>
+      <button class="pv-btn pv-end" id="pv-end" type="button" title="End the slide show (Esc)">End Slide Show</button>
+    </footer>
+    <script type="module" src="./presenter.js"></script>
+  </body>
+</html>

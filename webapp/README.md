@@ -26,11 +26,13 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `editor.js` | The one module the page names |
 | `editor.core.js` | State, the engine client and its priority queue, every command registered, keys, boot |
 | `editor.files.js` | File picker, drag and drop; `download`, through which Save and every Export pass (the desktop shell's hook, `window.__openpresentNative.save(bytes, ext, name)`) |
-| `editor.slides.js` | Thumbnails, the stage, zoom, Reading View, the slide show |
+| `editor.slides.js` | Thumbnails, the stage, zoom, Reading View, the notes pane |
+| `editor.show.js` | The slide show (`VS-07`): From Beginning, From Current Slide and Presenter View; PowerPoint's keys, number then Enter, black and white screens, hidden slides skipped, a fade for each transition with the rest reported |
+| `presenter.html`, `presenter.js`, `presenter.css` | Presenter View's window: current and next slide, notes as text, timer, clock, slide count; driven by `editor.show.js` through `window.opener` |
 | `editor.selection.js` | Shape selection on the stage (`VS-06`): click, Tab, drag to move, 8 resize and 1 rotate handle, nudge, Delete, undo and redo; after OpenCalc's `editor.selection.js`. One op per drag, at its end |
 | `editor.text.js` | Text editing on the stage (`VS-05`): double click into a text box, caret, typing, Backspace and Delete, selection by drag, Shift+arrows and Ctrl+A, Bold, Italic and Underline (Home ribbon and Ctrl+B/I/U), undo and redo over the one history. The engine lays out and hit-tests; a hidden textarea takes keys and IME; caret and selection are drawn in an SVG in slide EMU. After OpenCalc's in-cell editor |
 | `editor.dialogs.js` | The modal: errors, the per-slide report, shortcuts, about |
-| `render.worker.js` | The engine in a worker: open, draw a slide to PNG, report, save, PDF |
+| `render.worker.js` | The engine in a worker: open, draw a slide to PNG, report, save, PDF, edits, and the show's plan and notes |
 | `commands.js` | The command registry |
 | `ribbon.js`, `ribbon.model.js` | The ribbon, File page and Quick Access Toolbar, drawn from the model |
 | `editor.css`, `ribbon.css`, `ribbon.tokens.css` | Tokens (accent `DEC-03`), regions, the ribbon |

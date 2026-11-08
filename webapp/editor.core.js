@@ -214,8 +214,11 @@ function registerCommands() {
   register("slide.first", { label: "First Slide", shortcut: "Home", enabled: hasDeck, run: () => slides.go(0) });
   register("slide.last", { label: "Last Slide", shortcut: "End", enabled: hasDeck, run: () => slides.go(state.deck.count - 1) });
 
-  register("slideshow.from-beginning", { label: "From Beginning", shortcut: "F5", enabled: hasDeck, run: () => slides.startShow(0) });
-  register("slideshow.from-current", { label: "From Current Slide", shortcut: "Shift+F5", enabled: hasDeck, run: () => slides.startShow(state.current) });
+  // Presenting (`VS-07`, `editor.show.js`).
+  const canPresent = () => hasDeck() && !slides.showing();
+  register("slideshow.from-beginning", { label: "From Beginning", shortcut: "F5", enabled: canPresent, run: () => slides.startShow(0) });
+  register("slideshow.from-current", { label: "From Current Slide", shortcut: "Shift+F5", enabled: canPresent, run: () => slides.startShow(state.current) });
+  register("slideshow.presenter-view", { label: "Presenter View", shortcut: "Alt+F5", enabled: canPresent, run: () => slides.startShow(0, { presenterView: true }) });
 
   register("view.normal", { label: "Normal", checked: () => !state.reading, run: () => { state.reading = false; changed(); slides.relayout(); } });
   register("view.reading", { label: "Reading View", enabled: hasDeck, checked: () => state.reading, run: () => { state.reading = !state.reading; changed(); slides.relayout(); } });
@@ -265,7 +268,11 @@ function bindKeys() {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && !e.altKey && (e.key === "o" || e.key === "O")) { e.preventDefault(); openFilePicker(); return; }
     if (mod && !e.altKey && (e.key === "s" || e.key === "S")) { e.preventDefault(); run("file.save"); return; }
-    if (e.key === "F5") { e.preventDefault(); if (state.deck) slides.startShow(e.shiftKey ? state.current : 0); return; }
+    if (e.key === "F5" && !mod) {
+      e.preventDefault();
+      run(e.altKey ? "slideshow.presenter-view" : e.shiftKey ? "slideshow.from-current" : "slideshow.from-beginning");
+      return;
+    }
     if (mod || e.altKey || !state.deck) return;
     // Over the ribbon's own controls the arrows are theirs.
     if (e.target.closest?.(".op-ribbon, .rb-pop")) return;

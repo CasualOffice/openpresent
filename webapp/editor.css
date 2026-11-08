@@ -210,7 +210,8 @@ body {
   flex: none; height: 72px; overflow: auto; padding: 8px 16px; box-sizing: border-box;
   background: var(--op-background-color); border-top: 1px solid var(--op-border-color);
 }
-.notes-text { margin: 0; color: var(--op-faint-text-color); }
+.notes-text { margin: 0; color: var(--op-text-color); white-space: pre-wrap; overflow-wrap: anywhere; }
+.notes-text.is-empty { color: var(--op-faint-text-color); }
 
 /* Without a deck the panes have nothing to show. */
 html:not(.op-has-deck) .slide-pane,
@@ -297,5 +298,12 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 
 .show { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; background: #000; outline: none; cursor: none; }
 .show-img { display: block; max-width: 100%; max-height: 100%; user-select: none; }
+/* The transition (`VS-07`): the next slide fades in over the one shown. */
+.show-fade { position: absolute; max-width: 100%; max-height: 100%; opacity: 0; transition-property: opacity; transition-timing-function: linear; user-select: none; pointer-events: none; }
+.show-fade.is-in { opacity: 1; }
+/* B and W: a black or white screen over the slide. */
+.show.is-black::before, .show.is-white::before { content: ""; position: absolute; inset: 0; z-index: 2; }
+.show.is-black::before { background: #000; }
+.show.is-white::before { background: #fff; }
 .show.is-end::after { content: attr(data-end); color: #fff; font-size: 16px; position: absolute; top: 24px; left: 0; right: 0; text-align: center; cursor: default; }
 .show.is-end { cursor: default; }

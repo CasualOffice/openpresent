@@ -114,6 +114,7 @@ export const TABS = [
     { label: "Start Slide Show", fold: 3, icon: "play", items: [
       L("slideshow.from-beginning", "play", "From Beginning (F5)"),
       L("slideshow.from-current", "play", "From Current Slide (Shift+F5)"),
+      L("slideshow.presenter-view", "tab_desktop_multiple", "Presenter View (Alt+F5)"),
     ] },
     { label: "Set Up", fold: 2, icon: "settings", items: [
       L("slideshow.set-up", "settings", "Set Up Slide Show"),

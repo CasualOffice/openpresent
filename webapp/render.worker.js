@@ -9,7 +9,9 @@
 // `{ op: "shapes", index }`, `{ op: "transform", index, node, x, y, cx, cy, rot }`,
 // `{ op: "delete", index, node }`, `{ op: "undo" }` and `{ op: "redo" }`; each edit
 // answers with `undo: [canUndo, canRedo]`, and undo and redo with the slide changed.
-// Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name. Out: `{ id, ok: true, ... }` or
+// Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name.
+// The slide show (`VS-07`): `{ op: "plan" }`, each slide's hidden flag and transition,
+// and `{ op: "notes", index }`, a slide's speaker notes as text. Out: `{ id, ok: true, ... }` or
 // `{ id, ok: false, error }`, where `error` is the engine's message with its code.
 // Nothing here fetches anything but the engine itself, from this origin.
 
@@ -18,6 +20,7 @@ import init, {
   slide_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
+  show_plan, slide_transition, slide_notes,
 } from "./pkg/casual_slide_wasm.js";
 
 // Text editing (`VS-05`): `{ id, op: "text", fn, args }` calls one of these by name and
@@ -71,6 +74,17 @@ self.onmessage = async (event) => {
       let value = fn(...(Array.isArray(msg.args) ? msg.args : []));
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()) });
+    } else if (msg.op === "plan") {
+      // Two numbers a slide (`show_plan`), and the effect's name where the show
+      // plays a fade in its place, for the report at the end.
+      const plan = Array.from(show_plan());
+      const effects = {};
+      for (let i = 0; i * 2 < plan.length; i++) {
+        if ((plan[i * 2] & 6) === 2) effects[i] = slide_transition(i);
+      }
+      self.postMessage({ id, ok: true, plan, effects });
+    } else if (msg.op === "notes") {
+      self.postMessage({ id, ok: true, notes: slide_notes(msg.index) });
     } else if (msg.op === "report") {
       self.postMessage({ id, ok: true, lines: slide_report(msg.index) });
     } else {
