@@ -150,7 +150,7 @@ jobs:
         run: cargo build --release --locked -p casual-slide-render --example render-deck
       # Noto CJK so LibreOffice draws Japanese, Chinese and Korean as ours does (from
       # webapp/fonts/cjk, T2D5-02), rather than as empty boxes that score as our error.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-cjk
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-noto-cjk fonts-crosextra-carlito fonts-crosextra-caladea
       # Ubuntu's AppArmor refuses unprivileged user namespaces by default; `unshare` needs one.
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: soffice --version | tee "$RUNNER_TEMP/lo-version.txt"
