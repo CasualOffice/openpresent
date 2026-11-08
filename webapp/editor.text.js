@@ -80,6 +80,14 @@ const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_ru
 
 /* ── Drawing the caret and selection ────────────────────────────────────── */
 
+/// The overlay's coordinates are the slide's, in EMU. Set on every draw: a deck of
+/// another size in a frame of the same shape (a 10-inch 16:9 deck after the 13.33-inch
+/// blank one) resizes nothing, so an observer alone left the old size (`UX-013`).
+function fitOverlay() {
+  const box = state.deck && `0 0 ${state.deck.width} ${state.deck.height}`;
+  if (overlay && box && overlay.getAttribute("viewBox") !== box) overlay.setAttribute("viewBox", box);
+}
+
 function clearOverlay() {
   if (overlay) overlay.replaceChildren();
 }
@@ -102,6 +110,7 @@ function draw(g) {
   clearOverlay();
   clearInterval(blink);
   if (!g || !selection.editing) return;
+  fitOverlay();
   const { quads, caret } = g;
   for (let i = 0; i + 8 <= quads.length; i += 8) {
     const poly = document.createElementNS(SVG, "polygon");
@@ -126,10 +135,13 @@ function draw(g) {
 }
 
 async function paint() {
+  const deck = state.deck, at = obj();
   try {
     draw(await geometry());
   } catch (e) {
-    status(`The caret could not be placed: ${e.message}`);
+    // A deck opened, or the box closed, while the engine answered: the question was
+    // about a shape no longer open, so there is nothing to report (`UX-013`).
+    if (state.deck === deck && obj() === at) status(`The caret could not be placed: ${e.message}`);
   }
   changed();
 }
@@ -733,10 +745,8 @@ export function init() {
   input.setAttribute("spellcheck", "false");
   frame.appendChild(input);
 
-  // The overlay's coordinates are the slide's, in EMU.
-  const size = () => { if (state.deck) overlay.setAttribute("viewBox", `0 0 ${state.deck.width} ${state.deck.height}`); };
-  new ResizeObserver(size).observe(frame);
-  new MutationObserver(size).observe(frame, { attributes: true, attributeFilter: ["hidden"] });
+  new ResizeObserver(fitOverlay).observe(frame);
+  new MutationObserver(fitOverlay).observe(frame, { attributes: true, attributeFilter: ["hidden"] });
 
   // Presses on the slide are routed by `editor.selection.js`; one on the grey
   // around it closes the box and clears the selection, as PowerPoint's.

@@ -95,6 +95,11 @@ pub struct RunStyle {
     pub baseline: f32,
     /// `spc`: extra advance after each character, points; negative tightens.
     pub spacing: f32,
+    /// The run's East Asian typeface (`ea`, theme references followed) when it draws
+    /// in another: its height still counts toward the line's, as PowerPoint makes an
+    /// East Asian font taller than the Latin one open the lines of Latin text too.
+    /// `None` when the run states none or draws in it.
+    pub east_asian_family: Option<String>,
 }
 
 /// The share of its size a raised or lowered run is drawn at: **Inferred** from how
@@ -368,6 +373,24 @@ pub struct FontSubstitution {
 struct Metrics {
     ascent: f32,
     descent: f32,
+}
+
+/// A run's line metrics: its own substituted face's, and its East Asian face's where
+/// that is taller, whichever is greater on each side.
+fn style_metrics(style: &RunStyle) -> Metrics {
+    let face = crate::faces::face_bytes_for(style.family.as_deref(), style.bold, style.italic);
+    let own = metrics(face, style.size);
+    let Some(ea) = style.east_asian_family.as_deref() else {
+        return own;
+    };
+    let other = metrics(
+        crate::faces::face_bytes_for(Some(ea), style.bold, style.italic),
+        style.size,
+    );
+    Metrics {
+        ascent: own.ascent.max(other.ascent),
+        descent: own.descent.max(other.descent),
+    }
 }
 
 fn metrics(face: &[u8], size: f32) -> Metrics {
@@ -742,14 +765,7 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
             rest_w,
         );
 
-        let end_metrics = metrics(
-            crate::faces::face_bytes_for(
-                paragraph.end.family.as_deref(),
-                paragraph.end.bold,
-                paragraph.end.italic,
-            ),
-            paragraph.end.size,
-        );
+        let end_metrics = style_metrics(&paragraph.end);
         let mut first_single = None;
         let mut lines_y = Vec::with_capacity(spans.len());
         let mut lines_m = Vec::with_capacity(spans.len());
@@ -767,9 +783,7 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
                 // A line's metrics come from the run's own substituted face, not
                 // the fallback that draws a character it lacks, as OpenCalc's
                 // `FaceSelector::primary` gives a cell's (owner instruction 42).
-                let face =
-                    crate::faces::face_bytes_for(style.family.as_deref(), style.bold, style.italic);
-                let im = metrics(face, style.size);
+                let im = style_metrics(style);
                 m = Some(m.map_or(im, |m| Metrics {
                     ascent: m.ascent.max(im.ascent),
                     descent: m.descent.max(im.descent),

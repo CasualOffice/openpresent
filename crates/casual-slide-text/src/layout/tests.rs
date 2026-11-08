@@ -222,6 +222,33 @@ fn double_line_spacing_doubles_the_distance_between_baselines() {
 }
 
 #[test]
+fn a_taller_east_asian_font_opens_the_lines_of_latin_text() {
+    // Times New Roman text with `ea` Calibri, as `z18866178-doklad-ru` writes every
+    // run: the lines are spaced by Calibri's height (Carlito, 1.22 em), not Times
+    // New Roman's (Liberation Serif, 1.11 em).
+    let pitch = |ea: Option<&str>| {
+        let mut s = style(32.0);
+        s.family = Some("Times New Roman".to_owned());
+        s.east_asian_family = ea.map(str::to_owned);
+        let t = |text: &str| StyledText {
+            text: text.to_owned(),
+            style: s.clone(),
+        };
+        let ys = baselines(&layout_body(
+            &body(vec![paragraph(vec![t("a"), t("\n"), t("b")])]),
+            FRAME,
+        ));
+        ys[1] - ys[0]
+    };
+    let own = pitch(None);
+    let opened = pitch(Some("Calibri"));
+    assert!((own / 32.0 - 1.107).abs() < 0.01, "{own}");
+    assert!((opened / 32.0 - 1.221).abs() < 0.01, "{opened}");
+    // One no taller changes nothing.
+    assert!((pitch(Some("Times New Roman")) - own).abs() < 0.01);
+}
+
+#[test]
 fn space_before_and_after_separate_paragraphs_but_not_the_ends() {
     let gap = |before: f32, after: f32| {
         let mut a = paragraph(vec![run("a", 18.0)]);

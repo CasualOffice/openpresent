@@ -344,10 +344,12 @@ fn run_style<'a>(
             .run(props, paragraph, |c| c.lang.as_deref())
             .map(|r| r.value),
     );
+    let ea = run_family(chain, props, paragraph, FontScript::EastAsian, fonts);
     let family = east_asian
-        .then(|| run_family(chain, props, paragraph, FontScript::EastAsian, fonts))
+        .then(|| ea.clone())
         .flatten()
         .or_else(|| run_family(chain, props, paragraph, FontScript::Latin, fonts));
+    let east_asian_family = ea.filter(|e| Some(e) != family.as_ref());
     if let Some(f) = &family {
         fonts.record(f);
     }
@@ -404,6 +406,7 @@ fn run_style<'a>(
             .map_or(0.0, |s| {
                 (s.value.value().0 as f32 / 100.0).clamp(-4000.0, 4000.0)
             }),
+        east_asian_family,
     }
 }
 

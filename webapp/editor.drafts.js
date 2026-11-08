@@ -341,13 +341,21 @@ function button(label, cls, onClick) {
   return b;
 }
 
-/// Draw the bar from the store; hidden when there is nothing to offer.
-export async function refreshRecoveryBar() {
+/// The drafts the bar offered when the editor opened. The bar is offered then only,
+/// as PowerPoint's Document Recovery pane is: a draft another tab writes later never
+/// makes it appear mid-session and push the stage down under the pointer (`UX-014`).
+/// Later redraws only take entries away.
+let offeredAtOpen = null;
+
+/// Draw the bar from the store; hidden when there is nothing to offer. `atOpen`, only
+/// from `initDrafts`: the drafts found now become the ones the bar may show.
+export async function refreshRecoveryBar(atOpen = false) {
   const bar = byId("op-recovery");
   if (!bar) return [];
   let rows = [];
-  try { rows = (await listDrafts()).filter((r) => r.id !== openedDraftId); } catch { rows = []; }
-  const showing = rows.filter((r) => !dismissed.has(r.id));
+  try { rows = (await listDrafts()).filter((r) => r.id !== openedDraftId && r.id !== `slot-${mySlot}`); } catch { rows = []; }
+  if (atOpen) offeredAtOpen = new Set(rows.map((r) => r.id));
+  const showing = rows.filter((r) => !dismissed.has(r.id) && !!offeredAtOpen?.has(r.id));
   bar.replaceChildren();
   bar.hidden = !showing.length;
   for (const meta of showing) bar.appendChild(entryFor(meta));
@@ -457,7 +465,7 @@ export async function initDrafts() {
     }
   }
   try {
-    const offered = await refreshRecoveryBar();
+    const offered = await refreshRecoveryBar(true);
     reservedSlots = new Set(offered.map((r) => slotOf(r.id)).filter((n) => n !== null));
   } catch { /* the bar stays hidden */ }
   try {
