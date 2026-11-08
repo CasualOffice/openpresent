@@ -23,15 +23,15 @@ use casual_slide_model::color::{ResolveContext, resolve};
 use casual_slide_model::fill::Fill;
 use casual_slide_model::text::{
     AutonumberScheme, Bullet, BulletColor, BulletFont, BulletSize, CapsType, CharacterProperties,
-    ParagraphProperties, TextAlign, TextAnchor, TextBody, TextItem, TextSpacing, TextWrap,
-    UnderlineType,
+    ParagraphProperties, StrikeType, TextAlign, TextAnchor, TextBody, TextItem, TextSpacing,
+    TextWrap, UnderlineType,
 };
 use casual_slide_model::theme::{FontCollectionIndex, FontScheme};
 use casual_slide_style::text::{FontScript, RunFont, TextChain, paragraph_level};
 
 use crate::layout::{
     Align, Anchor, BodyLayout, FontSubstitution, Frame, Insets, ParagraphLayout, Rgba, RunStyle,
-    Spacing, StyledText, TextLayout, layout_body,
+    Spacing, StrikeKind, StyledText, TextLayout, layout_body,
 };
 use crate::substitution::{SubstituteKind, substitute};
 
@@ -387,6 +387,25 @@ fn run_style<'a>(
             .run(props, paragraph, |c| c.highlight.as_ref())
             .and_then(|h| h.value.clone())
             .map(|c| color_of(&Fill::Solid(Some(c)), fonts.env)),
+        strike: chain
+            .run(props, paragraph, |c| c.strike)
+            .and_then(|s| match s.value {
+                StrikeType::SngStrike => Some(StrikeKind::Single),
+                StrikeType::DblStrike => Some(StrikeKind::Double),
+                StrikeType::NoStrike => None,
+            }),
+        // Thousandths of a percent of the size; a hostile value is held to ten sizes.
+        baseline: chain
+            .run(props, paragraph, |c| c.baseline.as_ref())
+            .map_or(0.0, |b| {
+                (b.value.value().0 as f32 / 100_000.0).clamp(-10.0, 10.0)
+            }),
+        // Hundredths of a point, held to `ST_TextPoint`'s range.
+        spacing: chain
+            .run(props, paragraph, |c| c.spacing.as_ref())
+            .map_or(0.0, |s| {
+                (s.value.value().0 as f32 / 100.0).clamp(-4000.0, 4000.0)
+            }),
         east_asian_family,
     }
 }
@@ -692,10 +711,8 @@ fn bullet<'a>(
             bold: text_style.bold,
             italic: false,
             color,
-            // PowerPoint does not underline or highlight a bullet.
-            underline: None,
-            highlight: None,
-            east_asian_family: None,
+            // PowerPoint does not underline, highlight, strike, raise or space a bullet.
+            ..RunStyle::default()
         },
     })
 }

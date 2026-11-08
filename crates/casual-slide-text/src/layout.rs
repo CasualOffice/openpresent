@@ -18,6 +18,9 @@
 //! | A word wider than the line breaks between characters | **Inferred** |
 //! | `just` and `dist` anchoring are laid out as top | Not yet modelled: `T2D4-01` |
 //! | An underline runs under each glyph run, trailing spaces of the line excluded, at the face's `post` underline position and thickness, in the run's colour | ECMA-376 21.1.2.3.9 names the kinds; the metrics are **Inferred** from how PowerPoint draws (`VS-18`) |
+//! | A strikethrough runs through each glyph run at the face's `OS/2` strikeout position and thickness, in the run's colour; a double one draws two lines a thickness either side of it | ECMA-376 21.1.2.3.12 names the kinds; the metrics and the double's gap are **Inferred** from how PowerPoint draws (`PAR-67`) |
+//! | A run with a `baseline` is raised (positive) or lowered by that share of its size, and drawn and advanced at two thirds of its size | ECMA-376 21.1.2.3.9 gives the offset as a percentage of the font size; the two-thirds size is **Inferred** from how PowerPoint draws superscript, not measured (`PAR-67`) |
+//! | `spc` is added to the advance after every character of the run, the last included | ECMA-376 21.1.2.3.9; after the last is **Inferred** (`PAR-67`) |
 //! | A highlight fills each glyph run's advance, from the face's ascent above the baseline to its descent below, behind every glyph of the body | ECMA-376 21.1.2.3.4 names `highlight`; the extent is **Inferred** from how PowerPoint draws, not measured (`UX-005`) |
 //!
 //! Not yet here: tabs, columns, vertical and rotated text, autofit's scale,
@@ -85,11 +88,49 @@ pub struct RunStyle {
     pub underline: Option<UnderlineType>,
     /// `highlight`: the colour drawn behind the glyphs; `None` draws none.
     pub highlight: Option<Rgba>,
+    /// `strike`: the strikethrough; `None` draws none.
+    pub strike: Option<StrikeKind>,
+    /// `baseline`, as a share of the size: `0.3` raises the run by 30% of its size,
+    /// a negative value lowers it; `0.0` is the line's own baseline.
+    pub baseline: f32,
+    /// `spc`: extra advance after each character, points; negative tightens.
+    pub spacing: f32,
     /// The run's East Asian typeface (`ea`, theme references followed) when it draws
     /// in another: its height still counts toward the line's, as PowerPoint makes an
     /// East Asian font taller than the Latin one open the lines of Latin text too.
     /// `None` when the run states none or draws in it.
     pub east_asian_family: Option<String>,
+}
+
+/// The share of its size a raised or lowered run is drawn at: **Inferred** from how
+/// PowerPoint draws superscript and subscript (`PAR-67`).
+pub const SCRIPT_SCALE: f32 = 2.0 / 3.0;
+
+impl RunStyle {
+    /// The size the glyphs are drawn and advanced at: smaller when raised or lowered.
+    #[must_use]
+    pub fn drawn_size(&self) -> f32 {
+        if self.baseline == 0.0 {
+            self.size
+        } else {
+            self.size * SCRIPT_SCALE
+        }
+    }
+
+    /// How far the run's baseline is raised above the line's, points, `y` up.
+    #[must_use]
+    pub fn rise(&self) -> f32 {
+        self.baseline * self.size
+    }
+}
+
+/// `a:ST_TextStrikeType`, less `noStrike`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StrikeKind {
+    /// `sngStrike`: one line.
+    Single,
+    /// `dblStrike`: two lines.
+    Double,
 }
 
 /// Text with one style. A line break inside a paragraph is a `\n` in `text`.
@@ -228,6 +269,25 @@ pub struct GlyphRun {
     pub underline: Option<Underline>,
     /// The run's highlight, if it has one.
     pub highlight: Option<Highlight>,
+    /// The run's strikethrough, if it has one.
+    pub strike: Option<Strikethrough>,
+}
+
+/// Where a strikethrough is drawn through one [`GlyphRun`], points, in the layout's
+/// space (`PAR-67`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Strikethrough {
+    /// One line or two.
+    pub kind: StrikeKind,
+    /// Start, at the first glyph's pen position.
+    pub x0: f32,
+    /// End, after the last glyph's advance.
+    pub x1: f32,
+    /// The centre of the single line, `y` down: above the run's baseline by the
+    /// face's strikeout position. A double one draws a thickness either side.
+    pub y: f32,
+    /// The face's strikeout thickness at the run's drawn size.
+    pub thickness: f32,
 }
 
 /// The box a run's highlight fills, behind its glyphs, points, in the layout's space:
@@ -386,6 +446,26 @@ fn underline_metrics(face: &[u8], size: f32) -> (f32, f32) {
     }
 }
 
+/// The face's strikeout centre above the baseline (positive up) and its thickness, in
+/// points at `size`, from `OS/2`; 0.3 and a twentieth of the size when the face does
+/// not say.
+fn strike_metrics(face: &[u8], size: f32) -> (f32, f32) {
+    let fallback = (size * 0.3, size * 0.05);
+    let Ok(font) = FontRef::new(face) else {
+        return fallback;
+    };
+    match font
+        .metrics(Size::new(size), LocationRef::default())
+        .strikeout
+    {
+        Some(d) if d.thickness > 0.0 && d.thickness.is_finite() && d.offset.is_finite() => {
+            // `OS/2` gives the top of the line, y up; the centre is half a thickness below.
+            (d.offset - d.thickness / 2.0, d.thickness)
+        }
+        _ => fallback,
+    }
+}
+
 /// One shaped glyph, with its cluster as an offset into the paragraph's text.
 #[derive(Debug, Clone, Copy)]
 struct Shaped {
@@ -499,8 +579,9 @@ fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
         let Some(text) = prepared.text.get(item.start..item.end) else {
             continue;
         };
+        let size = style.drawn_size();
         item.glyphs = match item.face {
-            Some(face) => crate::shape::run(face, text, style.size)
+            Some(face) => crate::shape::run(face, text, size)
                 .unwrap_or_default()
                 .into_iter()
                 .map(|g| Shaped {
@@ -523,13 +604,23 @@ fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
                         &TextFaces::new(style.family.as_deref(), style.bold, style.italic, text)
                             .resolve(ch),
                         ch,
-                        style.size,
+                        size,
                     ),
                     x_offset: 0.0,
                     y_offset: 0.0,
                 })
                 .collect(),
         };
+        // `spc`: extra advance after each character, on the last glyph of its cluster
+        // so a mark stays over its base.
+        if style.spacing != 0.0 {
+            let clusters: Vec<usize> = item.glyphs.iter().map(|g| g.cluster).collect();
+            for (i, glyph) in item.glyphs.iter_mut().enumerate() {
+                if clusters.get(i + 1) != Some(&glyph.cluster) {
+                    glyph.advance += style.spacing;
+                }
+            }
+        }
     }
     prepared
 }
@@ -818,6 +909,9 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
         for line in runs.iter_mut().filter_map(|r| r.underline.as_mut()) {
             line.y += offset;
         }
+        for line in runs.iter_mut().filter_map(|r| r.strike.as_mut()) {
+            line.y += offset;
+        }
         for mark in runs.iter_mut().filter_map(|r| r.highlight.as_mut()) {
             mark.top += offset;
             mark.bottom += offset;
@@ -867,6 +961,9 @@ fn emit(
         };
         let mut glyphs = Vec::new();
         let x_start = at.origin_x + *pen;
+        // A raised or lowered run sits on its own baseline.
+        let run_baseline = at.baseline - style.rise();
+        let size = style.drawn_size();
         for g in item
             .glyphs
             .iter()
@@ -876,7 +973,7 @@ fn emit(
                 glyphs.push(Glyph {
                     id: g.id,
                     x: at.origin_x + *pen + g.x_offset,
-                    y: at.baseline - g.y_offset,
+                    y: run_baseline - g.y_offset,
                 });
             }
             *pen += g.advance;
@@ -891,12 +988,22 @@ fn emit(
         }
         if let (Some(face), false) = (item.face, glyphs.is_empty()) {
             let underline = style.underline.map(|kind| {
-                let (below, thickness) = underline_metrics(face, style.size);
+                let (below, thickness) = underline_metrics(face, size);
                 Underline {
                     kind,
                     x0: x_start,
                     x1: at.origin_x + *pen,
-                    y: at.baseline + below,
+                    y: run_baseline + below,
+                    thickness,
+                }
+            });
+            let strike = style.strike.map(|kind| {
+                let (above, thickness) = strike_metrics(face, size);
+                Strikethrough {
+                    kind,
+                    x0: x_start,
+                    x1: at.origin_x + *pen,
+                    y: run_baseline - above,
                     thickness,
                 }
             });
@@ -913,7 +1020,7 @@ fn emit(
             out.push(GlyphRun {
                 face,
                 face_key: crate::outline::face_key(face),
-                size: style.size,
+                size,
                 color: style.color,
                 synthetic_bold: item.synthetic_bold,
                 glyphs,
@@ -924,6 +1031,7 @@ fn emit(
                     .to_owned(),
                 underline,
                 highlight,
+                strike,
             });
         }
     }

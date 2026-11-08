@@ -655,3 +655,65 @@ fn strikethrough_scripts_spacing_case_and_clear_save_read_back_and_undo() {
     assert_eq!(v.text_slice(object, 0, n).unwrap(), text);
     assert_eq!(v.save().unwrap(), input);
 }
+
+/// The Font dialog (`PAR-20`): every field at once, one undo step, saved as PowerPoint
+/// writes them, read back into what the dialog opens with; a bad field changes nothing.
+#[test]
+fn the_font_dialog_sets_every_field_in_one_undo_step() {
+    let input = fixture("area-text.pptx");
+    let mut v = Viewer::open(input.clone()).unwrap();
+    let (object, len) = text_box(&v);
+    let n = len.min(4);
+    let fields = [
+        ("font", "Georgia"),
+        ("size", "32"),
+        ("bold", "1"),
+        ("italic", "1"),
+        ("underline", "dbl"),
+        ("color", "srgb 0070C0"),
+        ("strike", "double"),
+        ("baseline", "12"),
+        ("spacing", "4.5"),
+    ];
+    assert!(v.set_font(object, (0, n), &fields).unwrap());
+    let state = v.run_state(object, 1).unwrap();
+    assert_eq!(
+        state[7..],
+        ["1", "1", "dbl", "double", "12", "4.5"].map(str::to_owned),
+        "{state:?}"
+    );
+    assert_eq!(state[1], "32");
+    let saved = v.save().unwrap();
+    let parts = changed_parts(&input, &saved);
+    let xml = part_xml(&saved, &parts[0]);
+    for attr in [
+        "sz=\"3200\"",
+        "b=\"1\"",
+        "i=\"1\"",
+        "u=\"dbl\"",
+        "strike=\"dblStrike\"",
+        "baseline=\"12000\"",
+        "spc=\"450\"",
+        "typeface=\"Georgia\"",
+        "val=\"0070C0\"",
+    ] {
+        assert!(xml.contains(attr), "{attr} in {xml}");
+    }
+    let again = Viewer::open(saved).unwrap();
+    assert_eq!(again.run_state(object, 1).unwrap()[7..], state[7..]);
+    // One step undoes the lot.
+    v.undo().unwrap();
+    assert_eq!(v.save().unwrap(), input);
+    // A field it cannot read is refused, and nothing changes.
+    for bad in [
+        [("bold", "1"), ("strike", "triple")],
+        [("bold", "1"), ("baseline", "300")],
+        [("bold", "1"), ("shadow", "1")],
+    ] {
+        assert_eq!(
+            v.set_font(object, (0, n), &bad).unwrap_err().code(),
+            "CS-WSM-0006"
+        );
+    }
+    assert!(!v.can_undo_redo().0);
+}

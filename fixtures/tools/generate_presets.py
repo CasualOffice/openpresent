@@ -374,6 +374,32 @@ def texts():
     return build(grid("Text properties", cases, 7, 5, draw), **IMAGE)
 
 
+def text_font_effects():
+    """PAR-67: strikethrough, superscript, subscript and character spacing at a readable
+    size, each beside the same text without it, so a rendered page compares them."""
+    def run(text, rpr=""):
+        return f'<a:r><a:rPr lang="en-US" sz="2800"{rpr}/><a:t>{escape(text)}</a:t></a:r>'
+
+    cases = [("plain", run("Struck text")),
+             ("strike sngStrike", run("Struck text", ' strike="sngStrike"')),
+             ("strike dblStrike", run("Struck text", ' strike="dblStrike"')),
+             ("baseline 30000", run("E = mc") + run("2", ' baseline="30000"')),
+             ("baseline -25000", run("H") + run("2", ' baseline="-25000"') + run("O")),
+             ("baseline 30000 and -25000", run("x") + run("n", ' baseline="30000"') + run("i", ' baseline="-25000"')),
+             ("spc 600", run("Spaced", ' spc="600"')),
+             ("spc -150", run("Condensed", ' spc="-150"')),
+             ("spc 0", run("Spaced"))]
+
+    def draw(s, box, item):
+        x, y, cx, cy = box
+        sid = s.nid()
+        s.add(f'<p:sp><p:nvSpPr><p:cNvPr id="{sid}" name="Text {sid}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+              f'<p:spPr>{xfrm(x, y, cx, cy)}{geom()}<a:noFill/></p:spPr>'
+              f'<p:txBody><a:bodyPr wrap="none" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/>{item[1]}</a:p></p:txBody></p:sp>')
+
+    return build(grid("Strikethrough, scripts and spacing", cases, 3, 3, draw))
+
+
 def text_ecma_only():
     """What Ecma's lists allow, F4 accepts, the Open XML SDK refuses and none of the real
     decks writes, kept apart so area-text is what both validators accept (F4-02)."""
@@ -516,7 +542,7 @@ def fixtures():
     """(relative path, bytes, manifest expectation), in a fixed order."""
     decks = (("preset-shapes", preset_shapes), ("preset-text-warps", text_warps), ("area-custom-geometry", custom_geometry),
              ("area-color", colors), ("area-fill", fills), ("area-line", lines), ("area-effect", effects), ("area-d3", scene),
-             ("area-text", texts), ("area-text-ecma-only", text_ecma_only), ("area-table", table), ("area-pic", pictures), ("area-shape-tree", shape_tree),
+             ("area-text", texts), ("area-text-ecma-only", text_ecma_only), ("text-font-effects", text_font_effects), ("area-table", table), ("area-pic", pictures), ("area-shape-tree", shape_tree),
              ("area-slide", slide_props), ("area-timing", timing), ("area-trans", transitions))
     for name, make in decks:
         yield f"generated/{name}.pptx", make(), "open"

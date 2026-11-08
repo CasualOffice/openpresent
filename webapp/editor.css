@@ -453,6 +453,16 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .dz-field input[type="number"] { width: 96px; }
 .dz-field[hidden] { display: none; }
 .dz-radios { display: flex; gap: 16px; margin: 0 0 10px; }
+/* The Font dialog's tabs (`PAR-20`): OpenCalc's Format Cells tabs (`webapp/editor.css` at
+   `b23c67c`, `.fc-tabs` to `.fc-check`), in this page's tokens. */
+.fc-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--op-border-color); margin-bottom: 10px; }
+.fc-tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 10px; font: inherit; color: inherit; opacity: 0.75; cursor: pointer; }
+.fc-tab.on { opacity: 1; border-bottom-color: var(--op-accent-color); }
+.fc-page { min-height: 180px; min-width: 360px; }
+.fc-page[hidden] { display: none; }
+.fc-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 6px 0 10px; }
+.fc-check { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.fc-label { font-size: 12px; font-weight: 600; margin: 10px 0 4px; }
 
 /* Shapes (`SHAPE-01`): the gallery and Shape Format menus, the drawing tool and the
    yellow adjust handles. */

@@ -40,7 +40,10 @@ pub mod substitution;
 pub mod woff2;
 
 pub use body::{TextEnv, layout_text_body};
-pub use layout::{CaretLine, Frame, Glyph, GlyphRun, TextLayout, Underline, UnderlineType};
+pub use layout::{
+    CaretLine, Frame, Glyph, GlyphRun, StrikeKind, Strikethrough, TextLayout, Underline,
+    UnderlineType,
+};
 pub use outline::{OutlineOp, face_by_key, glyph_outline, outline_by_key};
 
 use skrifa::{FontRef, MetadataProvider, instance::LocationRef, prelude::Size};

@@ -7,9 +7,7 @@ fn style(size: f32) -> RunStyle {
         bold: false,
         italic: false,
         color: Rgba::BLACK,
-        underline: None,
-        highlight: None,
-        east_asian_family: None,
+        ..RunStyle::default()
     }
 }
 
@@ -409,4 +407,85 @@ fn an_underlined_run_carries_a_line_under_its_glyphs_at_the_faces_underline_metr
         "{line:?}"
     );
     assert!(layout.runs[1].underline.is_none());
+}
+
+/// The x after the last glyph of `run`: its line's end, from the caret stops.
+fn advance_of(text: &str, style: RunStyle) -> f32 {
+    let layout = layout_body(
+        &body(vec![paragraph(vec![StyledText {
+            text: text.to_owned(),
+            style,
+        }])]),
+        FRAME,
+    );
+    let stops = &layout.carets[0].stops;
+    stops.last().unwrap().1 - stops[0].1
+}
+
+#[test]
+fn a_struck_run_carries_a_line_through_its_glyphs_and_a_double_one_says_so() {
+    let mut struck = run("Struck", 20.0);
+    struck.style.strike = Some(StrikeKind::Single);
+    let mut double = run(" twice", 20.0);
+    double.style.strike = Some(StrikeKind::Double);
+    let plain = run(" plain", 20.0);
+    let layout = layout_body(&body(vec![paragraph(vec![struck, double, plain])]), FRAME);
+    let first = &layout.runs[0];
+    let line = first.strike.expect("the struck run has a line");
+    assert_eq!(line.kind, StrikeKind::Single);
+    assert!((line.x0 - first.glyphs[0].x).abs() < 0.01, "{line:?}");
+    assert!(line.x1 > first.glyphs.last().unwrap().x, "{line:?}");
+    // Above the baseline, through the lower case: between a tenth and a half of the size.
+    let baseline = first.glyphs[0].y;
+    assert!(
+        line.y < baseline - 20.0 * 0.1 && line.y > baseline - 20.0 * 0.5,
+        "{line:?}"
+    );
+    assert!(line.thickness > 0.2 && line.thickness < 20.0 * 0.15);
+    assert_eq!(
+        layout.runs[1].strike.map(|s| s.kind),
+        Some(StrikeKind::Double)
+    );
+    assert!(layout.runs[2].strike.is_none());
+}
+
+#[test]
+fn superscript_and_subscript_are_raised_and_lowered_and_drawn_at_two_thirds() {
+    let plain = run("x", 30.0);
+    let mut sup = run("2", 30.0);
+    sup.style.baseline = 0.3;
+    let mut sub = run("i", 30.0);
+    sub.style.baseline = -0.25;
+    let layout = layout_body(&body(vec![paragraph(vec![plain, sup, sub])]), FRAME);
+    let line = layout.runs[0].glyphs[0].y;
+    assert_eq!(layout.runs[0].size, 30.0);
+    assert!(
+        (layout.runs[1].size - 20.0).abs() < 0.01,
+        "{:?}",
+        layout.runs[1].size
+    );
+    assert!(
+        (layout.runs[1].glyphs[0].y - (line - 9.0)).abs() < 0.01,
+        "raised 30% of 30 pt"
+    );
+    assert!((layout.runs[2].size - 20.0).abs() < 0.01);
+    assert!(
+        (layout.runs[2].glyphs[0].y - (line + 7.5)).abs() < 0.01,
+        "lowered 25% of 30 pt"
+    );
+    // Advanced at the smaller size too.
+    let mut small = style(30.0);
+    small.baseline = 0.3;
+    assert!((advance_of("2222", small) - advance_of("2222", style(20.0))).abs() < 0.01);
+}
+
+#[test]
+fn character_spacing_adds_its_points_after_every_character() {
+    let tight = advance_of("Spaced", style(20.0));
+    let mut loose = style(20.0);
+    loose.spacing = 3.0;
+    assert!((advance_of("Spaced", loose) - (tight + 6.0 * 3.0)).abs() < 0.01);
+    let mut condensed = style(20.0);
+    condensed.spacing = -1.0;
+    assert!((advance_of("Spaced", condensed) - (tight - 6.0)).abs() < 0.01);
 }
