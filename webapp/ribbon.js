@@ -530,11 +530,15 @@ function buildBackstage() {
       item.classList.toggle("is-on", on);
       item.setAttribute("aria-current", on ? "page" : "false");
       page.hidden = !on;
+      // A page with a panel of its own (File > Info's properties) is drawn by its
+      // module when it shows, so what it says is current (`FILE-01`).
+      if (on) document.dispatchEvent(new CustomEvent("op-backstage-page", { detail: { id, page } }));
     }
   };
   for (const entry of FILE_RAIL) {
     const page = h("section", "rb-page");
     page.hidden = true;
+    page.dataset.page = entry.id;
     page.appendChild(h("h1", "rb-page-title", entry.label));
     for (const sec of entry.sections || []) {
       const block = h("div", "rb-section");

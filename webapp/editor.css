@@ -531,3 +531,71 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .pic-crop-corner { width: 12px; height: 12px; margin: -6px 0 0 -6px; cursor: crosshair; }
 .pic-crop-hz { width: 18px; height: 6px; margin: -3px 0 0 -9px; cursor: ns-resize; }
 .pic-crop-vt { width: 6px; height: 18px; margin: -9px 0 0 -3px; cursor: ew-resize; }
+
+/* The File tab (`FILE-01`). The name in the title bar reads as text until hovered;
+ * clicked, an input with the label's own type and box takes its place (OpenCalc's
+ * `button.doc-name` and `.doc-rename`, `UX-CHR-10`). */
+button.doc-name {
+  font: inherit; color: inherit; background: none; border: 0; cursor: text;
+  padding: 2px 6px; border-radius: 5px; max-width: 40vw;
+}
+button.doc-name:hover { background: var(--op-surface-color); }
+button.doc-name:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+.doc-rename {
+  font: inherit; font-weight: 600; color: var(--op-text-color); padding: 2px 6px;
+  background: var(--op-popover-background-color);
+  border: 1px solid var(--op-control-border-color); border-radius: 5px;
+}
+.doc-rename:focus { outline: none; border-color: var(--op-accent-color); }
+
+/* File > Info's Properties, and Advanced Properties. */
+.op-info-props { margin-top: 28px; }
+.op-props { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; align-items: center; margin-bottom: 18px; }
+.op-prop-row { display: contents; }
+.op-prop-label { font-size: 13px; color: var(--op-muted-text-color); }
+.op-prop-value { font-size: 13px; padding: 4px 0; }
+.op-prop-input {
+  font: inherit; font-size: 13px; color: var(--op-text-color); padding: 4px 6px; min-width: 0;
+  background: transparent; border: 1px solid transparent; border-radius: 4px; resize: vertical;
+}
+.op-prop-input:hover { border-color: var(--op-control-border-color); }
+.op-prop-input:focus { outline: none; border-color: var(--op-accent-color); background: var(--op-popover-background-color); }
+.op-prop-input::placeholder { color: var(--op-faint-text-color); }
+.op-modal-box:has(.op-tabs) { width: min(92vw, 640px); max-width: min(92vw, 640px); }
+.op-modal-body .op-prop-input { border-color: var(--op-control-border-color); }
+.op-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--op-border-color); margin-bottom: 12px; }
+.op-tab { font: inherit; font-size: 13px; padding: 6px 12px; border: 0; background: none; color: var(--op-text-color); cursor: pointer; border-bottom: 2px solid transparent; }
+.op-tab[aria-selected="true"] { border-bottom-color: var(--op-accent-color); font-weight: 600; }
+.op-custom-form { display: grid; grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr) auto auto; gap: 6px; }
+.op-custom-note { min-height: 1.2em; margin: 6px 0; font-size: 12.5px; }
+.op-custom-list { border: 1px solid var(--op-border-color); border-radius: 6px; max-height: 220px; overflow: auto; }
+.op-custom-row {
+  display: grid; grid-template-columns: 1fr 1fr 90px; gap: 8px; width: 100%; padding: 5px 8px;
+  font: inherit; font-size: 13px; text-align: left; border: 0; background: none; color: var(--op-text-color); cursor: pointer;
+}
+.op-custom-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-custom-row:hover, .op-custom-row[aria-selected="true"] { background: var(--op-surface-color); }
+.op-custom-head { font-weight: 600; cursor: default; border-bottom: 1px solid var(--op-border-color); }
+.op-custom-empty { padding: 8px; font-size: 13px; }
+.op-saveas { display: grid; grid-template-columns: max-content minmax(240px, 1fr); gap: 8px 12px; align-items: center; }
+.op-saveas > p { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12.5px; }
+
+/* Autosave's recovery bar (`SAVE-01`), and its standing state in the status bar. */
+.op-recovery { padding: 6px 16px; background: color-mix(in srgb, var(--op-accent-color) 10%, var(--op-background-color)); border-bottom: 1px solid var(--op-border-color); font-size: 13px; }
+.op-recovery[hidden] { display: none; }
+.op-recovery-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.op-recovery-note { color: var(--op-muted-text-color); }
+.op-recovery-actions { display: inline-flex; gap: 6px; margin-left: auto; }
+.autosave-state { color: var(--op-danger-color); font-size: 12px; margin-left: 8px; }
+
+/* File > Print: only the slides print, one a page, landscape, edge to edge. */
+.print-sheet { display: none; }
+@media print {
+  @page { size: landscape; margin: 0; }
+  body.editor-body > *:not(.print-sheet) { display: none !important; }
+  body.editor-body { background: #fff; }
+  .print-sheet { display: block; }
+  .print-page { break-after: page; page-break-after: always; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; }
+  .print-page:last-child { break-after: auto; page-break-after: auto; }
+  .print-slide { max-width: 100%; max-height: 100%; }
+}

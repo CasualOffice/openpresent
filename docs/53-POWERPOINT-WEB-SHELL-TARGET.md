@@ -62,9 +62,10 @@ buttons, the rest behind the group's "…" overflow; galleries become dropdowns.
 | --- | --- | --- |
 | Home, New | Blank Presentation, then templates (ours) | [D] |
 | Open | Browse this device | [D] |
-| Info | Properties; what this build leaves out (ours) | [D] |
-| Save a Copy, Download | Save, Save a Copy, Download as PDF, PNG of the slide | [D] |
-| Print | Print, Ctrl+P | [D] |
+| Info | Properties beside the page: Slides and Words, then Title, Tags, Comments, Categories, Subject, Company, Manager edited in place; Related Dates; Related People (Author, Last Modified By). Advanced Properties: Summary, Statistics, Custom. What this build leaves out (ours) | [D] |
+| Save As | Save, Save As (name and type: .pptx, .potx, .ppsx; F12), Download a Copy, Rename | [D] |
+| Export | Download as PDF, PNG of the slide | [D] |
+| Print | Print, Ctrl+P: the browser's print, one slide a page | [D] |
 | Share | Share with people | [D] |
 | About, Options | Theme; ribbon labels | [D] |
 | Back | Arrow at the top of the rail; Esc | [D] |
