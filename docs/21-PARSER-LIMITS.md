@@ -316,6 +316,7 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_PIXELS` | `4096 * 4096` | Pixels in one drawn slide; past it the width is reduced, not refused | None: the picture is smaller | Untested: `the_pixel_bound_shrinks_the_width_rather_than_refusing` runs on CI |
 | `MAX_NOTES_CHARS` | `100_000` | Characters of one slide's speaker notes handed to Presenter View (`VS-07`) | None: the notes are cut and end with an ellipsis | Tested: guard loosened, `notes_past_the_bound_are_cut_and_marked` failed (`tests/present.rs`) |
 | `MAX_TRANSITION_MS` | `60_000` | Milliseconds one transition plays, from `p14:dur` (`VS-07`) | None: a longer one plays for a minute | Untested |
+| `MAX_DURATION_MS` | `60_000` | Milliseconds an effect or transition is given by the Transitions and Animations tabs (`VS-10`, `casual-slide-transaction`) | None: a longer one is held to a minute | Untested |
 | `MAX_PICTURE_BYTES` | `64 * 1024 * 1024` | Bytes of one picture Insert > Picture takes, as the writer's media bound (`VS-08`) | CS-WSM-0008 | Untested: no test inserts a picture past it |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
