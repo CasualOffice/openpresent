@@ -98,6 +98,35 @@ pub const LIBERATION_MONO: BundledFamily = BundledFamily {
     ],
 };
 
+/// Noto Sans Arabic: Arabic script, which no family above covers (`T2D1-04`).
+///
+/// A fallback only, never a substitute for a requested name: a run in Arial or
+/// Tahoma draws its Latin in its substitute and its Arabic here, the unmodulated
+/// design those fonts' own Arabic is closest to. Regular and Bold ship; italic asks
+/// draw upright, as Arabic has no italic in Office's fonts either.
+pub const NOTO_SANS_ARABIC: BundledFamily = BundledFamily {
+    name: "Noto Sans Arabic",
+    faces: [
+        face!("noto/NotoSansArabic-Regular.ttf"),
+        face!("noto/NotoSansArabic-Bold.ttf"),
+        face!("noto/NotoSansArabic-Regular.ttf"),
+        face!("noto/NotoSansArabic-Bold.ttf"),
+    ],
+};
+
+/// Noto Naskh Arabic: Arabic for a serif run (Times New Roman, the Office theme's
+/// Arabic font), whose own Arabic is a Naskh design (`T2D1-04`). Chosen ahead of
+/// [`NOTO_SANS_ARABIC`] only when the run's family is a serif one.
+pub const NOTO_NASKH_ARABIC: BundledFamily = BundledFamily {
+    name: "Noto Naskh Arabic",
+    faces: [
+        face!("noto/NotoNaskhArabic-Regular.ttf"),
+        face!("noto/NotoNaskhArabic-Bold.ttf"),
+        face!("noto/NotoNaskhArabic-Regular.ttf"),
+        face!("noto/NotoNaskhArabic-Bold.ttf"),
+    ],
+};
+
 /// The default family / ultimate fallback.
 #[cfg(feature = "all-fonts")]
 pub const DEFAULT_FAMILY: &BundledFamily = &ROBOTO;
@@ -121,13 +150,16 @@ const DEFAULT_FAMILY: &BundledFamily = &CARLITO;
 /// Roboto because the metric-compatible face was left out to save a few
 /// megabytes on a machine with a disk.
 #[cfg(feature = "all-fonts")]
-pub const FAMILIES: [&BundledFamily; 6] = [
+pub const FAMILIES: [&BundledFamily; 8] = [
     &ROBOTO,
     &CALADEA,
     &CARLITO,
     &LIBERATION_SANS,
     &LIBERATION_SERIF,
     &LIBERATION_MONO,
+    // Last: reached only for characters the Latin families lack (`T2D1-04`).
+    &NOTO_SANS_ARABIC,
+    &NOTO_NASKH_ARABIC,
 ];
 
 /// One family, for WebAssembly.
@@ -335,6 +367,15 @@ impl TextFaces {
             let supplied = find_registered(ch);
             return (supplied, Some(target), false);
         }
+        // A serif run's Arabic in the Naskh face, as its own font would draw it
+        // (`T2D1-04`), unless a host supplied a face for it.
+        #[cfg(feature = "all-fonts")]
+        if self.target.style == crate::cjk::Style::Serif && find_registered(ch).is_none() {
+            let naskh = NOTO_NASKH_ARABIC.face_bytes(self.bold, self.italic);
+            if covers(naskh, ch) {
+                return (Some(naskh), None, false);
+            }
+        }
         (coverage_face_bytes(ch, self.bold, self.italic), None, false)
     }
 }
@@ -347,7 +388,8 @@ fn covers(bytes: &'static [u8], ch: char) -> bool {
 ///
 /// # Why fonts are ingested rather than embedded
 ///
-/// The bundled families cover Latin and Hebrew. Arabic, Devanagari, Thai and
+/// The bundled families cover Latin, Hebrew and (since `T2D1-04`, by the
+/// owner's decision) Arabic. Devanagari, Thai and
 /// CJK render as `.notdef` boxes, and the obvious fix — bundle Noto — is the
 /// wrong shape twice over. It puts megabytes into a WebAssembly bundle for
 /// scripts most deployments never see; and it makes this project the arbiter of

@@ -15,7 +15,9 @@ instruction 42. Same owner, Apache-2.0. The fonts keep their own licences: see
 New here, with no OpenCalc counterpart: `src/breaks.rs` (UAX #14 break
 opportunities), `src/layout.rs` and `src/layout/tests.rs` (paragraph and body layout to
 glyph runs), `src/body.rs` (a model text body through the style chain to that layout),
-`src/outline.rs` (face keys and glyph outlines; its pen follows OpenCalc's `GlyphPen`
+`src/bidi.rs` (UAX #9 levels and reordering for right-to-left paragraphs; OpenCalc's
+browser does its own bidi, `T2D1-04`), `fonts/noto/` (the Arabic faces, from Google's
+releases: `fonts/README.md`), `src/outline.rs` (face keys and glyph outlines; its pen follows OpenCalc's `GlyphPen`
 in `casual-calc-render/src/lib.rs`), and `tests/corpus.rs`.
 OpenCalc has no line breaker: a cell does not wrap as a text body does.
 

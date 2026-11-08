@@ -65,6 +65,10 @@ pub struct SceneReport {
     pub text_bodies_undrawn: u32,
     /// Everything else not drawn, or drawn approximately, by feature.
     pub features: BTreeMap<&'static str, u32>,
+    /// East Asian characters drawn without the CJK slice meant for them, with that
+    /// slice's variant: what a host loads before drawing the slide again
+    /// (`T2D1-04`). Characters, not counts, since that is what a host looks up.
+    pub cjk_wanted: std::collections::BTreeSet<(casual_slide_text::cjk::Variant, char)>,
 }
 
 impl SceneReport {
@@ -963,6 +967,9 @@ impl<'a> Builder<'a> {
         if captured {
             self.text.captured = Some((transform, layout.carets.clone()));
         }
+        self.report
+            .cjk_wanted
+            .extend(layout.cjk_wanted.iter().copied());
         if layout.runs.is_empty() {
             self.report.text_bodies_undrawn = self.report.text_bodies_undrawn.saturating_add(1);
             return;

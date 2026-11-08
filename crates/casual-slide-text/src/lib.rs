@@ -29,6 +29,7 @@
 //! coordinate space of the frame the caller passes. Outlines scale with the size
 //! they are asked at, so a backend working in EMU asks in EMU.
 
+pub mod bidi;
 pub mod body;
 mod breaks;
 pub mod cjk;

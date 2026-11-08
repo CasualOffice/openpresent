@@ -20,7 +20,7 @@ caret. Here, the browser would give each collaborator a different wrap, and the 
 The cost is real, and `SPK-01` measures it before ADR-004 is Accepted.
 
 **Fonts.** OpenCalc already bundles Carlito (Calibri metrics), Caladea (Cambria metrics),
-Liberation (Arial, Times New Roman, Courier New metrics), Inter for UI and sliced CJK faces.
+Liberation (Arial, Times New Roman, Courier New metrics), Inter for UI and sliced CJK faces. Here, Noto Sans Arabic and Noto Naskh Arabic are bundled as Arabic fallbacks (`T2D1-04`): a run's Arabic is drawn in its `cs` font (the theme's font for its language's script when `cs` is empty), and where no bundled face covers it, in Naskh for a serif family and Sans otherwise. A right-to-left paragraph (`pPr/@rtl`) measures its margins, indent and bullet from the right, keeps `algn` as written (`r` is the right edge either way), and orders its runs by `-text`'s `bidi.rs` (UAX #9's W2, W3, W7, N1, N2, I1, I2 and L2; no explicit embeddings, number separators or mirrored brackets). The editor's worker draws CJK by asking the engine after each drawing which slices it wanted (`slide_font_needs`), fetching them from `fonts/cjk/` and drawing again, OpenCalc's PDF-export loop.
 Metric-compatible substitution keeps line breaks true to PowerPoint for those families.
 Others are the honest gap: **Aptos**, Office's current default, is the largest risk: modern decks reflow without a compatible face. Akasia (OFL) claims metric compatibility with it, which is self-reported and unverified (`TXT-03`). Options, in order: the host supplies the
 real font through a font seam; a tuned substitute with stored advance overrides; report the
