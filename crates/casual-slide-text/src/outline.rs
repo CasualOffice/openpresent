@@ -40,11 +40,19 @@ const STYLES: [&str; 4] = ["Regular", "Bold", "Italic", "BoldItalic"];
 /// Faces named by a hash, remembered as runs name them.
 static HASHED: RwLock<Vec<(&'static [u8], String)>> = RwLock::new(Vec::new());
 
+/// Whether two faces are one: the same address, or the same bytes. A `const`
+/// family's `include_bytes!` may be copied per codegen unit, so address alone
+/// can miss a bundled face (`CI-16`). Lengths differ between faces, so the
+/// byte compare runs only for the face itself.
+fn same_face(a: &[u8], b: &[u8]) -> bool {
+    core::ptr::eq(a, b) || a == b
+}
+
 fn bundled_key(face: &[u8]) -> Option<String> {
     FAMILIES.iter().find_map(|family| {
         STYLES.iter().enumerate().find_map(|(i, style)| {
             let bytes = family.face_bytes(i & 1 == 1, i & 2 == 2);
-            core::ptr::eq(bytes, face).then(|| format!("{}-{style}", family.name.replace(' ', "")))
+            same_face(bytes, face).then(|| format!("{}-{style}", family.name.replace(' ', "")))
         })
     })
 }
@@ -163,7 +171,7 @@ mod tests {
                 let key = face_key(face);
                 assert!(!key.contains(' '), "{key}");
                 let back = face_by_key(&key).expect("found again");
-                assert!(core::ptr::eq(back, face), "{key}");
+                assert_eq!(back, face, "{key}");
             }
         }
         assert_eq!(
@@ -174,12 +182,9 @@ mod tests {
 
     #[test]
     fn another_face_is_named_by_its_bytes_and_found_again() {
-        let copy: &'static [u8] = Box::leak(
-            crate::faces::CARLITO
-                .face_bytes(false, false)
-                .to_vec()
-                .into_boxed_slice(),
-        );
+        let mut bytes = crate::faces::CARLITO.face_bytes(false, false).to_vec();
+        bytes.push(0);
+        let copy: &'static [u8] = Box::leak(bytes.into_boxed_slice());
         let key = face_key(copy);
         assert!(key.starts_with("face-"), "{key}");
         assert_eq!(key, hash_key(copy), "the same bytes, the same key");
@@ -214,7 +219,10 @@ mod tests {
             top(&small) < 0.0,
             "y down: the letter is above the baseline"
         );
-        assert!((top(&large) - 2.0 * top(&small)).abs() < 0.01);
+        assert!(
+            (top(&large) - 2.0 * top(&small)).abs() < 0.05,
+            "linear within two 26.6 roundings"
+        );
     }
 
     #[test]

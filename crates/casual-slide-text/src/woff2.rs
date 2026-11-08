@@ -270,6 +270,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
     fn a_shipped_slice_decodes_to_a_face_skrifa_reads() {
         use skrifa::MetadataProvider as _;
         let sfnt = to_sfnt(&slice("jp-sans-400/000.woff2"), 1 << 24).expect("decodes");
@@ -281,6 +282,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
     fn truncation_and_caps_are_refused_not_misread() {
         let bytes = slice("jp-sans-400/000.woff2");
         assert_eq!(to_sfnt(&bytes[..40], 1 << 24), Err(Woff2Error::NotWoff2));

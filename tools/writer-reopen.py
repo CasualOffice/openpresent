@@ -54,9 +54,10 @@ def clones_of(deck):
 def f4(paths):
     """Part statuses by deck, keyed by path. Exit 1 just means something failed."""
     tool = REPO / "tools/f4/validate.py"
-    out = subprocess.run([sys.executable, "-I", str(tool), "--json", *map(str, paths)],
-                         capture_output=True, text=True, check=False)
-    if out.returncode not in (0, 1):
+    out = subprocess.run([sys.executable, "-I", "-X", "utf8", str(tool), "--json", *map(str, paths)],
+                         capture_output=True, text=True, encoding="utf-8", check=False)
+    # UTF-8 both ways: Windows' console code page cannot print every part name (CI-16).
+    if out.returncode not in (0, 1) or not out.stdout.strip():
         raise SystemExit(f"F4 could not run:\n{out.stderr}")
     return json.loads(out.stdout)
 

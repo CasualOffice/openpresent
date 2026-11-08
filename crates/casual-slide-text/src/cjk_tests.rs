@@ -28,6 +28,7 @@ const JP_SANS: Variant = Variant {
 };
 
 #[test]
+#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn a_loaded_slice_draws_and_measures_its_characters() {
     let dir = dir();
     assert!(dir.load(wanted(JP_SANS, "日本語")) >= 1, "a slice was read");
@@ -43,6 +44,7 @@ fn a_loaded_slice_draws_and_measures_its_characters() {
 }
 
 #[test]
+#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn kana_in_a_latin_cell_draws_its_han_in_the_japanese_face_and_hangul_in_the_korean() {
     let dir = dir();
     let kr = Variant::new(Region::Kr, Style::Sans, false);
@@ -60,6 +62,7 @@ fn kana_in_a_latin_cell_draws_its_han_in_the_japanese_face_and_hangul_in_the_kor
 }
 
 #[test]
+#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn a_character_its_region_lacks_comes_from_the_next_region_in_the_chain() {
     let dir = dir();
     let index = dir.index();
@@ -85,6 +88,7 @@ fn a_character_its_region_lacks_comes_from_the_next_region_in_the_chain() {
 }
 
 #[test]
+#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn an_east_asian_font_draws_its_own_latin_once_its_slice_loads() {
     // Korean serif: no other test in this binary registers it.
     let kr_serif = Variant::new(Region::Kr, Style::Serif, false);
@@ -99,6 +103,7 @@ fn an_east_asian_font_draws_its_own_latin_once_its_slice_loads() {
 }
 
 #[test]
+#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn a_bold_serif_cell_is_drawn_emboldened_because_no_serif_bold_ships() {
     let tc_serif = Variant::new(Region::Tc, Style::Serif, true);
     assert_eq!(tc_serif.weight, 400);
@@ -116,6 +121,7 @@ fn a_bold_serif_cell_is_drawn_emboldened_because_no_serif_bold_ships() {
 /// of three regions, has exactly that advance — so a column autofitted before
 /// its font arrives is not wrong for its CJK text.
 #[test]
+#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn the_nominal_width_is_the_real_width_in_every_shipped_slice() {
     let mut checked = 0usize;
     // Every region and both styles; the bold sans shares its widths with the

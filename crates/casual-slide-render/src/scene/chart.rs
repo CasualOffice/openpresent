@@ -18,8 +18,9 @@
 //! `spPr` states, since a slide chart sits on the slide rather than on a grid.
 //!
 //! Not drawn, and reported: 3D (drawn flat), radar, surface and bubble families,
-//! data labels, markers on line charts, trendlines and error bars, and
-//! `cx:chartSpace` (2016+ charts).
+//! `cx:chartSpace` (2016+ charts), and, by name (`SKEL-04`), data labels, line
+//! and scatter markers, trendlines, error bars, drop, high-low and series lines,
+//! up-down bars, pie explosion and the data table.
 
 use casual_slide_import::chart::chart_of;
 use casual_slide_model::chart::c;
@@ -298,6 +299,9 @@ impl<'a> Builder<'a> {
     /// Every series of every family the plot area holds, in drawing order.
     fn chart_series(&mut self, space: &c::ChartSpace) -> Vec<Series> {
         let mut out = Vec::new();
+        for part in undrawn_parts(space) {
+            self.report.note(part);
+        }
         for (family, chart) in space.charts().iter().enumerate() {
             use c::PlotAreaCharts as P;
             let three_d = matches!(
@@ -1557,9 +1561,275 @@ fn wedge(cx: f64, cy: f64, r: f64, inner: f64, a0: f64, a1: f64) -> Vec<PathCmd>
     out
 }
 
+/// Whether a `c:CT_Boolean` is on; an element without `val` means true.
+fn on(b: Option<&c::Boolean>) -> bool {
+    b.is_some_and(|b| b.val.unwrap_or(true))
+}
+
+/// Whether any of a label's `show*` switches is on.
+fn shows(v: [Option<&c::Boolean>; 5]) -> bool {
+    v.into_iter().any(on)
+}
+
+/// Whether a series' or a family's data labels show anything (`SKEL-04`).
+fn labels_shown(d: Option<&c::DLbls>) -> bool {
+    let Some(d) = d else { return false };
+    if on(d.delete.as_deref()) {
+        return false;
+    }
+    shows([
+        d.show_val.as_deref(),
+        d.show_cat_name.as_deref(),
+        d.show_ser_name.as_deref(),
+        d.show_percent.as_deref(),
+        d.show_bubble_size.as_deref(),
+    ]) || d.d_lbl.iter().any(|l| {
+        !on(l.delete.as_deref())
+            && (l.tx.is_some()
+                || shows([
+                    l.show_val.as_deref(),
+                    l.show_cat_name.as_deref(),
+                    l.show_ser_name.as_deref(),
+                    l.show_percent.as_deref(),
+                    l.show_bubble_size.as_deref(),
+                ]))
+    })
+}
+
+/// Whether a series' marker is drawn: no symbol means the family's choice.
+fn marker_shown(m: Option<&c::Marker>, family_default: bool) -> bool {
+    match m.and_then(|m| m.symbol.as_deref()) {
+        Some(s) => s.val != Some(c::MarkerStyleValue::None),
+        None => family_default,
+    }
+}
+
+/// What one series carries that is not drawn.
+struct SerParts<'a> {
+    labels: Option<&'a c::DLbls>,
+    trendlines: bool,
+    err_bars: bool,
+}
+
+/// Every part of a chart the renderer does not draw, named for the render
+/// report (`SKEL-04`, "nothing lost silently"), each name once per chart.
+fn undrawn_parts(space: &c::ChartSpace) -> Vec<&'static str> {
+    use c::PlotAreaCharts as P;
+    let mut out: Vec<&'static str> = Vec::new();
+    let mut add = |name: &'static str, present: bool| {
+        if present && !out.contains(&name) {
+            out.push(name);
+        }
+    };
+    fn sers(
+        add: &mut dyn FnMut(&'static str, bool),
+        family: Option<&c::DLbls>,
+        parts: &mut dyn Iterator<Item = SerParts<'_>>,
+    ) {
+        add("chart data labels", labels_shown(family));
+        for s in parts {
+            add("chart data labels", labels_shown(s.labels));
+            add("chart trendlines", s.trendlines);
+            add("chart error bars", s.err_bars);
+        }
+    }
+    fn line(s: &c::LineSer) -> SerParts<'_> {
+        SerParts {
+            labels: s.d_lbls.as_deref(),
+            trendlines: !s.trendline.is_empty(),
+            err_bars: s.err_bars.is_some(),
+        }
+    }
+    fn bar(s: &c::BarSer) -> SerParts<'_> {
+        SerParts {
+            labels: s.d_lbls.as_deref(),
+            trendlines: !s.trendline.is_empty(),
+            err_bars: s.err_bars.is_some(),
+        }
+    }
+    fn area(s: &c::AreaSer) -> SerParts<'_> {
+        SerParts {
+            labels: s.d_lbls.as_deref(),
+            trendlines: !s.trendline.is_empty(),
+            err_bars: !s.err_bars.is_empty(),
+        }
+    }
+    fn pie(s: &c::PieSer) -> SerParts<'_> {
+        SerParts {
+            labels: s.d_lbls.as_deref(),
+            trendlines: false,
+            err_bars: false,
+        }
+    }
+    fn scatter(s: &c::ScatterSer) -> SerParts<'_> {
+        SerParts {
+            labels: s.d_lbls.as_deref(),
+            trendlines: !s.trendline.is_empty(),
+            err_bars: !s.err_bars.is_empty(),
+        }
+    }
+    for chart in space.charts() {
+        match chart {
+            P::LineChart(l) => {
+                sers(&mut add, l.d_lbls.as_deref(), &mut l.ser.iter().map(line));
+                let dflt = on(l.marker.as_deref());
+                for s in &l.ser {
+                    add(
+                        "chart line markers",
+                        marker_shown(s.marker.as_deref(), dflt),
+                    );
+                }
+                add("chart drop lines", l.drop_lines.is_some());
+                add("chart high-low lines", l.hi_low_lines.is_some());
+                add("chart up-down bars", l.up_down_bars.is_some());
+            }
+            P::Line3DChart(l) => {
+                sers(&mut add, l.d_lbls.as_deref(), &mut l.ser.iter().map(line));
+                add("chart drop lines", l.drop_lines.is_some());
+            }
+            P::StockChart(l) => {
+                sers(&mut add, l.d_lbls.as_deref(), &mut l.ser.iter().map(line));
+                for s in &l.ser {
+                    add(
+                        "chart line markers",
+                        marker_shown(s.marker.as_deref(), false),
+                    );
+                }
+                add("chart drop lines", l.drop_lines.is_some());
+                add("chart high-low lines", l.hi_low_lines.is_some());
+                add("chart up-down bars", l.up_down_bars.is_some());
+            }
+            P::ScatterChart(sc) => {
+                sers(
+                    &mut add,
+                    sc.d_lbls.as_deref(),
+                    &mut sc.ser.iter().map(scatter),
+                );
+                for s in &sc.ser {
+                    add(
+                        "chart scatter markers",
+                        marker_shown(s.marker.as_deref(), true),
+                    );
+                }
+            }
+            P::BarChart(b) => {
+                sers(&mut add, b.d_lbls.as_deref(), &mut b.ser.iter().map(bar));
+                add("chart series lines", !b.ser_lines.is_empty());
+            }
+            P::Bar3DChart(b) => {
+                sers(&mut add, b.d_lbls.as_deref(), &mut b.ser.iter().map(bar));
+            }
+            P::AreaChart(a) => {
+                sers(&mut add, a.d_lbls.as_deref(), &mut a.ser.iter().map(area));
+                add("chart drop lines", a.drop_lines.is_some());
+            }
+            P::Area3DChart(a) => {
+                sers(&mut add, a.d_lbls.as_deref(), &mut a.ser.iter().map(area));
+                add("chart drop lines", a.drop_lines.is_some());
+            }
+            P::PieChart(p) => {
+                sers(&mut add, p.d_lbls.as_deref(), &mut p.ser.iter().map(pie));
+                add(
+                    "chart pie explosion",
+                    p.ser.iter().any(|s| s.explosion.is_some()),
+                );
+            }
+            P::Pie3DChart(p) => {
+                sers(&mut add, p.d_lbls.as_deref(), &mut p.ser.iter().map(pie));
+                add(
+                    "chart pie explosion",
+                    p.ser.iter().any(|s| s.explosion.is_some()),
+                );
+            }
+            P::DoughnutChart(p) => {
+                sers(&mut add, p.d_lbls.as_deref(), &mut p.ser.iter().map(pie));
+                add(
+                    "chart pie explosion",
+                    p.ser.iter().any(|s| s.explosion.is_some()),
+                );
+            }
+            P::OfPieChart(p) => {
+                sers(&mut add, p.d_lbls.as_deref(), &mut p.ser.iter().map(pie));
+                add(
+                    "chart pie explosion",
+                    p.ser.iter().any(|s| s.explosion.is_some()),
+                );
+                add("chart series lines", !p.ser_lines.is_empty());
+            }
+            // Whole families not drawn are reported where they are skipped.
+            P::RadarChart(_) | P::SurfaceChart(_) | P::Surface3DChart(_) | P::BubbleChart(_) => {}
+        }
+    }
+    let table = space
+        .chart
+        .as_deref()
+        .and_then(|c| c.plot_area.as_deref())
+        .is_some_and(|p| p.d_table.is_some());
+    add("chart data table", table);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn line_space(ser: c::LineSer, marker: Option<Box<c::Boolean>>) -> c::ChartSpace {
+        c::ChartSpace {
+            chart: Some(Box::new(c::Chart {
+                plot_area: Some(Box::new(c::PlotArea {
+                    charts: vec![c::PlotAreaCharts::LineChart(Box::new(c::LineChart {
+                        ser: vec![ser],
+                        marker,
+                        ..Default::default()
+                    }))],
+                    ..Default::default()
+                })),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn undrawn_chart_parts_are_named_for_the_report() {
+        let yes = || Some(Box::new(c::Boolean { val: Some(true) }));
+        let line = c::LineSer {
+            d_lbls: Some(Box::new(c::DLbls {
+                show_val: yes(),
+                ..Default::default()
+            })),
+            trendline: vec![c::Trendline::default()],
+            err_bars: Some(Box::default()),
+            ..Default::default()
+        };
+        assert_eq!(
+            undrawn_parts(&line_space(line, yes())),
+            [
+                "chart data labels",
+                "chart line markers",
+                "chart trendlines",
+                "chart error bars"
+            ]
+        );
+    }
+
+    #[test]
+    fn hidden_labels_and_no_markers_are_not_reported() {
+        let line = c::LineSer {
+            d_lbls: Some(Box::new(c::DLbls {
+                show_val: Some(Box::new(c::Boolean { val: Some(false) })),
+                ..Default::default()
+            })),
+            marker: Some(Box::new(c::Marker {
+                symbol: Some(Box::new(c::MarkerStyle {
+                    val: Some(c::MarkerStyleValue::None),
+                })),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        assert!(undrawn_parts(&line_space(line, None)).is_empty());
+    }
 
     #[test]
     fn ticks_step_in_ones_twos_and_fives() {
