@@ -190,6 +190,9 @@ impl ShapeBox {
     pub const KEEP_ASPECT: u32 = 32;
     /// A group.
     pub const GROUP: u32 = 64;
+    /// A placeholder (`p:ph`): the only shape an empty text body prompts on, as
+    /// PowerPoint shows "Click to add text" on placeholders only (`SHAPE-02`).
+    pub const PLACEHOLDER: u32 = 128;
 }
 
 /// A Design edit for the save plan.
@@ -395,7 +398,8 @@ impl Viewer {
                 | bit(locks.no_resize, ShapeBox::NO_RESIZE)
                 | bit(locks.no_rot, ShapeBox::NO_ROTATE)
                 | bit(locks.no_change_aspect, ShapeBox::KEEP_ASPECT)
-                | bit(Some(shape.kind == NodeKind::Group), ShapeBox::GROUP);
+                | bit(Some(shape.kind == NodeKind::Group), ShapeBox::GROUP)
+                | bit(Some(shape.placeholder().is_some()), ShapeBox::PLACEHOLDER);
             out.push(ShapeBox {
                 node: shape.id.node,
                 x: t.offset.x.0,

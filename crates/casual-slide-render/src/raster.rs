@@ -211,6 +211,18 @@ fn draw(
     }
 }
 
+/// The width, in the path's own units, of one device pixel under `t`: PowerPoint
+/// draws no line thinner than a pixel, so a thin theme line is a solid pixel rather
+/// than a pale smear of coverage (`SHAPE-02`).
+fn hairline(t: &Transform) -> f32 {
+    let scale = (t.sx * t.sy - t.kx * t.ky).abs().sqrt();
+    if scale.is_finite() && scale > 0.0 {
+        1.0 / scale
+    } else {
+        0.0
+    }
+}
+
 fn sk_stroke(stroke: &Stroke) -> SkStroke {
     let (line_join, miter_limit) = match stroke.join {
         Join::Round => (LineJoin::Round, 4.0),
@@ -273,7 +285,8 @@ pub fn render_pixmap(
                     );
                 }
                 if let Some(stroke) = stroke {
-                    let s = sk_stroke(stroke);
+                    let mut s = sk_stroke(stroke);
+                    s.width = s.width.max(hairline(&t));
                     draw(
                         &mut pixmap,
                         &p,

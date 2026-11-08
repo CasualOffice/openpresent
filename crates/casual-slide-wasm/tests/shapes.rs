@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::Command;
 
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
-use casual_slide_wasm::{Ends, Viewer};
+use casual_slide_wasm::{Ends, ShapeBox, Viewer};
 
 /// The first slide's XML: the blank deck's one slide.
 fn first_slide_xml(bytes: &[u8]) -> String {
@@ -192,4 +192,65 @@ fn fill_outline_and_style_save_and_undo() {
     assert_eq!(v.save().unwrap(), opened);
     assert_eq!(v.palette(0).unwrap().len(), 10);
     assert!(v.palette(0).unwrap().iter().all(|c| c.len() == 6));
+}
+
+/// The red channel of pixel `(x, y)` of a straight RGBA image `w` wide.
+fn red(px: &[u8], w: u32, x: u32, y: u32) -> u8 {
+    px[((y * w + x) * 4) as usize]
+}
+
+#[test]
+fn a_drawn_arrow_line_paints_a_solid_line_and_a_visible_arrowhead() {
+    // The theme's thin line (`lnRef idx="1"`, 0.5 pt of accent1 `4472C4`) at 960
+    // pixels across a 13.33 inch slide is two thirds of a pixel. Centred on a pixel
+    // row, it must paint that row near accent1, as PowerPoint draws no line thinner
+    // than a device pixel, not a washed-out two-thirds coverage.
+    let mut v = Viewer::blank().unwrap();
+    let px = 12_700; // EMU in one pixel at 960 wide.
+    let y = 200 * px + px / 2;
+    v.insert_preset(
+        0,
+        "straightConnector1",
+        Ends::Tail,
+        "Straight Arrow Connector",
+        [100 * px, y, 400 * px, 0],
+        (false, false),
+    )
+    .unwrap();
+    let (w, rgba) = v.render_rgba(0, 960).unwrap();
+    assert_eq!(w, 960);
+    let darkest = (195..206).map(|r| red(&rgba, w, 300, r)).min().unwrap();
+    assert!(
+        darkest <= 0x60,
+        "the line is pale: darkest red {darkest:#x}"
+    );
+    // The arrowhead at the tail (x = 500 px) is several pixels across six pixels
+    // back from its tip, not a speck the width of the line.
+    let rows = (180..221).filter(|&r| red(&rgba, w, 494, r) < 0xC0).count();
+    assert!(
+        rows >= 5,
+        "the arrowhead spans {rows} rows six pixels from its tip"
+    );
+}
+
+#[test]
+fn only_placeholders_are_flagged_for_the_empty_text_prompt() {
+    // The blank deck's Title Slide has two placeholders; a drawn shape is not one,
+    // so "Click to add text" never shows over it.
+    let mut v = Viewer::blank().unwrap();
+    let node = v
+        .insert_preset(
+            0,
+            "rect",
+            Ends::Plain,
+            "Rectangle",
+            [0, 0, 1_000_000, 1_000_000],
+            (false, false),
+        )
+        .unwrap();
+    let flagged = |b: &ShapeBox| b.flags & ShapeBox::PLACEHOLDER != 0;
+    let shapes = v.shapes(0).unwrap();
+    assert_eq!(shapes.iter().filter(|b| flagged(b)).count(), 2);
+    let drawn = shapes.iter().find(|b| b.node == node).unwrap();
+    assert!(!flagged(drawn));
 }

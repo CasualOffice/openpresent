@@ -27,6 +27,7 @@ const byId = (id) => document.getElementById(id);
 
 // `ShapeBox`'s flag bits in `casual-slide-wasm`.
 const NO_MOVE = 4, NO_RESIZE = 8, NO_ROTATE = 16, KEEP_ASPECT = 32;
+const PLACEHOLDER = 128;              // `ShapeBox::PLACEHOLDER`: only these prompt
 const ROT_UNIT = 60000;               // `@rot` is in 60000ths of a degree
 const NUDGE = 76200;                  // PowerPoint's grid step, 1/12 inch, in EMU
 const NUDGE_FINE = 12700;             // one point, with Ctrl
@@ -211,10 +212,11 @@ function paintSelection() {
   const l = layer();
   for (const el of [...l.children]) if (!el.classList.contains("sel-ghost")) el.remove();
   if (state.reading || !state.deck) return;
-  // Empty text placeholders show where to click, as PowerPoint's dashed prompt.
+  // Empty text placeholders show where to click, as PowerPoint's dashed prompt; a
+  // drawn shape or text box with no text shows none (`SHAPE-02`).
   const k = scale();
   for (const s of shapes) {
-    if (!s.empty || (text.editing() && s.node === selected)) continue;
+    if (!s.empty || !(s.flags & PLACEHOLDER) || (text.editing() && s.node === selected)) continue;
     const p = document.createElement("div");
     p.className = "sel-prompt";
     p.style.left = `${s.x * k}px`;

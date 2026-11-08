@@ -1158,6 +1158,11 @@ fn end_of(points: &[(f64, f64)]) -> Option<((f64, f64), (f64, f64))> {
     (len > 0.0 && len.is_finite()).then_some((tip, (dx / len, dy / len)))
 }
 
+/// The least line width a line end is sized from, in EMU: 2 pt. PowerPoint sizes
+/// its arrowheads from the line's width, but a thin line's head stays a readable
+/// arrow rather than shrinking with it (`SHAPE-02`; observed, not measured).
+const END_BASE_MIN: f64 = 25_400.0;
+
 /// Size of a line end in line widths, as PowerPoint draws `sm`, `med` and `lg`.
 fn end_scale(token: Option<String>) -> f64 {
     match token.as_deref() {
@@ -1193,7 +1198,7 @@ fn arrowheads(path: &[PathCmd], stroke: &Stroke, ends: Ends) -> Vec<Piece> {
     }
     let points = path_points(path);
     let reversed: Vec<(f64, f64)> = points.iter().rev().copied().collect();
-    let unit = stroke.width.max(9_525.0);
+    let unit = stroke.width.max(END_BASE_MIN);
     let mut out = Vec::new();
     for (end, pts) in [(ends.head, &points), (ends.tail, &reversed)] {
         let Some(kind) = end.and_then(|e| e.end_type) else {
@@ -1553,14 +1558,26 @@ mod tests {
             head: None,
             tail: end(LineEndType::Triangle),
         };
-        let heads = arrowheads(&path, &solid_stroke(10_000.0), ends);
+        let heads = arrowheads(&path, &solid_stroke(30_000.0), ends);
         assert_eq!(heads.len(), 1);
         let (cmds, fill, stroke) = &heads[0];
         assert!(fill.is_some() && stroke.is_none());
         // Tip at the end; the base three widths back, three widths across.
         assert_eq!(cmds[0], PathCmd::MoveTo(100_000.0, 0.0));
-        assert_eq!(cmds[1], PathCmd::LineTo(70_000.0, 15_000.0));
-        assert_eq!(cmds[2], PathCmd::LineTo(70_000.0, -15_000.0));
+        assert_eq!(cmds[1], PathCmd::LineTo(10_000.0, 45_000.0));
+        assert_eq!(cmds[2], PathCmd::LineTo(10_000.0, -45_000.0));
+    }
+
+    #[test]
+    fn a_thin_line_sizes_its_arrowhead_from_two_points() {
+        let path = vec![PathCmd::MoveTo(0.0, 0.0), PathCmd::LineTo(100_000.0, 0.0)];
+        let ends = Ends {
+            head: None,
+            tail: end(LineEndType::Triangle),
+        };
+        // A 0.5 pt theme line's head is three times 2 pt, not three times 0.5 pt.
+        let heads = arrowheads(&path, &solid_stroke(6_350.0), ends);
+        assert_eq!(heads[0].0[1], PathCmd::LineTo(23_800.0, 38_100.0));
     }
 
     #[test]
