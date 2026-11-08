@@ -7,6 +7,7 @@ fn style(size: f32) -> RunStyle {
         bold: false,
         italic: false,
         color: Rgba::BLACK,
+        underline: None,
     }
 }
 
@@ -354,4 +355,29 @@ fn caret_stops_cover_every_character_boundary_of_each_line() {
     let glyph_y = layout.runs[0].glyphs[0].y;
     assert!(first.top < glyph_y && glyph_y < first.bottom);
     assert!(layout.carets[1].top >= first.bottom - 0.01);
+}
+
+#[test]
+fn an_underlined_run_carries_a_line_under_its_glyphs_at_the_faces_underline_metrics() {
+    let mut underlined = run("Under ", 20.0);
+    underlined.style.underline = Some(UnderlineType::Sng);
+    // Trailing spaces of the line are not underlined.
+    let plain = run("plain ", 20.0);
+    let layout = layout_body(&body(vec![paragraph(vec![underlined, plain])]), FRAME);
+    let first = &layout.runs[0];
+    let line = first.underline.expect("the underlined run has a line");
+    assert_eq!(line.kind, UnderlineType::Sng);
+    assert!((line.x0 - first.glyphs[0].x).abs() < 0.01, "{line:?}");
+    assert!(line.x1 > first.glyphs.last().unwrap().x, "{line:?}");
+    // Below the baseline, by a few percent of the size, and a sensible thickness.
+    let baseline = first.glyphs[0].y;
+    assert!(
+        line.y > baseline && line.y < baseline + 20.0 * 0.3,
+        "{line:?}"
+    );
+    assert!(
+        line.thickness > 0.2 && line.thickness < 20.0 * 0.15,
+        "{line:?}"
+    );
+    assert!(layout.runs[1].underline.is_none());
 }

@@ -24,6 +24,7 @@ use casual_slide_model::fill::Fill;
 use casual_slide_model::text::{
     AutonumberScheme, Bullet, BulletColor, BulletFont, BulletSize, CapsType, CharacterProperties,
     ParagraphProperties, TextAlign, TextAnchor, TextBody, TextItem, TextSpacing, TextWrap,
+    UnderlineType,
 };
 use casual_slide_model::theme::{FontCollectionIndex, FontScheme};
 use casual_slide_style::text::{FontScript, RunFont, TextChain, paragraph_level};
@@ -316,6 +317,10 @@ fn run_style<'a>(
         color: chain
             .run_fill(props, paragraph)
             .map_or(Rgba::BLACK, |f| color_of(&f.value, fonts.env)),
+        underline: chain
+            .run(props, paragraph, |c| c.underline)
+            .map(|u| u.value)
+            .filter(|u| *u != UnderlineType::None),
     }
 }
 
@@ -519,6 +524,8 @@ fn bullet<'a>(
             bold: text_style.bold,
             italic: false,
             color,
+            // PowerPoint does not underline a bullet.
+            underline: None,
         },
     })
 }

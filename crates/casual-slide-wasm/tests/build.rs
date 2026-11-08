@@ -259,3 +259,65 @@ fn a_deck_built_from_blank_passes_the_sdk_validator() {
         _ => panic!("the SDK validator rejected the built deck:\n{report}"),
     }
 }
+
+/// `VS-18`: PowerPoint's blank Title Slide centres its title and subtitle; the blank
+/// deck's layout must say so, since its master's `titleStyle` says left.
+#[test]
+fn the_blank_decks_title_and_subtitle_draw_centred() {
+    let mut v = Viewer::blank().unwrap();
+    let shapes = v.shapes(0).unwrap();
+    for (i, text) in [(0, "Hi"), (1, "Sub")] {
+        let node = shapes[i].node;
+        type_into(&mut v, 0, node, text);
+        let object = ObjectId {
+            part: v.slide_part(0).unwrap(),
+            node,
+        };
+        let start = v.caret_rect(0, object, 0).unwrap()[0];
+        let end = v.caret_rect(0, object, text.len()).unwrap()[0];
+        // Both placeholders run from 1524000 to 10668000 EMU: the middle is 6096000.
+        let middle = (start + end) / 2.0;
+        assert!(
+            (middle - 6_096_000.0).abs() < 20_000.0,
+            "{text}: drawn from {start} to {end}"
+        );
+    }
+}
+
+/// `VS-18`: Ctrl+U draws a line under the run, right across the text.
+#[test]
+fn an_underlined_title_draws_a_line_under_its_text() {
+    let mut v = Viewer::blank().unwrap();
+    let node = v.shapes(0).unwrap()[0].node;
+    type_into(&mut v, 0, node, "HELLO");
+    let object = ObjectId {
+        part: v.slide_part(0).unwrap(),
+        node,
+    };
+    let width = 960u32;
+    let scale = f64::from(width) / 12_192_000.0;
+    let start = v.caret_rect(0, object, 0).unwrap();
+    let end = v.caret_rect(0, object, 5).unwrap();
+    let (x0, x1) = (
+        (start[0] * scale) as usize + 2,
+        (end[0] * scale) as usize - 2,
+    );
+    // The most dark pixels in any one row across the text.
+    let longest = |v: &mut Viewer| {
+        let (w, rgba) = v.render_rgba(0, width).unwrap();
+        let w = w as usize;
+        (0..rgba.len() / 4 / w)
+            .map(|y| (x0..x1).filter(|x| rgba[(y * w + x) * 4] < 100).count())
+            .max()
+            .unwrap()
+    };
+    let before = longest(&mut v);
+    assert!(
+        before < (x1 - x0) * 9 / 10,
+        "no row is dark across: {before}"
+    );
+    v.toggle(object, 0, 5, casual_slide_wasm::Toggle::Underline)
+        .unwrap();
+    let after = longest(&mut v);
+    assert_eq!(after, x1 - x0, "a row is dark right across the text");
+}
