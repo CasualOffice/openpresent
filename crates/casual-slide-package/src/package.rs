@@ -6,7 +6,7 @@ use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
 
 use zip::write::{SimpleFileOptions, ZipWriter};
-use zip::{CompressionMethod, DateTime, ZipArchive};
+use zip::{CompressionMethod, DateTime, System, ZipArchive};
 
 use crate::directory::record_count;
 use crate::error::PackageError;
@@ -329,10 +329,13 @@ impl Package {
         }
         // A fixed timestamp and method: determinism is a contract. The time is set
         // here, not left to `zip`'s default, which is the clock when its `time`
-        // feature is on, as any crate in the build could make it (`PKG-03`).
+        // feature is on, as any crate in the build could make it (`PKG-03`). The host
+        // system is set too: `zip` records DOS when built for Windows and Unix
+        // elsewhere, so left to its default the same save differs by build target.
         let options = SimpleFileOptions::default()
             .compression_method(CompressionMethod::Deflated)
-            .last_modified_time(DateTime::default());
+            .last_modified_time(DateTime::default())
+            .system(System::Unix);
         let failed = |_| PackageError::RewriteFailed;
         let mut out = ZipWriter::new(Cursor::new(Vec::new()));
         let mut written = BTreeSet::new();

@@ -543,6 +543,23 @@ fn a_rewrite_writes_a_fixed_timestamp() {
     }
 }
 
+/// `PKG-03`: a rewritten entry records one host system on every build target. `zip`
+/// otherwise records DOS on Windows and Unix elsewhere, and the bytes differ.
+#[test]
+fn a_rewrite_records_the_same_host_system_on_every_target() {
+    let zip = make_zip(&[("keep.xml", b"<a/>"), ("edit.xml", b"<b/>")]);
+    let mut pkg = Package::open(zip, PackageLimits::default()).unwrap();
+    let mut edits = crate::PartEdits::default();
+    edits.replace("edit.xml", b"<c/>".to_vec());
+    edits.replace("new.xml", b"<d/>".to_vec());
+    let out = pkg.rewrite(&edits).unwrap();
+    let mut archive = zip::ZipArchive::new(Cursor::new(out)).unwrap();
+    for name in ["edit.xml", "new.xml"] {
+        let entry = archive.by_name(name).unwrap();
+        assert_eq!(entry.system(), zip::System::Unix, "{name}");
+    }
+}
+
 /// Set the sizes in the first local header only, leaving the central directory as written.
 fn lie_in_local_header(
     mut zip: Vec<u8>,
