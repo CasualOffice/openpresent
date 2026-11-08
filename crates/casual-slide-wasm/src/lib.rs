@@ -31,6 +31,8 @@ pub use design::{BackgroundChoice, BuiltinTheme, Fit, THEMES};
 
 mod animate;
 mod build;
+mod collab;
+pub use collab::MAX_PARTICIPANT;
 mod edit;
 mod rich;
 mod shapes;
@@ -88,6 +90,9 @@ pub enum BridgeError {
     /// Insert > Picture was given bytes that are not a PNG or JPEG picture, or more of
     /// them than [`MAX_PICTURE_BYTES`] (`VS-08`).
     NotAPicture,
+    /// Co-editing refused a message or an arrival; the collaboration code
+    /// (`CS-COL-*`, `COL-04`).
+    Collab(&'static str),
 }
 
 impl BridgeError {
@@ -105,6 +110,7 @@ impl BridgeError {
             Self::BadArgument => "CS-WSM-0006",
             Self::Build(code) => code,
             Self::NotAPicture => "CS-WSM-0008",
+            Self::Collab(code) => code,
         }
     }
 }
@@ -134,6 +140,7 @@ impl core::fmt::Display for BridgeError {
             Self::NoText => write!(f, "[{}] that shape has no text to edit", self.code()),
             Self::BadArgument => write!(f, "[{}] an argument named nothing", self.code()),
             Self::Build(code) => write!(f, "[{code}] the new slide or shape could not be built"),
+            Self::Collab(code) => write!(f, "[{code}] the shared session could not take that"),
             Self::NotAPicture => write!(
                 f,
                 "[{}] only PNG and JPEG pictures up to 64 MB can be inserted",
@@ -233,6 +240,8 @@ pub struct Viewer {
     new_media: BTreeMap<String, casual_slide_export::writer::MediaBytes>,
     /// Pictures inserted so far, which names the next one.
     minted: u32,
+    /// A shared session, while one is on (`COL-04`).
+    shared: Option<collab::Shared>,
 }
 
 impl Viewer {
@@ -256,6 +265,7 @@ impl Viewer {
             origins: BTreeMap::new(),
             new_media: BTreeMap::new(),
             minted: 0,
+            shared: None,
         })
     }
 
@@ -604,6 +614,113 @@ fn changed_code(v: &Viewer, slide: Option<usize>) -> i32 {
         return -2;
     }
     slide.map_or(-1, |i| i32::try_from(i).unwrap_or(-1))
+}
+
+/// Start a shared session as participant `client` at `revision` (`COL-04`): the deck
+/// open must be the room's, its seed with its log replayed.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-COL-0004` for a participant number out of range.
+#[wasm_bindgen]
+pub fn collab_begin(client: u64, revision: u64) -> Result<(), JsError> {
+    with_viewer(|v| v.collab_begin(client, revision))
+}
+
+/// End the shared session.
+#[wasm_bindgen]
+pub fn collab_end() {
+    let _ = with_viewer(|v| {
+        v.collab_end();
+        Ok(())
+    });
+}
+
+/// The collaboration protocol's version.
+#[wasm_bindgen]
+#[must_use]
+pub fn protocol_version() -> u32 {
+    casual_slide_transaction::collab::wire::PROTOCOL_VERSION
+}
+
+/// The next submission to send, as its JSON message; empty when there is none.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-COL-0003` for an edit with no wire form.
+#[wasm_bindgen]
+pub fn collab_flush() -> Result<String, JsError> {
+    with_viewer(|v| v.collab_flush().map(Option::unwrap_or_default))
+}
+
+/// Own chunks through `through` are committed; the room is at `revision`.
+#[wasm_bindgen]
+pub fn collab_acknowledge(through: u64, revision: u64) {
+    let _ = with_viewer(|v| {
+        v.collab_acknowledge(through, revision);
+        Ok(())
+    });
+}
+
+/// Whether any own edit is not yet acknowledged.
+#[wasm_bindgen]
+#[must_use]
+pub fn collab_unacknowledged() -> bool {
+    with_viewer(|v| Ok(v.collab_unacknowledged())).unwrap_or(false)
+}
+
+/// Apply another participant's operations, a JSON array, at `revision`. Returns the
+/// slide indexes they touched, `-2` for one not named.
+///
+/// # Errors
+///
+/// `CS-COL-0002` when this copy no longer agrees and must join again; `CS-COL-0004`
+/// for a malformed message.
+#[wasm_bindgen]
+pub fn collab_receive(ops: String, revision: u64) -> Result<Vec<i32>, JsError> {
+    with_viewer(|v| v.collab_receive(&ops, revision))
+}
+
+/// Replay a room's log, a JSON array, on the deck just opened from its seed.
+///
+/// # Errors
+///
+/// `CS-COL-0002` when an operation does not apply.
+#[wasm_bindgen]
+pub fn collab_replay(ops: String) -> Result<(), JsError> {
+    with_viewer(|v| v.collab_replay(&ops))
+}
+
+/// Where a caret at `offset` in a shape moves to after the last arrival.
+#[wasm_bindgen]
+#[must_use]
+pub fn collab_map_offset(part: u32, node: u32, offset: u32) -> u32 {
+    with_viewer(|v| Ok(v.collab_map_offset(part, node, offset as usize)))
+        .ok()
+        .and_then(|o| u32::try_from(o).ok())
+        .unwrap_or(offset)
+}
+
+/// This participant's presence as the JSON message to send: the slide, the selected
+/// shapes, and the caret (`node` 0 for none) with the selection's other end.
+#[wasm_bindgen]
+#[must_use]
+pub fn collab_presence(
+    slide: u32,
+    shapes: Vec<u32>,
+    node: u32,
+    offset: u32,
+    anchor: u32,
+) -> String {
+    Viewer::collab_presence(casual_slide_transaction::collab::Presence {
+        slide,
+        shapes,
+        caret: (node != 0).then_some(casual_slide_transaction::collab::Caret {
+            node,
+            offset,
+            anchor,
+        }),
+    })
 }
 
 /// The engine's version.

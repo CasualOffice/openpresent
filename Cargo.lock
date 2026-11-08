@@ -204,6 +204,7 @@ dependencies = [
  "casual-slide-style",
  "casual-slide-text",
  "casual-slide-transaction",
+ "serde_json",
  "tiny-skia",
  "wasm-bindgen",
 ]

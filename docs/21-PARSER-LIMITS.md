@@ -326,6 +326,7 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_NAME_CHARS` | `128` | Characters of the name a host gives a shape it inserts (`SHAPE-01`) | None: the name is cut; control characters are dropped and the rest escaped | Untested |
 | `MAX_FRAME_BYTES` | `48 * 1024 * 1024` | Bytes of one collaboration message, sent or accepted; a room's seed deck travels in one, base64 (`casual-slide-transaction::collab`, `VS-09`) | The server closes the connection | Untested |
 | `MAX_OUTSTANDING` | `1` | Chunks a collaborating client has in flight: stop and wait (`VS-09`, `COL-02`) | None: edits wait for the acknowledgement | Tested: raised to 32, `two_clients_editing_at_once_through_the_server_end_with_the_same_deck` failed |
+| `MAX_PARTICIPANT` | `4095` | Participants a room numbers, each minting node numbers and `cNvPr/@id`s from its own range of 2^20 (`casual-slide-wasm` `collab`, `COL-04`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_TEXT` | `1 << 20` | Characters of one inserted text on the wire (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's XML on the wire, which is then read under the reader's own limits (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_LINE_WIDTH` | `20_116_800` | EMU of an outline weight Shape Outline sets, PowerPoint's 1584 points (`SHAPE-01`) | None: a wider one is set to the bound | Untested |

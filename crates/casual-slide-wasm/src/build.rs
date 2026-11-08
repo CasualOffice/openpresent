@@ -520,11 +520,23 @@ impl Viewer {
         label: Option<&str>,
     ) -> Result<u32, BridgeError> {
         let ordinal = self.slide_ordinal(index)?;
+        if rel.is_some() && self.is_shared() {
+            // A picture's bytes have no way to the other participants yet (`COL-04`).
+            return Err(BridgeError::Edit(
+                casual_slide_transaction::TxnError::NotShared,
+            ));
+        }
+        // In a shared session, an id from this participant's own range.
+        let mint = self.shared_mint();
         let parts = self.deck.parts();
         let part = parts.get(ordinal).ok_or(BridgeError::BadArgument)?;
         let root = part.shape_tree().ok_or(BridgeError::BadArgument)?;
+        let (parent, at) = (root.id, root.children.len());
         let (top_spid, top_node) = highest(part);
-        let id = top_spid.checked_add(1).ok_or(BridgeError::BadArgument)?;
+        let id = match mint {
+            Some(m) => m,
+            None => top_spid.checked_add(1).ok_or(BridgeError::BadArgument)?,
+        };
         let name = if rel.is_some() {
             format!("Picture {}", id.saturating_sub(1))
         } else if let Some(label) = label {
@@ -534,9 +546,9 @@ impl Viewer {
         };
         let clamp = |v: i64| v.clamp(0, i64::from(i32::MAX));
         let b = [clamp(b[0]), clamp(b[1]), clamp(b[2]), clamp(b[3])];
+        let element = shape_xml(kind, id, &name, rel, b, flip);
         let xml = format!(
-            "<p:sld {NAMESPACES}><p:cSld><p:spTree>{TREE_HEAD}{}</p:spTree></p:cSld></p:sld>",
-            shape_xml(kind, id, &name, rel, b, flip)
+            "<p:sld {NAMESPACES}><p:cSld><p:spTree>{TREE_HEAD}{element}</p:spTree></p:cSld></p:sld>"
         );
         let read = read_slide(xml.as_bytes(), "ppt/slides/openpresent-insert.xml", ordinal)?;
         let mut node = read
@@ -544,14 +556,16 @@ impl Viewer {
             .and_then(|t| t.children.first())
             .cloned()
             .ok_or(BridgeError::Build("CS-WSM-0007"))?;
-        let node_number = top_node.checked_add(1).ok_or(BridgeError::BadArgument)?;
+        let node_number = match mint {
+            Some(m) => m,
+            None => top_node.checked_add(1).ok_or(BridgeError::BadArgument)?,
+        };
         node.id = ObjectId {
             part: ordinal,
             node: node_number,
         };
+        self.shared_remember(node.id, &element);
         node.children.clear();
-        let parent = root.id;
-        let at = root.children.len();
         self.typing = None;
         self.history.apply(
             self.deck.parts_mut(),
