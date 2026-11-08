@@ -8,7 +8,9 @@
 //! a range and format a range over one shape's text body (`VS-05`); from the Properties
 //! and Tree families, set a node's transform and delete or insert a node (`VS-06`, moved
 //! here from `casual-slide-wasm`'s `txn.rs`); from the Deck family, add, list, remove,
-//! move and hide slides (`VS-08`). One op set, one undo stack.
+//! move and hide slides (`VS-08`); from the Motion family, a slide's transition and the
+//! effects of its main animation sequence (`VS-10`, [`animate`]). One op set, one undo
+//! stack.
 //!
 //! # Positions
 //!
@@ -31,6 +33,8 @@ use casual_slide_model::slide::{PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
     CharacterProperties, LineBreak, Paragraph, TextBody, TextItem, TextRun, UnderlineType,
 };
+use casual_slide_model::timing::{SlideTiming, Slot};
+use casual_slide_model::transition::SlideTransition;
 
 /// An error applying an operation. Each has a stable code (`docs/20`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,6 +61,12 @@ pub enum TxnError {
     /// A part cannot be added or dropped here: an added part must take the next
     /// ordinal, and only the last part, listed nowhere, can be dropped (`VS-08`).
     BadPart(u32),
+    /// The slide's timing is not in the shape the Animations tab edits: inside
+    /// `mc:AlternateContent`, left unread, or a root holding something else. Nothing
+    /// changes, so nothing the edit cannot read is lost (`VS-10`).
+    Timing(u32),
+    /// No shape on the slide has this `cNvPr/@id`, so no effect can name it (`VS-10`).
+    NoTarget(u32),
 }
 
 impl TxnError {
@@ -70,6 +80,8 @@ impl TxnError {
             Self::EmptyBody(_) => "CS-TXN-0005",
             Self::NoSuchSlide(_) => "CS-TXN-0006",
             Self::BadPart(_) => "CS-TXN-0007",
+            Self::Timing(_) => "CS-TXN-0008",
+            Self::NoTarget(_) => "CS-TXN-0009",
         }
     }
 }
@@ -118,6 +130,14 @@ impl core::fmt::Display for TxnError {
                 "[{}] part {ordinal} cannot be added or dropped there",
                 self.code()
             ),
+            Self::Timing(ordinal) => write!(
+                f,
+                "[{}] the animations of part {ordinal} are not in a form this build edits yet",
+                self.code()
+            ),
+            Self::NoTarget(spid) => {
+                write!(f, "[{}] no shape on the slide has id {spid}", self.code())
+            }
         }
     }
 }
@@ -257,6 +277,55 @@ pub enum Operation {
         /// What `@show` becomes.
         show: Option<bool>,
     },
+    /// Motion: a slide's `p:transition`; `None` removes it (`VS-10`).
+    SetTransition {
+        /// The slide part.
+        ordinal: u32,
+        /// What it becomes.
+        transition: Option<Slot<SlideTransition>>,
+    },
+    /// Motion: a slide's whole `p:timing`; `None` removes it. The inverse of every
+    /// effect operation: the timing exactly as it was (`VS-10`).
+    SetTiming {
+        /// The slide part.
+        ordinal: u32,
+        /// What it becomes.
+        timing: Option<Slot<SlideTiming>>,
+    },
+    /// Motion: add an effect to the slide's main sequence at `index` (`VS-10`).
+    AddEffect {
+        /// The slide part.
+        ordinal: u32,
+        /// Its place in the sequence, from 0.
+        index: usize,
+        /// What it is.
+        effect: NewEffect,
+    },
+    /// Motion: delete the effect at `index` of the main sequence.
+    RemoveEffect {
+        /// The slide part.
+        ordinal: u32,
+        /// Its place.
+        index: usize,
+    },
+    /// Motion: move the effect at `from` to `to`, counted after it is taken out.
+    MoveEffect {
+        /// The slide part.
+        ordinal: u32,
+        /// Where it is.
+        from: usize,
+        /// Where it goes.
+        to: usize,
+    },
+    /// Motion: when the effect at `index` starts.
+    SetEffectStart {
+        /// The slide part.
+        ordinal: u32,
+        /// Its place.
+        index: usize,
+        /// On click, with or after the previous.
+        start: EffectStart,
+    },
     /// Several operations as one: applied in order, all or nothing, one undo step.
     Batch(Vec<Operation>),
 }
@@ -277,16 +346,27 @@ impl Operation {
             | Self::InsertSlide { .. }
             | Self::RemoveSlide { .. }
             | Self::MoveSlide { .. }
-            | Self::SetSlideShow { .. } => None,
+            | Self::SetSlideShow { .. }
+            | Self::SetTransition { .. }
+            | Self::SetTiming { .. }
+            | Self::AddEffect { .. }
+            | Self::RemoveEffect { .. }
+            | Self::MoveEffect { .. }
+            | Self::SetEffectStart { .. } => None,
         }
     }
 
     /// The part this operation edits, for a host that shows it. The first, for a batch.
     pub fn part(&self) -> Option<u32> {
         match self {
-            Self::SetSlideShow { ordinal, .. } | Self::InsertSlide { ordinal, .. } => {
-                Some(*ordinal)
-            }
+            Self::SetSlideShow { ordinal, .. }
+            | Self::InsertSlide { ordinal, .. }
+            | Self::SetTransition { ordinal, .. }
+            | Self::SetTiming { ordinal, .. }
+            | Self::AddEffect { ordinal, .. }
+            | Self::RemoveEffect { ordinal, .. }
+            | Self::MoveEffect { ordinal, .. }
+            | Self::SetEffectStart { ordinal, .. } => Some(*ordinal),
             Self::Batch(ops) => ops.iter().find_map(Operation::part),
             _ => self.object().map(|o| o.part),
         }
@@ -316,6 +396,12 @@ impl Operation {
             Self::DropPart { .. } | Self::RemoveSlide { .. } => "Delete Slide",
             Self::MoveSlide { .. } => "Move Slide",
             Self::SetSlideShow { .. } => "Hide Slide",
+            Self::SetTransition { .. } => "Transition",
+            Self::SetTiming { .. } | Self::AddEffect { .. } | Self::SetEffectStart { .. } => {
+                "Animation"
+            }
+            Self::RemoveEffect { .. } => "Remove Animation",
+            Self::MoveEffect { .. } => "Reorder Animations",
             Self::Batch(ops) => ops.first().map_or("Edit", Operation::label),
         }
     }
@@ -842,6 +928,25 @@ fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnErro
         Operation::RemoveSlide { index } => slides::remove_slide(parts, index),
         Operation::MoveSlide { from, to } => slides::move_slide(parts, from, to),
         Operation::SetSlideShow { ordinal, show } => slides::set_show(parts, ordinal, show),
+        Operation::SetTransition {
+            ordinal,
+            transition,
+        } => animate::set_transition(parts, ordinal, transition),
+        Operation::SetTiming { ordinal, timing } => animate::set_timing(parts, ordinal, timing),
+        Operation::AddEffect {
+            ordinal,
+            index,
+            effect,
+        } => animate::add_effect(parts, ordinal, index, effect),
+        Operation::RemoveEffect { ordinal, index } => animate::remove_effect(parts, ordinal, index),
+        Operation::MoveEffect { ordinal, from, to } => {
+            animate::move_effect(parts, ordinal, from, to)
+        }
+        Operation::SetEffectStart {
+            ordinal,
+            index,
+            start,
+        } => animate::set_effect_start(parts, ordinal, index, start),
         Operation::Batch(ops) => {
             let mut inverses: Vec<Operation> = Vec::with_capacity(ops.len());
             let mut changed = false;
@@ -1015,8 +1120,13 @@ impl History {
     }
 }
 
+pub mod animate;
 mod slides;
 
+pub use animate::{EffectKind, EffectStart, NewEffect, TransitionKind};
+
+#[cfg(test)]
+mod animate_tests;
 #[cfg(test)]
 mod shape_tests;
 #[cfg(test)]
