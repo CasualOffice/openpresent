@@ -192,7 +192,8 @@ pub fn build_transition(
                 value: Some(Box::new(fallback)),
             },
         ],
-        selected: Some(0),
+        // As the reader resolves it: `p14` is not a namespace it understands.
+        selected: Some(1),
     }))
 }
 

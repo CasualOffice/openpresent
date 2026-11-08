@@ -111,8 +111,13 @@ fn a_p14_duration_overrides_the_speed() {
     let v = Viewer::open(bytes).unwrap();
     let t = v.show_slide(0).unwrap().transition.unwrap();
     assert_eq!(
-        (t.effect, t.duration_ms, t.played_as_is),
-        ("push", 1250, false)
+        (
+            t.effect,
+            t.duration_ms,
+            t.played_as_is,
+            t.direction.as_str()
+        ),
+        ("push", 1250, true, "u")
     );
 }
 
