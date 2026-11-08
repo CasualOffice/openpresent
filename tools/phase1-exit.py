@@ -3,6 +3,9 @@
 
     python3 tools/phase1-exit.py          # reads the evidence record, then runs CLAUDE.md's gates
     python3 tools/phase1-exit.py --quick  # without the gates, which then print NOT MET: not run
+    python3 tools/phase1-exit.py --quick --gates-result success --sign-off-not-failing
+        # on CI: the gates item from the p1-gates job's result, and exit 0 when owner sign-off
+        # is the only item NOT MET (it still prints NOT MET)
 
 Runs only what already exists, and reads the list from docs/06, so an item added there and
 unknown here prints NOT MET. Nothing can be met by assertion: what did not run is not met,
@@ -15,7 +18,11 @@ failure and was made from the fixtures as they are now. The commit it was made a
 an engine change since then is a reason to run it again before sign-off.
 
 `--tracker`, `--roadmap` and `--evidence` let a planted failure be checked.
-Exit: 0 if every item is met, 1 if not, 2 if the list cannot be read.
+`--gates-result` takes the result of the job that ran the gates (`phase1-exit.yml`'s p1-gates):
+only "success" is met. `--sign-off-not-failing` exists because sign-off is the owner's act, not a
+check CI can pass; without it a workflow would be red until the owner ticks the box.
+Exit: 0 if every item is met (or, with `--sign-off-not-failing`, every item but owner sign-off),
+1 if not, 2 if the list cannot be read.
 """
 
 import argparse
@@ -207,6 +214,8 @@ CHECKS = (
 
 
 def gates(args):
+    if args.gates_result is not None:
+        return args.gates_result == "success", f"p1-gates job: {args.gates_result}"
     if args.quick:
         return False, "not run (--quick)"
     env = dict(os.environ, **ENV)
@@ -217,6 +226,9 @@ def gates(args):
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--quick", action="store_true")
+    parser.add_argument("--gates-result", help="result of the CI job that ran the gates; only 'success' is met")
+    parser.add_argument("--sign-off-not-failing", action="store_true",
+                        help="exit 0 when owner sign-off is the only item not met; it still prints NOT MET")
     parser.add_argument("--tracker", default=str(ROOT / tracker_rows.TRACKER))
     parser.add_argument("--roadmap", default=str(ROOT / "docs/06-ROADMAP-AND-DELIVERY.md"))
     parser.add_argument("--evidence", default=str(ROOT / "tools/phase1-evidence.json"))
@@ -234,7 +246,11 @@ def main(argv):
         print(f"{'MET    ' if met else 'NOT MET'} {text}\n        {evidence}")
     closed = sum(r[1] for r in results)
     print(f"{closed} of {len(results)} met.")
-    return 0 if closed == len(results) else 1
+    unmet = [text for text, met, _ in results if not met]
+    if args.sign_off_not_failing and unmet and all(re.search(r"^Owner sign-off", t) for t in unmet):
+        print("Only owner sign-off is NOT MET: that is the owner's box, so this exits 0 (--sign-off-not-failing).")
+        return 0
+    return 0 if not unmet else 1
 
 
 if __name__ == "__main__":
