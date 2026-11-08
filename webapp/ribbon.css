@@ -312,7 +312,9 @@
 
 /* Right-click menus. */
 .rb-ctx { min-width: 220px; }
-.rb-ctx .rb-pop-item { min-height: 30px; }
+/* Compact rows as in PowerPoint's menus: the label sets the height, not a tall line box. */
+.rb-ctx .rb-pop-item { min-height: 26px; line-height: 1.2; padding: 0 10px; }
+.rb-ctx .rb-pop-sep { margin: 3px 6px; }
 
 /* KeyTips */
 .op-chrome-ribbon .rb-tip {
