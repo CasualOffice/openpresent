@@ -11,7 +11,7 @@ on:
 # protects a running run but not a queued one, which GitHub drops when a third
 # push joins the group (CI-15).
 concurrency:
-  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

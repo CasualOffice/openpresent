@@ -27,7 +27,7 @@ permissions:
 # As OpenCalc's ci.yml: on main each commit has its own group, so its evidence is never
 # cancelled, even while queued; a pull request's superseded run is.
 concurrency:
-  group: phase1-exit-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
+  group: phase1-exit-${{ github.ref }}
   cancel-in-progress: true
 
 env:
