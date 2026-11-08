@@ -28,6 +28,8 @@
 //   were refused by the worker, and the cell was found by the rows' stated heights,
 //   a row below the one drawn. The cell is found here from the stage picture: the
 //   first orange cell, "falsch-positiv", row 2, column 2.
+// - Ctrl+Z then Ctrl+Y pressed together undo and redo, in that order: the redo was
+//   refused while the undo was unanswered.
 //
 // Usage: node tests/browser/caret-on-other-slide-size.mjs <server binary>
 // Needs `playwright-core` (installed by the job, pinned) and Chrome on the runner.
@@ -245,6 +247,22 @@ async function main() {
       fail(`a key typed just after the click went to the text's end: ${JSON.stringify(after)}`);
     }
     console.log("caret-on-other-slide-size: a key typed at once after a click goes in at the click");
+
+    // UX-015: Ctrl+Z then Ctrl+Y pressed together undo the Q and redo it, in order.
+    // Both keys go in one task, so the second comes before the engine answers the first:
+    // the redo was refused, as Redo was enabled only from the last answer's undo state.
+    const edits = await page.evaluate(async () => (await import("/editor.core.js")).editsNow());
+    await page.evaluate(() => {
+      const t = document.activeElement || document.body;
+      for (const key of ["z", "y"]) {
+        t.dispatchEvent(new KeyboardEvent("keydown", { key, ctrlKey: true, bubbles: true, cancelable: true }));
+      }
+    });
+    // An undo and a redo each count one edit in the engine.
+    await until(page, async (n) => (await import("/editor.core.js")).editsNow() >= n + 2, "the undo and the redo both applied", edits);
+    const redone = await bodyText(page, flow.part, flow.node);
+    if (redone !== after) fail(`after Ctrl+Z, Ctrl+Y the text is ${JSON.stringify(redone)}, not ${JSON.stringify(after)}`);
+    console.log("caret-on-other-slide-size: Ctrl+Z then Ctrl+Y at once undo and redo in order");
 
     // UX-015: a second click in a group enters the shape inside, and typing goes there.
     await openDeck(page, GROUPED, "z21464709-souzou-ja.pptx");

@@ -34,10 +34,11 @@ use casual_slide_model::drawing::ShapeProperties;
 use casual_slide_model::fill::Fill;
 use casual_slide_model::presentation::{Percentage, TextFont};
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
-use casual_slide_model::slide::{Background, PartEntry, SlidePart, SlideParts};
+use casual_slide_model::slide::{Background, MasterTextStyles, PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
     Bullet, BulletFont, CharacterProperties, LineBreak, Paragraph, ParagraphProperties, StrikeType,
-    TextAlign, TextBody, TextItem, TextPoint, TextRun, TextSpacing, UnderlineType, Written,
+    TextAlign, TextBody, TextItem, TextListStyle, TextPoint, TextRun, TextSpacing, UnderlineType,
+    Written,
 };
 use casual_slide_model::theme::{ColorScheme, FontScheme, ShapeStyle};
 use casual_slide_model::timing::{SlideTiming, Slot};
@@ -476,6 +477,23 @@ pub enum Operation {
         /// What `bg` becomes.
         background: Option<Box<Background>>,
     },
+    /// Design: a master's `txStyles`, whole; `None` removes it (`UX-015`). Slide Size
+    /// scales the font sizes it states. Its own inverse, with the styles it replaced.
+    SetTextStyles {
+        /// The master's part ordinal.
+        master: u32,
+        /// What `txStyles` becomes.
+        styles: Option<Box<MasterTextStyles>>,
+    },
+    /// Properties: a shape's `txBody/lstStyle`, whole; `None` removes it (`UX-015`).
+    /// Slide Size scales the font sizes it states. Its own inverse. Refused on a node
+    /// with no text body.
+    SetListStyle {
+        /// The shape.
+        object: ObjectId,
+        /// What `lstStyle` becomes.
+        list_style: Option<Box<TextListStyle>>,
+    },
     /// Deck: add a slide-like part with the next ordinal, listed nowhere yet. A new or
     /// duplicated slide is this, then [`Operation::InsertSlide`] (`VS-08`).
     AddPart {
@@ -647,7 +665,8 @@ impl Operation {
             | Self::DeleteRange { object, .. }
             | Self::FormatRange { object, .. }
             | Self::FormatParagraphs { object, .. }
-            | Self::Restore { object, .. } => Some(*object),
+            | Self::Restore { object, .. }
+            | Self::SetListStyle { object, .. } => Some(*object),
             Self::SetTable { node, .. } | Self::SetNonVisual { node, .. } => Some(*node),
             Self::SetChart { .. }
             | Self::SetAuthors { .. }
@@ -657,7 +676,8 @@ impl Operation {
             | Self::SetFontScheme { .. }
             | Self::SetSlideSize { .. }
             | Self::SetSections { .. }
-            | Self::SetBackground { .. } => None,
+            | Self::SetBackground { .. }
+            | Self::SetTextStyles { .. } => None,
             Self::Batch(ops) => ops.iter().find_map(Operation::object),
             Self::AddPart { .. }
             | Self::DropPart { .. }
@@ -679,6 +699,7 @@ impl Operation {
     pub fn part(&self) -> Option<u32> {
         match self {
             Self::SetBackground { part, .. } => Some(*part),
+            Self::SetTextStyles { master, .. } => Some(*master),
             Self::SetSlideShow { ordinal, .. }
             | Self::InsertSlide { ordinal, .. }
             | Self::SetTransition { ordinal, .. }
@@ -701,7 +722,8 @@ impl Operation {
         match self {
             Self::SetColorScheme { .. }
             | Self::SetFontScheme { .. }
-            | Self::SetSlideSize { .. } => true,
+            | Self::SetSlideSize { .. }
+            | Self::SetTextStyles { .. } => true,
             Self::Batch(ops) => ops.iter().any(Operation::is_deck_wide),
             _ => false,
         }
@@ -736,6 +758,7 @@ impl Operation {
             Self::SetSlideSize { .. } => "Slide Size",
             Self::SetSections { .. } => "Section",
             Self::SetBackground { .. } => "Background",
+            Self::SetTextStyles { .. } | Self::SetListStyle { .. } => "Format",
             Self::AddPart { .. } | Self::InsertSlide { .. } => "New Slide",
             Self::DropPart { .. } | Self::RemoveSlide { .. } => "Delete Slide",
             Self::MoveSlide { .. } => "Move Slide",
@@ -1466,7 +1489,21 @@ pub(crate) fn apply_inner<D: Document + ?Sized>(
         | Operation::SetSlideSize { .. }
         | Operation::SetSections { .. }
         | Operation::SetBackground { .. }
+        | Operation::SetTextStyles { .. }
         | Operation::SetDocumentProperties { .. } => Err(TxnError::NoDesign),
+        Operation::SetListStyle { object, list_style } => {
+            let body = body_mut(parts, object)?;
+            let wanted = list_style.map(|l| *l);
+            let changed = body.list_style != wanted;
+            let before = core::mem::replace(&mut body.list_style, wanted);
+            Ok((
+                Operation::SetListStyle {
+                    object,
+                    list_style: before.map(Box::new),
+                },
+                changed,
+            ))
+        }
         // Handled by `rich::apply_rich` above.
         Operation::SetTable { node, .. } => Err(TxnError::NoTable(node)),
         Operation::SetChart { part, .. } => Err(TxnError::NoChart(part)),

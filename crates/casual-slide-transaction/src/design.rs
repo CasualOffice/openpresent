@@ -154,6 +154,28 @@ pub(crate) fn apply_design<D: Document + ?Sized>(
                 changed,
             )
         }
+        Operation::SetTextStyles { master, styles } => {
+            let master = *master;
+            let id = casual_slide_model::shape::ObjectId {
+                part: master,
+                node: 0,
+            };
+            let part = doc
+                .parts_mut()
+                .get_mut(master)
+                .filter(|p| p.kind == casual_slide_model::slide::SlideKind::Master)
+                .ok_or(TxnError::NoSuchObject(id))?;
+            let wanted = styles.as_deref().cloned();
+            let changed = part.text_styles != wanted;
+            let before = core::mem::replace(&mut part.text_styles, wanted);
+            (
+                Operation::SetTextStyles {
+                    master,
+                    styles: before.map(Box::new),
+                },
+                changed,
+            )
+        }
         Operation::SetSections { sections } => {
             let slot = doc.sections_mut().ok_or(TxnError::NoDesign)?;
             let changed = slot != sections;

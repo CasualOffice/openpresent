@@ -589,9 +589,14 @@ export function openRange() {
   return [...obj(), ...textRange()];
 }
 
+/// Undo or redo from the open box, after every edit queued before it, so a key typed
+/// and Ctrl+Z pressed at once undo that key (`UX-015`). Straight to the engine, not
+/// through the command's enabled state, which may not have heard the last edit yet.
 function history(id) {
-  call("edit_break_typing").catch(() => {});
-  run(id);
+  serial(async () => {
+    await call("edit_break_typing").catch(() => {});
+    await (id === "edit.undo" ? shapes.undoStep() : shapes.redoStep());
+  });
 }
 
 /// The stage was drawn again, after an undo, a redo or a move: keep the caret

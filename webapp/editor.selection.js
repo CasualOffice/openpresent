@@ -706,13 +706,37 @@ export async function deleteSelection() {
 /// Undo once, as Undo does, and resolve when the slide is drawn again: Paste Special
 /// takes a paste back this way to paste it another way (`PAR-11`).
 export const undoStep = () => history("undo");
+/// Redo once, as Redo does: the text editor's Ctrl+Y, queued behind its edits.
+export const redoStep = () => history("redo");
+
+/// Undos and redos sent and not yet answered (`UX-015`). Ctrl+Z then Ctrl+Y pressed
+/// together lost the redo: Redo was enabled from the undo state of the last answer,
+/// which the undo had not given yet, so the redo was refused. As OpenCalc's `doUndo`
+/// and `doRedo` (`opencalc/webapp/editor.selection.js`), the engine's history is the
+/// one judge: while a step is on its way both stay enabled and go to the engine, which
+/// applies them in the order sent (one queue, one priority) and does nothing when its
+/// stack is empty.
+let historyPending = 0;
 
 async function history(op) {
+  historyPending += 1;
+  try {
+    await historyOnce(op);
+  } finally {
+    historyPending -= 1;
+    changed();
+  }
+}
+
+async function historyOnce(op) {
   try {
     const r = await request({ op }, { priority: 9 });
     afterEdit(r);
     // A theme, the slide size or several backgrounds (`VS-12`): every slide is drawn again.
-    if (r.slide === -2 && r.count === state.deck.count) { slides.redrawAll(r.size); return; }
+    // An undo's answer carries no count: none means the list is unchanged (`UX-015`;
+    // an undone Slide Size was left drawn at the new size).
+    const same = typeof r.count !== "number" || r.count === state.deck.count;
+    if (r.slide === -2 && same) { slides.redrawAll(r.size); return; }
     // A slide added, deleted, moved or hidden comes back too (`VS-08`): the pane is
     // read again whenever the count changed or no single slide was named.
     if (typeof r.count === "number" && (r.count !== state.deck.count || r.slide < 0)) {
@@ -959,8 +983,8 @@ export function onKey(e) {
 
 export function init() {
   const has = () => !!state.deck;
-  register("edit.undo", { label: "Undo", shortcut: "Ctrl+Z", enabled: () => has() && undoState[0], run: () => history("undo") });
-  register("edit.redo", { label: "Redo", shortcut: "Ctrl+Y", enabled: () => has() && undoState[1], run: () => history("redo") });
+  register("edit.undo", { label: "Undo", shortcut: "Ctrl+Z", enabled: () => has() && (undoState[0] || historyPending > 0), run: () => history("undo") });
+  register("edit.redo", { label: "Redo", shortcut: "Ctrl+Y", enabled: () => has() && (undoState[1] || historyPending > 0), run: () => history("redo") });
   register("shape.delete", { label: "Delete", shortcut: "Delete", enabled: () => has() && !!shape(), run: deleteSelection });
   const any = () => has() && !!shape();
   for (const [how, label] of [["left", "Align Left"], ["center", "Align Center"], ["right", "Align Right"], ["top", "Align Top"], ["middle", "Align Middle"], ["bottom", "Align Bottom"]]) {
