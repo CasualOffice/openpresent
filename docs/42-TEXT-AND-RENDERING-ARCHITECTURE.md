@@ -60,6 +60,10 @@ Items carry object ids so the editor can invalidate and reuse them per object.
 | `-render` tiny-skia | Server thumbnails, PNG, the fidelity gate | Same outlines |
 | `-render` PDF | Export, print | Embedded subset fonts, real text |
 
+A stroke is never drawn thinner than one device pixel, as PowerPoint draws a 0.5 pt theme line
+as a solid pixel at low zoom; a line end is sized in line widths from at least 2 pt, so a thin
+line's arrowhead stays readable (`SHAPE-02`; an estimate, not measured against PowerPoint).
+
 Glyph paths rather than `fillText` because `fillText` re-shapes and can disagree with the engine.
 The cost is losing LCD antialiasing and hinting, which matter little at slide scale and not at all
 in a rotated title, but do matter in small text at low zoom. `SPK-01` looks at this directly, on
