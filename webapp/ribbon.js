@@ -48,7 +48,8 @@ async function ensureSprite() {
     const doc = new DOMParser().parseFromString(await r.text(), "image/svg+xml");
     const svg = doc.documentElement;
     if (svg.nodeName !== "svg") throw new Error("sprite is not SVG");
-    svg.removeAttribute("style");   // a style attribute is refused by the CSP; CSS hides it
+    // The sprite carries no style attribute, which the CSP would refuse even while
+    // parsing (`UX-016`); `.op-sprite` hides it.
     svg.setAttribute("class", "op-sprite");
     document.body.insertBefore(document.importNode(svg, true), document.body.firstChild);
   } catch (e) {
