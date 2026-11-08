@@ -783,7 +783,7 @@ impl<'a> Builder<'a> {
         w: f64,
         h: f64,
         kind: NodeKind,
-    ) -> (Vec<(Vec<PathCmd>, FillMode, bool)>, Option<TextRect>) {
+    ) -> (Vec<OutlinePath>, Option<TextRect>) {
         let extents = Extents::new(w.round() as i64, h.round() as i64);
         let compiled;
         let (def, adjusts): (&GeometryDef, Vec<(String, String)>) = match geometry {
@@ -862,6 +862,10 @@ struct Ends {
     head: Option<LineEnd>,
     tail: Option<LineEnd>,
 }
+
+/// One outline of a shape's geometry: its commands, its fill mode, and whether it
+/// is stroked.
+type OutlinePath = (Vec<PathCmd>, FillMode, bool);
 
 /// One drawn piece: a path, its fill, its stroke.
 type Piece = (Vec<PathCmd>, Option<Paint>, Option<Stroke>);
