@@ -42,7 +42,9 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `editor.css`, `ribbon.css`, `ribbon.tokens.css` | Tokens (accent `DEC-03`), regions, the ribbon |
 | `icons.fluent.svg` | Fluent UI System Icons sprite |
 | `index.html`, `docs.html`, `deploy.html`, `download.html` | The site: landing, user guide, self-hosting, desktop downloads. Strict CSP, no inline style or script |
-| `style.css`, `site.js` | The site's stylesheet and its small script (reveals, mobile menu, docs contents); never loaded by the editor |
+| `style.css`, `site.js` | The site's stylesheet and its small script (reveals, the hero's demo strip, Try a sample deck, mobile menu, docs contents); never loaded by the editor |
+
+At build time `pages.yml` adds `shots/` (slides drawn by `render-deck`, and `editor.png`, the editor as the runner's Chrome shows it), `samples/sample-deck.pptx` (a CC BY deck from `fixtures/real`), and through `tools/site/build.py` the site's address in canonical and Open Graph URLs, `robots.txt` and `sitemap.xml` (`SITE-03`).
 
 Every ribbon command PowerPoint has is present. The ones this build cannot run are
 registered disabled, with the reason in their tooltip (owner, 2026-11-08), never faked.
