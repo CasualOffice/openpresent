@@ -1,18 +1,19 @@
 //! Slides' operations on the wire, and their transform (`docs/24` §The op set, §Text OT).
 //!
-//! The first co-editing slice (`VS-09`) carries the Text family (insert, delete,
-//! format), a shape's transform from Properties, and insert and delete of a top-level
-//! node from Tree. Every other operation is refused in a shared session before it is
-//! applied ([`shareable`]), so two copies never part because one edit could not be
-//! sent.
+//! The wire carries the Text family (insert, delete, and format with every attribute
+//! the Home tab's Font group sets), a shape's transform from Properties, and insert
+//! and delete of a top-level node from Tree, a picture's bytes with it. Every other
+//! operation is refused in a shared session before it is applied ([`shareable`]), so
+//! two copies never part because one edit could not be sent.
 //!
 //! Conflict rules, as `docs/24` states them:
 //! - **Properties**: per property, the server's order wins: of two concurrent
 //!   transforms of one shape, the later stands and the earlier becomes nothing.
 //! - **Text**: character OT inside one body. Positions count a paragraph break as one
-//!   character. A format over a concurrently deleted range formats what remains; text
-//!   inserted inside or at the end of a formatted range is formatted with it, since it
-//!   inherits from the character before it as typing does.
+//!   character. Typed text carries the run properties it took where it was typed
+//!   (`COL-01`), so no copy formats it from a neighbour. A format over a concurrently
+//!   deleted range formats what remains; text typed strictly inside a formatted range
+//!   is formatted with it; text typed inside a deleted range stays, at the cut.
 //! - **Tree**: a node's place among its parent's children is an index, transformed as
 //!   a list; a delete beats a concurrent edit of the node, which becomes nothing.
 //!
@@ -25,20 +26,32 @@ use casual_slide_model::presentation::{
 };
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
-use casual_slide_model::text::UnderlineType;
+use casual_slide_model::text::{CharacterProperties, UnderlineType};
 use serde::{Deserialize, Serialize};
 
 use super::{Engine, Side};
 use crate::{Attribute, Operation};
 
-/// The protocol version of slides' collaboration. 1 is `VS-09`'s first slice.
-pub const PROTOCOL_VERSION: u32 = 1;
+/// The protocol version of slides' collaboration. 1 was `VS-09`'s first slice; 2
+/// carries typed text's run properties, every font attribute, and pictures' bytes.
+pub const PROTOCOL_VERSION: u32 = 2;
 
 /// The most characters one inserted text may carry.
 pub const MAX_WIRE_TEXT: usize = 1 << 20;
 
-/// The most bytes a node's XML may carry.
+/// The most bytes a node's or a run's XML may carry.
 pub const MAX_WIRE_XML: usize = 1 << 20;
+
+/// The most bytes of a picture one inserted node may carry: its base64 then fits a
+/// frame ([`super::MAX_FRAME_BYTES`]) with room for the rest of the message.
+pub const MAX_WIRE_MEDIA: usize = 32 * 1024 * 1024;
+
+/// [`MAX_WIRE_MEDIA`] as base64 characters.
+pub const MAX_WIRE_MEDIA_TEXT: usize = 44_739_244;
+const _: () = assert!(MAX_WIRE_MEDIA_TEXT == MAX_WIRE_MEDIA.div_ceil(3) * 4);
+
+/// The most formats one inserted text may have picked up; one per attribute kind.
+const MAX_WIRE_FORMATS: usize = 7;
 
 /// A node, by its part's ordinal and its number in the part.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -152,7 +165,28 @@ impl WireTransform {
     }
 }
 
-/// A character attribute on the wire.
+/// How the wire's XML is written and read: by the host, which has the writer and the
+/// hardened reader. A node crosses as its element, run properties as an `a:rPr`
+/// element; neither is trusted further than a deck is.
+pub trait Codec {
+    /// The element a node is written as, to send it.
+    fn node_xml(&self, node: &ShapeNode) -> Option<String>;
+    /// The picture a node shows, when the receiver does not have it: its relationship
+    /// id as the node's XML names it, and its bytes in base64.
+    fn node_media(&self, node: &ShapeNode) -> Option<WireMedia> {
+        let _ = node;
+        None
+    }
+    /// Run properties as an `a:rPr` element.
+    fn run_xml(&self, properties: &CharacterProperties) -> Option<String>;
+    /// A node read from the wire, numbered `id`; `None` if it is not one node.
+    fn read_node(&self, xml: &str, id: ObjectId) -> Option<ShapeNode>;
+    /// Run properties read from an `a:rPr` element.
+    fn read_run(&self, xml: &str) -> Option<CharacterProperties>;
+}
+
+/// A character attribute on the wire. Size is a number; a font, a colour and a
+/// highlight are run properties holding that one element, as `a:rPr` XML.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "camelCase")]
 pub enum WireAttribute {
@@ -162,12 +196,105 @@ pub enum WireAttribute {
     Italic(Option<bool>),
     /// `@u`, as its token.
     Underline(Option<String>),
+    /// `@sz`, hundredths of a point.
+    Size(Option<i32>),
+    /// `latin`, in an `a:rPr`.
+    Latin(Option<String>),
+    /// The fill, in an `a:rPr`: Font Color.
+    Fill(Option<String>),
+    /// `highlight`, in an `a:rPr`.
+    Highlight(Option<String>),
 }
 
 impl WireAttribute {
     fn same_kind(&self, other: &Self) -> bool {
         core::mem::discriminant(self) == core::mem::discriminant(other)
     }
+
+    fn of(attribute: &Attribute, codec: &dyn Codec) -> Result<Self, WireError> {
+        let xml = |p: CharacterProperties| codec.run_xml(&p).ok_or(WireError::NotShared);
+        Ok(match attribute {
+            Attribute::Bold(v) => Self::Bold(*v),
+            Attribute::Italic(v) => Self::Italic(*v),
+            Attribute::Underline(v) => Self::Underline(v.as_ref().map(Lexical::to_lexical)),
+            Attribute::Size(v) => Self::Size(*v),
+            Attribute::Latin(v) => Self::Latin(
+                v.as_ref()
+                    .map(|f| {
+                        xml(CharacterProperties {
+                            latin: Some(f.clone()),
+                            ..Default::default()
+                        })
+                    })
+                    .transpose()?,
+            ),
+            Attribute::Fill(v) => Self::Fill(
+                v.as_ref()
+                    .map(|f| {
+                        xml(CharacterProperties {
+                            fill: Some(f.clone()),
+                            ..Default::default()
+                        })
+                    })
+                    .transpose()?,
+            ),
+            Attribute::Highlight(v) => Self::Highlight(
+                v.as_ref()
+                    .map(|c| {
+                        xml(CharacterProperties {
+                            highlight: Some(Some(c.clone())),
+                            ..Default::default()
+                        })
+                    })
+                    .transpose()?,
+            ),
+        })
+    }
+
+    fn model(&self, codec: &dyn Codec) -> Result<Attribute, WireError> {
+        let read = |xml: &str| {
+            if xml.len() > MAX_WIRE_XML {
+                return Err(WireError::BadValue);
+            }
+            codec.read_run(xml).ok_or(WireError::BadNode)
+        };
+        Ok(match self {
+            Self::Bold(v) => Attribute::Bold(*v),
+            Self::Italic(v) => Attribute::Italic(*v),
+            Self::Underline(None) => Attribute::Underline(None),
+            Self::Underline(Some(t)) => Attribute::Underline(Some(
+                UnderlineType::parse_lexical(t).ok_or(WireError::BadValue)?,
+            )),
+            Self::Size(v) => {
+                if v.is_some_and(|s| !(100..=400_000).contains(&s)) {
+                    return Err(WireError::BadValue);
+                }
+                Attribute::Size(*v)
+            }
+            Self::Latin(v) => Attribute::Latin(match v {
+                Some(x) => Some(read(x)?.latin.ok_or(WireError::BadValue)?),
+                None => None,
+            }),
+            Self::Fill(v) => Attribute::Fill(match v {
+                Some(x) => Some(read(x)?.fill.ok_or(WireError::BadValue)?),
+                None => None,
+            }),
+            Self::Highlight(v) => Attribute::Highlight(match v {
+                Some(x) => Some(read(x)?.highlight.flatten().ok_or(WireError::BadValue)?),
+                None => None,
+            }),
+        })
+    }
+}
+
+/// A picture's bytes, carried with the node that shows them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WireMedia {
+    /// The relationship id the node's `a:blip/@r:embed` names.
+    pub rel: String,
+    /// The bytes, base64.
+    pub data: String,
 }
 
 /// One operation as it travels.
@@ -191,8 +318,11 @@ pub enum WireOp {
         index: usize,
         /// The node's number.
         node: Id,
-        /// The element: `p:sp`, `p:cxnSp`, and so on.
+        /// The element: `p:sp`, `p:cxnSp`, `p:pic`.
         xml: String,
+        /// A picture's bytes, which the receiver adds as new media.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        media: Option<WireMedia>,
     },
     /// Remove a node, which was at `index` under `parent`.
     DeleteNode {
@@ -203,7 +333,8 @@ pub enum WireOp {
         /// Its place there.
         index: usize,
     },
-    /// Insert text into a shape's body.
+    /// Insert typed text into a shape's body, with the run properties it had where
+    /// it was typed (`COL-01`): it never takes them from a neighbour here.
     InsertText {
         /// The shape.
         object: Id,
@@ -211,6 +342,12 @@ pub enum WireOp {
         at: usize,
         /// What.
         text: String,
+        /// Its run properties as an `a:rPr` element; empty for none.
+        run: String,
+        /// Formats it was given by concurrent formats it was typed inside, set over
+        /// `run` in order.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        formats: Vec<WireAttribute>,
     },
     /// Delete `[start, end)` of a shape's body.
     DeleteRange {
@@ -231,14 +368,6 @@ pub enum WireOp {
         end: usize,
         /// What to set.
         attribute: WireAttribute,
-        /// Whether text typed at `start` takes the format of the character after it
-        /// rather than before (a paragraph's start, or after a line break), so the
-        /// range grows over it. Set by the sender, which has the body.
-        #[serde(default)]
-        start_takes_after: bool,
-        /// The same, at `end`.
-        #[serde(default)]
-        end_takes_after: bool,
     },
     /// Several, in order.
     Batch {
@@ -284,7 +413,7 @@ impl core::fmt::Display for WireError {
 
 impl std::error::Error for WireError {}
 
-/// Whether `op` can be shared in this slice, so a shared session may apply it.
+/// Whether `op` can be shared, so a shared session may apply it.
 #[must_use]
 pub fn shareable(op: &Operation) -> bool {
     match op {
@@ -292,27 +421,19 @@ pub fn shareable(op: &Operation) -> bool {
         | Operation::DeleteNode { .. }
         | Operation::InsertNode { .. }
         | Operation::InsertText { .. }
-        | Operation::DeleteRange { .. } => true,
-        // Size, font, colour and highlight have no wire form yet (`COL-06`): refused
-        // before they are applied, so a copy never holds an edit it cannot send.
-        Operation::FormatRange { attribute, .. } => matches!(
-            attribute,
-            Attribute::Bold(_) | Attribute::Italic(_) | Attribute::Underline(_)
-        ),
+        | Operation::InsertRun { .. }
+        | Operation::DeleteRange { .. }
+        | Operation::FormatRange { .. } => true,
         Operation::Batch(ops) => ops.iter().all(shareable),
         _ => false,
     }
 }
 
 impl WireOp {
-    /// The wire form of `op`, applied locally with `inverse` returned. A delete takes
-    /// its parent and place from its inverse; an insert takes its XML from `xml_of`.
-    pub fn of(
-        op: &Operation,
-        inverse: &Operation,
-        xml_of: &dyn Fn(ObjectId) -> Option<String>,
-        takes_after: &dyn Fn(ObjectId, usize) -> bool,
-    ) -> Result<Self, WireError> {
+    /// The wire form of `op`, applied locally with `inverse` returned, as a shared
+    /// [`crate::History`] journals them: typed text as [`Operation::InsertRun`]. A
+    /// delete takes its parent and place from its inverse.
+    pub fn of(op: &Operation, inverse: &Operation, codec: &dyn Codec) -> Result<Self, WireError> {
         Ok(match (op, inverse) {
             (Operation::SetTransform { node, transform }, _) => Self::SetTransform {
                 node: (*node).into(),
@@ -329,7 +450,8 @@ impl WireOp {
                 parent: (*parent).into(),
                 index: *index,
                 node: node.id.into(),
-                xml: xml_of(node.id).ok_or(WireError::NotShared)?,
+                xml: codec.node_xml(node).ok_or(WireError::NotShared)?,
+                media: codec.node_media(node),
             },
             (Operation::DeleteNode { node }, Operation::InsertNode { parent, index, .. }) => {
                 Self::DeleteNode {
@@ -338,10 +460,23 @@ impl WireOp {
                     index: *index,
                 }
             }
-            (Operation::InsertText { object, at, text }, _) => Self::InsertText {
+            (
+                Operation::InsertRun {
+                    object,
+                    at,
+                    text,
+                    properties,
+                },
+                _,
+            ) => Self::InsertText {
                 object: (*object).into(),
                 at: *at,
                 text: text.clone(),
+                run: match properties {
+                    Some(p) => codec.run_xml(p).ok_or(WireError::NotShared)?,
+                    None => String::new(),
+                },
+                formats: Vec::new(),
             },
             (Operation::DeleteRange { object, start, end }, _) => Self::DeleteRange {
                 object: (*object).into(),
@@ -360,40 +495,32 @@ impl WireOp {
                 object: (*object).into(),
                 start: *start,
                 end: *end,
-                start_takes_after: takes_after(*object, *start),
-                end_takes_after: takes_after(*object, *end),
-                attribute: match attribute {
-                    Attribute::Bold(v) => WireAttribute::Bold(*v),
-                    Attribute::Italic(v) => WireAttribute::Italic(*v),
-                    Attribute::Underline(v) => {
-                        WireAttribute::Underline(v.as_ref().map(Lexical::to_lexical))
-                    }
-                    // Size, font, colour and highlight are not on the wire yet, so a shared
-                    // session refuses them, as it does every edit it cannot carry (`VS-09`).
-                    Attribute::Size(_)
-                    | Attribute::Latin(_)
-                    | Attribute::Fill(_)
-                    | Attribute::Highlight(_) => return Err(WireError::NotShared),
-                },
+                attribute: WireAttribute::of(attribute, codec)?,
             },
-            (Operation::Batch(ops), Operation::Batch(inverses)) => {
-                // A batch's inverses run newest first.
+            (Operation::Batch(ops), inverse) => {
+                // A batch's inverses run newest first. Typed text cut into runs is a
+                // batch whose inverse is one restore, which none of its runs needs.
+                let none = Operation::Batch(Vec::new());
+                let inverses: Vec<&Operation> = match inverse {
+                    Operation::Batch(inverses) => inverses.iter().rev().collect(),
+                    _ => Vec::new(),
+                };
                 let mut out = Vec::with_capacity(ops.len());
-                for (op, inverse) in ops.iter().zip(inverses.iter().rev()) {
-                    out.push(Self::of(op, inverse, xml_of, takes_after)?);
+                for (i, op) in ops.iter().enumerate() {
+                    let inverse = inverses.get(i).copied().unwrap_or(&none);
+                    out.push(Self::of(op, inverse, codec)?);
                 }
                 Self::Batch { ops: out }
             }
+            // Typed text crosses with its run properties, as `InsertRun`; a shared
+            // history sends it so.
             _ => return Err(WireError::NotShared),
         })
     }
 
-    /// The model operation this wire operation is, reading an inserted node's XML with
-    /// `read_node`. Values are checked; text is bounded; nothing is trusted.
-    pub fn operation(
-        &self,
-        read_node: &dyn Fn(&str, ObjectId) -> Option<ShapeNode>,
-    ) -> Result<Operation, WireError> {
+    /// The model operation this wire operation is, reading XML with `codec`. Values
+    /// are checked; text, XML and media are bounded; nothing is trusted.
+    pub fn operation(&self, codec: &dyn Codec) -> Result<Operation, WireError> {
         Ok(match self {
             Self::Noop => Operation::Batch(Vec::new()),
             Self::SetTransform { node, transform } => Operation::SetTransform {
@@ -405,15 +532,20 @@ impl WireOp {
                 index,
                 node,
                 xml,
+                media,
             } => {
-                if xml.len() > MAX_WIRE_XML {
+                if xml.len() > MAX_WIRE_XML
+                    || media
+                        .as_ref()
+                        .is_some_and(|m| m.data.len() > MAX_WIRE_MEDIA_TEXT)
+                {
                     return Err(WireError::BadValue);
                 }
                 let id: ObjectId = (*node).into();
                 if id.part != parent.part || id.node < 2 {
                     return Err(WireError::BadValue);
                 }
-                let mut read = read_node(xml, id).ok_or(WireError::BadNode)?;
+                let mut read = codec.read_node(xml, id).ok_or(WireError::BadNode)?;
                 read.id = id;
                 Operation::InsertNode {
                     parent: (*parent).into(),
@@ -424,14 +556,33 @@ impl WireOp {
             Self::DeleteNode { node, .. } => Operation::DeleteNode {
                 node: (*node).into(),
             },
-            Self::InsertText { object, at, text } => {
-                if text.chars().count() > MAX_WIRE_TEXT {
+            Self::InsertText {
+                object,
+                at,
+                text,
+                run,
+                formats,
+            } => {
+                if text.chars().count() > MAX_WIRE_TEXT
+                    || run.len() > MAX_WIRE_XML
+                    || formats.len() > MAX_WIRE_FORMATS
+                {
                     return Err(WireError::BadValue);
                 }
-                Operation::InsertText {
+                let mut properties = if run.is_empty() {
+                    None
+                } else {
+                    Some(Box::new(codec.read_run(run).ok_or(WireError::BadNode)?))
+                };
+                for f in formats {
+                    f.model(codec)?
+                        .set(properties.get_or_insert_with(Box::default));
+                }
+                Operation::InsertRun {
                     object: (*object).into(),
                     at: *at,
                     text: text.clone(),
+                    properties,
                 }
             }
             Self::DeleteRange { object, start, end } => {
@@ -449,7 +600,6 @@ impl WireOp {
                 start,
                 end,
                 attribute,
-                ..
             } => {
                 if start > end {
                     return Err(WireError::BadValue);
@@ -458,19 +608,12 @@ impl WireOp {
                     object: (*object).into(),
                     start: *start,
                     end: *end,
-                    attribute: match attribute {
-                        WireAttribute::Bold(v) => Attribute::Bold(*v),
-                        WireAttribute::Italic(v) => Attribute::Italic(*v),
-                        WireAttribute::Underline(None) => Attribute::Underline(None),
-                        WireAttribute::Underline(Some(t)) => Attribute::Underline(Some(
-                            UnderlineType::parse_lexical(t).ok_or(WireError::BadValue)?,
-                        )),
-                    },
+                    attribute: attribute.model(codec)?,
                 }
             }
             Self::Batch { ops } => Operation::Batch(
                 ops.iter()
-                    .map(|op| op.operation(read_node))
+                    .map(|op| op.operation(codec))
                     .collect::<Result<_, _>>()?,
             ),
         })
@@ -502,6 +645,7 @@ impl WireOp {
                 object: o,
                 at,
                 text,
+                ..
             } if *o == object && *at <= offset => offset.saturating_add(text_length(text)),
             Self::DeleteRange {
                 object: o,
@@ -523,26 +667,9 @@ pub fn text_length(text: &str) -> usize {
         .count()
 }
 
-/// Whether text typed at `at` goes with a concurrent delete of `[start, end)`: inside
-/// it or at either edge. Typed text takes the format of a neighbour when it is applied,
-/// and a delete changes which neighbour that is, so text kept beside or inside a
-/// deleted range could be formatted differently on two copies. The delete wins, as a
-/// delete of a shape beats a concurrent edit of it (`docs/24`).
-fn swallowed(at: usize, start: usize, end: usize) -> bool {
-    start < end && start <= at && at <= end
-}
-
 /// `x` after `[start, end)` is deleted.
 fn shift_over_delete(x: usize, start: usize, end: usize) -> usize {
     x - (x.min(end) - x.min(start))
-}
-
-fn delete_or_noop(object: Id, start: usize, end: usize) -> WireOp {
-    if start >= end {
-        WireOp::Noop
-    } else {
-        WireOp::DeleteRange { object, start, end }
-    }
 }
 
 /// `[start, end)` with `[s, e)` taken out, as up to two ranges in the coordinates
@@ -630,48 +757,37 @@ fn transform(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
         }
         // Tree: a parent's children as a list.
         (
-            W::InsertNode {
-                parent,
-                index,
-                node,
-                xml,
-            },
+            W::InsertNode { parent, index, .. },
             W::InsertNode {
                 parent: p2,
                 index: i2,
                 ..
             },
         ) if parent == p2 => {
-            let index = if *i2 < *index || (*i2 == *index && side == Side::Later) {
-                index + 1
-            } else {
-                *index
-            };
-            W::InsertNode {
-                parent: *parent,
-                index,
-                node: *node,
-                xml: xml.clone(),
+            let mut out = op.clone();
+            if let W::InsertNode { index: slot, .. } = &mut out
+                && (*i2 < *index || (*i2 == *index && side == Side::Later))
+            {
+                *slot = index + 1;
             }
+            out
         }
         (
-            W::InsertNode {
-                parent,
-                index,
-                node,
-                xml,
-            },
+            W::InsertNode { parent, index, .. },
             W::DeleteNode {
                 parent: p2,
                 index: i2,
                 ..
             },
-        ) if parent == p2 => W::InsertNode {
-            parent: *parent,
-            index: if *i2 < *index { index - 1 } else { *index },
-            node: *node,
-            xml: xml.clone(),
-        },
+        ) if parent == p2 => {
+            let mut out = op.clone();
+            if let W::InsertNode { index: slot, .. } = &mut out
+                && *i2 < *index
+            {
+                *slot = index - 1;
+            }
+            out
+        }
         (
             W::DeleteNode {
                 node,
@@ -721,51 +837,85 @@ fn transform(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
     }
 }
 
+/// Text OT. Typed text carries its own run properties, so where it lands decides
+/// nothing about its format: text typed inside a concurrently deleted range survives
+/// at the cut, and text typed strictly inside a concurrently formatted range takes
+/// that format, as typing there would; at a range's edge it does not.
 fn transform_text(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
     use WireOp as W;
+    let with_at = |at: usize| {
+        let mut out = op.clone();
+        if let W::InsertText { at: slot, .. } = &mut out {
+            *slot = at;
+        }
+        out
+    };
+    let format = |object: Id, start: usize, end: usize, attribute: &WireAttribute| W::FormatRange {
+        object,
+        start,
+        end,
+        attribute: attribute.clone(),
+    };
     match (op, over) {
         (
-            W::InsertText { object, at, text },
+            W::InsertText { at, .. },
             W::InsertText {
                 at: a2, text: t2, ..
             },
         ) => {
-            let at = if *a2 < *at || (*a2 == *at && side == Side::Later) {
-                at + text_length(t2)
+            if *a2 < *at || (*a2 == *at && side == Side::Later) {
+                with_at(at + text_length(t2))
             } else {
-                *at
-            };
-            W::InsertText {
-                object: *object,
-                at,
-                text: text.clone(),
+                op.clone()
             }
         }
-        (W::InsertText { object, at, text }, W::DeleteRange { start, end, .. }) => {
-            if swallowed(*at, *start, *end) {
-                W::Noop
-            } else {
-                W::InsertText {
-                    object: *object,
-                    at: shift_over_delete(*at, *start, *end),
-                    text: text.clone(),
+        (W::InsertText { at, .. }, W::DeleteRange { start, end, .. }) => {
+            with_at(shift_over_delete(*at, *start, *end))
+        }
+        (
+            W::InsertText { at, .. },
+            W::FormatRange {
+                start,
+                end,
+                attribute,
+                ..
+            },
+        ) => {
+            if *start < *at && *at < *end {
+                let mut out = op.clone();
+                if let W::InsertText { formats, .. } = &mut out {
+                    formats.retain(|f| !f.same_kind(attribute));
+                    formats.push(attribute.clone());
                 }
+                out
+            } else {
+                op.clone()
             }
         }
         (W::InsertText { .. }, _) => op.clone(),
 
         (W::DeleteRange { object, start, end }, W::InsertText { at, text, .. }) => {
             let n = text_length(text);
-            if swallowed(*at, *start, *end) {
-                // The delete beats text typed inside it or at its edges: it takes
-                // that text too.
-                delete_or_noop(*object, *start, end + n)
-            } else if *at < *start {
+            if *at <= *start {
                 W::DeleteRange {
                     object: *object,
                     start: start + n,
                     end: end + n,
                 }
+            } else if *at < *end {
+                // The text typed inside stays: delete round it, the later part first.
+                batch_or_single(vec![
+                    W::DeleteRange {
+                        object: *object,
+                        start: at + n,
+                        end: end + n,
+                    },
+                    W::DeleteRange {
+                        object: *object,
+                        start: *start,
+                        end: *at,
+                    },
+                ])
             } else {
                 op.clone()
             }
@@ -775,11 +925,21 @@ fn transform_text(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
             W::DeleteRange {
                 start: s2, end: e2, ..
             },
-        ) => delete_or_noop(
-            *object,
-            shift_over_delete(*start, *s2, *e2),
-            shift_over_delete(*end, *s2, *e2),
-        ),
+        ) => {
+            let (start, end) = (
+                shift_over_delete(*start, *s2, *e2),
+                shift_over_delete(*end, *s2, *e2),
+            );
+            if start >= end {
+                W::Noop
+            } else {
+                W::DeleteRange {
+                    object: *object,
+                    start,
+                    end,
+                }
+            }
+        }
         (W::DeleteRange { .. }, _) => op.clone(),
 
         (
@@ -788,58 +948,17 @@ fn transform_text(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
                 start,
                 end,
                 attribute,
-                start_takes_after,
-                end_takes_after,
             },
             W::InsertText { at, text, .. },
         ) => {
             let n = text_length(text);
-            // Typed text takes the format of the character before it, or of what
-            // follows where no run holds one: at a paragraph's start, and after a
-            // break the text itself makes. So the inserted text up to its first break
-            // is in the range if the character before it is, and the rest if the
-            // character after it is; either order of the two then leaves the same
-            // runs.
-            let head = text
-                .chars()
-                .filter(|&c| c == '\n' || c == '\u{b}' || crate::keep_char(c))
-                .position(|c| c == '\n' || c == '\u{b}')
-                .map_or(n, |i| i + 1);
-            let before_in = (*start < *at && *at < *end)
-                || (*at == *start && *start_takes_after)
-                || (*at == *end && !*end_takes_after);
-            let after_in = *start <= *at && *at < *end;
-            let mut ranges: Vec<(usize, usize)> = Vec::new();
-            let mut add = |s: usize, e: usize| {
-                if s >= e {
-                    return;
-                }
-                match ranges.last_mut() {
-                    Some(last) if last.1 == s => last.1 = e,
-                    _ => ranges.push((s, e)),
-                }
-            };
-            add(*start, (*end).min(*at));
-            if before_in {
-                add(*at, at + head);
+            if *at <= *start {
+                format(*object, start + n, end + n, attribute)
+            } else if *at < *end {
+                format(*object, *start, end + n, attribute)
+            } else {
+                op.clone()
             }
-            if after_in {
-                add(at + head, at + n);
-            }
-            add((*start).max(*at) + n, end + n);
-            batch_or_single(
-                ranges
-                    .into_iter()
-                    .map(|(start, end)| W::FormatRange {
-                        object: *object,
-                        start,
-                        end,
-                        attribute: attribute.clone(),
-                        start_takes_after: *start_takes_after,
-                        end_takes_after: *end_takes_after,
-                    })
-                    .collect(),
-            )
         }
         (
             W::FormatRange {
@@ -847,8 +966,6 @@ fn transform_text(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
                 start,
                 end,
                 attribute,
-                start_takes_after,
-                end_takes_after,
             },
             W::DeleteRange {
                 start: s2, end: e2, ..
@@ -861,14 +978,7 @@ fn transform_text(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
             if start >= end {
                 W::Noop
             } else {
-                W::FormatRange {
-                    object: *object,
-                    start,
-                    end,
-                    attribute: attribute.clone(),
-                    start_takes_after: *start_takes_after,
-                    end_takes_after: *end_takes_after,
-                }
+                format(*object, start, end, attribute)
             }
         }
         (
@@ -877,8 +987,6 @@ fn transform_text(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
                 start,
                 end,
                 attribute,
-                start_takes_after,
-                end_takes_after,
             },
             W::FormatRange {
                 start: s2,
@@ -891,14 +999,7 @@ fn transform_text(op: &WireOp, over: &WireOp, side: Side) -> WireOp {
             batch_or_single(
                 subtract(*start, *end, *s2, *e2)
                     .into_iter()
-                    .map(|(start, end)| W::FormatRange {
-                        object: *object,
-                        start,
-                        end,
-                        attribute: attribute.clone(),
-                        start_takes_after: *start_takes_after,
-                        end_takes_after: *end_takes_after,
-                    })
+                    .map(|(s, e)| format(*object, s, e, attribute))
                     .collect(),
             )
         }

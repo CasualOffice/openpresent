@@ -26,7 +26,10 @@ use std::collections::BTreeMap;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+mod undo;
 pub mod wire;
+
+pub use undo::rebase_history;
 
 #[cfg(test)]
 mod tests;

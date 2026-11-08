@@ -328,7 +328,10 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_OUTSTANDING` | `1` | Chunks a collaborating client has in flight: stop and wait (`VS-09`, `COL-02`) | None: edits wait for the acknowledgement | Tested: raised to 32, `two_clients_editing_at_once_through_the_server_end_with_the_same_deck` failed |
 | `MAX_PARTICIPANT` | `4095` | Participants a room numbers, each minting node numbers and `cNvPr/@id`s from its own range of 2^20 (`casual-slide-wasm` `collab`, `COL-04`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_TEXT` | `1 << 20` | Characters of one inserted text on the wire (`VS-09`) | CS-COL-0004 | Untested |
-| `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's XML on the wire, which is then read under the reader's own limits (`VS-09`) | CS-COL-0004 | Untested |
+| `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's or run's XML on the wire, which is then read under the reader's own limits (`VS-09`, `COL-01`) | CS-COL-0004 | Untested |
+| `MAX_WIRE_MEDIA` | `32 * 1024 * 1024` | Bytes of one picture carried with an inserted node, so its base64 fits a frame; a larger one is refused while shared before it is applied (`COL-04`) | CS-TXN-0015, CS-COL-0004 | Untested |
+| `MAX_WIRE_MEDIA_TEXT` | `44_739_244` | `MAX_WIRE_MEDIA` as base64 characters (asserted equal at compile time), checked before decoding (`COL-04`) | CS-COL-0004 | Untested |
+| `MAX_WIRE_FORMATS` | `7` | Formats one inserted text may have picked up, one per attribute kind (`COL-01`) | CS-COL-0004 | Untested |
 | `MAX_CLIP_SHAPES` | `1000` | Shapes one Copy, Paste, Duplicate, group move or group delete takes (`UX-003`) | CS-WSM-0006 | Untested |
 | `MAX_FONT_POINTS` | `4000.0` | Points the Font Size box takes, `ST_TextFontSize`'s bound (`UX-003`) | CS-WSM-0006 | `home_tests::a_bad_size_or_colour_is_refused_and_changes_nothing` |
 | `MAX_FONT_NAME_CHARS` | `64` | Characters of a name typed in the Font box (`UX-003`) | None: the name is cut; control characters are dropped | Untested |
