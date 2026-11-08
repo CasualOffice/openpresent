@@ -5,7 +5,7 @@
 out, and what closes it.
 
 **Order follows the owner's priority (2026-11-07):** fidelity is the most critical thing, so import, export and
-modelling come first, then layout and rendering, then the editor. **Web and desktop are both first-class** (`DEC-06`).
+modelling come first. After Phase 1, work runs as **vertical slices** (owner instruction 44): thin features a user can use, each cut through every layer, then deepened. **Web and desktop are both first-class** (`DEC-06`).
 
 **PowerPoint verification is a release gate, not a phase blocker** (`DEC-04`, `PV-01`). Until it passes, phases close against LibreOffice, schemas and Microsoft's validator, and nothing may claim to match PowerPoint.
 
@@ -18,8 +18,8 @@ modelling come first, then layout and rendering, then the editor. **Web and desk
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
 | 0 Foundation | **Closed** 2026-11-07 | Signed off by the owner. Seeded violations were run locally on macOS, not on GitHub's runners. Fonts measured in `SPK-01` left the repo and return in Phase 2 |
 | 1 Model, import, export | **Open** | See the Phase 1 plan below |
-| 2 Layout and render | Not opened | Plan proposed below, for the owner's approval (instruction 41). **No rendering, painting or font work until Phase 1 closes** (owner instruction 20) |
-| 3 to 10 | Not opened | — |
+| 2 Layout and render | **Open** under instruction 43's waiver | Its tiers are the render backlog for slices 1 and 2 |
+| Slices 1 to 13 | 1 and 2 in progress | Replace Phases 3 to 10; see §After Phase 1 |
 
 ### Waivers
 
@@ -162,7 +162,7 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 
 | Area | In | Out |
 | --- | --- | --- |
-| Display list | `Path`, `GlyphRun`, `Image`, `Group`, `Effect` items as in [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md); serializable, golden-tested, same bytes on every platform | Canvas2D painting (Phase 3) |
+| Display list | `Path`, `GlyphRun`, `Image`, `Group`, `Effect` items as in [42](42-TEXT-AND-RENDERING-ARCHITECTURE.md); serializable, golden-tested, same bytes on every platform | Canvas2D painting (slice 1) |
 | Fonts | OpenCalc's faces copied with provenance; resolution by theme font, `+mj-lt`, script and fallback; every substitution reported (`TXT-01`) | Bundling Aptos, Calibri or any face we may not ship |
 | Text | Shaping, bidi, line breaking, paragraphs, bullets, fields, body text, vertical and rotated text, CJK rules, Thai on demand (`TXT-07`), stored autofit, WordArt warps | Recomputing autofit after edits (Phase 5) |
 | Geometry | All 187 presets and custom paths, drawn from the existing `casual-slide-geometry`; group transforms | — |
@@ -240,67 +240,51 @@ It assumes: Phase 1 signed and `DEC-16` to `DEC-20` answered before the start; a
 - [ ] No network capability in the render path, shown by a test.
 - [ ] Owner sign-off.
 
-## Phase 3 — Viewer
+## After Phase 1: vertical slices
 
-- **Gives:** a browser and a Tauri desktop window open a real deck, with thumbnails, views and zoom, and no editing.
-- **Opens:** Phase 2 closed; `UX-001` done and the shell prototype approved by the owner.
-- **In:** WASM bridge, Canvas2D painter, native desktop path, shell, rail, status bar, Normal, Sorter, Reading views, notes pane, accessible DOM, CSP.
-- **Out:** every edit.
-- **Closes when:**
-  - [ ] Painter matches the PNG backend within threshold; web and desktop agree.
-  - [ ] Browser smoke in CI on the published matrix; desktop bundles on three platforms.
-  - [ ] 500-slide budget met.
-  - [ ] WCAG 2.2 AA audit of the shell, with screen reader and keyboard-only passes.
-  - [ ] XSS and link threats (`SEC-E01`, `SEC-E03`, `SEC-N03`) tested.
-  - [ ] Owner sign-off.
+**What changed, 2026-11-08 (owner instruction 44).** Phases 3 to 10 were layers: finish the viewer, then all of editing, then the slide show, then collaboration. A user saw nothing usable until late, and a problem in one layer surfaced only when the next was built. They are replaced by **vertical slices**: each is a thin feature a user can see and use, cut through model, layout, render, UI and save at once, then deepened in later passes. Phase 2's tiers and targets stay as the render backlog that slices draw from. **Nothing about fidelity changes:** absent stays absent, edits patch named nodes (ADR-013), nothing is lost silently, untrusted input never panics, and no claim of a PowerPoint match before `PV-01`. Every exit criterion of the old Phases 3 to 10 is kept: each is moved to the slice or pass named below, never dropped.
 
-## Phases 4 to 7 — Editing
+**How a slice runs.**
+- **Outcome:** one sentence a user would say, shown on a real deck from `fixtures/real`.
+- **End point:** merged to `main`; its named tests green on GitHub CI, on web and desktop where both apply; the gallery (`FH-02`) or a CI browser run shows it working; tracker, checklist and docs true. Then the owner signs it; only the owner closes a slice.
+- **Time box** is in session-hours at Phase 2's pace. At the box the session merges what passes, files a row for the rest and stops.
+- **Reuse (instruction 42):** each starts from OpenCalc's working code, copied with provenance, and names what it copies. Building what OpenCalc has needs a reason in its row.
+- **Thin first.** A slice does the common case end to end and reports what it does not do. Depth comes in later passes, each its own row with its own end point.
 
-**Common entry:** the previous editing phase closed, plus the prerequisites below. **Common exit:** the op set is inverse-tested and **TP1 holds for every op added (`OP-02`)**,
-the UI status is filled for every in-scope checklist row, a task test by people who use PowerPoint passes for the phase's verbs, keyboard and screen
-reader work for every new verb, and the owner signs.
+| # | Slice | User can | End point | Box | Copies from OpenCalc |
+| --- | --- | --- | --- | ---: | --- |
+| 1 | **Web viewer** (in progress) | Open a `.pptx` in the browser and page through its slides, with thumbnails and zoom | Every `fixtures/real` deck opens and draws in a CI browser run; text, shapes and pictures drawn; anything not drawn is reported | 4 | `casual-calc-wasm` bridge, `webapp/` shell (`index.html`, `editor.core.js`, `file.worker.js`, `serve.py`), CSP, fonts |
+| 2 | **Tables, charts, effects in render** | See tables, charts and shadows as the deck has them | `T2E-04`, `T2F-01`, `T2H-01`, `T2C-01` gates met; R1 measured on their decks | 8 | `casual-calc-render` chart drawing, `casual-calc-layout`, `-text` |
+| 3 | **Desktop window** | Open the same deck in a native window by double-click | Tauri bundles built on three OSs in CI; desktop and web draw the same | 2 | `desktop/` Tauri shell, file association, `casual-calc-host` |
+| 4 | **Save and export** | Download the deck unchanged, or as PDF | Unedited save byte-identical; PDF has real text (`T2G-01`); desktop Save works | 3 | `editor.files.js`, `download`, PDF writer and subsetter |
+| 5 | **Edit text** | Click a text box, type, delete, bold, undo, save | Typed text round-trips and opens clean in the SDK validator; only the edited node changes; IME in one browser | 6 | `casual-calc-transaction` (undo), `casual-calc-selection`, `commands.js`, `editor.clipboard.js` |
+| 6 | **Move and resize shapes** | Select, drag, resize, rotate, delete, undo | Op set inverse-tested; transform round-trips; drag budget on the adversarial slide | 4 | `editor.selection.js`, `editor.geometry.js`, transaction |
+| 7 | **Present** | Play the deck full screen with keyboard, and a presenter view | Slide show on web and desktop; notes shown; transitions drawn as cuts and reported | 3 | `commands.js` key handling, `editor.core.js` view switching |
+| 8 | **Build slides** | Add, duplicate, reorder and delete slides; insert a shape, text box or picture | Each op inverse-tested and round-trips; autosave and recovery lose nothing (`SAVE-01`) | 5 | `editor.sheets.js` (tab ops pattern), `editor.drafts.js` (autosave), ribbon |
+| 9 | **Collaborate** | Two people edit one deck and see each other | Two browsers in CI converge; resume with no lost edit | 6 | `server/casual-calc-collab-server`, `collab.js`, `editor.presence.js`, `editor.versions.js` |
+| 10 | **Animate** | See entrance, exit and emphasis animations and transitions play | Timeline goldens for the common classes; 60 fps on a named device | 5 | — (new; OpenCalc has no timeline) |
+| 11 | **Edit rich objects** | Edit a table's cells and a chart's data | Edits round-trip; chart data in an embedded OpenCalc pane (`DEC-15`) | 6 | `casual-calc-sdk`, `editor.charts.js`, embed |
+| 12 | **Design** | Change theme, background, slide size; edit a master | Master edit propagates and round-trips | 4 | `ribbon.model.js` galleries |
+| 13 | **Hosts** | Run it under a company's file store and AI tools | WOPI validator passes; SDK and MCP published | 5 | `server/casual-calc-wopi`, `casual-calc-mcp`, `sdk/` |
 
-| Phase | Gives | Opens after | In | Out | Extra exit criteria |
-| --- | --- | --- | --- | --- | --- |
-| **4 Objects** | Build a deck from shapes and pictures | 3 | Op set, undo, select, transform, guides, group, arrange, selection pane, insert shape and picture, slide ops, reuse slides, merge shapes, eyedropper, sections, format panes, Home, Insert, Shape Format, Picture Format, accessibility checker, **autosave and recovery** | Text editing | Drag budget on adversarial slide; a crash loses nothing (`SAVE-01`) |
-| **5 Text** | Type and format, in any script | 4 | Caret, selection, IME, formatting, lists, autofit on edit, find and replace, spell seam, links, outline view, notes page view | Tables, charts | IME matrix; RTL and CJK; typing budget |
-| **6 Rich objects** | Tables, charts, SmartArt, equations, media, ink | 5, 2F | Each, with Format tabs; chart data through the OpenCalc SDK | Slide show | Round-trip per construct after edit |
-| **7 Design** | Themes, masters, layouts | 6 | Themes, variants, background, slide size, master and layout editing | — | Master edit propagates and round-trips |
+Slices 1 and 2 run now. Slice 3 and 4 start beside them, since each is mostly copied; slices 5 onward start in order after 4, at most three sessions at once (rule 22). **About 61 session-hours** in all, before deepening.
 
-## Phase 8 — Slide show
+**Deepening passes.** After a slice closes, each pass adds depth to it and has its own row and box: more scripts and RTL for text editing; full Format panes; all transitions, Morph and motion paths; SmartArt and equation editing; ink; media; reading and sorter views; accessibility checker; and so on, from [96](96-POWERPOINT-FIT-GAP.md). Passes are ordered by how many real decks they affect.
 
-- **Gives:** a deck presents as it does in PowerPoint, with presenter view, on web and desktop.
-- **Opens:** playback (8A) after 1I and Phase 3; authoring (8B) after Phase 4. Theme editing is not a dependency.
-- **In:** timeline, all transitions, Morph, all animation classes, triggers, motion paths, animation pane, presenter view, custom shows, timings, kiosk, narration playback, zoom.
-- **Out:** nothing recordable: narration, timings, screen recording and video or GIF export are in 8B ([96](96-POWERPOINT-FIT-GAP.md)).
-- **Closes when:**
-  - [ ] Deterministic timeline goldens for each timing construct, against the documented semantics in BEH-23.
-  - [ ] 60 fps on the animation corpus on a named device.
-  - [ ] Presenter sync test; owner sign-off.
+**Where the old phase gates went.** Each is now a gate on the slice or pass named.
 
-## Phase 9 — Collaboration
+| Old gate | Now on |
+| --- | --- |
+| Painter matches the PNG backend; web and desktop agree; browser smoke in CI | Slices 1 and 3 |
+| 500-slide budget in the viewer | Slice 1 pass |
+| WCAG 2.2 AA audit, screen reader, keyboard-only; XSS and link threats `SEC-E01`, `E03`, `N03` | Every slice for its own verbs; full audit at the release gate |
+| Op set inverse-tested, TP1 for every op (`OP-02`), task test with PowerPoint users | Slices 5, 6, 8, 11, 12, for their ops |
+| IME matrix, RTL and CJK, typing budget | Slice 5 passes |
+| Timeline goldens, 60 fps, presenter sync | Slices 7 and 10 |
+| TP1 property tests, wire fuzz target, leader failover, load numbers, `SEC-S01` to `S06` | Slice 9 and its passes |
+| `ENT-*` rows, penetration test, SBOM, signed releases, `PV-01`, legal review (`DEC-07`) | **Release gate**, before the first stable release, unchanged |
 
-- **Gives:** people co-edit one deck reliably.
-- **Opens:** Phases 4 to 7 op sets stable; read-only audit of OpenCalc's server done.
-- **In:** forked server, OT per [24](24-OPERATIONS-AND-COLLABORATION.md), presence, modern comments, version history.
-- **Out:** WOPI and hosting product work.
-- **Closes when:**
-  - [ ] TP1 property tests over every op; a fuzz target on the wire format.
-  - [ ] Two real browsers in CI; resume with no lost edit; leader failover tested.
-  - [ ] Published load-test numbers on a named environment.
-  - [ ] `SEC-S01`, `S02`, `S03`, `S05`, `S06` tested; owner sign-off.
-
-## Phase 10 — Enterprise and hosts
-
-- **Gives:** an enterprise can deploy and support it. **First stable release.**
-- **Opens:** Phases 8 and 9 closed.
-- **In:** all remaining [10](10-ENTERPRISE-REQUIREMENTS.md) rows, SDK, WOPI, MCP, `.odp`, import of legacy `.ppt` (`PPT-01`), 3D model rendering and editing (`D3-01`), Helm, release process.
-- **Closes when:**
-  - [ ] Each `ENT-*` row closed with evidence.
-  - [ ] Third-party penetration test; findings closed.
-  - [ ] WOPI validator passes; SBOM and signed releases published.
-  - [ ] **`PV-01` passed: PowerPoint opens every exported corpus deck with no repair prompt, with visual and edit comparison recorded.**
-  - [ ] No P0 or P1 open; legal review complete (`DEC-07`); owner sign-off.
+**Release gate.** Unchanged from the old Phase 10: every `ENT-*` row closed with evidence; third-party penetration test; WOPI validator; SBOM and signed releases; **`PV-01` passed**; no P0 or P1 open; legal review; owner sign-off.
 
 ## Claims
 

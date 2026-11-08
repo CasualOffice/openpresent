@@ -360,3 +360,37 @@ The plan is in [06](06-ROADMAP-AND-DELIVERY.md) §Phase 2 plan, awaiting the own
 | T2G-01 | PDF backend | Open | P0 | Lane C. OpenCalc's PDF writer and subsetter copied with provenance; a page per slide; real, extractable text. **Box:** 1.5 | Text extracted from each page equals the slide's text; R5 holds for PDF |
 | T2G-02 | Tagged PDF, JPEG, print | Open | P1 | Lane B. Tags in reading order, alt text, links, JPEG, handouts and notes pages. **Box:** 2 | Tags and alt text checked on CI; each print layout renders |
 | P2X-01 | Phase 2 exit run | Open | P0 | All lanes, last. Measure and assert R1 to R12 on GitHub CI; assemble evidence for the owner. **Box:** 1 | Every Phase 2 exit criterion has evidence |
+
+## Vertical slices, 2026-11-08 (owner instruction 44)
+
+The plan is in [06](06-ROADMAP-AND-DELIVERY.md) §After Phase 1, which gives each slice's outcome, end point, box in session-hours and what it copies from OpenCalc. They replace Phases 3 to 10.
+
+| ID | Title | St | Sev | Mechanism | Gate |
+| --- | --- | --- | --- | --- | --- |
+| VS-01 | Slice 1: web viewer | In progress | P0 | Open and page through a deck in the browser, thumbnails, zoom. **Box:** 4 | Every `fixtures/real` deck draws in a CI browser run; undrawn constructs reported |
+| VS-02 | Slice 2: tables, charts, effects in render | In progress | P0 | Through `T2E-04`, `T2F-01`, `T2H-01`, `T2C-01`. **Box:** 8 | Those rows' gates met |
+| VS-03 | Slice 3: desktop window | Open | P0 | Tauri shell from OpenCalc. **Box:** 2 | Bundles on three OSs in CI; draws as the web does |
+| VS-04 | Slice 4: save and export | Open | P0 | Unedited save, PDF, desktop Save. **Box:** 3 | Byte-identical unedited save; PDF text extracts |
+| VS-05 | Slice 5: edit text | Open | P0 | Caret, type, delete, bold, undo, save. **Box:** 6 | Round-trip, only edited node changes, SDK validator clean |
+| VS-06 | Slice 6: move and resize shapes | Open | P0 | Select, drag, resize, rotate, delete, undo. **Box:** 4 | Ops inverse-tested; drag budget |
+| VS-07 | Slice 7: present | Open | P1 | Full-screen show, presenter view, notes. **Box:** 3 | Runs on web and desktop in CI |
+| VS-08 | Slice 8: build slides | Open | P1 | Slide ops, insert shape, text box, picture; autosave (`SAVE-01`). **Box:** 5 | Ops round-trip; crash loses nothing |
+| VS-09 | Slice 9: collaborate | Open | P1 | Two people co-edit. **Box:** 6 | Two CI browsers converge; resume loses nothing |
+| VS-10 | Slice 10: animate | Open | P1 | Common animations and transitions play. **Box:** 5 | Timeline goldens; 60 fps on a named device |
+| VS-11 | Slice 11: edit rich objects | Open | P1 | Table cells; chart data in an OpenCalc pane (`DEC-15`). **Box:** 6 | Edits round-trip |
+| VS-12 | Slice 12: design | Open | P2 | Theme, background, slide size, master edit. **Box:** 4 | Master edit propagates and round-trips |
+| VS-13 | Slice 13: hosts | Open | P2 | WOPI, SDK, MCP. **Box:** 5 | WOPI validator passes |
+
+## CI failures on `main`, 2026-11-08
+
+Read from GitHub Actions; first failure in each failing job.
+
+| ID | Title | St | Sev | Mechanism | Gate |
+| --- | --- | --- | --- | --- | --- |
+| CI-10 | `ci` test (ubuntu, macos): hostile corpus expectation | Open | P0 | Run 42429326313 at `fix(import): real-deck count…`. `crates/casual-slide-ooxml/tests/corpus.rs:96`: `hostile/spoofed-office-document-type.bin` now yields only `CS-REC-0203` (repaired, main part found); expected `CS-FND-0007` too. Decide which is right under [29](29-RECOVERY.md), then fix code or expectation | `every_fixture_meets_its_expectation` green on all three OSs |
+| CI-11 | `ci` test (windows): theme edit test | Open | P0 | Same run. `crates/casual-slide-export/tests/theme.rs:50`, `a_fill_in_the_format_scheme_edited_changes_that_node_alone`: expected one match of a `<a:fillStyleLst>` snippet, found 0. Likely CRLF line endings in the compared text (rule 16) | Test green on Windows |
+| CI-12 | `phase1-exit` p1-gates: clippy | Open | P0 | Run 42431077782 at `dceb8a3`. `clippy::type_complexity` at `crates/casual-slide-render/src/scene.rs:786`, return type `(Vec<(Vec<PathCmd>, FillMode, bool)>, Option<TextRect>)`. Factor a type | Clippy clean with `-D warnings` |
+| CI-13 | `phase1-exit` p1-evidence: closing list | Open | P1 | Same run. 5 of 7 met: "Gates in CLAUDE.md" not met because p1-gates failed (`CI-12`); owner sign-off not met, expected. Clears with `CI-12` | 6 of 7 met, sign-off left |
+| CI-14 | `gallery` gallery-deploy: Pages | Open | P1 | Run 42431077695. `actions/deploy-pages`: "Failed to create deployment (status: 404)… Ensure GitHub Pages has been enabled". Owner sets Pages source to GitHub Actions in repository settings (`FH-02`) | Deploy job green |
+| CI-15 | `ci` runs on `main` mostly cancelled | Open | P2 | Pushes in quick succession cancel the running `ci` run, so most commits have no full result; latest full `ci` (42429326313) failed. Merges batch, or `main` keeps its last run | Each merge to `main` has a completed `ci` run |
+
