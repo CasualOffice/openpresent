@@ -305,6 +305,11 @@ fn run_style<'a>(
     if let Some(f) = &family {
         fonts.record(f);
     }
+    // A hyperlinked run is drawn in the theme's `hlink` and underlined, whatever
+    // its own fill, as PowerPoint and LibreOffice draw it. The 2019 extension that
+    // asks for the text's own colour (`hlinkClr val="tx"`) is not modelled
+    // (`FH-04`).
+    let link = props.is_some_and(|c| c.hyperlink_click.is_some());
     RunStyle {
         family,
         size: chain.font_size(props, paragraph).value.max(1) as f32 / 100.0,
@@ -314,14 +319,36 @@ fn run_style<'a>(
         italic: chain
             .run(props, paragraph, |c| c.italic)
             .is_some_and(|b| b.value),
-        color: chain
-            .run_fill(props, paragraph)
-            .map_or(Rgba::BLACK, |f| color_of(&f.value, fonts.env)),
+        color: link
+            .then(|| hyperlink_color(fonts.env))
+            .flatten()
+            .unwrap_or_else(|| {
+                chain
+                    .run_fill(props, paragraph)
+                    .map_or(Rgba::BLACK, |f| color_of(&f.value, fonts.env))
+            }),
         underline: chain
             .run(props, paragraph, |c| c.underline)
             .map(|u| u.value)
-            .filter(|u| *u != UnderlineType::None),
+            .filter(|u| *u != UnderlineType::None)
+            .or(link.then_some(UnderlineType::Sng)),
     }
+}
+
+/// The theme's `hlink`, through the colour map: the colour PowerPoint draws a
+/// run with `hlinkClick` in, over the run's own fill. `None` when the theme has
+/// no such slot, so the run keeps its own colour.
+fn hyperlink_color(env: &TextEnv<'_>) -> Option<Rgba> {
+    let hlink =
+        casual_slide_model::color::Color::new(casual_slide_model::color::ColorValue::Scheme(
+            casual_slide_model::color::SchemeColor::Hlink,
+        ));
+    resolve(&hlink, &env.colors).ok().map(|c| Rgba {
+        r: c.rgb.r,
+        g: c.rgb.g,
+        b: c.rgb.b,
+        a: 255,
+    })
 }
 
 /// Autonumber counters by level: the scheme last seen there and its number.
@@ -793,6 +820,49 @@ mod tests {
                 .map(|p| p.bullet.as_ref().map_or("", |b| b.text.as_str()))
                 .collect();
             assert_eq!(bullets, ["3)", "4)"]);
+        }
+
+        #[test]
+        fn a_hyperlinked_run_takes_the_hlink_colour_and_an_underline() {
+            use casual_slide_model::shape::Hyperlink;
+            use casual_slide_model::theme::{ColorMap, ColorScheme, ColorSchemeIndex};
+            let mut scheme = ColorScheme::default();
+            scheme.slots[ColorSchemeIndex::Hlink as usize] = Some(Color::srgb(5, 99, 193));
+            let mut map = ColorMap::default();
+            map.slots[casual_slide_model::theme::ColorMapSlot::Hlink as usize] =
+                Some(ColorSchemeIndex::Hlink);
+            let env = TextEnv {
+                colors: ResolveContext {
+                    scheme: Some(&scheme),
+                    map: Some(&map),
+                    ..ResolveContext::default()
+                },
+                fonts: None,
+            };
+            let mut linked = props(2100, false, "Arial", Some(Color::srgb(0, 0, 0)));
+            linked.hyperlink_click = Some(Box::new(Hyperlink {
+                rel_id: Some("rId2".to_owned()),
+                ..Hyperlink::default()
+            }));
+            let body = TextBody {
+                properties: None,
+                list_style: None,
+                paragraphs: vec![Paragraph {
+                    properties: None,
+                    items: vec![
+                        run("link", linked),
+                        run(" plain", props(2100, false, "Arial", None)),
+                    ],
+                    end_properties: None,
+                }],
+            };
+            let (resolved, _) = resolve_body(&body, &TextChain::default(), &env);
+            let runs = &resolved.paragraphs[0].runs;
+            let c = runs[0].style.color;
+            assert_eq!((c.r, c.g, c.b), (5, 99, 193), "the theme's hlink, not tx1");
+            assert_eq!(runs[0].style.underline, Some(UnderlineType::Sng));
+            assert_eq!(runs[1].style.color, Rgba::BLACK);
+            assert_eq!(runs[1].style.underline, None);
         }
     }
 }
