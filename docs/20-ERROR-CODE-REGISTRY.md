@@ -25,7 +25,7 @@ Findings, which do not stop a deck opening: CS-FND-0001 external content; 0002 u
 
 Rendering, from `casual-slide-render` (`RenderError`): CS-RND-0001 the surface would be of no size or over 16384 pixels a side; 0002 PNG encoding failed; 0003 no slide at that index. A deck that cannot be opened for drawing carries its reader's own code. What a render leaves out is not an error: `RenderReport` names it by feature, with counts and part names only.
 
-The browser bridge, from `casual-slide-wasm` (`BridgeError`, `VS-01`): CS-WSM-0001 a call that needs a deck came before one was opened; 0002 a width of zero or past `MAX_WIDTH_PX`; 0003 the drawn picture could not be read back as RGBA. A render error carries its `CS-RND` code, and a deck that cannot be opened its reader's own.
+The browser bridge, from `casual-slide-wasm` (`BridgeError`, `VS-01`): CS-WSM-0001 a call that needs a deck came before one was opened; 0002 a width of zero or past `MAX_WIDTH_PX`; 0003 the drawn picture could not be read back as RGBA. From slice 5 (`VS-05`): 0004 the shape has no text body, or no caret can be placed in it; 0005 a bridge number that names no caret move or attribute. A refused edit carries its `CS-TXN` code. A render error carries its `CS-RND` code, and a deck that cannot be opened its reader's own.
 
 Text edits, from `casual-slide-transaction` (`TxnError`, `VS-05`): CS-TXN-0001 no shape has the id, or its part was not read; 0002 the shape has no text body; 0003 an offset or paragraph range past the end of the body; 0004 a restore that would leave a body with no paragraph. Each refuses the edit and changes nothing.
 
