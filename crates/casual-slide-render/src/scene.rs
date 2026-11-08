@@ -26,9 +26,10 @@ use casual_slide_model::line::{
     Line, LineCap, LineDash, LineEnd, LineEndType, LineJoin, PresetLineDash,
 };
 use casual_slide_model::properties::Lexical;
-use casual_slide_model::shape::{NodeKind, ShapeNode, Transform};
+use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{BackgroundFill, SlideParts};
-use casual_slide_model::text::{TextListStyle, TextVertical};
+use casual_slide_model::table::TableStyleList;
+use casual_slide_model::text::{Autofit, TextBody, TextListStyle, TextVertical};
 use casual_slide_model::theme::{ColorScheme, FormatScheme, ShapeStyle, StyleMatrixRef, Theme};
 use casual_slide_style::Chain;
 use casual_slide_text::{Frame, TextEnv, layout_text_body};
@@ -85,6 +86,12 @@ pub struct SlideScene<'a> {
     pub media: &'a dyn MediaResolver,
     /// The presentation's `defaultTextStyle`, the last level of every text chain.
     pub default_text_style: Option<&'a TextListStyle>,
+    /// The deck's `tableStyles` part, which a table's `tableStyleId` names into.
+    pub table_styles: Option<&'a TableStyleList>,
+    /// The deck's chart parts, which a chart frame's relationship names.
+    pub charts: Option<&'a casual_slide_import::chart::DeckCharts>,
+    /// Each SmartArt frame's stored drawing, as nodes in the frame's space.
+    pub diagrams: Option<&'a BTreeMap<ObjectId, Vec<ShapeNode>>>,
 }
 
 impl core::fmt::Debug for SlideScene<'_> {
@@ -108,6 +115,10 @@ const DEFAULT_LINE_WIDTH: f64 = 0.0;
 
 /// EMU in a point.
 const EMU_PER_POINT: f64 = 12_700.0;
+
+mod chart;
+mod effects;
+mod table;
 
 struct Builder<'a> {
     scene: SlideScene<'a>,
@@ -209,6 +220,27 @@ impl<'a> Builder<'a> {
             .theme
             .and_then(|t| t.elements.as_ref())
             .and_then(|e| e.format_scheme.as_ref())
+    }
+
+    /// The colour context text resolves in; `placeholder` stands for `phClr`.
+    fn text_colors<'c>(&self, placeholder: Option<&'c Color>) -> ResolveContext<'c>
+    where
+        'a: 'c,
+    {
+        ResolveContext {
+            scheme: self.scheme(),
+            map: self.chain.color_map().map(|m| m.value),
+            placeholder,
+            system_palette: None,
+        }
+    }
+
+    /// The theme's font scheme.
+    fn font_scheme(&self) -> Option<&'a casual_slide_model::theme::FontScheme> {
+        self.scene
+            .theme
+            .and_then(|t| t.elements.as_ref())
+            .and_then(|e| e.font_scheme.as_ref())
     }
 
     fn color(&mut self, c: &Color, ph: Option<&Color>) -> Option<Rgba> {
@@ -485,17 +517,80 @@ impl<'a> Builder<'a> {
                 self.shape(node, layer, parent, group_fill);
             }
             NodeKind::GraphicFrame => {
-                if node.table.is_some() {
-                    self.report.note("table");
+                if let Some(table) = node.table.as_deref() {
+                    self.table(node, table, layer, parent);
                 } else if node.chart.is_some() {
-                    self.report.note("chart");
+                    self.chart(node, layer, parent);
                 } else if node.diagram.is_some() {
-                    self.report.note("diagram");
+                    self.diagram(node, layer, parent, depth);
+                } else if node.retained.is_some() {
+                    self.retained(node, layer, parent);
                 } else {
                     self.report.note("graphic frame");
                 }
             }
             NodeKind::ContentPart => self.report.note("content part"),
+        }
+    }
+
+    /// An OLE object, control or 3D model: never opened (`SEC-C07`), drawn from the
+    /// picture stored in its place.
+    fn retained(&mut self, node: &'a ShapeNode, layer: Layer, parent: &Affine) {
+        let fallback = node
+            .retained
+            .as_deref()
+            .and_then(|r| r.fallback_rel_id.as_deref());
+        let Some(rel) = fallback else {
+            self.report.note("embedded object (no fallback picture)");
+            return;
+        };
+        let Some(part) = self.scene.media.media_part(node.id.part, rel) else {
+            self.report.note("picture (relationship unresolved)");
+            return;
+        };
+        let Some(t) = self.chain.transform(node).map(|t| t.value) else {
+            self.report.note("embedded object (no placement)");
+            return;
+        };
+        let (w, h) = (t.extent.cx as f64, t.extent.cy as f64);
+        let transform = parent.then_after(&placement(
+            t.offset.x.0 as f64,
+            t.offset.y.0 as f64,
+            w,
+            h,
+            t.rotation,
+            t.flip_h,
+            t.flip_v,
+        ));
+        let paint = Paint::Picture {
+            part,
+            frame: (0.0, 0.0, w, h),
+            alpha: 1.0,
+        };
+        self.push(node, layer, transform, rect_path(w, h), Some(paint), None);
+    }
+
+    /// A SmartArt frame, from the drawing PowerPoint stored for it.
+    fn diagram(&mut self, node: &'a ShapeNode, layer: Layer, parent: &Affine, depth: usize) {
+        let Some(nodes) = self.scene.diagrams.and_then(|d| d.get(&node.id)) else {
+            self.report.note("diagram (no stored drawing)");
+            return;
+        };
+        let Some(t) = self.chain.transform(node).map(|t| t.value) else {
+            self.report.note("diagram (no placement)");
+            return;
+        };
+        let mapping = parent.then_after(&placement(
+            t.offset.x.0 as f64,
+            t.offset.y.0 as f64,
+            t.extent.cx as f64,
+            t.extent.cy as f64,
+            t.rotation,
+            t.flip_h,
+            t.flip_v,
+        ));
+        for child in nodes {
+            self.node(child, layer, &mapping, None, depth + 1);
         }
     }
 
@@ -561,14 +656,33 @@ impl<'a> Builder<'a> {
             .and_then(|e| e.idx)
             .and_then(|i| self.format().and_then(|f| f.effect(i)))
             .and_then(|e| e.effects.as_ref());
-        if own_effects.or(style_effects).is_some_and(has_effect) {
-            self.report.note("effects");
-        }
+        let effects = own_effects.or(style_effects).filter(|e| has_effect(e));
+        // An effect reference's colour stands for `phClr` in a theme effect.
+        let effect_ph = if own_effects.is_some() {
+            None
+        } else {
+            style
+                .and_then(|s| s.effect.as_ref())
+                .and_then(|e| e.color.as_ref())
+        };
         if node.properties.scene3d.is_some() || node.properties.sp3d.is_some() {
             self.report.note("3D");
         }
         let geometry = levels.iter().find_map(|n| n.properties.geometry.as_ref());
         let (paths, text_rect) = self.paths(geometry, w, h, node.kind);
+        if let Some(effects) = effects {
+            // Shadows and glows sit behind what the shape draws.
+            let drawn: Vec<&[PathCmd]> = paths
+                .iter()
+                .filter(|(_, mode, stroked)| {
+                    picture.is_some()
+                        || (fill.is_some() && *mode != FillMode::None)
+                        || (stroke.is_some() && *stroked)
+                })
+                .map(|(p, _, _)| p.as_slice())
+                .collect();
+            self.effects(node, layer, transform, effects, effect_ph, &drawn);
+        }
         for (path, mode, stroked) in paths {
             let fill = match mode {
                 FillMode::None => None,
@@ -614,6 +728,20 @@ impl<'a> Builder<'a> {
         let Some(body) = node.text_body.as_deref() else {
             return;
         };
+        self.text_in(node, body, layer, transform, rect, style);
+    }
+
+    /// Lay out `body` in `rect` of `node`'s space, with `node`'s text chain, and push
+    /// its glyph runs.
+    fn text_in(
+        &mut self,
+        node: &'a ShapeNode,
+        body: &TextBody,
+        layer: Layer,
+        transform: Affine,
+        rect: TextRect,
+        style: Option<&'a ShapeStyle>,
+    ) {
         if !body.paragraphs.iter().any(|p| !p.items.is_empty()) {
             return;
         }
@@ -622,19 +750,12 @@ impl<'a> Builder<'a> {
             .chain
             .text_chain(node, self.scene.default_text_style, object_defaults);
         let env = TextEnv {
-            colors: ResolveContext {
-                scheme: self.scheme(),
-                map: self.chain.color_map().map(|m| m.value),
-                placeholder: style
+            colors: self.text_colors(
+                style
                     .and_then(|s| s.font.as_ref())
                     .and_then(|f| f.color.as_ref()),
-                system_palette: None,
-            },
-            fonts: self
-                .scene
-                .theme
-                .and_then(|t| t.elements.as_ref())
-                .and_then(|e| e.font_scheme.as_ref()),
+            ),
+            fonts: self.font_scheme(),
         };
         let frame = Frame {
             x: (rect.l / EMU_PER_POINT) as f32,
@@ -642,7 +763,24 @@ impl<'a> Builder<'a> {
             width: ((rect.r - rect.l).max(0.0) / EMU_PER_POINT) as f32,
             height: ((rect.b - rect.t).max(0.0) / EMU_PER_POINT) as f32,
         };
-        let layout = layout_text_body(body, &chain, &env, frame);
+        let autofit = chain
+            .body(body.properties.as_ref(), |b| b.autofit.as_ref())
+            .map(|r| r.value);
+        let layout = match autofit {
+            Some(Autofit::Normal {
+                font_scale,
+                line_spacing_reduction,
+            }) if font_scale.is_some() || line_spacing_reduction.is_some() => {
+                let scale = font_scale
+                    .as_ref()
+                    .map_or(1.0, |p| f64::from(p.value().0) / 100_000.0);
+                let reduce = line_spacing_reduction
+                    .as_ref()
+                    .map_or(0.0, |p| f64::from(p.value().0) / 100_000.0);
+                autofit_layout(body, &chain, &env, frame, scale, reduce)
+            }
+            _ => layout_text_body(body, &chain, &env, frame),
+        };
         if layout.runs.is_empty() {
             self.report.text_bodies_undrawn = self.report.text_bodies_undrawn.saturating_add(1);
             return;
@@ -732,6 +870,20 @@ impl<'a> Builder<'a> {
         }
         let ph = style.and_then(|r| r.color.as_ref());
         let ordinal = levels.first().map_or(0, |n| n.id.part);
+        self.line_stroke(&merged, ph, w, h, ordinal, group_fill)
+    }
+
+    /// A merged line as a stroke over a `w` by `h` box, and its ends. `ph` stands
+    /// for `phClr`.
+    fn line_stroke(
+        &mut self,
+        merged: &Line,
+        ph: Option<&Color>,
+        w: f64,
+        h: f64,
+        ordinal: u32,
+        group_fill: Option<&Fill>,
+    ) -> Option<(Stroke, Ends)> {
         let paint = self.fill_paint(merged.fill.as_ref()?, ph, w, h, ordinal, group_fill)?;
         let width = merged.width.map_or(DEFAULT_LINE_WIDTH, f64::from);
         if merged.compound.is_some_and(|c| c.to_lexical() != "sng") {
@@ -783,7 +935,7 @@ impl<'a> Builder<'a> {
         w: f64,
         h: f64,
         kind: NodeKind,
-    ) -> (Vec<(Vec<PathCmd>, FillMode, bool)>, Option<TextRect>) {
+    ) -> (Vec<OutlinePath>, Option<TextRect>) {
         let extents = Extents::new(w.round() as i64, h.round() as i64);
         let compiled;
         let (def, adjusts): (&GeometryDef, Vec<(String, String)>) = match geometry {
@@ -856,12 +1008,49 @@ impl<'a> Builder<'a> {
     }
 }
 
+/// `normAutofit`'s stored result applied: every run, bullet and paragraph mark
+/// scaled by `fontScale`, and percentage line spacing lowered by
+/// `lnSpcReduction`, as PowerPoint draws a body it last fitted. The scale is the
+/// file's, not recomputed here.
+fn autofit_layout(
+    body: &TextBody,
+    chain: &casual_slide_style::text::TextChain<'_>,
+    env: &TextEnv<'_>,
+    frame: Frame,
+    scale: f64,
+    reduce: f64,
+) -> casual_slide_text::TextLayout {
+    use casual_slide_text::layout::{Spacing, layout_body};
+    let (mut resolved, substitutions) = casual_slide_text::body::resolve_body(body, chain, env);
+    let scale = scale.clamp(0.01, 1.0) as f32;
+    let reduce = reduce.clamp(0.0, 0.9) as f32;
+    let mut text = String::new();
+    for p in &mut resolved.paragraphs {
+        for run in p.runs.iter_mut().chain(p.bullet.iter_mut()) {
+            run.style.size *= scale;
+            text.push_str(&run.text);
+        }
+        p.end.size *= scale;
+        if let Spacing::Percent(v) = &mut p.line_spacing {
+            *v = (*v - reduce).max(0.1);
+        }
+    }
+    let mut layout = layout_body(&resolved, frame);
+    layout.substitutions = substitutions;
+    layout.missing_scripts = casual_slide_text::faces::missing_scripts(&text);
+    layout
+}
+
 /// A line's two ends: `headEnd` at the path's start, `tailEnd` at its end.
 #[derive(Debug, Clone, Copy)]
 struct Ends {
     head: Option<LineEnd>,
     tail: Option<LineEnd>,
 }
+
+/// One outline of a shape's geometry: its commands, its fill mode, and whether it
+/// is stroked.
+type OutlinePath = (Vec<PathCmd>, FillMode, bool);
 
 /// One drawn piece: a path, its fill, its stroke.
 type Piece = (Vec<PathCmd>, Option<Paint>, Option<Stroke>);

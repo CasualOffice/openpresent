@@ -220,3 +220,166 @@ fn a_slide_index_past_the_end_is_an_error_with_a_code() {
     let err = deck.render_slide_png(99, 12.0, None).unwrap_err();
     assert_eq!(err.code(), "CS-RND-0003");
 }
+
+/// A table is drawn, not skipped: its cells fill, and the report no longer names it.
+#[test]
+fn a_table_draws_its_cells_and_is_not_reported_as_skipped() {
+    let mut deck = open("table-merged-cells.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.contains_key("table"),
+        "{:?}",
+        scene.features
+    );
+    let filled = list
+        .items
+        .iter()
+        .filter(|i| matches!(i, DisplayItem::Path { fill: Some(_), .. }))
+        .count();
+    assert!(filled >= 4, "only {filled} filled items");
+    // The merged origin cell, 2000000 by 740000 EMU at the frame's corner, is
+    // filled in the fixture style's near-black.
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    let px = |emu: f64| (emu * 96.0 / 914_400.0) as u32;
+    let [r, g, b, _] = pixel(&png, px(500_000.0), px(150_000.0));
+    assert!(r < 60 && g < 60 && b < 60, "{r},{g},{b}");
+}
+
+/// Classic charts are drawn from their cached values: bars, lines, areas, pies and
+/// scatters reach the display list, and the report names only the families left.
+#[test]
+fn classic_charts_draw_from_their_cached_values() {
+    let deck = open("chart-families.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    for key in scene.features.keys() {
+        assert!(
+            *key != "chart" && !key.starts_with("chart (part") && !key.starts_with("chart (rel"),
+            "{:?}",
+            scene.features
+        );
+    }
+    let filled = list
+        .items
+        .iter()
+        .filter(|i| matches!(i, DisplayItem::Path { fill: Some(_), .. }))
+        .count();
+    let stroked = list
+        .items
+        .iter()
+        .filter(|i| {
+            matches!(
+                i,
+                DisplayItem::Path {
+                    fill: None,
+                    stroke: Some(_),
+                    ..
+                }
+            )
+        })
+        .count();
+    assert!(
+        filled > 30 && stroked > 10,
+        "{filled} filled, {stroked} stroked"
+    );
+}
+
+/// SmartArt is drawn from the drawing PowerPoint stored for it, not reported.
+#[test]
+fn a_diagram_is_drawn_from_its_stored_drawing() {
+    let deck = open("graphics-diagram-consistent.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.keys().any(|k| k.starts_with("diagram")),
+        "{:?}",
+        scene.features
+    );
+    let drawn = list
+        .items
+        .iter()
+        .filter(|i| {
+            matches!(
+                i,
+                DisplayItem::Path {
+                    layer: Layer::Slide,
+                    ..
+                }
+            )
+        })
+        .count();
+    assert!(drawn > 0, "nothing of the diagram drawn");
+}
+
+/// An OLE object is drawn from the picture stored in its place, never opened.
+#[test]
+fn an_ole_object_is_drawn_from_its_fallback_picture() {
+    let deck = open("area-ole.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.contains_key("graphic frame"),
+        "{:?}",
+        scene.features
+    );
+    assert!(list.items.iter().any(|i| matches!(
+        i,
+        DisplayItem::Path {
+            fill: Some(Paint::Picture { .. }),
+            ..
+        }
+    )));
+}
+
+/// An outer shadow is drawn behind its shape as translucent paint, and the slide no
+/// longer reports its effects as skipped.
+#[test]
+fn an_outer_shadow_is_drawn_behind_its_shape() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/real/z19828779-education-ar.pptx");
+    let deck = Deck::open(std::fs::read(path).unwrap()).unwrap();
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.contains_key("effects"),
+        "{:?}",
+        scene.features
+    );
+    let translucent = list.items.iter().any(|i| {
+        matches!(
+            i,
+            DisplayItem::Path {
+                stroke: Some(casual_slide_render::display::Stroke {
+                    paint: Paint::Solid(Rgba { a, .. }),
+                    ..
+                }),
+                fill: None,
+                ..
+            } if *a < 255
+        )
+    });
+    assert!(translucent, "no shadow ring drawn");
+}
+
+/// `normAutofit` draws at the scale the file stores: a 10 pt run under
+/// `fontScale="62500"` is drawn at 6.25 pt.
+#[test]
+fn norm_autofit_draws_text_at_the_stored_font_scale() {
+    let deck = open("area-text.pptx");
+    let (list, _) = deck.display_list(2).unwrap();
+    // `Text 55` sits at 8656320,4361688 EMU.
+    let sizes: Vec<f64> = list
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            DisplayItem::GlyphRun {
+                transform, size, ..
+            } if (transform.e - 8_656_320.0).abs() < 1.0
+                && (transform.f - 4_361_688.0).abs() < 1.0 =>
+            {
+                Some(*size)
+            }
+            _ => None,
+        })
+        .collect();
+    assert!(!sizes.is_empty(), "no text in the autofit box");
+    for s in sizes {
+        assert!((s - 6.25 * 12_700.0).abs() < 1.0, "drawn at {s} EMU");
+    }
+}

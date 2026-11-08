@@ -11,7 +11,9 @@ use casual_slide_import::presentation::import_deck;
 use casual_slide_import::properties::ImportLimits;
 use casual_slide_import::slide::{SlideLimits, import_slide_parts};
 use casual_slide_import::theme::import_theme_limited;
+use casual_slide_model::shape::{ObjectId, ShapeNode};
 use casual_slide_model::slide::{SlideKind, SlideParts};
+use casual_slide_model::table::TableStyleList;
 use casual_slide_model::text::TextListStyle;
 use casual_slide_model::theme::Theme;
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, TargetMode, XmlTree, resolve_internal};
@@ -47,6 +49,9 @@ pub struct Deck {
     rels: Relationships,
     size: (i64, i64),
     default_text_style: Option<TextListStyle>,
+    table_styles: Option<TableStyleList>,
+    charts: casual_slide_import::chart::DeckCharts,
+    diagrams: BTreeMap<ObjectId, Vec<ShapeNode>>,
     media: BTreeMap<String, Vec<u8>>,
     unreadable_media: BTreeSet<String>,
     /// Masters whose theme could not be read.
@@ -72,14 +77,16 @@ impl Deck {
         let deck = import_deck(&mut package, &limits)
             .map_err(|e| RenderError::Open(e.code()))?
             .deck;
-        let parts = import_slide_parts(
+        let imported = import_slide_parts(
             &mut package,
             &deck.presentation,
             &SlideLimits::default(),
             &limits,
         )
-        .map_err(|e| RenderError::Open(e.code()))?
-        .parts;
+        .map_err(|e| RenderError::Open(e.code()))?;
+        let parts = imported.parts;
+        let table_styles = imported.table_styles;
+        let charts = imported.charts;
         let size = deck
             .presentation
             .slide_size
@@ -111,6 +118,29 @@ impl Deck {
             }
         }
 
+        // Each SmartArt frame's stored drawing (`SEC-C12`: no layout is run).
+        let mut diagrams = BTreeMap::new();
+        let graphic_limits = casual_slide_import::diagram::GraphicLimits::default();
+        let mut findings = casual_slide_import::properties::Findings::new(limits.max_findings);
+        for entry in &parts.structure.parts {
+            let Some(part) = parts.get(entry.id.part) else {
+                continue;
+            };
+            let found = casual_slide_import::diagram::import_slide_diagrams(
+                &mut package,
+                &entry.part,
+                part,
+                &graphic_limits,
+                &limits,
+                &mut findings,
+            );
+            for (frame, diagram) in found {
+                if let Some(drawing) = diagram.drawing.as_ref() {
+                    diagrams.insert(frame, crate::diagram::drawing_nodes(frame, drawing));
+                }
+            }
+        }
+
         let mut rels = Relationships::default();
         for entry in &parts.structure.parts {
             let mut map = BTreeMap::new();
@@ -132,6 +162,9 @@ impl Deck {
             rels,
             size,
             default_text_style: deck.presentation.default_text_style.clone(),
+            table_styles,
+            charts,
+            diagrams,
             media: BTreeMap::new(),
             unreadable_media: BTreeSet::new(),
             themes_unread,
@@ -170,6 +203,9 @@ impl Deck {
             size: self.size,
             media: &self.rels,
             default_text_style: self.default_text_style.as_ref(),
+            table_styles: self.table_styles.as_ref(),
+            charts: Some(&self.charts),
+            diagrams: Some(&self.diagrams),
         };
         build_slide(scene, ordinal)
     }
