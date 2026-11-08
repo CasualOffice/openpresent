@@ -42,7 +42,7 @@ import * as text from "./editor.text.js";
 const byId = (id) => document.getElementById(id);
 
 // `ShapeBox`'s flag bits in `casual-slide-wasm`.
-const NO_MOVE = 4, NO_RESIZE = 8, NO_ROTATE = 16, KEEP_ASPECT = 32, GROUP = 64;
+const NO_MOVE = 4, NO_RESIZE = 8, NO_ROTATE = 16, KEEP_ASPECT = 32, GROUP = 64, TABLE = 256;
 const PLACEHOLDER = 128;              // `ShapeBox::PLACEHOLDER`: only these prompt
 const ROT_UNIT = 60000;               // `@rot` is in 60000ths of a degree
 const NUDGE = 76200;                  // PowerPoint's grid step, 1/12 inch, in EMU
@@ -338,6 +338,10 @@ function dropGhostWhenDrawn() {
   setTimeout(done, 3000);
 }
 
+/// Who opens a table's cell on a press inside it (`editor.objects.js`).
+let tablePress = null;
+export function onTablePress(f) { tablePress = f; }
+
 /// Who draws over the selection, as the yellow adjust handles (`editor.shapes.js`):
 /// each is told the selected shape after every paint, or `null` while a drag runs.
 const painters = [];
@@ -517,6 +521,12 @@ function press(p, shift, add = false) {
   text.stop();
   select(found ? found.node : null);
   if (found && found.flags & GROUP) enterGroup(found);
+  // A press inside a table, off its border, types in the cell under it, as
+  // PowerPoint's; it selected the table only, and typing went nowhere (`UX-015`).
+  if (found && found.flags & TABLE && tablePress && interior(found, p)) {
+    tablePress(found, p);
+    return false;
+  }
   byId("stage").focus({ preventScroll: true });
   if (found) drag = { kind: "move", start: p, origin: found, box: { ...found } };
   // A press on an empty part of the slide draws a marquee.

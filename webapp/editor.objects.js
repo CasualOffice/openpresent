@@ -161,7 +161,10 @@ function chartPicker() {
 async function tableShape(node) {
   const v = await ask("table_shape", [state.current, node]);
   const rows = v[0], cols = v[1];
-  return { rows, cols, widths: v.slice(2, 2 + cols), heights: v.slice(2 + cols, 2 + cols + rows) };
+  // The rows as drawn, grown to fit their text, when the engine gives them: by the
+  // stated heights alone a click landed a row or more below (`UX-015`).
+  const drawn = v.length >= 2 + cols + 2 * rows ? v.slice(2 + cols + rows, 2 + cols + 2 * rows) : null;
+  return { rows, cols, widths: v.slice(2, 2 + cols), heights: drawn || v.slice(2 + cols, 2 + cols + rows) };
 }
 
 /// The cell under a point of the slide, EMU, by the grid's widths and stated heights.
@@ -185,7 +188,9 @@ function cellBox(s, t, row, col) {
 let cellEditor = null;
 
 /// Type into a cell: a field over it; Tab and Shift+Tab move on, Escape puts it back.
-async function editCell(s, row, col) {
+/// `whole` selects the cell's text, as Tab does in PowerPoint; a click puts the caret
+/// at its end instead, so a key typed after it adds to the text (`UX-015`).
+async function editCell(s, row, col, whole = true) {
   await closeCellEditor(true);
   const t = await tableShape(s.node);
   if (row >= t.rows || col >= t.cols) return;
@@ -219,7 +224,8 @@ async function editCell(s, row, col) {
   });
   area.addEventListener("blur", () => { if (cellEditor === me) closeCellEditor(true); });
   area.focus();
-  area.select();
+  if (whole) area.select();
+  else area.setSelectionRange(area.value.length, area.value.length);
 }
 
 async function closeCellEditor(commit) {
@@ -409,4 +415,32 @@ export function init() {
   register("table.delete-rows", { label: "Delete Rows", enabled: tableSelected, run: () => tableEdit(1, (c) => c.row) });
   register("table.delete-columns", { label: "Delete Columns", enabled: tableSelected, run: () => tableEdit(3, (c) => c.col) });
   byId("slide-frame").addEventListener("dblclick", onDoubleClick, true);
+  // One click inside a table types in the cell under it, as PowerPoint (`UX-015`).
+  // Keys typed while the cell opens are kept and typed into it, as `editor.text.js`
+  // keeps them for a text box.
+  selection.onTablePress(async (s, [x, y]) => {
+    const held = [];
+    const hold = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key.length === 1) held.push(e.key);
+      else if (e.key === "Enter") held.push("\n");
+      else if (e.key === "Backspace") held.pop();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    document.addEventListener("keydown", hold, true);
+    try {
+      const t = await tableShape(s.node);
+      const c = cellAt(s, t, x, y);
+      await editCell(s, c.row, c.col, false);
+    } finally {
+      document.removeEventListener("keydown", hold, true);
+    }
+    const area = cellEditor?.area;
+    if (area && held.length) {
+      area.value += held.join("");
+      area.setSelectionRange(area.value.length, area.value.length);
+    }
+  });
 }

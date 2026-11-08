@@ -150,6 +150,9 @@ pub struct SceneText {
     pub boxes: Vec<TextBox>,
     /// The asked-for shape's transform and caret lines, in points in its space.
     pub captured: Option<(Affine, Vec<CaretLine>)>,
+    /// Each table's row heights as drawn, EMU: the stated height grown to fit its
+    /// text, so a click finds the cell under it (`UX-015`).
+    pub table_rows: BTreeMap<ObjectId, Vec<f64>>,
 }
 
 /// Build the display list of the part at `ordinal`, which is usually a slide but may

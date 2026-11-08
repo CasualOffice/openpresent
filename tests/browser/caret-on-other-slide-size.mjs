@@ -23,6 +23,11 @@
 // - A grouped shape's text is entered as PowerPoint's: on `z21464709-souzou-ja.pptx`,
 //   a click on a callout inside a group selects the group, a second puts the caret in
 //   the callout, and typing goes into it.
+// - One click in a table's cell types into that cell, as PowerPoint. On
+//   `z17310490-vierfelder-de.pptx` a click selected the table only, the cell calls
+//   were refused by the worker, and the cell was found by the rows' stated heights,
+//   a row below the one drawn. The cell is found here from the stage picture: the
+//   first orange cell, "falsch-positiv", row 2, column 2.
 //
 // Usage: node tests/browser/caret-on-other-slide-size.mjs <server binary>
 // Needs `playwright-core` (installed by the job, pinned) and Chrome on the runner.
@@ -39,6 +44,7 @@ const ORIGIN = `http://127.0.0.1:${PORT}`;
 const DECK = path.join(ROOT, "fixtures/real/gs-shapecrawler-074-ru.pptx");
 const FLOW = path.join(ROOT, "fixtures/real/gs-z11091145-curation-en.pptx");
 const GROUPED = path.join(ROOT, "fixtures/real/z21464709-souzou-ja.pptx");
+const TABLE = path.join(ROOT, "fixtures/real/z17310490-vierfelder-de.pptx");
 const server = process.argv[2];
 
 function fail(message) {
@@ -97,6 +103,38 @@ function centre(page, b) {
     const k = r.width / core.state.deck.width;
     return [r.left + (b.x + b.cx / 2) * k, r.top + (b.y + b.cy / 2) * k];
   }, b);
+}
+
+/// The page box of the topmost orange region in the stage picture, by flood fill from
+/// its first pixel: on the table deck, the "falsch-positiv" cell.
+function orangeCell() {
+  const img = document.getElementById("slide-img");
+  if (!img.complete || !img.naturalWidth) return null;
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const g = c.getContext("2d");
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height).data;
+  const orange = (i) => d[i] > 230 && d[i + 1] > 170 && d[i + 1] < 215 && d[i + 2] < 60;
+  let start = -1;
+  for (let i = 0; i < d.length && start < 0; i += 4) if (orange(i)) start = i / 4;
+  if (start < 0) return null;
+  const seen = new Uint8Array(c.width * c.height);
+  const stack = [start];
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  seen[start] = 1;
+  while (stack.length) {
+    const p = stack.pop();
+    const x = p % c.width, y = (p - x) / c.width;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    for (const q of [p - 1, p + 1, p - c.width, p + c.width]) {
+      if (q >= 0 && q < seen.length && !seen[q] && orange(q * 4)) { seen[q] = 1; stack.push(q); }
+    }
+  }
+  const r = img.getBoundingClientRect();
+  const k = r.width / c.width;
+  return { left: r.left + x0 * k, right: r.left + (x1 + 1) * k, top: r.top + y0 * k, bottom: r.top + (y1 + 1) * k };
 }
 
 /// The bounding box, in CSS pixels on the page, of everything in the stage picture
@@ -236,6 +274,25 @@ async function main() {
       return r.value.includes("XY");
     }, "XY typed into the grouped callout", [callout.part, callout.node]);
     console.log("caret-on-other-slide-size: a second click in a group types into the shape inside");
+
+    // UX-015: one click in a table cell, then typing, types into that cell.
+    const groupedSrc = await page.evaluate(() => document.getElementById("slide-img").src);
+    await openDeck(page, TABLE, "z17310490-vierfelder-de.pptx");
+    await until(page, (old) => document.getElementById("slide-img").src !== old, "the table deck on the stage", groupedSrc);
+    const cell = await until(page, orangeCell, "the orange cell drawn on the stage");
+    const table = await page.evaluate(async () => (await import("/editor.selection.js")).allShapes().find((s) => s.flags & 256)?.node);
+    if (table == null) fail("no table on the slide");
+    await page.mouse.click((cell.left + cell.right) / 2, (cell.top + cell.bottom) / 2);
+    await page.keyboard.type("Q");
+    await until(page, () => document.querySelector(".op-cell-editor"), "the cell editor");
+    await page.mouse.click(cell.left - 2, cell.bottom + 200);   // off the table: commits
+    const typed = await until(page, async (node) => {
+      const core = await import("/editor.core.js");
+      const r = await core.request({ op: "build", fn: "table_cell_text", args: [0, node, 1, 1] });
+      return r.value.includes("Q") ? r.value : null;
+    }, "Q in the falsch-positiv cell", table);
+    if (!typed.startsWith("falsch-positiv")) fail(`the cell holds ${JSON.stringify(typed)}`);
+    console.log("caret-on-other-slide-size: one click in a table cell types into that cell");
   } finally {
     await browser?.close();
     child.kill();

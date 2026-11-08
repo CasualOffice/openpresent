@@ -98,6 +98,10 @@ const BUILD = {
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
   // A second click inside a group (`UX-015`).
   group_shapes,
+  // Tables and charts (`VS-11`): `editor.objects.js` asks for them as `build`; they sat
+  // under `animate`, so every table and chart call was refused (`UX-015`).
+  insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
+  table_style, set_table_style, insert_chart, chart_data, set_chart_data,
 };
 
 /// Arguments that cross as typed arrays: the bridge takes `Vec<u32>` and `Vec<f64>`.
@@ -109,8 +113,6 @@ const NODE_LISTS = new Set(["copy_shapes", "duplicate_shapes", "delete_shapes"])
 const ANIMATE = {
   transition_choice, set_slide_transition, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
-  insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
-  table_style, set_table_style, insert_chart, chart_data, set_chart_data,
 };
 
 const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });
