@@ -11,6 +11,65 @@ Nothing has been released. Release tags and their dry-run default are described 
 
 ## Unreleased
 
+### 2026-11-09
+
+**Added: side panes, comments, notes and the Selection Pane (`UX-011`)**
+
+- One task pane host at the right; Format Shape and the Animation Pane moved onto it.
+- Comments pane: modern threaded comments on a slide or shape, replies, resolve, reopen, delete, markers, saved through the Tier 1M model; @mention text is sent nowhere.
+- Speaker notes typed under the slide and saved to the notes slide, created when a slide has none.
+- Selection Pane: list, rename, hide or show, reorder by drag; engine ops `SetComments`, `SetAuthors`, `SetNotes`, `SetNonVisual`.
+
+**Added: the File tab and autosave (`FILE-01`, `SAVE-01`)**
+
+- Rename in the title bar; File > Info properties and Advanced Properties (Summary, Statistics, Custom) saved into `docProps`, one undo step each.
+- Save As `.pptx`, `.potx`, `.ppsx` (F12) through the save-as grid; Download a Copy; Print, one slide a page.
+- Browser autosave to IndexedDB and a recovery bar, copied from OpenCalc's `editor.drafts.js`.
+
+**Docs**
+
+- PowerPoint parity audit of the live editor: 352 features, 35 working (9.9%), backlog `PAR-01` to `PAR-66` (`FIT-02`).
+- Every document brought true to the code and git at `8011d28` (`DOC-011`).
+
+### 2026-11-08
+
+**Phase 1 closed.** Every tier, 1A to 1N and 1R, closed; the owner signed off on the phase1-exit run at `50ea80d` (`P1X-01`, instruction 53).
+
+**Added: rendering (Phase 2, under instruction 43's waiver)**
+
+- `casual-slide-text`: text bodies laid out into glyph runs, caret stops, copied from OpenCalc's text crate (`T2D1-01` to `T2D4-01`).
+- `casual-slide-render`: slides to PNG (tiny-skia) and to PDF with real, extractable text (`SKEL-01`, `VS-04`); tables, classic charts, SmartArt from its drawing, OLE from its fallback, shadow, glow, autofit at its stored scale (`SKEL-03`); highlight (`UX-005`).
+- Fidelity fixes from the gallery's scores: group scale, pattern and tiled fills, CJK, vertical text, hyperlink colour, EMF-wrapped bitmaps, symbol fonts, Gaussian blur (`FH-03`, `FH-04`, `FH-05`).
+
+**Added: vertical slices 1 to 12 (instruction 44), each built and open with its leftovers**
+
+- Slice 1, web viewer: `casual-slide-wasm` and `webapp/`, OpenCalc's shell cloned for PowerPoint (`VS-01`).
+- Slice 3, desktop: Tauri shell, bundled on three OSs (`VS-03`).
+- Slice 4, save and export: byte-identical unedited save, PDF, slide as PNG (`VS-04`, done).
+- Slice 5, edit text: `casual-slide-transaction` from OpenCalc, caret, typing, IME, Bold/Italic/Underline, undo (`VS-05`, `VS-17`, `VS-19`).
+- Slice 6, move and resize: select, drag, resize, rotate, nudge, delete (`VS-06`).
+- Slice 7, present: slide show and Presenter View (`VS-07`).
+- Slice 8, build slides: New Slide, Duplicate, Delete, Hide, reorder, insert text box and picture; starts on a blank deck (`VS-08`).
+- Slice 9, collaborate: the collaboration seam (ADR-020), `server/casual-slide-collab-server`, and co-editing in the browser with presence (`VS-09`, `COL-01`, `COL-04`, `COL-06`).
+- Slice 10, animate: Transitions and Animations tabs, Animation Pane, played in the show (`VS-10`).
+- Slice 11, rich objects: insert and edit tables and charts, Edit Data (`VS-11`).
+- Slice 12, design: themes, variants, slide size, background (`VS-12`).
+- Slice 2, render depth, continues (`VS-02`).
+
+**Added: the editor's shell and objects**
+
+- PowerPoint for the web's ribbon, menus, Format Shape pane, status bar, KeyTips, Home tab formatting, clipboard, multi-select, Picture Format tab (`UX-003`, `UX-004`).
+- Shapes gallery with all 187 presets, drawing, yellow handles, Shape Format tab (`SHAPE-01`).
+
+**Added: site and fidelity measurement**
+
+- Marketing site and editor on GitHub Pages at https://casualoffice.github.io/openpresent/ (`SITE-01`, `SITE-03`).
+- Slide gallery beside LibreOffice, scored per slide: at `1ba6443`, 5.4% of pixels differ on mean (94.6% agree with LibreOffice 26.2.6.3), not a PowerPoint measure (`FH-01`, `FH-02`).
+
+**Fixed**
+
+- CI failures on `main`, `CI-10` to `CI-22`.
+
 ### 2026-11-07
 
 **Added: closing Tiers 1E and 1F (`CLOSE-01`, `T1E-06`, `T1F-04`, `STYLE-01`, `DRAW-01`)**
