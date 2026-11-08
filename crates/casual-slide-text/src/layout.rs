@@ -225,6 +225,24 @@ pub struct TextLayout {
     pub substitutions: Vec<FontSubstitution>,
     /// Scripts in the text that no available face can draw.
     pub missing_scripts: Vec<crate::faces::MissingScript>,
+    /// Where a caret can stand on each line, in reading order: what an editor
+    /// places a caret and hit-tests with (`VS-05`).
+    pub carets: Vec<CaretLine>,
+}
+
+/// One laid-out line's caret stops, in the frame's space, points.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct CaretLine {
+    /// The paragraph the line is in, from 0.
+    pub paragraph: usize,
+    /// The top of the line: its baseline less its ascent.
+    pub top: f32,
+    /// The bottom: its baseline plus its descent.
+    pub bottom: f32,
+    /// `(offset, x)`: each place a caret can stand, as a character offset into the
+    /// paragraph's own text (a line break one character, a bullet none), and the x of
+    /// the caret there. In offset order; the first is where the line starts.
+    pub stops: Vec<(usize, f32)>,
 }
 
 /// A requested family drawn with a bundled one.
@@ -526,6 +544,7 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
     let top = frame.y + insets.top;
 
     let mut runs: Vec<GlyphRun> = Vec::new();
+    let mut carets: Vec<CaretLine> = Vec::new();
     let mut y = 0.0f32;
     let mut lines_total = 0usize;
     let count = body.paragraphs.len();
@@ -571,6 +590,7 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
         );
         let mut first_single = None;
         let mut lines_y = Vec::with_capacity(spans.len());
+        let mut lines_m = Vec::with_capacity(spans.len());
         let mut height = 0.0f32;
         for (line_index, &(start, end)) in spans.iter().enumerate() {
             let from = if line_index == 0 { 0 } else { start };
@@ -600,6 +620,7 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
             };
             height += line_height;
             lines_y.push((height - m.descent, line_index));
+            lines_m.push(m);
         }
         let single = first_single.unwrap_or(end_metrics.ascent + end_metrics.descent);
         let amount = |s: Spacing| match s {
@@ -610,7 +631,9 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
             y += amount(paragraph.space_before);
         }
 
-        for (&(start, end), &(baseline, line_index)) in spans.iter().zip(&lines_y) {
+        for ((&(start, end), &(baseline, line_index)), m) in
+            spans.iter().zip(&lines_y).zip(&lines_m)
+        {
             let baseline = y + baseline;
             let trimmed = trim_end(&prepared.text, start, end);
             let line_w = width(&prefix, start, trimmed);
@@ -654,6 +677,34 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
                     &mut runs,
                 );
             }
+            // Caret stops: every character boundary on the line, the trailing space
+            // included and a line feed's own end not, since that is the next line's.
+            let line_end =
+                if prepared.text.get(..end).is_some_and(|t| t.ends_with('\n')) && end > start {
+                    end - 1
+                } else {
+                    end
+                };
+            let caret_from = start.max(prepared.bullet_len);
+            let text_tail = prepared.text.get(caret_from..line_end).unwrap_or("");
+            let mut chars_before = prepared
+                .text
+                .get(prepared.bullet_len..caret_from)
+                .map_or(0, |t| t.chars().count());
+            let mut stops = Vec::with_capacity(text_tail.len().saturating_add(1));
+            let pen_x = left + pen;
+            stops.push((chars_before, pen_x));
+            for (offset, ch) in text_tail.char_indices() {
+                let after = caret_from + offset + ch.len_utf8();
+                chars_before += 1;
+                stops.push((chars_before, pen_x + width(&prefix, caret_from, after)));
+            }
+            carets.push(CaretLine {
+                paragraph: index,
+                top: baseline - m.ascent,
+                bottom: baseline + m.descent,
+                stops,
+            });
             let at = LinePlace {
                 origin_x: left,
                 baseline,
@@ -677,6 +728,10 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
         for glyph in runs.iter_mut().flat_map(|r| r.glyphs.iter_mut()) {
             glyph.y += offset;
         }
+        for line in &mut carets {
+            line.top += offset;
+            line.bottom += offset;
+        }
     }
 
     TextLayout {
@@ -685,6 +740,7 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
         lines: lines_total,
         substitutions: Vec::new(),
         missing_scripts: Vec::new(),
+        carets,
     }
 }
 

@@ -42,7 +42,10 @@ pub use images::{
 };
 pub use pdf::{PdfMetadata, write_pdf};
 pub use raster::{BundledOutlines, GlyphOutlines, render_pixmap, render_png};
-pub use scene::{MediaResolver, NoMedia, SceneReport, SlideScene, build_slide};
+pub use scene::{
+    MediaResolver, NoMedia, SceneReport, SceneText, SlideScene, TextBox, build_slide,
+    build_slide_text,
+};
 
 /// An error rendering a slide.
 #[derive(Debug, Clone, PartialEq, Eq)]

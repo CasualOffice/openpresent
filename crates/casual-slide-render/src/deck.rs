@@ -20,7 +20,9 @@ use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, TargetMode, XmlTree, 
 
 use crate::display::{DisplayItem, DisplayList, Paint};
 use crate::raster::{BundledOutlines, GlyphOutlines, render_png};
-use crate::scene::{MediaResolver, SceneReport, SlideScene, build_slide};
+use crate::scene::{
+    MediaResolver, SceneReport, SceneText, SlideScene, build_slide, build_slide_text,
+};
 use crate::{RenderError, RenderReport};
 
 /// The largest media part read for drawing. Over it, the picture is reported as not
@@ -194,10 +196,29 @@ impl Deck {
     /// The display list of any slide-like part by ordinal: a layout or a master is
     /// drawn as a slide of its own.
     pub fn display_list_of_part(&self, ordinal: u32) -> (DisplayList, SceneReport) {
+        build_slide(self.scene(ordinal), ordinal)
+    }
+
+    /// The text boxes of slide `index`, and the caret lines of `capture` if it is one
+    /// of them (`VS-05`).
+    pub fn slide_text(
+        &self,
+        index: usize,
+        capture: Option<ObjectId>,
+    ) -> Result<SceneText, RenderError> {
+        let ordinal = self
+            .parts
+            .structure
+            .slide(index)
+            .ok_or(RenderError::NoSuchSlide(index))?;
+        Ok(build_slide_text(self.scene(ordinal), ordinal, capture).2)
+    }
+
+    fn scene(&self, ordinal: u32) -> SlideScene<'_> {
         let master = casual_slide_style::Chain::of(&self.parts, ordinal)
             .master
             .map(|m| m.id.part);
-        let scene = SlideScene {
+        SlideScene {
             parts: &self.parts,
             theme: master.and_then(|m| self.themes.get(&m)),
             size: self.size,
@@ -206,8 +227,7 @@ impl Deck {
             table_styles: self.table_styles.as_ref(),
             charts: Some(&self.charts),
             diagrams: Some(&self.diagrams),
-        };
-        build_slide(scene, ordinal)
+        }
     }
 
     /// The file's bytes exactly as they arrived, for a save that starts from them.
@@ -215,9 +235,15 @@ impl Deck {
         self.package.save_unedited()
     }
 
-    /// The deck's slide-like parts, as read.
+    /// The deck's slide-like parts, as read, or as edited since.
     pub fn parts(&self) -> &SlideParts {
         &self.parts
+    }
+
+    /// The deck's slide-like parts, to edit. What is drawn next is drawn from them; the
+    /// file is untouched until a save brings it to them.
+    pub fn parts_mut(&mut self) -> &mut SlideParts {
+        &mut self.parts
     }
 
     /// Read the media a display list draws, once each.

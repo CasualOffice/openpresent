@@ -32,7 +32,7 @@ use casual_slide_model::table::TableStyleList;
 use casual_slide_model::text::{Autofit, TextBody, TextListStyle, TextVertical};
 use casual_slide_model::theme::{ColorScheme, FormatScheme, ShapeStyle, StyleMatrixRef, Theme};
 use casual_slide_style::Chain;
-use casual_slide_text::{Frame, TextEnv, layout_text_body};
+use casual_slide_text::{CaretLine, Frame, TextEnv, layout_text_body};
 
 use crate::display::{
     Affine, Cap, DisplayItem, DisplayList, Glyph, Join, Layer, Paint, PathCmd, Rgba, Stop, Stroke,
@@ -125,17 +125,53 @@ struct Builder<'a> {
     chain: Chain<'a>,
     items: Vec<DisplayItem>,
     report: SceneReport,
+    capture: Option<ObjectId>,
+    text: SceneText,
+}
+
+/// A text body on the slide's own layer, where an editor can click into it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextBox {
+    /// The shape.
+    pub object: ObjectId,
+    /// The shape's space onto the slide's, EMU.
+    pub transform: Affine,
+    /// The text rectangle in the shape's space, EMU: left, top, right, bottom.
+    pub rect: (f64, f64, f64, f64),
+}
+
+/// What an editor needs of a slide's text (`VS-05`): its text boxes, top last, and the
+/// caret lines of the one asked for.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SceneText {
+    /// Every text body on the slide's own layer, in painting order.
+    pub boxes: Vec<TextBox>,
+    /// The asked-for shape's transform and caret lines, in points in its space.
+    pub captured: Option<(Affine, Vec<CaretLine>)>,
 }
 
 /// Build the display list of the part at `ordinal`, which is usually a slide but may
 /// be a layout or master, drawn as a slide of its own.
 pub fn build_slide(scene: SlideScene<'_>, ordinal: u32) -> (DisplayList, SceneReport) {
+    let (list, report, _) = build_slide_text(scene, ordinal, None);
+    (list, report)
+}
+
+/// As [`build_slide`], and the slide's text boxes, with the caret lines of `capture`
+/// laid out even when its body is empty.
+pub fn build_slide_text(
+    scene: SlideScene<'_>,
+    ordinal: u32,
+    capture: Option<ObjectId>,
+) -> (DisplayList, SceneReport, SceneText) {
     let chain = Chain::of(scene.parts, ordinal);
     let mut b = Builder {
         scene,
         chain,
         items: Vec::new(),
         report: SceneReport::default(),
+        capture,
+        text: SceneText::default(),
     };
     b.background();
     let master = chain.master.map(|m| m.id.part);
@@ -168,6 +204,7 @@ pub fn build_slide(scene: SlideScene<'_>, ordinal: u32) -> (DisplayList, SceneRe
             items: b.items,
         },
         b.report,
+        b.text,
     )
 }
 
@@ -728,6 +765,13 @@ impl<'a> Builder<'a> {
         let Some(body) = node.text_body.as_deref() else {
             return;
         };
+        if layer == Layer::Slide {
+            self.text.boxes.push(TextBox {
+                object: node.id,
+                transform,
+                rect: (rect.l, rect.t, rect.r, rect.b),
+            });
+        }
         self.text_in(node, body, layer, transform, rect, style);
     }
 
@@ -742,7 +786,8 @@ impl<'a> Builder<'a> {
         rect: TextRect,
         style: Option<&'a ShapeStyle>,
     ) {
-        if !body.paragraphs.iter().any(|p| !p.items.is_empty()) {
+        let captured = self.capture == Some(node.id);
+        if !captured && !body.paragraphs.iter().any(|p| !p.items.is_empty()) {
             return;
         }
         let object_defaults = self.scene.theme.and_then(|t| t.object_defaults.as_ref());
@@ -781,6 +826,9 @@ impl<'a> Builder<'a> {
             }
             _ => layout_text_body(body, &chain, &env, frame),
         };
+        if captured {
+            self.text.captured = Some((transform, layout.carets.clone()));
+        }
         if layout.runs.is_empty() {
             self.report.text_bodies_undrawn = self.report.text_bodies_undrawn.saturating_add(1);
             return;

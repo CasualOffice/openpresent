@@ -324,3 +324,34 @@ fn hostile_sizes_and_frames_do_not_panic() {
         let _ = layout_body(&body(vec![paragraph(vec![run("text here", size)])]), frame);
     }
 }
+
+#[test]
+fn caret_stops_cover_every_character_boundary_of_each_line() {
+    let b = body(vec![
+        paragraph(vec![run("Hello ", 18.0), run("world", 18.0)]),
+        paragraph(vec![]),
+        paragraph(vec![run("a\nbc", 18.0)]),
+    ]);
+    let layout = layout_body(&b, FRAME);
+    let lines: Vec<(usize, Vec<usize>)> = layout
+        .carets
+        .iter()
+        .map(|l| (l.paragraph, l.stops.iter().map(|s| s.0).collect()))
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            (0, (0..=11).collect::<Vec<_>>()),
+            (1, vec![0]),
+            (2, vec![0, 1]),
+            (2, vec![2, 3, 4]),
+        ]
+    );
+    let first = &layout.carets[0];
+    assert!(first.stops.windows(2).all(|w| w[1].1 > w[0].1));
+    assert!((first.stops[0].1 - FRAME.x).abs() < 0.01);
+    // The glyphs sit between each line's top and bottom.
+    let glyph_y = layout.runs[0].glyphs[0].y;
+    assert!(first.top < glyph_y && glyph_y < first.bottom);
+    assert!(layout.carets[1].top >= first.bottom - 0.01);
+}
