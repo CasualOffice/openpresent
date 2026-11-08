@@ -52,7 +52,7 @@ modelling come first. After Phase 1, work runs as **vertical slices** (owner ins
   - [x] Fixture corpus has provenance recorded, including real PowerPoint-written decks as input. Evidence: `F-004`, `F-007`, 66 decks.
   - [x] `SPK-01` reported; ADR-004 and ADR-005 settled. Evidence: [64](64-SPK-01-TEXT-COST.md).
   - [x] `SPK-02` runs 5 decks end to end against LibreOffice; Microsoft's validator runs. Evidence: `SPK-02`, `F-006`.
-  - [ ] Owner sign-off.
+  - [x] Owner sign-off (2026-11-08).
 
 ## Phase 1 — Model, import, export
 
@@ -120,11 +120,11 @@ Every task below is a row in [14](14-EXECUTION-TRACKER.md). Audit coverage is re
 7. New limits have hostile fixtures; each new parser has a fuzz target.
 
 **Phase 1 closes when:**
-- [ ] All tiers closed.
-- [ ] Every exported corpus deck passes schema validation and Microsoft's validator, and LibreOffice reopens it. The PowerPoint check is `PV-01`.
-- [ ] Corpus includes real decks from PowerPoint on Windows and Mac, and Google Slides, with provenance recorded. Keynote was dropped by the owner (instruction 36).
-- [ ] A 500-slide deck opens within its budget, and a hostile corpus run shows no crash or hang.
-- [ ] The damage corpus opens, or is refused only under [29](29-RECOVERY.md)'s rules; an edit to a recovered deck writes a valid file, except a part kept as it arrived after a failed checksum, which is reported (owner instruction 34).
+- [x] All tiers closed.
+- [x] Every exported corpus deck passes schema validation and Microsoft's validator, and LibreOffice reopens it. The PowerPoint check is `PV-01`.
+- [x] Corpus includes real decks from PowerPoint on Windows and Mac, and Google Slides, with provenance recorded. Keynote was dropped by the owner (instruction 36).
+- [x] A 500-slide deck opens within its budget, and a hostile corpus run shows no crash or hang.
+- [x] The damage corpus opens, or is refused only under [29](29-RECOVERY.md)'s rules; an edit to a recovered deck writes a valid file, except a part kept as it arrived after a failed checksum, which is reported (owner instruction 34).
 - [ ] Owner sign-off.
 
 ## Phase 2 — Layout and render
