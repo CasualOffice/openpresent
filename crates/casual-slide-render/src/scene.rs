@@ -7,12 +7,15 @@
 //! master placeholders', then its style matrix reference into the theme. Geometry is
 //! `casual-slide-geometry`'s, evaluated at the shape's size.
 //!
-//! What this cannot draw yet is counted in [`SceneReport`], never dropped silently:
-//! text above all, which lane B's text crate fills as [`DisplayItem::GlyphRun`].
+//! Text is laid out by `casual-slide-text` in the geometry's text rectangle and
+//! carried as [`DisplayItem::GlyphRun`]. What this cannot draw yet is counted in
+//! [`SceneReport`], never dropped silently.
 
 use std::collections::BTreeMap;
 
-use casual_slide_geometry::{Adjust, Extents, FillMode, GeometryDef, Segment, preset_shape};
+use casual_slide_geometry::{
+    Adjust, Extents, FillMode, GeometryDef, Segment, TextRect, preset_shape,
+};
 use casual_slide_model::color::{Color, ResolveContext, resolve};
 use casual_slide_model::effect::EffectProperties;
 use casual_slide_model::fill::{
@@ -25,11 +28,13 @@ use casual_slide_model::line::{
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{NodeKind, ShapeNode, Transform};
 use casual_slide_model::slide::{BackgroundFill, SlideParts};
-use casual_slide_model::theme::{ColorScheme, FormatScheme, StyleMatrixRef, Theme};
+use casual_slide_model::text::{TextListStyle, TextVertical};
+use casual_slide_model::theme::{ColorScheme, FormatScheme, ShapeStyle, StyleMatrixRef, Theme};
 use casual_slide_style::Chain;
+use casual_slide_text::{Frame, TextEnv, layout_text_body};
 
 use crate::display::{
-    Affine, Cap, DisplayItem, DisplayList, Join, Layer, Paint, PathCmd, Rgba, Stop, Stroke,
+    Affine, Cap, DisplayItem, DisplayList, Glyph, Join, Layer, Paint, PathCmd, Rgba, Stop, Stroke,
 };
 
 /// Turns a relationship id on a part into the media part it names.
@@ -52,8 +57,9 @@ impl MediaResolver for NoMedia {
 /// stable feature key. Keys name constructs; no document content.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SceneReport {
-    /// Shapes whose text body holds text: drawn as nothing until the text crate
-    /// (lane B) supplies glyph runs.
+    /// Text bodies laid out and drawn as glyph runs.
+    pub text_bodies_drawn: u32,
+    /// Text bodies holding items that laid out to no glyphs.
     pub text_bodies_undrawn: u32,
     /// Everything else not drawn, or drawn approximately, by feature.
     pub features: BTreeMap<&'static str, u32>,
@@ -77,6 +83,8 @@ pub struct SlideScene<'a> {
     pub size: (i64, i64),
     /// Where pictures' bytes live.
     pub media: &'a dyn MediaResolver,
+    /// The presentation's `defaultTextStyle`, the last level of every text chain.
+    pub default_text_style: Option<&'a TextListStyle>,
 }
 
 impl core::fmt::Debug for SlideScene<'_> {
@@ -97,6 +105,9 @@ const MAX_SEGMENTS_PER_SHAPE: usize = 200_000;
 
 /// The schema's default line width, `a:ln/@w` absent, is 0: the thinnest line.
 const DEFAULT_LINE_WIDTH: f64 = 0.0;
+
+/// EMU in a point.
+const EMU_PER_POINT: f64 = 12_700.0;
 
 struct Builder<'a> {
     scene: SlideScene<'a>,
@@ -556,16 +567,8 @@ impl<'a> Builder<'a> {
         if node.properties.scene3d.is_some() || node.properties.sp3d.is_some() {
             self.report.note("3D");
         }
-        if node
-            .text_body
-            .as_ref()
-            .is_some_and(|b| b.paragraphs.iter().any(|p| !p.items.is_empty()))
-        {
-            self.report.text_bodies_undrawn = self.report.text_bodies_undrawn.saturating_add(1);
-        }
-
         let geometry = levels.iter().find_map(|n| n.properties.geometry.as_ref());
-        let paths = self.paths(geometry, w, h, node.kind);
+        let (paths, text_rect) = self.paths(geometry, w, h, node.kind);
         for (path, mode, stroked) in paths {
             let fill = match mode {
                 FillMode::None => None,
@@ -588,6 +591,103 @@ impl<'a> Builder<'a> {
                     self.push(node, layer, transform, head, fill, stroke);
                 }
             }
+        }
+        let rect = text_rect.unwrap_or(TextRect {
+            l: 0.0,
+            t: 0.0,
+            r: w,
+            b: h,
+        });
+        self.text(node, layer, transform, rect, style);
+    }
+
+    /// A shape's text body, laid out by `casual-slide-text` in the geometry's text
+    /// rectangle, as glyph runs in the shape's space.
+    fn text(
+        &mut self,
+        node: &'a ShapeNode,
+        layer: Layer,
+        transform: Affine,
+        rect: TextRect,
+        style: Option<&'a ShapeStyle>,
+    ) {
+        let Some(body) = node.text_body.as_deref() else {
+            return;
+        };
+        if !body.paragraphs.iter().any(|p| !p.items.is_empty()) {
+            return;
+        }
+        let object_defaults = self.scene.theme.and_then(|t| t.object_defaults.as_ref());
+        let chain = self
+            .chain
+            .text_chain(node, self.scene.default_text_style, object_defaults);
+        let env = TextEnv {
+            colors: ResolveContext {
+                scheme: self.scheme(),
+                map: self.chain.color_map().map(|m| m.value),
+                placeholder: style
+                    .and_then(|s| s.font.as_ref())
+                    .and_then(|f| f.color.as_ref()),
+                system_palette: None,
+            },
+            fonts: self
+                .scene
+                .theme
+                .and_then(|t| t.elements.as_ref())
+                .and_then(|e| e.font_scheme.as_ref()),
+        };
+        let frame = Frame {
+            x: (rect.l / EMU_PER_POINT) as f32,
+            y: (rect.t / EMU_PER_POINT) as f32,
+            width: ((rect.r - rect.l).max(0.0) / EMU_PER_POINT) as f32,
+            height: ((rect.b - rect.t).max(0.0) / EMU_PER_POINT) as f32,
+        };
+        let layout = layout_text_body(body, &chain, &env, frame);
+        if layout.runs.is_empty() {
+            self.report.text_bodies_undrawn = self.report.text_bodies_undrawn.saturating_add(1);
+            return;
+        }
+        self.report.text_bodies_drawn = self.report.text_bodies_drawn.saturating_add(1);
+        for _ in &layout.substitutions {
+            self.report.note("font substituted");
+        }
+        for _ in &layout.missing_scripts {
+            self.report.note("script with no face");
+        }
+        if body.properties.as_ref().is_some_and(|b| {
+            b.rotation.is_some_and(|r| r != 0)
+                || b.vertical.is_some_and(|v| v != TextVertical::Horz)
+        }) {
+            self.report
+                .note("rotated or vertical text (drawn horizontal)");
+        }
+        for run in layout.runs {
+            if run.synthetic_bold {
+                self.report.note("synthetic bold (drawn regular)");
+            }
+            let pt = |v: f32| f64::from(v) * EMU_PER_POINT;
+            self.items.push(DisplayItem::GlyphRun {
+                object: Some(node.id),
+                layer,
+                transform,
+                face: run.face_key,
+                size: pt(run.size),
+                glyphs: run
+                    .glyphs
+                    .iter()
+                    .map(|g| Glyph {
+                        id: u32::from(g.id),
+                        x: pt(g.x),
+                        y: pt(g.y),
+                    })
+                    .collect(),
+                fill: Paint::Solid(Rgba {
+                    r: run.color.r,
+                    g: run.color.g,
+                    b: run.color.b,
+                    a: run.color.a,
+                }),
+            });
         }
     }
 
@@ -683,7 +783,7 @@ impl<'a> Builder<'a> {
         w: f64,
         h: f64,
         kind: NodeKind,
-    ) -> Vec<(Vec<PathCmd>, FillMode, bool)> {
+    ) -> (Vec<(Vec<PathCmd>, FillMode, bool)>, Option<TextRect>) {
         let extents = Extents::new(w.round() as i64, h.round() as i64);
         let compiled;
         let (def, adjusts): (&GeometryDef, Vec<(String, String)>) = match geometry {
@@ -692,7 +792,7 @@ impl<'a> Builder<'a> {
                 let Some(def) = name.as_deref().and_then(preset_shape) else {
                     self.report
                         .note("preset geometry (unknown, drawn as a rectangle)");
-                    return vec![(rect_path(w, h), FillMode::Norm, true)];
+                    return (vec![(rect_path(w, h), FillMode::Norm, true)], None);
                 };
                 let adjusts = p
                     .adjust
@@ -709,7 +809,7 @@ impl<'a> Builder<'a> {
                 }
                 Err(_) => {
                     self.report.note("custom geometry (over a cap)");
-                    return Vec::new();
+                    return (Vec::new(), None);
                 }
             },
             None => {
@@ -717,9 +817,9 @@ impl<'a> Builder<'a> {
                 // picture or placeholder box is drawn. A connector without one has
                 // nothing to follow.
                 if kind == NodeKind::Connector {
-                    return Vec::new();
+                    return (Vec::new(), None);
                 }
-                return vec![(rect_path(w, h), FillMode::Norm, true)];
+                return (vec![(rect_path(w, h), FillMode::Norm, true)], None);
             }
         };
         let adjusts: Vec<Adjust<'_>> = adjusts.iter().map(|(n, f)| Adjust::formula(n, f)).collect();
@@ -752,7 +852,7 @@ impl<'a> Builder<'a> {
                 .collect();
             out.push((cmds, path.fill, path.stroke));
         }
-        out
+        (out, Some(resolved.text_rect))
     }
 }
 

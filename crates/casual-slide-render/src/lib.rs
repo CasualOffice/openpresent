@@ -12,9 +12,10 @@
 //! - [`raster`]: the list onto a `tiny-skia` pixmap, then PNG.
 //! - [`Deck`]: a deck's bytes opened for all three.
 //!
-//! **Text is not drawn yet.** [`DisplayItem::GlyphRun`] is the seam the text crate
-//! (`casual-slide-text`, lane B) fills; until it does, every text body is counted in
-//! [`SceneReport::text_bodies_undrawn`] and [`RenderReport::lines`] says so.
+//! Text is laid out by `casual-slide-text` into [`DisplayItem::GlyphRun`]s and
+//! outlined from its faces ([`raster::BundledOutlines`]); a body that lays out to no
+//! glyphs is counted in [`SceneReport::text_bodies_undrawn`], and
+//! [`RenderReport::lines`] says so.
 
 pub mod deck;
 pub mod display;
@@ -28,7 +29,7 @@ pub use images::{
     ImageReport, ImageSource, MAX_IMAGE_PIXELS, MAX_IMAGE_SIDE, NoImages, UndrawnImage,
     UndrawnReason,
 };
-pub use raster::{GlyphOutlines, render_pixmap, render_png};
+pub use raster::{BundledOutlines, GlyphOutlines, render_pixmap, render_png};
 pub use scene::{MediaResolver, NoMedia, SceneReport, SlideScene, build_slide};
 
 /// An error rendering a slide.
@@ -96,7 +97,7 @@ impl RenderReport {
         let mut out = Vec::new();
         if self.scene.text_bodies_undrawn > 0 {
             out.push(format!(
-                "text: {} text bodies not drawn; text arrives with casual-slide-text",
+                "text: {} text bodies laid out to no glyphs",
                 self.scene.text_bodies_undrawn
             ));
         }

@@ -77,11 +77,41 @@ fn a_gradient_fill_reaches_the_display_list_and_the_pixels() {
 }
 
 #[test]
-fn text_is_reported_not_drawn_until_the_text_crate_joins() {
+fn text_is_laid_out_into_glyph_runs_and_drawn() {
     let mut deck = open("shape-fills.pptx");
-    let (_, report) = deck.render_slide_png(0, 12.0, None).unwrap();
-    assert!(report.scene.text_bodies_undrawn > 0);
-    assert!(report.lines().iter().any(|l| l.starts_with("text: ")));
+    let (list, _) = deck.display_list(0).unwrap();
+    let runs = list
+        .items
+        .iter()
+        .filter(|i| matches!(i, DisplayItem::GlyphRun { glyphs, .. } if !glyphs.is_empty()))
+        .count();
+    assert!(runs > 0, "no glyph runs");
+    let (_, report) = deck.render_slide_png(0, 24.0, None).unwrap();
+    assert!(report.scene.text_bodies_drawn > 0);
+    assert_eq!(report.glyph_runs_undrawn, 0);
+}
+
+/// A title on a white slide puts dark pixels inside its box once text is drawn.
+#[test]
+fn a_title_draws_dark_pixels_in_its_box() {
+    let mut deck = open("image.pptx");
+    let (png, report) = deck.render_slide_png(0, 96.0, None).unwrap();
+    assert_eq!(report.glyphs_undrawn, 0, "{:?}", report.lines());
+    let p = tiny_skia::Pixmap::decode_png(&png).unwrap();
+    let px = |emu: f64| (emu * 96.0 / 914_400.0) as u32;
+    // `Title 1`: 838200,365125, 10515600 by 1325563 EMU.
+    let mut dark = 0;
+    for y in px(365_125.0)..px(365_125.0 + 1_325_563.0) {
+        for x in px(838_200.0)..px(838_200.0 + 10_515_600.0) {
+            if let Some(c) = p.pixel(x, y) {
+                let c = c.demultiply();
+                if u32::from(c.red()) + u32::from(c.green()) + u32::from(c.blue()) < 300 {
+                    dark += 1;
+                }
+            }
+        }
+    }
+    assert!(dark > 50, "only {dark} dark pixels where the title is");
 }
 
 #[test]

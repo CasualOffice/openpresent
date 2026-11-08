@@ -12,11 +12,12 @@ use casual_slide_import::properties::ImportLimits;
 use casual_slide_import::slide::{SlideLimits, import_slide_parts};
 use casual_slide_import::theme::import_theme_limited;
 use casual_slide_model::slide::{SlideKind, SlideParts};
+use casual_slide_model::text::TextListStyle;
 use casual_slide_model::theme::Theme;
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, TargetMode, XmlTree, resolve_internal};
 
 use crate::display::{DisplayItem, DisplayList, Paint};
-use crate::raster::{GlyphOutlines, render_png};
+use crate::raster::{BundledOutlines, GlyphOutlines, render_png};
 use crate::scene::{MediaResolver, SceneReport, SlideScene, build_slide};
 use crate::{RenderError, RenderReport};
 
@@ -45,6 +46,7 @@ pub struct Deck {
     themes: BTreeMap<u32, Theme>,
     rels: Relationships,
     size: (i64, i64),
+    default_text_style: Option<TextListStyle>,
     media: BTreeMap<String, Vec<u8>>,
     unreadable_media: BTreeSet<String>,
     /// Masters whose theme could not be read.
@@ -129,6 +131,7 @@ impl Deck {
             themes,
             rels,
             size,
+            default_text_style: deck.presentation.default_text_style.clone(),
             media: BTreeMap::new(),
             unreadable_media: BTreeSet::new(),
             themes_unread,
@@ -166,6 +169,7 @@ impl Deck {
             theme: master.and_then(|m| self.themes.get(&m)),
             size: self.size,
             media: &self.rels,
+            default_text_style: self.default_text_style.as_ref(),
         };
         build_slide(scene, ordinal)
     }
@@ -201,7 +205,8 @@ impl Deck {
         }
     }
 
-    /// Render slide `index` to PNG at `dpi`, with glyphs from `glyphs` if given.
+    /// Render slide `index` to PNG at `dpi`. Glyphs are outlined by `glyphs` if
+    /// given, else from `casual-slide-text`'s faces.
     pub fn render_slide_png(
         &mut self,
         index: usize,
@@ -210,7 +215,8 @@ impl Deck {
     ) -> Result<(Vec<u8>, RenderReport), RenderError> {
         let (list, scene) = self.display_list(index)?;
         self.load_media(&list);
-        let (png, mut report) = render_png(&list, dpi, &self.media, glyphs)?;
+        let glyphs = glyphs.unwrap_or(&BundledOutlines);
+        let (png, mut report) = render_png(&list, dpi, &self.media, Some(glyphs))?;
         report.scene = scene;
         Ok((png, report))
     }

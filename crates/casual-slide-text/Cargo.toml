@@ -1,0 +1,46 @@
+[package]
+name = "casual-slide-text"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+casual-slide-model = { path = "../casual-slide-model" }
+# Effective run, paragraph and body values come from the inheritance chain;
+# this crate never walks it itself (ADR-006).
+casual-slide-style = { path = "../casual-slide-style" }
+# Outlines and metrics from the bundled face bytes. As OpenCalc (`DEP-14`
+# there): the crate ttf-parser's own advisory recommends it.
+skrifa = "0.46"
+# The CJK slices are WOFF2, as in OpenCalc (`XL-FEAT-140` there). Pure Rust,
+# no `unsafe` with default features, BSD-3-Clause/MIT.
+brotli-decompressor = "5"
+# Shaping (ADR-019, DEC-18). Not behind a feature, unlike OpenCalc's renderer:
+# a slide's line breaks are decided by the engine on every host, the browser
+# included, so every collaborator and every export get the same wrap (`docs/42`,
+# which reverses OpenCalc's ADR-018). Built on `read-fonts`, the parser `skrifa`
+# uses, so glyph ids agree by construction. MIT.
+harfrust = "0.13"
+# UAX #14 break opportunities. OpenCalc has no line breaker (a cell does not
+# wrap the way a text body does), so this is new here. Apache-2.0, no
+# dependencies, no `unsafe`. No dictionary for Thai (`TXT-07`).
+unicode-linebreak = "0.1"
+
+[features]
+# On by default, unlike OpenCalc. There, the browser drew cell text with its own
+# fonts and the bundled faces only made thumbnails. Here the engine lays out text
+# on every host, so a host without the metric-compatible faces would wrap lines
+# differently from one with them (ADR-016). The WebAssembly bundle cost is a
+# recorded budget question, not a reason to let wraps differ.
+default = ["all-fonts"]
+all-fonts = []
+
+[dev-dependencies]
+# The corpus test reads every generated and real deck through import.
+casual-slide-import = { path = "../casual-slide-import" }
+casual-slide-ooxml = { path = "../casual-slide-ooxml" }

@@ -11,6 +11,7 @@ members = [
     "crates/casual-slide-geometry",
     "crates/casual-slide-style",
     "crates/casual-slide-render",
+    "crates/casual-slide-text",
 ]
 
 [workspace.package]
@@ -37,6 +38,17 @@ unimplemented = "deny"
 opt-level = 3
 
 [profile.dev.package.quick-xml]
+opt-level = 3
+
+# The text crate's corpus test shapes and outlines every text body of every deck; the
+# shaper and the font readers unoptimized would make it the slowest test by far.
+[profile.dev.package.harfrust]
+opt-level = 3
+
+[profile.dev.package.read-fonts]
+opt-level = 3
+
+[profile.dev.package.skrifa]
 opt-level = 3
 
 [profile.release]

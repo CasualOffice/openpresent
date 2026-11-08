@@ -33,6 +33,30 @@ pub trait GlyphOutlines {
     fn outline(&self, face: &str, id: u32, size: f64, out: &mut Vec<PathCmd>) -> bool;
 }
 
+/// Glyph outlines from `casual-slide-text`'s bundled and registered faces, by the
+/// face key its glyph runs carry.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BundledOutlines;
+
+impl GlyphOutlines for BundledOutlines {
+    fn outline(&self, face: &str, id: u32, size: f64, out: &mut Vec<PathCmd>) -> bool {
+        use casual_slide_text::OutlineOp as O;
+        let mut ops = Vec::new();
+        if !casual_slide_text::outline_by_key(face, id, size as f32, &mut ops) {
+            return false;
+        }
+        let f = f64::from;
+        out.extend(ops.into_iter().map(|op| match op {
+            O::MoveTo(x, y) => PathCmd::MoveTo(f(x), f(y)),
+            O::LineTo(x, y) => PathCmd::LineTo(f(x), f(y)),
+            O::QuadTo(a, b, x, y) => PathCmd::QuadTo(f(a), f(b), f(x), f(y)),
+            O::CubicTo(a, b, c, d, x, y) => PathCmd::CubicTo(f(a), f(b), f(c), f(d), f(x), f(y)),
+            O::Close => PathCmd::Close,
+        }));
+        true
+    }
+}
+
 /// The pixel size a slide renders to at `dpi`.
 pub fn pixel_size(list: &DisplayList, dpi: f64) -> (u32, u32) {
     let px = |emu: f64| {
