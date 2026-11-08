@@ -28,7 +28,8 @@ use casual_slide_model::line::{
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{NodeKind, ShapeNode, Transform};
 use casual_slide_model::slide::{BackgroundFill, SlideParts};
-use casual_slide_model::text::{TextListStyle, TextVertical};
+use casual_slide_model::table::TableStyleList;
+use casual_slide_model::text::{TextBody, TextListStyle, TextVertical};
 use casual_slide_model::theme::{ColorScheme, FormatScheme, ShapeStyle, StyleMatrixRef, Theme};
 use casual_slide_style::Chain;
 use casual_slide_text::{Frame, TextEnv, layout_text_body};
@@ -85,6 +86,8 @@ pub struct SlideScene<'a> {
     pub media: &'a dyn MediaResolver,
     /// The presentation's `defaultTextStyle`, the last level of every text chain.
     pub default_text_style: Option<&'a TextListStyle>,
+    /// The deck's `tableStyles` part, which a table's `tableStyleId` names into.
+    pub table_styles: Option<&'a TableStyleList>,
 }
 
 impl core::fmt::Debug for SlideScene<'_> {
@@ -108,6 +111,8 @@ const DEFAULT_LINE_WIDTH: f64 = 0.0;
 
 /// EMU in a point.
 const EMU_PER_POINT: f64 = 12_700.0;
+
+mod table;
 
 struct Builder<'a> {
     scene: SlideScene<'a>,
@@ -209,6 +214,27 @@ impl<'a> Builder<'a> {
             .theme
             .and_then(|t| t.elements.as_ref())
             .and_then(|e| e.format_scheme.as_ref())
+    }
+
+    /// The colour context text resolves in; `placeholder` stands for `phClr`.
+    fn text_colors<'c>(&self, placeholder: Option<&'c Color>) -> ResolveContext<'c>
+    where
+        'a: 'c,
+    {
+        ResolveContext {
+            scheme: self.scheme(),
+            map: self.chain.color_map().map(|m| m.value),
+            placeholder,
+            system_palette: None,
+        }
+    }
+
+    /// The theme's font scheme.
+    fn font_scheme(&self) -> Option<&'a casual_slide_model::theme::FontScheme> {
+        self.scene
+            .theme
+            .and_then(|t| t.elements.as_ref())
+            .and_then(|e| e.font_scheme.as_ref())
     }
 
     fn color(&mut self, c: &Color, ph: Option<&Color>) -> Option<Rgba> {
@@ -485,8 +511,8 @@ impl<'a> Builder<'a> {
                 self.shape(node, layer, parent, group_fill);
             }
             NodeKind::GraphicFrame => {
-                if node.table.is_some() {
-                    self.report.note("table");
+                if let Some(table) = node.table.as_deref() {
+                    self.table(node, table, layer, parent);
                 } else if node.chart.is_some() {
                     self.report.note("chart");
                 } else if node.diagram.is_some() {
@@ -614,6 +640,20 @@ impl<'a> Builder<'a> {
         let Some(body) = node.text_body.as_deref() else {
             return;
         };
+        self.text_in(node, body, layer, transform, rect, style);
+    }
+
+    /// Lay out `body` in `rect` of `node`'s space, with `node`'s text chain, and push
+    /// its glyph runs.
+    fn text_in(
+        &mut self,
+        node: &'a ShapeNode,
+        body: &TextBody,
+        layer: Layer,
+        transform: Affine,
+        rect: TextRect,
+        style: Option<&'a ShapeStyle>,
+    ) {
         if !body.paragraphs.iter().any(|p| !p.items.is_empty()) {
             return;
         }
@@ -622,19 +662,12 @@ impl<'a> Builder<'a> {
             .chain
             .text_chain(node, self.scene.default_text_style, object_defaults);
         let env = TextEnv {
-            colors: ResolveContext {
-                scheme: self.scheme(),
-                map: self.chain.color_map().map(|m| m.value),
-                placeholder: style
+            colors: self.text_colors(
+                style
                     .and_then(|s| s.font.as_ref())
                     .and_then(|f| f.color.as_ref()),
-                system_palette: None,
-            },
-            fonts: self
-                .scene
-                .theme
-                .and_then(|t| t.elements.as_ref())
-                .and_then(|e| e.font_scheme.as_ref()),
+            ),
+            fonts: self.font_scheme(),
         };
         let frame = Frame {
             x: (rect.l / EMU_PER_POINT) as f32,
@@ -732,6 +765,20 @@ impl<'a> Builder<'a> {
         }
         let ph = style.and_then(|r| r.color.as_ref());
         let ordinal = levels.first().map_or(0, |n| n.id.part);
+        self.line_stroke(&merged, ph, w, h, ordinal, group_fill)
+    }
+
+    /// A merged line as a stroke over a `w` by `h` box, and its ends. `ph` stands
+    /// for `phClr`.
+    fn line_stroke(
+        &mut self,
+        merged: &Line,
+        ph: Option<&Color>,
+        w: f64,
+        h: f64,
+        ordinal: u32,
+        group_fill: Option<&Fill>,
+    ) -> Option<(Stroke, Ends)> {
         let paint = self.fill_paint(merged.fill.as_ref()?, ph, w, h, ordinal, group_fill)?;
         let width = merged.width.map_or(DEFAULT_LINE_WIDTH, f64::from);
         if merged.compound.is_some_and(|c| c.to_lexical() != "sng") {

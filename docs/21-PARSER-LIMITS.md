@@ -302,6 +302,7 @@ Past one of these the picture, shape or slide is not drawn, and the render repor
 | `MAX_SIDE_PX` | `16_384` | Pixels on one side of a rendered slide | CS-RND-0001 | Untested |
 | `MAX_GROUP_DEPTH` | `64` | Groups walked inside one another, beyond import's own bound | Report: group nested too deep | Untested |
 | `MAX_SEGMENTS_PER_SHAPE` | `200_000` | Path segments drawn for one shape | Report: geometry over the segment budget | Untested |
+| `MAX_TABLE_CELLS` | `100_000` | Grid cells of one table drawn | Report: table over the cell budget | Untested |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
 

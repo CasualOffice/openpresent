@@ -220,3 +220,27 @@ fn a_slide_index_past_the_end_is_an_error_with_a_code() {
     let err = deck.render_slide_png(99, 12.0, None).unwrap_err();
     assert_eq!(err.code(), "CS-RND-0003");
 }
+
+/// A table is drawn, not skipped: its cells fill, and the report no longer names it.
+#[test]
+fn a_table_draws_its_cells_and_is_not_reported_as_skipped() {
+    let mut deck = open("table-merged-cells.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.contains_key("table"),
+        "{:?}",
+        scene.features
+    );
+    let filled = list
+        .items
+        .iter()
+        .filter(|i| matches!(i, DisplayItem::Path { fill: Some(_), .. }))
+        .count();
+    assert!(filled >= 4, "only {filled} filled items");
+    // The merged origin cell, 2000000 by 740000 EMU at the frame's corner, is
+    // filled in the fixture style's near-black.
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    let px = |emu: f64| (emu * 96.0 / 914_400.0) as u32;
+    let [r, g, b, _] = pixel(&png, px(500_000.0), px(150_000.0));
+    assert!(r < 60 && g < 60 && b < 60, "{r},{g},{b}");
+}

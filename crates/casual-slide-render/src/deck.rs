@@ -12,6 +12,7 @@ use casual_slide_import::properties::ImportLimits;
 use casual_slide_import::slide::{SlideLimits, import_slide_parts};
 use casual_slide_import::theme::import_theme_limited;
 use casual_slide_model::slide::{SlideKind, SlideParts};
+use casual_slide_model::table::TableStyleList;
 use casual_slide_model::text::TextListStyle;
 use casual_slide_model::theme::Theme;
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage, TargetMode, XmlTree, resolve_internal};
@@ -47,6 +48,7 @@ pub struct Deck {
     rels: Relationships,
     size: (i64, i64),
     default_text_style: Option<TextListStyle>,
+    table_styles: Option<TableStyleList>,
     media: BTreeMap<String, Vec<u8>>,
     unreadable_media: BTreeSet<String>,
     /// Masters whose theme could not be read.
@@ -72,14 +74,15 @@ impl Deck {
         let deck = import_deck(&mut package, &limits)
             .map_err(|e| RenderError::Open(e.code()))?
             .deck;
-        let parts = import_slide_parts(
+        let imported = import_slide_parts(
             &mut package,
             &deck.presentation,
             &SlideLimits::default(),
             &limits,
         )
-        .map_err(|e| RenderError::Open(e.code()))?
-        .parts;
+        .map_err(|e| RenderError::Open(e.code()))?;
+        let parts = imported.parts;
+        let table_styles = imported.table_styles;
         let size = deck
             .presentation
             .slide_size
@@ -132,6 +135,7 @@ impl Deck {
             rels,
             size,
             default_text_style: deck.presentation.default_text_style.clone(),
+            table_styles,
             media: BTreeMap::new(),
             unreadable_media: BTreeSet::new(),
             themes_unread,
@@ -170,6 +174,7 @@ impl Deck {
             size: self.size,
             media: &self.rels,
             default_text_style: self.default_text_style.as_ref(),
+            table_styles: self.table_styles.as_ref(),
         };
         build_slide(scene, ordinal)
     }
