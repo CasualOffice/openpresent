@@ -100,6 +100,18 @@ pub enum Op {
         /// The shape.
         shape_id: u32,
     },
+    /// Move a top-level shape of the shape tree to place `index` among its shapes, in
+    /// z-order, by its `cNvPr/@id` (`UX-006`, Bring Forward, Send Backward). The element
+    /// moves whole, with its `mc:AlternateContent` where it is in one; nothing else
+    /// changes. A place past the last puts it last.
+    MoveShape {
+        /// Which slide.
+        slide: SlideRef,
+        /// The shape.
+        shape_id: u32,
+        /// Its new place among the tree's shapes, from 0 (the back).
+        index: usize,
+    },
     /// Point one relationship of a slide at new media. Other referrers keep the old
     /// part (`INV-SP-04`).
     ReplaceMedia {
@@ -367,8 +379,13 @@ fn bad(what: &'static str, subject: impl Into<String>) -> WriterError {
 
 /// Every element of a tree. A tree's depth is bounded when it is parsed.
 pub(crate) fn all_elements(tree: &XmlTree) -> Vec<ElementId> {
+    all_elements_under(tree, tree.root())
+}
+
+/// `top` and every element under it.
+fn all_elements_under(tree: &XmlTree, top: ElementId) -> Vec<ElementId> {
     let mut out = Vec::new();
-    let mut stack = vec![tree.root()];
+    let mut stack = vec![top];
     while let Some(el) = stack.pop() {
         out.push(el);
         let mut children = tree.child_elements(el);
@@ -414,6 +431,11 @@ impl Draft<'_> {
             } => self.add_picture(slide, bytes, extension, content_type),
             Op::RemovePicture { slide, shape_id } => self.remove_picture(slide, *shape_id),
             Op::RemoveShape { slide, shape_id } => self.remove_shape(slide, *shape_id),
+            Op::MoveShape {
+                slide,
+                shape_id,
+                index,
+            } => self.move_shape(slide, *shape_id, *index),
             Op::ReplaceMedia {
                 slide,
                 rel_id,
@@ -922,6 +944,64 @@ impl Draft<'_> {
             return Err(bad("no such picture", wanted));
         };
         self.remove_element(&part, pic)
+    }
+
+    fn move_shape(
+        &mut self,
+        slide: &SlideRef,
+        shape_id: u32,
+        index: usize,
+    ) -> Result<(), WriterError> {
+        const SHAPES: [&str; 7] = [
+            "sp",
+            "pic",
+            "grpSp",
+            "graphicFrame",
+            "cxnSp",
+            "contentPart",
+            "AlternateContent",
+        ];
+        let (_, entry) = self.slide(slide)?;
+        let part = Self::slide_part(&entry)?;
+        let wanted = shape_id.to_string();
+        let tree = self.tree(&part)?;
+        let sp_tree = pml_child(tree, tree.root(), "cSld")
+            .and_then(|c| pml_child(tree, c, "spTree"))
+            .ok_or_else(|| bad("the slide has no shape tree", part.clone()))?;
+        let shapes: Vec<ElementId> = tree
+            .child_elements(sp_tree)
+            .into_iter()
+            .filter(|&el| SHAPES.contains(&tree.local_name(el)))
+            .collect();
+        let names = |el: ElementId| {
+            all_elements_under(tree, el).into_iter().any(|c| {
+                tree.local_name(c) == "cNvPr"
+                    && tree.plain_attribute(c, "id").as_deref() == Some(wanted.as_str())
+            })
+        };
+        let found: Vec<ElementId> = shapes.iter().copied().filter(|&el| names(el)).collect();
+        let shape = match found.as_slice() {
+            [one] => *one,
+            [] => return Err(bad("no such shape at the top of the tree", wanted)),
+            _ => return Err(bad("a shape id two shapes share", wanted)),
+        };
+        let others: Vec<ElementId> = shapes.into_iter().filter(|&el| el != shape).collect();
+        let before = others.get(index).copied();
+        if before.is_none() && others.last().is_none() {
+            return Ok(());
+        }
+        // Already in place: nothing to write.
+        let now = tree
+            .child_elements(sp_tree)
+            .into_iter()
+            .filter(|&el| SHAPES.contains(&tree.local_name(el)))
+            .position(|el| el == shape);
+        if now == Some(index.min(others.len())) {
+            return Ok(());
+        }
+        tree.remove_child(sp_tree, shape);
+        tree.insert_child(sp_tree, before, shape);
+        Ok(())
     }
 
     fn remove_shape(&mut self, slide: &SlideRef, shape_id: u32) -> Result<(), WriterError> {

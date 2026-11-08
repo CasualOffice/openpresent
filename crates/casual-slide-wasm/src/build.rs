@@ -647,6 +647,7 @@ impl Viewer {
     pub(crate) fn save_built(&self) -> Result<Vec<u8>, BridgeError> {
         let bytes = self.slides_pass(self.deck.source_bytes())?;
         let bytes = self.shapes_pass(bytes)?;
+        let bytes = self.order_pass(bytes)?;
         let bytes = self.patch_pass(bytes)?;
         let bytes = self.chart_pass(bytes)?;
         self.design_pass(bytes)
@@ -674,7 +675,7 @@ impl Viewer {
             .bytes)
     }
 
-    fn run(plan: &SavePlan<'_>, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
+    pub(crate) fn run(plan: &SavePlan<'_>, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
         let mut package = PresentationPackage::open(bytes, OoxmlLimits::default())
             .map_err(|e| BridgeError::Save(e.code()))?;
         Ok(plan

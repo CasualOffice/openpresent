@@ -567,3 +567,5 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .ov-title:hover, .ov-body:hover { border-color: var(--op-control-border-color); }
 .ov-title:focus, .ov-body:focus { outline: none; border-color: var(--op-accent-color); background: var(--op-background-color); }
 .ov-none { font-size: 12px; color: var(--op-muted-text-color); padding: 4px; }
+/* Find and Replace (`UX-006`, `editor.find.js`). */
+.fd-buttons { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }

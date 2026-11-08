@@ -36,7 +36,8 @@ const NEW_SLIDE = ["home.new-slide", "home.new-slide-layout", "home.duplicate-sl
 const SLIDE_SIZE = ["design.slide-size.standard", "design.slide-size.widescreen", "design.slide-size.custom"];
 const ZOOM = ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", "view.zoom.150", "view.zoom.200"];
 const SECTION = ["slide.section.add", "slide.section.rename", "slide.section.remove", "slide.section.collapse-all", "slide.section.expand-all"];
-const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.distribute-horizontal", "arrange.distribute-vertical", "arrange.rotate-right", "arrange.flip-horizontal", "arrange.selection-pane"];
+const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.distribute-horizontal", "arrange.distribute-vertical", "arrange.rotate-right", "arrange.rotate-left", "arrange.flip-vertical", "arrange.flip-horizontal", "arrange.selection-pane"];
+const ROTATE = ["arrange.rotate-right", "arrange.rotate-left", "arrange.flip-vertical", "arrange.flip-horizontal"];
 const SELECT = ["edit.select-all", "arrange.selection-pane"];
 const PRESENT = ["slideshow.from-beginning", "slideshow.from-current", "slideshow.presenter-view"];
 
@@ -244,7 +245,7 @@ export const TABS = [
       L("arrange.bring-forward", "position_forward", "Bring Forward (Ctrl+])", { menu: ["arrange.bring-forward", "arrange.bring-to-front"] }),
       L("arrange.send-backward", "position_backward", "Send Backward (Ctrl+[)", { menu: ["arrange.send-backward", "arrange.send-to-back"] }),
       L("arrange.selection-pane", "panel_right", "Selection Pane"),
-      R([[S("arrange.align", "align_left", "Align", { menu: ARRANGE.slice(6, 12) })], [S("arrange.group", "group", "Group (Ctrl+G)", { menu: ["arrange.group", "arrange.ungroup"] })], [S("arrange.rotate", "arrow_rotate_clockwise", "Rotate", { menu: ["arrange.rotate-right", "arrange.flip-horizontal"] })]]),
+      R([[S("arrange.align", "align_left", "Align", { menu: ARRANGE.slice(6, 12) })], [S("arrange.group", "group", "Group (Ctrl+G)", { menu: ["arrange.group", "arrange.ungroup"] })], [S("arrange.rotate", "arrow_rotate_clockwise", "Rotate", { menu: ROTATE })]]),
     ] },
     { label: "Size", fold: 6, icon: "slide_size", launcher: "format.size-pane", items: [
       R([[S("shape.height", "table_resize_row", "Height")], [S("shape.width", "table_resize_column", "Width")]]),
@@ -283,7 +284,7 @@ TABS.push(
     { label: "Arrange", fold: 2, icon: "position_to_front", items: [
       L("arrange.bring-forward", "position_forward", "Bring Forward (Ctrl+])", { menu: ["arrange.bring-forward", "arrange.bring-to-front"] }),
       L("arrange.send-backward", "position_backward", "Send Backward (Ctrl+[)", { menu: ["arrange.send-backward", "arrange.send-to-back"] }),
-      R([[S("arrange.align", "align_left", "Align", { menu: ARRANGE.slice(6, 12) })], [S("arrange.rotate", "arrow_rotate_clockwise", "Rotate", { menu: ["arrange.rotate-right", "arrange.flip-horizontal"] })]]),
+      R([[S("arrange.align", "align_left", "Align", { menu: ARRANGE.slice(6, 12) })], [S("arrange.rotate", "arrow_rotate_clockwise", "Rotate", { menu: ROTATE })]]),
     ] },
     { label: "Size", fold: 5, icon: "slide_size", launcher: "format.size-pane", items: [
       L("picture.crop", "select_object", "Crop"),
@@ -389,6 +390,8 @@ export const LABELS = {
   "edit.duplicate": "Duplicate (Ctrl+D)",
   "arrange.rotate-right": "Rotate Right 90°",
   "arrange.flip-horizontal": "Flip Horizontal",
+  "arrange.rotate-left": "Rotate Left 90°",
+  "arrange.flip-vertical": "Flip Vertical",
   "arrange.selection-pane": "Selection Pane",
   "shape.edit-text": "Edit Text",
   "shape.edit-points": "Edit Points",

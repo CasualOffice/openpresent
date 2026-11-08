@@ -36,6 +36,8 @@ import * as clipboard from "./editor.clipboard.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 import * as presence from "./editor.presence.js";
 import * as views from "./editor.views.js";
+import * as arrange from "./editor.arrange.js";
+import * as find from "./editor.find.js";
 
 const byId = (id) => document.getElementById(id);
 
@@ -344,6 +346,8 @@ function bindKeys() {
     if ((typing(e.target) && !idleInput) || slides.showing()) return;
     if (!byId("op-modal").hidden || document.documentElement.classList.contains("op-backstage-open")) return;
     // Undo and redo anywhere; with a shape selected, its keys come first (`VS-06`).
+    if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && arrange.onKey(e)) return;
+    if (state.deck && find.onKey(e)) return;
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
     const mod = e.ctrlKey || e.metaKey;
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && build.onKey(e)) return;
@@ -421,6 +425,8 @@ async function boot() {
   home.init();       // the Home tab's Font and Paragraph groups (`UX-003`)
   clipboard.init();  // Cut, Copy, Paste and Duplicate (`UX-003`)
   views.init();      // Outline View, Slide Sorter, Notes Page (`UX-006`)
+  arrange.init();    // Arrange: order, rotate, flip (`UX-006`)
+  find.init();       // Find, Replace, Reset Slide (`UX-006`)
   registerCommands();
   presence.init();
   initDialogs(request);

@@ -57,6 +57,43 @@ impl Viewer {
         Ok(out)
     }
 
+    /// Home > Reset (`UX-006`): every placeholder on slide `index` goes back to its
+    /// layout's position, size and look: its own transform and shape properties are
+    /// taken away, so it inherits them again. Text and other shapes stay. One undo
+    /// step; `false` when nothing was moved or restyled.
+    ///
+    /// # Errors
+    ///
+    /// `CS-RND-0003` for a slide that does not exist.
+    pub fn reset_slide(&mut self, index: usize) -> Result<bool, BridgeError> {
+        let part = self.slide_ordinal(index)?;
+        let Some(tree) = self.deck.parts().get(part).and_then(|p| p.shape_tree()) else {
+            return Ok(false);
+        };
+        let mut ops = Vec::new();
+        for node in tree.descendants().filter(|n| n.placeholder().is_some()) {
+            if node.transform.is_some() {
+                ops.push(Operation::SetTransform {
+                    node: node.id,
+                    transform: None,
+                });
+            }
+            if node.properties != casual_slide_model::drawing::ShapeProperties::default()
+                || node.style.is_some()
+            {
+                ops.push(Operation::SetLook {
+                    node: node.id,
+                    properties: Box::new(casual_slide_model::drawing::ShapeProperties::default()),
+                    style: None,
+                });
+            }
+        }
+        if ops.is_empty() {
+            return Ok(false);
+        }
+        self.edit(Operation::Batch(ops), false)
+    }
+
     /// Replace the whole text of `object` with `text`, a line feed starting a new
     /// paragraph, as one undo step. Formatting follows the text's first character,
     /// as typing over a selection does.

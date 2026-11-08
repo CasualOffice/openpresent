@@ -51,7 +51,11 @@ pub use rich::{DEFAULT_TABLE_STYLE, TableEdit};
 pub use shapes::{MAX_LINE_WIDTH, parse_color, preset_outline, theme_style};
 mod show;
 pub use show::{MAX_NOTES_CHARS, MAX_TRANSITION_MS, ShowSlide, ShowTransition};
+mod arrange;
 mod views;
+pub use arrange::Order;
+mod find;
+pub use find::{Found, MAX_FIND_MATCHES};
 pub use views::OutlineSlide;
 
 use casual_slide_transaction::{History, Operation, TxnError};
@@ -2382,6 +2386,91 @@ pub fn text_set_paragraphs(
             value,
         )
     })
+}
+
+/// Arrange (`UX-006`): move shape `node` of slide `index` in z-order, `order` 0 Bring
+/// to Front, 1 Bring Forward, 2 Send Backward, 3 Send to Back. One undo step.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another number or a shape inside a group.
+#[wasm_bindgen]
+pub fn arrange_order(index: u32, node: u32, order: u32) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let order = Order::from_code(order).ok_or(BridgeError::BadArgument)?;
+        v.reorder(index as usize, node, order)
+    })
+}
+
+/// Arrange > Rotate > Flip Horizontal or Flip Vertical (`UX-006`): one undo step.
+///
+/// # Errors
+///
+/// `CS-TXN-0001` for no such shape.
+#[wasm_bindgen]
+pub fn arrange_flip(index: u32, node: u32, horizontal: bool) -> Result<bool, JsError> {
+    with_viewer(|v| v.flip(index as usize, node, horizontal))
+}
+
+/// Find (`UX-006`): every place `query` occurs, five numbers a match: `[slide, part,
+/// node, start, end]`.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn find_text(query: String, match_case: bool) -> Result<Vec<u32>, JsError> {
+    with_viewer(|v| {
+        let mut out = Vec::new();
+        for f in v.find_text(&query, match_case)? {
+            out.extend_from_slice(&[
+                to_u32(f.index),
+                f.object.part,
+                f.object.node,
+                to_u32(f.start),
+                to_u32(f.end),
+            ]);
+        }
+        Ok(out)
+    })
+}
+
+/// Replace All (`UX-006`): every match of `query` becomes `with`, one undo step;
+/// returns the count.
+///
+/// # Errors
+///
+/// The edit's own `CS-TXN` code; nothing changes.
+#[wasm_bindgen]
+pub fn replace_text_all(query: String, with: String, match_case: bool) -> Result<u32, JsError> {
+    with_viewer(|v| v.replace_text_all(&query, &with, match_case).map(to_u32))
+}
+
+/// Replace (`UX-006`): the match at `[start, end)` of a shape becomes `with`.
+///
+/// # Errors
+///
+/// The edit's own `CS-TXN` code.
+#[wasm_bindgen]
+pub fn replace_text_one(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    with: String,
+) -> Result<bool, JsError> {
+    with_viewer(|v| v.replace_one(object(part, node), start as usize, end as usize, &with))
+}
+
+/// Home > Reset (`UX-006`): slide `index`'s placeholders back to their layout's
+/// position, size and look. One undo step.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn reset_slide(index: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.reset_slide(index as usize))
 }
 
 /// Slide `index` in Outline View (`UX-006`): `[part, title, body]`, a node being -1
