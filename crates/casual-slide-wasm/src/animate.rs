@@ -13,7 +13,7 @@ use casual_slide_transaction::animate::{
     EffectEntry, build_transition_with, effects, tab_view, with_advance,
 };
 use casual_slide_transaction::{
-    EffectKind, EffectStart, NewEffect, Operation, TransitionKind, TransitionOption,
+    EffectKind, EffectOption, EffectStart, NewEffect, Operation, TransitionKind, TransitionOption,
 };
 
 use crate::{BridgeError, Viewer};
@@ -230,6 +230,8 @@ impl Viewer {
                 kind,
                 start,
                 duration_ms: kind.default_ms(),
+                option: None,
+                delay_ms: 0,
             },
         })
     }
@@ -270,6 +272,8 @@ impl Viewer {
                     kind,
                     start,
                     duration_ms: kind.default_ms(),
+                    option: None,
+                    delay_ms: 0,
                 },
             });
         }
@@ -306,6 +310,98 @@ impl Viewer {
             index: at,
             start,
         })
+    }
+
+    /// Effect Options, Duration and Delay of the effect at `at` (`UX-006`): it is built
+    /// again with `option` (`None` keeps its own), `duration_ms` and `delay_ms`, in its
+    /// place, as one undo step.
+    ///
+    /// # Errors
+    ///
+    /// `CS-WSM-0006` for an effect this build does not write, or one with no shape.
+    pub fn set_animation(
+        &mut self,
+        index: usize,
+        at: usize,
+        option: Option<EffectOption>,
+        duration_ms: u32,
+        delay_ms: u32,
+    ) -> Result<bool, BridgeError> {
+        let ordinal = self.ordinal_at(index)?;
+        let list = self.animations(index)?;
+        let entry = &list.get(at).ok_or(BridgeError::BadArgument)?.entry;
+        let (Some(spid), Some(kind)) = (entry.spid, entry.kind) else {
+            return Err(BridgeError::BadArgument);
+        };
+        self.motion(Operation::SetEffect {
+            ordinal,
+            index: at,
+            effect: NewEffect {
+                spid,
+                kind,
+                start: entry.start,
+                duration_ms,
+                option: option.or(entry.option),
+                delay_ms,
+            },
+        })
+    }
+
+    /// Animation Painter (`UX-006`): shape `to` gets shape `from`'s effects, those this
+    /// build writes, with their options, timing and start, in place of its own, at the
+    /// end of the sequence. One undo step.
+    ///
+    /// # Errors
+    ///
+    /// `CS-WSM-0006` for a shape with no id, or a source with nothing to copy.
+    pub fn paint_animation(
+        &mut self,
+        index: usize,
+        from: u32,
+        to: u32,
+    ) -> Result<bool, BridgeError> {
+        let ordinal = self.ordinal_at(index)?;
+        let source = self.spid_of(ordinal, from)?;
+        let target = self.spid_of(ordinal, to)?;
+        let list = self.animations(index)?;
+        let copies: Vec<NewEffect> = list
+            .iter()
+            .filter(|a| a.entry.spid == Some(source))
+            .filter_map(|a| {
+                Some(NewEffect {
+                    spid: target,
+                    kind: a.entry.kind?,
+                    start: a.entry.start,
+                    duration_ms: a.entry.duration_ms,
+                    option: a.entry.option,
+                    delay_ms: a.entry.delay_ms,
+                })
+            })
+            .collect();
+        if copies.is_empty() || source == target {
+            return Err(BridgeError::BadArgument);
+        }
+        let theirs: Vec<usize> = list
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| a.entry.spid == Some(target))
+            .map(|(i, _)| i)
+            .collect();
+        let mut ops: Vec<Operation> = theirs
+            .iter()
+            .rev()
+            .map(|&i| Operation::RemoveEffect { ordinal, index: i })
+            .collect();
+        let mut at = list.len().saturating_sub(theirs.len());
+        for effect in copies {
+            ops.push(Operation::AddEffect {
+                ordinal,
+                index: at,
+                effect,
+            });
+            at = at.saturating_add(1);
+        }
+        self.motion(Operation::Batch(ops))
     }
 
     /// Draw slide `index` as PNG with the shapes `nodes` hidden, for the slide show's

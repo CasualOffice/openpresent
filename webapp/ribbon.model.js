@@ -50,7 +50,9 @@ const TRANSITIONS = [["None", "dismiss"], ["Fade", "slide_transition"], ["Push",
 // Effect Options for a transition (`UX-004`): every choice, each shown only while
 // the slide's effect offers it (`editor.animate.js`).
 const TRANSITION_OPTIONS = Array.from({ length: 18 }, (_, i) => `transitions.option.${i}`);
-const ANIMATIONS = [["None", "dismiss"], ["Appear", "sparkle"], ["Fade", "text_effects_sparkle"], ["Fly In", "arrow_next"], ["Float In", "arrow_maximize"], ["Split", "layout_row_two_split_top"], ["Wipe", "arrow_previous"], ["Zoom", "zoom_in"]];
+const ANIMATIONS = [["None", "dismiss"], ["Appear", "sparkle"], ["Fade", "text_effects_sparkle"], ["Fly In", "arrow_next"], ["Float In", "arrow_maximize"], ["Split", "layout_row_two_split_top"], ["Wipe", "arrow_previous"], ["Zoom", "zoom_in"], ["Pulse", "record"], ["Grow/Shrink", "arrow_maximize"], ["Spin", "arrow_rotate_clockwise"]];
+// Effect Options for an effect (`UX-006`), each shown only while it applies.
+const ANIMATION_OPTIONS = Array.from({ length: 8 }, (_, i) => `animations.option.${i}`);
 // Picture Styles: our own swatches for the four the engine has (`picture.rs`).
 const PICTURE_STYLES = [["Simple Frame, White", "#ffffff", "#c8c8c8"], ["Simple Frame, Black", "#ffffff", "#000000"], ["Drop Shadow Rectangle", "#e6e6e6", "#7a7a7a"], ["Thick Matte, Black", "#f2f2f2", "#000000"]];
 const SHAPE_STYLES = [["Colored Outline", "#ffffff", "#156082"], ["Colored Fill", "#156082", "#156082"], ["Light 1 Fill", "#dbe9f4", "#156082"], ["Intense Effect", "#0e4a63", "#0e4a63"]];
@@ -157,7 +159,7 @@ export const TABS = [
     { label: "Preview", fold: 4, icon: "play", items: [L("animations.preview", "play", "Preview")] },
     { label: "Animation", fold: 3, icon: "sparkle", items: [
       G("animations.gallery", "Animation Styles", ANIMATIONS),
-      L("animations.effect-options", "settings", "Effect Options", { menu: ["animations.effect-options"] }),
+      L("animations.effect-options", "settings", "Effect Options", { menu: ANIMATION_OPTIONS }),
     ] },
     { label: "Advanced Animation", fold: 2, icon: "add", items: [
       L("animations.add", "sparkle", "Add Animation", { menu: ["animations.add"] }),

@@ -1917,9 +1917,10 @@ pub fn transition_to_all(index: u32) -> Result<bool, JsError> {
 }
 
 /// The Animation Pane's list for slide `index`: nine numbers an effect, `[node (-1
-/// for none), kind (-1 for another), class, start, ms, x, y, cx, cy]`, class 1
-/// entrance, 2 emphasis, 3 exit, 0 other; the box in EMU, zero for a shape the
-/// editor cannot select.
+/// for none), kind (-1 for another), class, start, ms, x, y, cx, cy, option, delay]`,
+/// class 1 entrance, 2 emphasis, 3 exit, 0 other; the box in EMU, zero for a shape
+/// the editor cannot select; option as
+/// [`casual_slide_transaction::EffectOption::code`], -1 for none; delay in ms.
 ///
 /// # Errors
 ///
@@ -1945,6 +1946,10 @@ pub fn slide_animations(index: u32) -> Result<Vec<f64>, JsError> {
                 }
                 None => out.extend_from_slice(&[0.0; 4]),
             }
+            out.extend_from_slice(&[
+                e.option.map_or(-1.0, |o| f64::from(o.code())),
+                f64::from(e.delay_ms),
+            ]);
         }
         Ok(out)
     })
@@ -2023,6 +2028,38 @@ pub fn set_animation_start(index: u32, at: u32, start: u32) -> Result<bool, JsEr
         let start = bad(casual_slide_transaction::EffectStart::from_code(start))?;
         v.set_animation_start(index as usize, at as usize, start)
     })
+}
+
+/// Effect Options, Duration and Delay of effect `at` on slide `index` (`UX-006`):
+/// `option` as [`casual_slide_transaction::EffectOption::from_code`] numbers it (99
+/// keeps the effect's own), `ms` and `delay` in milliseconds.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for an effect this build does not write.
+#[wasm_bindgen]
+pub fn set_animation(
+    index: u32,
+    at: u32,
+    option: u32,
+    ms: u32,
+    delay: u32,
+) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let option = casual_slide_transaction::EffectOption::from_code(option);
+        v.set_animation(index as usize, at as usize, option, ms, delay)
+    })
+}
+
+/// Animation Painter (`UX-006`): shape `to` on slide `index` gets shape `from`'s
+/// effects in place of its own.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a shape with no id or a source with no effect to copy.
+#[wasm_bindgen]
+pub fn paint_animation(index: u32, from: u32, to: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.paint_animation(index as usize, from, to))
 }
 
 /// Slide `index` as PNG with the shapes `nodes` hidden, for a show's animation steps.

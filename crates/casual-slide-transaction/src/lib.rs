@@ -483,6 +483,16 @@ pub enum Operation {
         /// Where it goes.
         to: usize,
     },
+    /// Motion: the effect at `index` built again as `effect`: its Effect Options,
+    /// duration and delay (`UX-006`). Its inverse is a [`Operation::SetTiming`].
+    SetEffect {
+        /// The slide part.
+        ordinal: u32,
+        /// Its place.
+        index: usize,
+        /// What it becomes.
+        effect: NewEffect,
+    },
     /// Motion: when the effect at `index` starts.
     SetEffectStart {
         /// The slide part.
@@ -543,6 +553,7 @@ impl Operation {
             | Self::AddEffect { .. }
             | Self::RemoveEffect { .. }
             | Self::MoveEffect { .. }
+            | Self::SetEffect { .. }
             | Self::SetEffectStart { .. } => None,
         }
     }
@@ -558,6 +569,7 @@ impl Operation {
             | Self::AddEffect { ordinal, .. }
             | Self::RemoveEffect { ordinal, .. }
             | Self::MoveEffect { ordinal, .. }
+            | Self::SetEffect { ordinal, .. }
             | Self::SetEffectStart { ordinal, .. } => Some(*ordinal),
             Self::Batch(ops) => ops.iter().find_map(Operation::part),
             _ => self.object().map(|o| o.part),
@@ -607,9 +619,10 @@ impl Operation {
             Self::MoveSlide { .. } => "Move Slide",
             Self::SetSlideShow { .. } => "Hide Slide",
             Self::SetTransition { .. } => "Transition",
-            Self::SetTiming { .. } | Self::AddEffect { .. } | Self::SetEffectStart { .. } => {
-                "Animation"
-            }
+            Self::SetTiming { .. }
+            | Self::AddEffect { .. }
+            | Self::SetEffect { .. }
+            | Self::SetEffectStart { .. } => "Animation",
             Self::RemoveEffect { .. } => "Remove Animation",
             Self::MoveEffect { .. } => "Reorder Animations",
             Self::Batch(ops) => ops.first().map_or("Edit", Operation::label),
@@ -1262,6 +1275,11 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
             index,
             start,
         } => animate::set_effect_start(parts, ordinal, index, start),
+        Operation::SetEffect {
+            ordinal,
+            index,
+            effect,
+        } => animate::set_effect(parts, ordinal, index, effect),
         Operation::Batch(ops) => {
             let mut inverses: Vec<Operation> = Vec::with_capacity(ops.len());
             let mut changed = false;
@@ -1504,7 +1522,9 @@ impl History {
 pub mod animate;
 mod slides;
 
-pub use animate::{EffectKind, EffectStart, NewEffect, TransitionKind, TransitionOption};
+pub use animate::{
+    EffectKind, EffectOption, EffectStart, NewEffect, TransitionKind, TransitionOption,
+};
 
 #[cfg(test)]
 mod animate_tests;

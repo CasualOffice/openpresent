@@ -72,6 +72,8 @@ fn add(index: usize, spid: u32, kind: EffectKind, start: EffectStart) -> Operati
             kind,
             start,
             duration_ms: kind.default_ms(),
+            option: None,
+            delay_ms: 0,
         },
     }
 }
@@ -490,6 +492,68 @@ fn advance_after_and_on_click_are_set_on_every_branch_and_kept_by_a_new_effect()
     )
     .unwrap();
     assert_ne!(parts, start);
+    apply(&mut parts, inverse).unwrap();
+    assert_eq!(parts, start);
+}
+
+#[test]
+fn every_effect_and_its_options_read_back_as_added() {
+    use super::animate::EffectOption;
+    for code in 0..12 {
+        let kind = EffectKind::from_code(code).unwrap();
+        assert_eq!(kind.code(), code);
+        let options: Vec<Option<EffectOption>> = if kind.options().is_empty() {
+            vec![None]
+        } else {
+            kind.options().iter().copied().map(Some).collect()
+        };
+        for option in options {
+            let mut parts = deck();
+            let mut effect = NewEffect::new(3, kind, EffectStart::OnClick);
+            effect.option = option;
+            apply(
+                &mut parts,
+                Operation::AddEffect {
+                    ordinal: SLIDE,
+                    index: 0,
+                    effect,
+                },
+            )
+            .unwrap();
+            let e = &listed(&parts)[0];
+            assert_eq!(e.kind, Some(kind), "{kind:?}");
+            assert_eq!(e.option, option, "{kind:?}");
+        }
+    }
+    assert_eq!(EffectKind::from_code(12), None);
+}
+
+#[test]
+fn set_effect_changes_option_duration_and_delay_in_one_undo_step() {
+    use super::animate::EffectOption;
+    let mut parts = animated();
+    let start = parts.clone();
+    let before = listed(&parts);
+    let mut effect = NewEffect::new(3, EffectKind::FlyIn, before[1].start);
+    effect.option = Some(EffectOption::FromLeft);
+    effect.duration_ms = 1250;
+    effect.delay_ms = 400;
+    let inverse = apply(
+        &mut parts,
+        Operation::SetEffect {
+            ordinal: SLIDE,
+            index: 1,
+            effect,
+        },
+    )
+    .unwrap();
+    let after = listed(&parts);
+    assert_eq!(after.len(), before.len());
+    assert_eq!(after[1].kind, Some(EffectKind::FlyIn));
+    assert_eq!(after[1].option, Some(EffectOption::FromLeft));
+    assert_eq!(after[1].duration_ms, 1250);
+    assert_eq!(after[1].delay_ms, 400);
+    assert_eq!(after[0], before[0]);
     apply(&mut parts, inverse).unwrap();
     assert_eq!(parts, start);
 }

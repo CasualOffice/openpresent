@@ -184,6 +184,64 @@ fn the_show_plays_the_new_transitions_as_themselves() {
 }
 
 #[test]
+fn effect_options_timing_and_the_painter_save_and_read_back() {
+    use casual_slide_transaction::EffectOption;
+    let (source, text, rect) = base();
+    let mut v = Viewer::open(source.clone()).unwrap();
+    for kind in [EffectKind::FloatIn, EffectKind::Spin] {
+        v.add_animation(0, text, kind, EffectStart::OnClick)
+            .unwrap();
+    }
+    v.set_animation(0, 0, Some(EffectOption::FromTop), 1500, 250)
+        .unwrap();
+    v.paint_animation(0, text, rect).unwrap();
+    let saved = v.save().unwrap();
+    let again = Viewer::open(saved.clone()).unwrap();
+    let list = again.animations(0).unwrap();
+    let read: Vec<_> = list
+        .iter()
+        .map(|a| {
+            (
+                a.node,
+                a.entry.kind,
+                a.entry.option,
+                a.entry.duration_ms,
+                a.entry.delay_ms,
+            )
+        })
+        .collect();
+    let float = (
+        Some(EffectKind::FloatIn),
+        Some(EffectOption::FromTop),
+        1500,
+        250,
+    );
+    let spin = (Some(EffectKind::Spin), None, 2000, 0);
+    let row = |n: u32, e: (Option<EffectKind>, Option<EffectOption>, u32, u32)| {
+        (Some(n), e.0, e.1, e.2, e.3)
+    };
+    assert_eq!(
+        read,
+        vec![
+            row(text, float),
+            row(text, spin),
+            row(rect, float),
+            row(rect, spin)
+        ]
+    );
+    assert_eq!(again.save().unwrap(), saved, "not a fixed point");
+    while v.can_undo_redo().0 {
+        v.undo().unwrap();
+    }
+    assert_eq!(v.save().unwrap(), source, "undone");
+    let Some((code, report)) = validate("tools/f4/validate.py", &saved, "f4-ux006", "F4_REQUIRED")
+    else {
+        return;
+    };
+    assert!(code == 0 || code == 2, "F4 rejected it:\n{report}");
+}
+
+#[test]
 fn a_slide_drawn_for_a_step_hides_the_shape_and_leaves_the_model_alone() {
     let (source, _, rect) = base();
     let mut v = Viewer::open(source.clone()).unwrap();

@@ -33,6 +33,7 @@ import init, {
   set_shape_fill, set_shape_outline, set_shape_style, slide_palette,
   transition_choice, set_slide_transition, set_transition_advance, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
+  set_animation, paint_animation,
   render_slide_png_hiding,
   insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
@@ -87,6 +88,7 @@ const NODE_LISTS = new Set(["copy_shapes", "duplicate_shapes", "delete_shapes"])
 const ANIMATE = {
   transition_choice, set_slide_transition, set_transition_advance, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
+  set_animation, paint_animation,
   insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
 };

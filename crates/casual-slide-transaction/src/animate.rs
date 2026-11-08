@@ -26,15 +26,17 @@
 
 use std::collections::BTreeMap;
 
+use casual_slide_model::color::Angle;
 use casual_slide_model::presentation::Percentage;
 use casual_slide_model::slide::{SlideKind, SlidePart, SlideParts};
 use casual_slide_model::timing::{
     AnimVariant, AnimateBehavior, AnimateCalcMode, AnimateEffectBehavior, AnimateEffectTransition,
-    AnimateScaleBehavior, AnimateValueTime, AnimateValueType, BehaviorAdditive, BuildEntry,
-    BuildParagraph, BuildTarget, CommonBehavior, CommonTimeNode, ConditionTrigger,
-    ContainerTimeNode, NextAction, SequenceTimeNode, SetBehavior, ShapeTarget, SlideTiming, Slot,
-    TargetVisitor, TimeAnimateValue, TimeCondition, TimeNode, TimeNodeFill, TimeNodePresetClass,
-    TimeNodeRestart, TimeNodeType, TimePoint, TimeTarget, TimeValue, TriggerEvent,
+    AnimateRotationBehavior, AnimateScaleBehavior, AnimateValueTime, AnimateValueType,
+    BehaviorAdditive, BuildEntry, BuildParagraph, BuildTarget, CommonBehavior, CommonTimeNode,
+    ConditionTrigger, ContainerTimeNode, NextAction, SequenceTimeNode, SetBehavior, ShapeTarget,
+    SlideTiming, Slot, TargetVisitor, TimeAnimateValue, TimeCondition, TimeNode, TimeNodeFill,
+    TimeNodePresetClass, TimeNodeRestart, TimeNodeType, TimePoint, TimeTarget, TimeValue,
+    TriggerEvent,
 };
 use casual_slide_model::transition::{
     CornerDirection, EightDirection, EightDirectionTransition, InOutDirection, InOutTransition,
@@ -544,14 +546,15 @@ pub fn with_advance(
     }
 }
 
-/// The effects the Animations tab offers (`VS-10`), with PowerPoint's preset ids.
+/// The effects the Animations tab offers (`VS-10`, `UX-006`), with PowerPoint's
+/// preset ids.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectKind {
     /// Entrance: Appear (preset 1).
     Appear,
     /// Entrance: Fade (preset 10).
     Fade,
-    /// Entrance: Fly In from the bottom (preset 2, subtype 4).
+    /// Entrance: Fly In (preset 2), from the bottom unless an option says otherwise.
     FlyIn,
     /// Emphasis: Pulse (preset 26).
     Pulse,
@@ -559,50 +562,175 @@ pub enum EffectKind {
     Disappear,
     /// Exit: Fade (preset 10), "Fade Out" in the gallery.
     FadeOut,
+    /// Entrance: Float In, up (preset 42) or down (preset 47).
+    FloatIn,
+    /// Entrance: Wipe (preset 22).
+    Wipe,
+    /// Entrance: Split (preset 16).
+    Split,
+    /// Entrance: Zoom from the object's centre (preset 53, subtype 16).
+    Zoom,
+    /// Emphasis: Grow/Shrink to 150% (preset 6).
+    GrowShrink,
+    /// Emphasis: Spin a full turn clockwise (preset 8).
+    Spin,
 }
 
-impl EffectKind {
-    /// From the bridge's number: 0 Appear, 1 Fade, 2 Fly In, 3 Pulse, 4 Disappear,
-    /// 5 Fade Out.
+/// An Effect Options choice for an effect (`UX-006`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectOption {
+    /// From Bottom; Float Up for Float In.
+    FromBottom,
+    /// From Left.
+    FromLeft,
+    /// From Right.
+    FromRight,
+    /// From Top; Float Down for Float In.
+    FromTop,
+    /// Split: Vertical Out.
+    VerticalOut,
+    /// Split: Vertical In.
+    VerticalIn,
+    /// Split: Horizontal Out.
+    HorizontalOut,
+    /// Split: Horizontal In.
+    HorizontalIn,
+}
+
+impl EffectOption {
+    const ALL: [Self; 8] = [
+        Self::FromBottom,
+        Self::FromLeft,
+        Self::FromRight,
+        Self::FromTop,
+        Self::VerticalOut,
+        Self::VerticalIn,
+        Self::HorizontalOut,
+        Self::HorizontalIn,
+    ];
+
+    /// From the bridge's number, the position in the list above, from 0.
     pub fn from_code(code: u32) -> Option<Self> {
-        Some(match code {
-            0 => Self::Appear,
-            1 => Self::Fade,
-            2 => Self::FlyIn,
-            3 => Self::Pulse,
-            4 => Self::Disappear,
-            5 => Self::FadeOut,
-            _ => return None,
-        })
+        Self::ALL.get(usize::try_from(code).ok()?).copied()
     }
 
     /// The bridge's number.
     pub fn code(self) -> u32 {
+        Self::ALL
+            .iter()
+            .position(|&o| o == self)
+            .and_then(|p| u32::try_from(p).ok())
+            .unwrap_or(0)
+    }
+
+    /// `@presetSubtype` for Fly In and Wipe: PowerPoint's 1 top, 2 right, 4 bottom,
+    /// 8 left; for Split, 37 vertical out, 21 vertical in, 42 horizontal out, 26
+    /// horizontal in (`Inferred`, not read from PowerPoint here).
+    fn subtype(self) -> i32 {
         match self {
-            Self::Appear => 0,
-            Self::Fade => 1,
-            Self::FlyIn => 2,
-            Self::Pulse => 3,
-            Self::Disappear => 4,
-            Self::FadeOut => 5,
+            Self::FromTop => 1,
+            Self::FromRight => 2,
+            Self::FromBottom => 4,
+            Self::FromLeft => 8,
+            Self::VerticalOut => 37,
+            Self::VerticalIn => 21,
+            Self::HorizontalOut => 42,
+            Self::HorizontalIn => 26,
         }
+    }
+
+    fn of_subtype(kind: EffectKind, subtype: Option<i32>) -> Option<Self> {
+        let options = kind.options();
+        let found = Self::ALL
+            .into_iter()
+            .find(|o| Some(o.subtype()) == subtype && options.contains(o));
+        found.or_else(|| options.first().copied())
+    }
+}
+
+const FOUR_SIDES: &[EffectOption] = &[
+    EffectOption::FromBottom,
+    EffectOption::FromLeft,
+    EffectOption::FromRight,
+    EffectOption::FromTop,
+];
+
+impl EffectKind {
+    const ALL: [Self; 12] = [
+        Self::Appear,
+        Self::Fade,
+        Self::FlyIn,
+        Self::Pulse,
+        Self::Disappear,
+        Self::FadeOut,
+        Self::FloatIn,
+        Self::Wipe,
+        Self::Split,
+        Self::Zoom,
+        Self::GrowShrink,
+        Self::Spin,
+    ];
+
+    /// From the bridge's number: 0 Appear, 1 Fade, 2 Fly In, 3 Pulse, 4 Disappear,
+    /// 5 Fade Out, 6 Float In, 7 Wipe, 8 Split, 9 Zoom, 10 Grow/Shrink, 11 Spin.
+    pub fn from_code(code: u32) -> Option<Self> {
+        Self::ALL.get(usize::try_from(code).ok()?).copied()
+    }
+
+    /// The bridge's number.
+    pub fn code(self) -> u32 {
+        Self::ALL
+            .iter()
+            .position(|&k| k == self)
+            .and_then(|p| u32::try_from(p).ok())
+            .unwrap_or(0)
     }
 
     /// `@presetClass`.
     pub fn class(self) -> TimeNodePresetClass {
         match self {
-            Self::Appear | Self::Fade | Self::FlyIn => TimeNodePresetClass::Entrance,
-            Self::Pulse => TimeNodePresetClass::Emphasis,
+            Self::Appear
+            | Self::Fade
+            | Self::FlyIn
+            | Self::FloatIn
+            | Self::Wipe
+            | Self::Split
+            | Self::Zoom => TimeNodePresetClass::Entrance,
+            Self::Pulse | Self::GrowShrink | Self::Spin => TimeNodePresetClass::Emphasis,
             Self::Disappear | Self::FadeOut => TimeNodePresetClass::Exit,
         }
     }
 
-    fn preset(self) -> (i32, i32) {
+    /// The Effect Options it offers, its default first; empty for none.
+    pub fn options(self) -> &'static [EffectOption] {
+        use EffectOption as O;
+        match self {
+            Self::FlyIn | Self::Wipe => FOUR_SIDES,
+            Self::FloatIn => &[O::FromBottom, O::FromTop],
+            Self::Split => &[
+                O::VerticalOut,
+                O::VerticalIn,
+                O::HorizontalOut,
+                O::HorizontalIn,
+            ],
+            _ => &[],
+        }
+    }
+
+    fn preset(self, option: Option<EffectOption>) -> (i32, i32) {
+        let sub = option.map_or(0, EffectOption::subtype);
         match self {
             Self::Appear | Self::Disappear => (1, 0),
             Self::Fade | Self::FadeOut => (10, 0),
-            Self::FlyIn => (2, 4),
+            Self::FlyIn => (2, sub),
             Self::Pulse => (26, 0),
+            Self::FloatIn if option == Some(EffectOption::FromTop) => (47, 0),
+            Self::FloatIn => (42, 0),
+            Self::Wipe => (22, sub),
+            Self::Split => (16, sub),
+            Self::Zoom => (53, 16),
+            Self::GrowShrink => (6, 0),
+            Self::Spin => (8, 0),
         }
     }
 
@@ -611,8 +739,9 @@ impl EffectKind {
     pub fn default_ms(self) -> u32 {
         match self {
             Self::Appear | Self::Disappear => 0,
-            Self::Fade | Self::FlyIn | Self::FadeOut => 500,
-            Self::Pulse => 500,
+            Self::FloatIn => 1000,
+            Self::GrowShrink | Self::Spin => 2000,
+            _ => 500,
         }
     }
 
@@ -623,7 +752,13 @@ impl EffectKind {
             (C::Entrance, 1) => Self::Appear,
             (C::Entrance, 10) => Self::Fade,
             (C::Entrance, 2) => Self::FlyIn,
+            (C::Entrance, 42 | 47) => Self::FloatIn,
+            (C::Entrance, 22) => Self::Wipe,
+            (C::Entrance, 16) => Self::Split,
+            (C::Entrance, 53) => Self::Zoom,
             (C::Emphasis, 26) => Self::Pulse,
+            (C::Emphasis, 6) => Self::GrowShrink,
+            (C::Emphasis, 8) => Self::Spin,
             (C::Exit, 1) => Self::Disappear,
             (C::Exit, 10) => Self::FadeOut,
             _ => return None,
@@ -683,6 +818,32 @@ pub struct NewEffect {
     /// How long it runs, in milliseconds; held to [`MAX_DURATION_MS`]. Ignored for
     /// Appear and Disappear, which are instant.
     pub duration_ms: u32,
+    /// Its Effect Options choice; `None`, or one the kind does not offer, for its
+    /// default.
+    pub option: Option<EffectOption>,
+    /// Delay before it starts, in milliseconds; held to [`MAX_DURATION_MS`].
+    pub delay_ms: u32,
+}
+
+impl NewEffect {
+    /// An effect with its kind's default duration and option and no delay.
+    pub fn new(spid: u32, kind: EffectKind, start: EffectStart) -> Self {
+        Self {
+            spid,
+            kind,
+            start,
+            duration_ms: kind.default_ms(),
+            option: None,
+            delay_ms: 0,
+        }
+    }
+
+    fn option(&self) -> Option<EffectOption> {
+        let options = self.kind.options();
+        self.option
+            .filter(|o| options.contains(o))
+            .or_else(|| options.first().copied())
+    }
 }
 
 /// One effect of a slide's main sequence, as the Animation Pane lists it.
@@ -699,6 +860,10 @@ pub struct EffectEntry {
     pub start: EffectStart,
     /// How long it runs, in milliseconds, from its behaviours.
     pub duration_ms: u32,
+    /// Its Effect Options choice, for a kind with options.
+    pub option: Option<EffectOption>,
+    /// Its own delay (`cTn/stCondLst/cond/@delay`), in milliseconds.
+    pub delay_ms: u32,
 }
 
 /* ── Building nodes ──────────────────────────────────────────────────────── */
@@ -814,29 +979,133 @@ fn pulse(spid: u32, ms: u32) -> TimeNode {
     })
 }
 
+/// `animEffect` with `filter`, entering, as Wipe and Split write it.
+fn filter_in(spid: u32, ms: u32, filter: &str) -> TimeNode {
+    TimeNode::AnimEffect(AnimateEffectBehavior {
+        transition: Some(AnimateEffectTransition::In),
+        filter: Some(filter.to_owned()),
+        behavior: behavior(
+            spid,
+            CommonTimeNode {
+                dur: Some(TimeValue::Milliseconds(ms)),
+                ..CommonTimeNode::default()
+            },
+            &[],
+        ),
+        ..AnimateEffectBehavior::default()
+    })
+}
+
+/// Grow/Shrink: `animScale` by 150%, held.
+fn grow(spid: u32, ms: u32) -> TimeNode {
+    TimeNode::AnimScale(AnimateScaleBehavior {
+        behavior: behavior(
+            spid,
+            CommonTimeNode {
+                dur: Some(TimeValue::Milliseconds(ms)),
+                fill: Some(TimeNodeFill::Hold),
+                ..CommonTimeNode::default()
+            },
+            &[],
+        ),
+        by: Some(TimePoint {
+            x: Some(Percentage(150_000)),
+            y: Some(Percentage(150_000)),
+        }),
+        ..AnimateScaleBehavior::default()
+    })
+}
+
+/// Spin: `animRot` by a full turn (21 600 000 sixty-thousandths of a degree).
+fn spin(spid: u32, ms: u32) -> TimeNode {
+    TimeNode::AnimRot(AnimateRotationBehavior {
+        by: Some(Angle(21_600_000)),
+        behavior: behavior(
+            spid,
+            CommonTimeNode {
+                dur: Some(TimeValue::Milliseconds(ms)),
+                fill: Some(TimeNodeFill::Hold),
+                ..CommonTimeNode::default()
+            },
+            &["r"],
+        ),
+        ..AnimateRotationBehavior::default()
+    })
+}
+
 /// The effect's own `par`, as PowerPoint writes the preset.
 fn effect_node(e: &NewEffect) -> TimeNode {
+    use EffectOption as O;
     let ms = e.duration_ms.clamp(1, MAX_DURATION_MS);
     let spid = e.spid;
+    let option = e.option();
     let children = match e.kind {
         EffectKind::Appear => vec![set_visibility(spid, 0, true)],
         EffectKind::Fade => vec![
             set_visibility(spid, 0, true),
             fade(spid, ms, AnimateEffectTransition::In),
         ],
-        EffectKind::FlyIn => vec![
+        EffectKind::FlyIn => {
+            let (x, y) = match option {
+                Some(O::FromLeft) => ("0-#ppt_w/2", "#ppt_y"),
+                Some(O::FromRight) => ("1+#ppt_w/2", "#ppt_y"),
+                Some(O::FromTop) => ("#ppt_x", "0-#ppt_h/2"),
+                _ => ("#ppt_x", "1+#ppt_h/2"),
+            };
+            vec![
+                set_visibility(spid, 0, true),
+                fly(spid, ms, "ppt_x", x, "#ppt_x"),
+                fly(spid, ms, "ppt_y", y, "#ppt_y"),
+            ]
+        }
+        EffectKind::FloatIn => {
+            let from = if option == Some(O::FromTop) {
+                "#ppt_y-.1"
+            } else {
+                "#ppt_y+.1"
+            };
+            vec![
+                set_visibility(spid, 0, true),
+                fade(spid, ms, AnimateEffectTransition::In),
+                fly(spid, ms, "ppt_x", "#ppt_x", "#ppt_x"),
+                fly(spid, ms, "ppt_y", from, "#ppt_y"),
+            ]
+        }
+        EffectKind::Wipe => {
+            // The filter names the way the edge moves: From Bottom wipes up.
+            let filter = match option {
+                Some(O::FromLeft) => "wipe(right)",
+                Some(O::FromRight) => "wipe(left)",
+                Some(O::FromTop) => "wipe(down)",
+                _ => "wipe(up)",
+            };
+            vec![set_visibility(spid, 0, true), filter_in(spid, ms, filter)]
+        }
+        EffectKind::Split => {
+            let filter = match option {
+                Some(O::VerticalIn) => "barn(inVertical)",
+                Some(O::HorizontalOut) => "barn(outHorizontal)",
+                Some(O::HorizontalIn) => "barn(inHorizontal)",
+                _ => "barn(outVertical)",
+            };
+            vec![set_visibility(spid, 0, true), filter_in(spid, ms, filter)]
+        }
+        EffectKind::Zoom => vec![
             set_visibility(spid, 0, true),
-            fly(spid, ms, "ppt_x", "#ppt_x", "#ppt_x"),
-            fly(spid, ms, "ppt_y", "1+#ppt_h/2", "#ppt_y"),
+            fly(spid, ms, "ppt_w", "0", "#ppt_w"),
+            fly(spid, ms, "ppt_h", "0", "#ppt_h"),
+            fade(spid, ms, AnimateEffectTransition::In),
         ],
         EffectKind::Pulse => vec![pulse(spid, ms)],
+        EffectKind::GrowShrink => vec![grow(spid, ms)],
+        EffectKind::Spin => vec![spin(spid, ms)],
         EffectKind::Disappear => vec![set_visibility(spid, 0, false)],
         EffectKind::FadeOut => vec![
             fade(spid, ms, AnimateEffectTransition::Out),
             set_visibility(spid, ms.saturating_sub(1), false),
         ],
     };
-    let (id, subtype) = e.kind.preset();
+    let (id, subtype) = e.kind.preset(option);
     TimeNode::Par(ContainerTimeNode {
         common: Some(CommonTimeNode {
             preset_id: Some(id),
@@ -845,7 +1114,7 @@ fn effect_node(e: &NewEffect) -> TimeNode {
             fill: Some(TimeNodeFill::Hold),
             grp_id: Some(0),
             node_type: Some(e.start.node_type()),
-            st_cond_lst: starts_at(0),
+            st_cond_lst: starts_at(e.delay_ms.min(MAX_DURATION_MS)),
             child_tn_lst: Some(children),
             ..CommonTimeNode::default()
         }),
@@ -946,16 +1215,30 @@ fn entry_of(start: EffectStart, node: &TimeNode) -> EffectEntry {
     let class = c.and_then(|c| c.preset_class);
     let mut spid = FirstSpid(None);
     node.clone().visit(&mut spid);
-    let ms = length(node).saturating_sub(
-        c.and_then(|c| c.st_cond_lst.as_ref()?.first().map(|d| ms_of(d.delay)))
-            .unwrap_or(0),
-    );
+    let delay = c
+        .and_then(|c| c.st_cond_lst.as_ref()?.first().map(|d| ms_of(d.delay)))
+        .unwrap_or(0);
+    let ms = length(node).saturating_sub(delay);
+    let kind = EffectKind::of(class, c.and_then(|c| c.preset_id));
+    let option = kind.and_then(|k| {
+        if k == EffectKind::FloatIn {
+            let down = c.and_then(|c| c.preset_id) == Some(47);
+            return Some(if down {
+                EffectOption::FromTop
+            } else {
+                EffectOption::FromBottom
+            });
+        }
+        EffectOption::of_subtype(k, c.and_then(|c| c.preset_subtype))
+    });
     EffectEntry {
         spid: spid.0,
-        kind: EffectKind::of(class, c.and_then(|c| c.preset_id)),
+        kind,
         class,
         start,
         duration_ms: u32::try_from(ms).unwrap_or(u32::MAX),
+        option,
+        delay_ms: u32::try_from(delay).unwrap_or(u32::MAX),
     }
 }
 
@@ -1361,6 +1644,27 @@ pub(crate) fn move_effect(
         }
         let item = apart.effects.remove(from);
         apart.effects.insert(to, item);
+        Ok(())
+    })
+}
+
+/// Replace effect `index` with `effect`, built again, as Effect Options, Duration
+/// and Delay change it (`UX-006`); its place and what the build list says stay.
+pub(crate) fn set_effect(
+    parts: &mut SlideParts,
+    ordinal: u32,
+    index: usize,
+    effect: NewEffect,
+) -> Result<Applied, TxnError> {
+    edit_effects(parts, ordinal, |part, apart| {
+        let len = apart.effects.len();
+        part.animated_node(effect.spid)
+            .ok_or(TxnError::NoTarget(effect.spid))?;
+        let item = apart.effects.get_mut(index).ok_or(TxnError::OutOfRange {
+            offset: index,
+            length: len,
+        })?;
+        *item = (effect.start, effect_node(&effect));
         Ok(())
     })
 }

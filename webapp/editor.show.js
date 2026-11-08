@@ -280,7 +280,44 @@ export function transitionFrames(effect, dir) {
 /* ── Animations (`VS-10`) ───────────────────────────────────────────────── */
 
 const ENTRANCE = 1, EXIT = 3;
-const KIND = { appear: 0, fade: 1, fly: 2, pulse: 3, disappear: 4, fadeOut: 5 };
+const KIND = { appear: 0, fade: 1, fly: 2, pulse: 3, disappear: 4, fadeOut: 5, float: 6, wipe: 7, split: 8, zoom: 9, grow: 10, spin: 11 };
+
+/// Keyframes for one effect on its shape's part of the slide picture (`VS-10`,
+/// `UX-006`), in the direction its Effect Options give; `null` for one played as a
+/// change of state. `W`, `H`: the slide's size, the box's units. Also the editor's
+/// Animations > Preview.
+export function effectFrames(e, W, H) {
+  const [x, y, cx, cy] = e.box;
+  const t = (y / H) * 100, l = (x / W) * 100, b = ((H - y - cy) / H) * 100, r = ((W - x - cx) / W) * 100;
+  const ins = (T, R, B, L) => `inset(${T}% ${R}% ${B}% ${L}%)`;
+  const full = ins(t, r, b, l);
+  const o = e.option;
+  switch (e.kind) {
+    case KIND.fade: return [{ opacity: 0 }, { opacity: 1 }];
+    case KIND.fadeOut: return [{ opacity: 1 }, { opacity: 0 }];
+    case KIND.fly: {
+      const from = o === 1 ? `translateX(${-((x + cx) / W) * 100}%)` : o === 2 ? `translateX(${((W - x) / W) * 100}%)`
+        : o === 3 ? `translateY(${-((y + cy) / H) * 100}%)` : `translateY(${((H - y) / H) * 100}%)`;
+      return [{ transform: from }, { transform: "translate(0, 0)" }];
+    }
+    case KIND.float: return [{ opacity: 0, transform: `translateY(${o === 3 ? -10 : 10}%)` }, { opacity: 1, transform: "translateY(0)" }];
+    case KIND.wipe: {
+      const from = o === 1 ? ins(t, 100 - l, b, l) : o === 2 ? ins(t, r, b, 100 - r) : o === 3 ? ins(t, r, 100 - t, l) : ins(100 - b, r, b, l);
+      return [{ clipPath: from }, { clipPath: full }];
+    }
+    case KIND.split: {
+      // Out opens from the centre line; In is drawn the same way here.
+      const vertical = o == null || o < 0 || o === 4 || o === 5;
+      const from = vertical ? ins(t, r + (100 - l - r) / 2, b, l + (100 - l - r) / 2) : ins(t + (100 - t - b) / 2, r, b + (100 - t - b) / 2, l);
+      return [{ clipPath: from }, { clipPath: full }];
+    }
+    case KIND.zoom: return [{ opacity: 0, transform: "scale(0)" }, { opacity: 1, transform: "scale(1)" }];
+    case KIND.pulse: return [{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }];
+    case KIND.grow: return [{ transform: "scale(1)" }, { transform: "scale(1.5)" }];
+    case KIND.spin: return [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }];
+    default: return null;
+  }
+}
 
 /// Slide `index`'s main sequence as clicks, each a list of steps, each a list of
 /// effects; `null` for a slide with none, or one the engine cannot read.
@@ -292,8 +329,8 @@ async function loadAnimations(index) {
     return null;
   }
   const effects = [];
-  for (let i = 0; i + 8 < v.length; i += 9) {
-    effects.push({ node: v[i], kind: v[i + 1], cls: v[i + 2], start: v[i + 3], ms: v[i + 4], box: [v[i + 5], v[i + 6], v[i + 7], v[i + 8]] });
+  for (let i = 0; i + 10 < v.length; i += 11) {
+    effects.push({ node: v[i], kind: v[i + 1], cls: v[i + 2], start: v[i + 3], ms: v[i + 4], box: [v[i + 5], v[i + 6], v[i + 7], v[i + 8]], option: v[i + 9], delay: v[i + 10] });
   }
   const shown = effects.filter((e) => e.node >= 0);
   if (!shown.length) return null;
@@ -379,21 +416,16 @@ async function playStep(index, before, hidden, effects) {
   const plays = [];
   for (const [e, img] of parts) {
     img.style.visibility = "";
-    const opts = { duration: Math.max(1, e.ms), easing: "ease-out", fill: "forwards" };
-    if (e.kind === KIND.fade) plays.push(img.animate([{ opacity: 0 }, { opacity: 1 }], opts).finished);
-    else if (e.kind === KIND.fadeOut) plays.push(img.animate([{ opacity: 1 }, { opacity: 0 }], opts).finished);
-    else if (e.kind === KIND.fly) {
-      const dy = ((state.deck.height - e.box[1]) / state.deck.height) * 100;
-      plays.push(img.animate([{ transform: `translateY(${dy}%)` }, { transform: "translateY(0)" }], opts).finished);
-    } else if (e.kind === KIND.pulse) {
-      plays.push(img.animate([{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }], { ...opts, easing: "ease-in-out" }).finished);
-    } else if (e.kind !== KIND.appear) {
-      show.standIns.add("animations other than Appear, Fade, Fly In, Pulse, Disappear and Fade Out");
+    const opts = { duration: Math.max(1, e.ms), delay: Math.max(0, e.delay || 0), easing: "ease-out", fill: "both" };
+    const frames = effectFrames(e, state.deck.width, state.deck.height);
+    if (frames) plays.push(img.animate(frames, opts).finished);
+    else if (e.kind !== KIND.appear) {
+      show.standIns.add("animations other than those the Animations tab offers");
     }
   }
   show.baseUrl = null;            // `before` is still drawn from; released below
   setBase(mid, `Slide ${index + 1}`);
-  const longest = Math.max(0, ...effects.map((e) => e.ms));
+  const longest = Math.max(0, ...effects.map((e) => e.ms + (e.delay || 0)));
   await Promise.race([Promise.all(plays), new Promise((r) => setTimeout(r, longest + 150))]).catch(() => {});
   if (before) URL.revokeObjectURL(before);
   if (!show) { URL.revokeObjectURL(end); return after; }

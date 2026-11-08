@@ -47,7 +47,17 @@ export const EFFECTS = [
   { code: 3, name: "Pulse", cls: "Emphasis" },
   { code: 4, name: "Disappear", cls: "Exit" },
   { code: 5, name: "Fade Out", cls: "Exit" },
+  { code: 6, name: "Float In", cls: "Entrance" },
+  { code: 7, name: "Wipe", cls: "Entrance" },
+  { code: 8, name: "Split", cls: "Entrance" },
+  { code: 9, name: "Zoom", cls: "Entrance" },
+  { code: 10, name: "Grow/Shrink", cls: "Emphasis" },
+  { code: 11, name: "Spin", cls: "Emphasis" },
 ];
+/// Effect Options for an effect, by the engine's numbers (`EffectOption::from_code`),
+/// and which each kind offers, its default first, as `EffectKind::options`.
+export const EFFECT_OPTIONS = ["From Bottom", "From Left", "From Right", "From Top", "Vertical Out", "Vertical In", "Horizontal Out", "Horizontal In"];
+const EFFECT_KIND_OPTIONS = { 2: [0, 1, 2, 3], 6: [0, 3], 7: [0, 1, 2, 3], 8: [4, 5, 6, 7] };
 const STARTS = ["On Click", "With Previous", "After Previous"];
 const CLASS_NAMES = ["Other", "Entrance", "Emphasis", "Exit"];
 
@@ -84,8 +94,8 @@ export async function read() {
     readError = "";
     const v = await call("slide_animations", [index]);
     const next = [];
-    for (let i = 0; i + 8 < v.length; i += 9) {
-      next.push({ node: v[i], kind: v[i + 1], cls: v[i + 2], start: v[i + 3], ms: v[i + 4], box: [v[i + 5], v[i + 6], v[i + 7], v[i + 8]] });
+    for (let i = 0; i + 10 < v.length; i += 11) {
+      next.push({ node: v[i], kind: v[i + 1], cls: v[i + 2], start: v[i + 3], ms: v[i + 4], box: [v[i + 5], v[i + 6], v[i + 7], v[i + 8]], option: v[i + 9], delay: v[i + 10] });
     }
     list = next;
     names = new Map();
@@ -262,7 +272,7 @@ function durationDialog(title, seconds, apply) {
 
 /* ── Animations ─────────────────────────────────────────────────────────── */
 
-const GALLERY_EFFECTS = { Appear: 0, Fade: 1, "Fly In": 2 };
+const GALLERY_EFFECTS = Object.fromEntries(EFFECTS.filter((e) => e.cls !== "Exit").map((e) => [e.name, e.code]));
 
 function replaceEffect(kind) {
   const node = selection.selectedNode();
@@ -276,7 +286,7 @@ function replaceEffect(kind) {
 
 function pickAnimation(name) {
   if (name === "None") { replaceEffect(-1); return; }
-  if (!(name in GALLERY_EFFECTS)) { status(`${name} is not available yet; Add Animation lists the effects this build writes`); return; }
+  if (!(name in GALLERY_EFFECTS)) return;
   replaceEffect(GALLERY_EFFECTS[name]);
 }
 
@@ -325,6 +335,114 @@ function removeEffect(at) {
   return guarded("remove the animation", async () => {
     await call("remove_animation", [state.current, at]);
     await edited();
+  });
+}
+
+/// Effect Options, Duration and Delay of effect `at` (`UX-006`): built again in its
+/// place, one undo step.
+function setTiming(at, { option = 99, ms, delay }) {
+  const e = list[at];
+  if (!e || e.kind < 0) return;
+  return guarded("change the animation", async () => {
+    await call("set_animation", [state.current, at, option, ms ?? e.ms, delay ?? e.delay]);
+    await edited(false);
+  });
+}
+
+const targetEffect = () => { const t = target(); return t >= 0 && list[t].kind >= 0 ? list[t] : null; };
+
+function secondsDialog(title, seconds, min, apply) {
+  showModal(title, (body) => {
+    const label = document.createElement("label");
+    label.className = "fp-row";
+    label.appendChild(document.createTextNode("Seconds"));
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(min);
+    input.max = "59";
+    input.step = "0.25";
+    input.className = "fp-input";
+    input.value = seconds.toFixed(2);
+    label.appendChild(input);
+    const ok = document.createElement("button");
+    ok.type = "button";
+    ok.className = "op-btn primary";
+    ok.textContent = "OK";
+    const go = () => {
+      const v = Number(input.value);
+      if (!(v >= min && v < 60)) { input.focus(); return; }
+      closeModal();
+      apply(Math.round(v * 1000));
+    };
+    ok.addEventListener("click", go);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    body.append(label, ok);
+  });
+}
+
+/// Animations > Preview: the slide's effects played on the slide in the editor, in
+/// order, each its shape cut from the slide's picture and moved as the show moves it.
+let previewing = false;
+async function previewAnimations() {
+  const index = state.current;
+  const frame = byId("slide-frame");
+  const now = byId("slide-img");
+  const shown = list.filter((e) => e.node >= 0);
+  if (!now?.src || previewing || !shown.length) return;
+  previewing = true;
+  const layer = h("div", "tr-preview");
+  layer.style.background = "transparent";
+  frame.appendChild(layer);
+  try {
+    for (const e of shown) {
+      if (state.current !== index) break;
+      const r = await request({ op: "png-hiding", index, width: Math.max(1, Math.round(frame.clientWidth)), nodes: [e.node] }, { priority: 8 });
+      const under = URL.createObjectURL(new Blob([r.png], { type: "image/png" }));
+      const base = h("img", "tr-preview-img");
+      base.alt = "";
+      base.src = under;
+      const part = h("img", "tr-preview-img");
+      part.alt = "";
+      part.src = now.src;
+      const [x, y, cx, cy] = e.box;
+      const W = state.deck.width, H = state.deck.height;
+      const pct = (v, of) => `${Math.max(0, Math.min(100, (v / of) * 100))}%`;
+      part.style.clipPath = `inset(${pct(y, H)} ${pct(W - x - cx, W)} ${pct(H - y - cy, H)} ${pct(x, W)})`;
+      part.style.transformOrigin = `${((x + cx / 2) / W) * 100}% ${((y + cy / 2) / H) * 100}%`;
+      layer.textContent = "";
+      layer.append(base, part);
+      await Promise.all([base.decode().catch(() => {}), part.decode().catch(() => {})]);
+      const frames = show.effectFrames(e, W, H);
+      if (frames) await part.animate(frames, { duration: Math.max(1, e.ms), delay: e.delay || 0, easing: "ease-out", fill: "both" }).finished.catch(() => {});
+      URL.revokeObjectURL(under);
+    }
+  } catch (err) {
+    errorDialog("OpenPresent could not preview the animations.", err.message);
+  } finally {
+    layer.remove();
+    previewing = false;
+  }
+}
+
+/// Animation Painter: pick up the selected shape's effects; the next shape selected
+/// gets them in place of its own (`UX-006`). Esc or a second click puts it down.
+let painterFrom = null;
+function armPainter() {
+  if (painterFrom != null) { painterFrom = null; status(""); changed(); return; }
+  const node = selection.selectedNode();
+  if (node == null || !list.some((e) => e.node === node && e.kind >= 0)) { status("Select an animated shape first"); return; }
+  painterFrom = { node, index: state.current };
+  status("Animation Painter: click the shape to give these animations to");
+  changed();
+}
+function paintTo(s) {
+  if (!painterFrom || !s || s.index !== painterFrom.index || s.node === painterFrom.node) return;
+  const from = painterFrom.node;
+  painterFrom = null;
+  guarded("copy the animations", async () => {
+    await call("paint_animation", [state.current, from, s.node]);
+    await edited(false);
+    status("Animations copied");
   });
 }
 
@@ -472,7 +590,33 @@ export function init() {
       status("Every slide has this slide's transition");
     }),
   });
-  register("animations.gallery", { label: "Animation Styles", enabled: hasShape, pick: pickAnimation, run: addAnimationDialog });
+  register("animations.gallery", { label: "Animation Styles", enabled: hasShape, pick: pickAnimation, run: addAnimationDialog,
+    selected: () => { const n = selection.selectedNode(); const e = list.find((x) => x.node === n); return e && e.kind >= 0 ? EFFECTS[e.kind].name : n == null ? "" : "None"; } });
+  const effectOffers = () => { const e = targetEffect(); return e ? EFFECT_KIND_OPTIONS[e.kind] || [] : []; };
+  EFFECT_OPTIONS.forEach((label, code) => {
+    register(`animations.option.${code}`, {
+      label, enabled: () => has() && effectOffers().includes(code), hidden: () => !effectOffers().includes(code),
+      checked: () => targetEffect()?.option === code, run: () => setTiming(target(), { option: code }),
+    });
+  });
+  register("animations.effect-options", {
+    label: "Effect Options", enabled: () => has() && effectOffers().length > 1,
+    run: () => chooser("Effect Options", effectOffers().map((c) => [EFFECT_OPTIONS[c], c]), (c) => setTiming(target(), { option: c })),
+  });
+  register("animations.timing", {
+    label: "Duration", enabled: () => { const e = targetEffect(); return has() && !!e && e.kind !== 0 && e.kind !== 4; },
+    value: () => { const e = targetEffect(); return e ? (e.ms / 1000).toFixed(2) : ""; },
+    run: () => secondsDialog("Animation Duration", (targetEffect()?.ms || 500) / 1000, 0.01, (ms) => setTiming(target(), { ms })),
+  });
+  register("animations.delay", {
+    label: "Delay", enabled: () => has() && !!targetEffect(),
+    value: () => { const e = targetEffect(); return e ? (e.delay / 1000).toFixed(2) : ""; },
+    run: () => secondsDialog("Animation Delay", (targetEffect()?.delay || 0) / 1000, 0, (delay) => setTiming(target(), { delay })),
+  });
+  register("animations.preview", { label: "Preview", enabled: () => has() && list.some((e) => e.node >= 0), run: previewAnimations });
+  register("animations.painter", { label: "Animation Painter", enabled: () => has() && (painterFrom != null || !!targetEffect()), checked: () => painterFrom != null, run: armPainter });
+  selection.onPaint((s) => paintTo(s));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && painterFrom) { painterFrom = null; status(""); changed(); } }, true);
   register("animations.add", { label: "Add Animation", enabled: hasShape, run: addAnimationDialog });
   register("animations.pane", { label: "Animation Pane", enabled: has, checked: paneOpen, run: () => (paneOpen() ? closePane() : openPane()) });
   register("animations.start", {
