@@ -35,7 +35,9 @@ const SETTLE_MS = 400;
 
 let overlay = null;    // <svg> over the slide
 let input = null;      // hidden <textarea>
-let formatBits = 0;    // bit 1 bold, 2 italic, 4 underline
+let formatBits = 0;    // bit 1 bold, 2 italic, 4 underline, 8 strike, 16 superscript, 32 subscript
+/// The pressed state of the Font group's toggles at the caret (`PAR-20`).
+export const caretFormatBits = () => (selection.editing ? formatBits : 0);
 let runState = null;   // [font, size, align, bulleted] at the caret (`UX-003`)
 let composing = false;
 let dragging = false;
@@ -74,7 +76,7 @@ async function call(fn, ...args) {
 }
 
 const obj = () => selection.object;
-const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_run", "text_grow", "text_set_paragraphs", "text_paste_rich"]);
+const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_run", "text_grow", "text_set_paragraphs", "text_paste_rich", "text_change_case"]);
 
 /* ── Drawing the caret and selection ────────────────────────────────────── */
 

@@ -146,16 +146,24 @@ pub enum RunSetting {
     Color,
     /// Text Highlight Color: a colour, or empty for none.
     Highlight,
+    /// Character Spacing: points, as text, from -1584 to 1584 (`ST_TextPoint`), or
+    /// empty for normal (`PAR-20`).
+    Spacing,
+    /// Clear All Formatting; the value is ignored.
+    Clear,
 }
 
 impl RunSetting {
-    /// From the bridge's number: 0 font, 1 size, 2 colour, 3 highlight.
+    /// From the bridge's number: 0 font, 1 size, 2 colour, 3 highlight, 4 character
+    /// spacing, 5 clear all formatting.
     pub fn from_code(code: u32) -> Option<Self> {
         match code {
             0 => Some(Self::Font),
             1 => Some(Self::Size),
             2 => Some(Self::Color),
             3 => Some(Self::Highlight),
+            4 => Some(Self::Spacing),
+            5 => Some(Self::Clear),
             _ => None,
         }
     }
@@ -175,6 +183,18 @@ fn size_from_text(value: &str) -> Option<i32> {
     // In range, so the product fits an `i32`.
     #[allow(clippy::cast_possible_truncation)]
     Some((points * 100.0).round() as i32)
+}
+
+/// Hundredths of a point from Character Spacing's points, within `ST_TextPoint`'s
+/// -400000 to 400000, rounded to the tenth of a point PowerPoint's box keeps.
+fn spacing_from_text(value: &str) -> Option<i32> {
+    let points: f64 = value.trim().parse().ok()?;
+    if !points.is_finite() || points.abs() > 1584.0 {
+        return None;
+    }
+    // Within 1584 points, so the product fits an `i32`.
+    #[allow(clippy::cast_possible_truncation)]
+    Some((points * 10.0).round() as i32 * 10)
 }
 
 /// The next size up or down the ladder from `hundredths`; past its ends, steps of ten
@@ -365,6 +385,11 @@ impl Viewer {
             RunSetting::Highlight => {
                 Attribute::Highlight(Some(parse_color(value).ok_or(BridgeError::BadArgument)?))
             }
+            RunSetting::Spacing if value.trim().is_empty() => Attribute::Spacing(None),
+            RunSetting::Spacing => Attribute::Spacing(Some(
+                spacing_from_text(value).ok_or(BridgeError::BadArgument)?,
+            )),
+            RunSetting::Clear => Attribute::Clear,
         };
         self.edit(
             Operation::FormatRange {
@@ -375,6 +400,106 @@ impl Viewer {
             },
             false,
         )
+    }
+
+    /// Change Case over `[start, end)` (`PAR-20`): `sentence`, `lower`, `upper`,
+    /// `title` (each word capitalized) or `toggle`. Each run keeps its properties; one
+    /// undo step.
+    pub fn change_case(
+        &mut self,
+        object: ObjectId,
+        (start, end): (usize, usize),
+        mode: &str,
+    ) -> Result<bool, BridgeError> {
+        use casual_slide_model::text::TextItem;
+        let (start, end) = (start.min(end), start.max(end));
+        if !matches!(mode, "sentence" | "lower" | "upper" | "title" | "toggle") {
+            return Err(BridgeError::BadArgument);
+        }
+        let body = self.body(object)?;
+        if end > body_length(body) {
+            return Err(BridgeError::BadArgument);
+        }
+        // Each stretch of the range inside one run: where it starts, its text, and the
+        // run's own properties.
+        let mut stretches: Vec<(usize, String, Option<Box<CharacterProperties>>)> = Vec::new();
+        let mut base = 0usize;
+        for p in &body.paragraphs {
+            let mut at = base;
+            for item in &p.items {
+                let len = item_length(item);
+                if let TextItem::Run(r) = item {
+                    let (s, e) = (at.max(start), (at + len).min(end));
+                    if s < e {
+                        let text: String = r
+                            .text
+                            .as_deref()
+                            .unwrap_or_default()
+                            .chars()
+                            .skip(s - at)
+                            .take(e - s)
+                            .collect();
+                        stretches.push((s, text, r.properties.clone()));
+                    }
+                }
+                at += len;
+            }
+            base = at + 1;
+        }
+        // The case of each character, decided over the whole range as one text: a word
+        // starts after a space, a sentence after `.`, `!` or `?` and a space.
+        let mut word_start = true;
+        let mut sentence_start = true;
+        let mut ops = Vec::new();
+        for (at, text, props) in &stretches {
+            let mut out = String::new();
+            for c in text.chars() {
+                let upper = match mode {
+                    "upper" => true,
+                    "lower" => false,
+                    "toggle" => !c.is_uppercase(),
+                    "title" => word_start,
+                    _ => sentence_start,
+                };
+                if upper {
+                    out.extend(c.to_uppercase());
+                } else {
+                    out.extend(c.to_lowercase());
+                }
+                if c.is_whitespace() {
+                    word_start = true;
+                } else {
+                    word_start = false;
+                    if c.is_alphanumeric() {
+                        sentence_start = false;
+                    } else if matches!(c, '.' | '!' | '?') {
+                        sentence_start = true;
+                    }
+                }
+            }
+            if out != *text {
+                ops.push((*at, text.chars().count(), out, props.clone()));
+            }
+        }
+        if ops.is_empty() {
+            return Ok(false);
+        }
+        // From the end back, so each stretch's offset still holds when it is replaced.
+        let mut batch = Vec::new();
+        for (at, len, text, properties) in ops.into_iter().rev() {
+            batch.push(Operation::DeleteRange {
+                object,
+                start: at,
+                end: at + len,
+            });
+            batch.push(Operation::InsertRun {
+                object,
+                at,
+                text,
+                properties,
+            });
+        }
+        self.edit(Operation::Batch(batch), false)
     }
 
     /// Increase or Decrease Font Size over `[start, end)`: each run steps from its own

@@ -1523,6 +1523,20 @@ pub fn open_blank() -> Result<(), JsError> {
     Ok(())
 }
 
+/// File > New from a template (`PAR-18`): the blank presentation in built-in theme
+/// `theme` (an index of [`design_themes`]), replacing any deck open before.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a theme that is not there; `CS-WSM-0007` if the blank deck could
+/// not be built.
+#[wasm_bindgen]
+pub fn open_template(theme: u32) -> Result<(), JsError> {
+    let viewer = Viewer::template(theme as usize).map_err(js)?;
+    SESSION.with(|s| *s.borrow_mut() = Some(viewer));
+    Ok(())
+}
+
 /// The deck's layouts for the New Slide gallery: `[ordinal, name, ordinal, name, …]`.
 /// A name is document text: the page shows it through `textContent` only.
 ///
@@ -2256,8 +2270,26 @@ pub fn text_run_state(part: u32, node: u32, offset: u32) -> Result<Vec<String>, 
     with_viewer(|v| v.run_state(object(part, node), offset as usize))
 }
 
+/// Change Case over `[start, end)` (`PAR-20`): `mode` `sentence`, `lower`, `upper`,
+/// `title` or `toggle`. One undo step; each run keeps its look.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another mode or a range past the text.
+#[wasm_bindgen]
+pub fn text_change_case(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    mode: &str,
+) -> Result<bool, JsError> {
+    with_viewer(|v| v.change_case(object(part, node), (start as usize, end as usize), mode))
+}
+
 /// Set a Font group value over `[start, end)`: `what` 0 font name, 1 size in points,
-/// 2 font colour, 3 highlight (a colour as [`parse_color`] reads it, or empty to clear).
+/// 2 font colour, 3 highlight (a colour as [`parse_color`] reads it, or empty to clear),
+/// 4 character spacing in points (empty for normal), 5 clear all formatting.
 ///
 /// # Errors
 ///

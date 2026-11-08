@@ -73,7 +73,8 @@ export const TABS = [
       R([
         [C("font.name", "Font", 110), C("font.size", "Font Size", 48), I("font.increase", "font_increase", "Increase Font Size (Ctrl+Shift+>)"), I("font.decrease", "font_decrease", "Decrease Font Size (Ctrl+Shift+<)"), I("font.clear", "text_clear_formatting", "Clear All Formatting (Ctrl+Space)")],
         [I("font.bold", "text_bold", "Bold (Ctrl+B)"), I("font.italic", "text_italic", "Italic (Ctrl+I)"), I("font.underline", "text_underline", "Underline (Ctrl+U)"), I("font.strike", "text_strikethrough", "Strikethrough"),
-         I("font.subscript", "text_subscript", "Subscript (Ctrl+=)"), I("font.superscript", "text_superscript", "Superscript (Ctrl+Shift++)"), I("font.case", "text_change_case", "Change Case", { menu: ["font.case.sentence", "font.case.lower", "font.case.upper", "font.case.title"] }),
+         I("font.subscript", "text_subscript", "Subscript (Ctrl+=)"), I("font.superscript", "text_superscript", "Superscript (Ctrl+Shift++)"), I("font.case", "text_change_case", "Change Case", { menu: ["font.case.sentence", "font.case.lower", "font.case.upper", "font.case.title", "font.case.toggle"] }),
+         I("font.spacing", "text_font", "Character Spacing", { menu: ["font.spacing.very-tight", "font.spacing.tight", "font.spacing.normal", "font.spacing.loose", "font.spacing.very-loose"] }),
          I("font.highlight", "highlight", "Text Highlight Color"), I("font.color", "text_color", "Font Color")],
       ]),
     ] },
@@ -294,9 +295,15 @@ TABS.push(
 /// The File page, in PowerPoint's order. As OpenCalc's: each page is a list of
 /// sections, and an item names a command, its icon, and one line of what it does.
 const F = (id, icon, label, desc) => ({ id, icon, label, desc });
+/// The built-in themes File > New offers as templates, in the engine's order
+/// (`casual-slide-wasm` `THEMES`); the tiles take their colours from the engine.
+export const TEMPLATES = ["Plain", "Harbour", "Meadow", "Ember", "Slate", "Orchid"];
 export const FILE_RAIL = [
   { id: "new", label: "New", icon: "document_add", sections: [
     { tiles: true, items: [F("file.new", "slide_add", "Blank Presentation", "Start a new presentation with one title slide")] },
+    // Our own templates, one for each built-in theme (`PAR-18`), not Microsoft's.
+    { title: "Templates", tiles: true, items: TEMPLATES.map((name, i) =>
+      F(`file.new.template.${i}`, "slide_add", name, `Start a new presentation in the ${name} theme`)) },
   ] },
   { id: "open", label: "Open", icon: "folder_open", sections: [
     { items: [F("file.open", "folder_open", "Browse", "Open a PowerPoint presentation (.pptx) from this device. It stays in this browser")] },
@@ -374,6 +381,12 @@ export const LABELS = {
   "font.case.lower": "lowercase",
   "font.case.upper": "UPPERCASE",
   "font.case.title": "Capitalize Each Word",
+  "font.case.toggle": "tOGGLE cASE",
+  "font.spacing.very-tight": "Very Tight",
+  "font.spacing.tight": "Tight",
+  "font.spacing.normal": "Normal",
+  "font.spacing.loose": "Loose",
+  "font.spacing.very-loose": "Very Loose",
   "arrange.bring-to-front": "Bring to Front (Ctrl+Shift+])",
   "arrange.bring-forward": "Bring Forward (Ctrl+])",
   "arrange.send-backward": "Send Backward (Ctrl+[)",

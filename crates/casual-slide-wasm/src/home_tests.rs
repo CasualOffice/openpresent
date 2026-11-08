@@ -609,3 +609,49 @@ fn numbering_list_levels_and_line_spacing_save_read_back_and_undo() {
     }
     assert_eq!(v.save().unwrap(), input);
 }
+
+/// The Font group's rest (`PAR-20`): Strikethrough, Superscript, Subscript, Character
+/// Spacing, Change Case and Clear All Formatting, each one undo step, saved as
+/// PowerPoint writes them and read back.
+#[test]
+fn strikethrough_scripts_spacing_case_and_clear_save_read_back_and_undo() {
+    let input = fixture("area-text.pptx");
+    let mut v = Viewer::open(input.clone()).unwrap();
+    let (object, len) = text_box(&v);
+    let n = len.min(4);
+    let text = v.text_slice(object, 0, n).unwrap();
+    assert!(v.toggle(object, 0, n, Toggle::Strike).unwrap());
+    assert!(v.toggle(object, 0, n, Toggle::Superscript).unwrap());
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0b01_1000);
+    assert!(v.toggle(object, 0, n, Toggle::Subscript).unwrap());
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0b10_1000);
+    assert!(v.set_run(object, (0, n), RunSetting::Spacing, "3").unwrap());
+    assert!(v.change_case(object, (0, n), "upper").unwrap());
+    assert_eq!(
+        v.text_slice(object, 0, n).unwrap(),
+        text.to_uppercase(),
+        "upper case"
+    );
+    let saved = v.save().unwrap();
+    let parts = changed_parts(&input, &saved);
+    let xml = part_xml(&saved, &parts[0]);
+    assert!(xml.contains("strike=\"sngStrike\""), "{xml}");
+    assert!(xml.contains("baseline=\"-25000\""), "{xml}");
+    assert!(xml.contains("spc=\"300\""), "{xml}");
+    let again = Viewer::open(saved).unwrap();
+    assert_eq!(
+        again.format_state(object, 1).unwrap() & 0b11_1000,
+        0b10_1000
+    );
+    assert_eq!(again.text_slice(object, 0, n).unwrap(), text.to_uppercase());
+    // Clear All Formatting takes every one off in one step.
+    assert!(v.set_run(object, (0, n), RunSetting::Clear, "").unwrap());
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0);
+    v.undo().unwrap();
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0b10_1000);
+    while v.can_undo_redo().0 {
+        v.undo().unwrap();
+    }
+    assert_eq!(v.text_slice(object, 0, n).unwrap(), text);
+    assert_eq!(v.save().unwrap(), input);
+}

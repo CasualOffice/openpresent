@@ -32,12 +32,12 @@
 use casual_slide_model::color::Color;
 use casual_slide_model::drawing::ShapeProperties;
 use casual_slide_model::fill::Fill;
-use casual_slide_model::presentation::TextFont;
+use casual_slide_model::presentation::{Percentage, TextFont};
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{Background, PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
-    Bullet, BulletFont, CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TextAlign,
-    TextBody, TextItem, TextRun, TextSpacing, UnderlineType,
+    Bullet, BulletFont, CharacterProperties, LineBreak, Paragraph, ParagraphProperties, StrikeType,
+    TextAlign, TextBody, TextItem, TextPoint, TextRun, TextSpacing, UnderlineType, Written,
 };
 use casual_slide_model::theme::{ColorScheme, FontScheme, ShapeStyle};
 use casual_slide_model::timing::{SlideTiming, Slot};
@@ -234,6 +234,15 @@ pub enum Attribute {
     Fill(Option<Fill>),
     /// `rPr/highlight`: Text Highlight Color. `None` removes it.
     Highlight(Option<Color>),
+    /// `rPr/@strike`: Strikethrough (`PAR-20`).
+    Strike(Option<StrikeType>),
+    /// `rPr/@baseline`, thousandths of a percent: Superscript above 0, Subscript below.
+    Baseline(Option<i32>),
+    /// `rPr/@spc`, hundredths of a point: Character Spacing.
+    Spacing(Option<i32>),
+    /// Clear All Formatting: every character property but the run's language, links,
+    /// bookmark and proofing marks removed, so the run inherits again.
+    Clear,
 }
 
 impl Attribute {
@@ -246,6 +255,24 @@ impl Attribute {
             Self::Latin(v) => p.latin.clone_from(v),
             Self::Fill(v) => p.fill.clone_from(v),
             Self::Highlight(v) => p.highlight = v.clone().map(Some),
+            Self::Strike(v) => p.strike = *v,
+            Self::Baseline(v) => p.baseline = v.map(|b| Written::new(Percentage(b))),
+            Self::Spacing(v) => p.spacing = v.map(|s| Written::new(TextPoint(s))),
+            Self::Clear => {
+                *p = CharacterProperties {
+                    lang: p.lang.take(),
+                    alt_lang: p.alt_lang.take(),
+                    dirty: p.dirty,
+                    error: p.error,
+                    no_proof: p.no_proof,
+                    smart_tag_clean: p.smart_tag_clean,
+                    smart_tag_id: p.smart_tag_id,
+                    bookmark: p.bookmark.take(),
+                    hyperlink_click: p.hyperlink_click.take(),
+                    hyperlink_mouse_over: p.hyperlink_mouse_over.take(),
+                    ..CharacterProperties::default()
+                };
+            }
         }
     }
 }

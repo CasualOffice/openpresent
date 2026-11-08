@@ -9,7 +9,8 @@
 // `{ op: "shapes", index }`, `{ op: "transform", index, node, x, y, cx, cy, rot }`,
 // `{ op: "delete", index, node }`, `{ op: "undo" }` and `{ op: "redo" }`; each edit
 // answers with `undo: [canUndo, canRedo]`, and undo and redo with the slide changed.
-// Building (`VS-08`): `{ op: "blank" }` opens the built-in new presentation, and
+// Building (`VS-08`): `{ op: "blank" }` opens the built-in new presentation, with
+// `template: n` in built-in theme n (`PAR-18`), and
 // `{ op: "build", fn, args }` runs one slide or insert call; undo and redo also
 // answer the slide count, since they may add or remove slides.
 // Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name.
@@ -27,7 +28,7 @@ import init, {
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   show_plan, slide_transition, transition_direction, slide_notes,
   design_themes, design_apply_theme, design_slide_size, design_background,
-  open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
+  open_blank, open_template, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
   preset_names, preset_icon, insert_preset, shape_handles, drag_shape_handle,
   set_shape_fill, set_shape_outline, set_shape_style, slide_palette,
@@ -38,7 +39,7 @@ import init, {
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
   collab_begin, collab_end, collab_flush, collab_acknowledge, collab_unacknowledged,
   collab_receive, collab_replay, collab_map_offset, collab_presence, protocol_version,
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case,
   font_families, font_css_stack, font_face_bytes,
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
   copy_slides, clipboard_slides, paste_slides,
@@ -78,7 +79,7 @@ const TEXT = {
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   // The Home tab's Font and Paragraph groups, and Copy of text (`UX-003`).
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case,
 };
 
 // Building a deck (`VS-08`): `{ id, op: "build", fn, args }` calls one of these by name
@@ -119,6 +120,17 @@ function failure(e) {
   return "the engine stopped unexpectedly";
 }
 
+// Every successful answer carries the engine's edit counter as it stands
+// (`editsNow`), so the page knows an edit happened the moment it did, without a
+// poll: the leave warning reads it (`PAR-01`). Before a deck is open there is none.
+const post = self.postMessage.bind(self);
+self.postMessage = (m, transfer) => {
+  if (m && m.ok) {
+    try { m.editsNow = edits_applied(); } catch { /* no deck yet */ }
+  }
+  post(m, transfer);
+};
+
 self.onmessage = async (event) => {
   const msg = event.data || {};
   const { id } = msg;
@@ -126,7 +138,8 @@ self.onmessage = async (event) => {
     await ready;
     if (msg.op === "open" || msg.op === "blank") {
       // `blank` is File > New, and the deck the editor starts with (`VS-08`).
-      if (msg.op === "blank") open_blank(); else open(new Uint8Array(msg.bytes));
+      if (msg.op === "blank" && Number.isInteger(msg.template)) open_template(msg.template);
+      else if (msg.op === "blank") open_blank(); else open(new Uint8Array(msg.bytes));
       const size = slide_size();
       self.postMessage({ id, ok: true, count: slide_count(), width: size[0], height: size[1], version: version() });
     } else if (msg.op === "png") {
@@ -220,6 +233,10 @@ self.onmessage = async (event) => {
       if (msg.fn === "copy_slides") args[0] = new Uint32Array(args[0] || []);
       let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
+      // An engine `i64` (`slide_layout`) arrives as a BigInt, which no page caller
+      // expects and which a `u32` argument refuses: New Slide failed on every deck
+      // with slides (`PAR-16`). Every such value fits a double.
+      if (typeof value === "bigint") value = Number(value);
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
     } else if (msg.op === "undo" || msg.op === "redo") {
       const slide = msg.op === "undo" ? undo() : redo();

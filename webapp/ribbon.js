@@ -676,7 +676,7 @@ export function openBackstage(page) {
   backstage.querySelector(".rb-rail-item.is-on, .rb-rail-item")?.focus();
 }
 
-function closeBackstage() {
+export function closeBackstage() {
   if (!backstage || backstage.hidden) return;
   backstage.hidden = true;
   document.documentElement.classList.remove("op-backstage-open");

@@ -499,7 +499,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 ## Parity today
 
-**Status: audit, 2026-11-09. Task `FIT-02`; rows 067, 095, 320, 321, 329, 341 and 351 updated by `PAR-06`, `PAR-10` to `PAR-13` and `PAR-15`.** The owner, 2026-11-08: many PowerPoint features are missing, and every gap must be found. This section marks each of the 318 rows above, and 34 more that the ribbon, menus, panes, keys and file operations have and the rows above miss (`PP-FIT-319` to `352`), with what the editor does **today**, on `main` at `7539ea5`. The rows above stay the plan; this table is the state.
+**Status: audit, 2026-11-09. Task `FIT-02`, re-audited on `main` at `6bf7e2c` (`PAR-01`), counts kept current by each `PAR` row since.** The owner, 2026-11-08: many PowerPoint features are missing, and every gap must be found. This section marks each of the 318 rows above, and 34 more that the ribbon, menus, panes, keys and file operations have and the rows above miss (`PP-FIT-319` to `352`), with what the editor does **today**. The first audit was of `main` at `7539ea5` (35 of 352 working, 9.9%); the re-audit clicked through what merged since, and each later row's change names the `PAR` row that made it. The rows above stay the plan; this table is the state.
 
 **How it was checked.** The live editor's code was read (`webapp/`, `crates/casual-slide-wasm`), the engine built with `wasm-pack`, and the editor served on `127.0.0.1` and driven in Chrome: the command registry read at run time (242 commands, 120 of them registered disabled with "Not available yet in this build"), real decks opened (`sdk-strict-animclr`, `pptxts-modern-comments`), shapes inserted and the Arrange menu opened with a multiple selection. A Works mark rests on the registry and code, and the decisive verbs were clicked; nothing was compared against a running PowerPoint (`UX-002`, `PV-01`).
 
@@ -517,15 +517,15 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 | | Works | Partial | Disabled | Faked | Absent | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| The 318 rows above | 32 (10.1%) | 47 (14.8%) | 58 (18.2%) | 0 | 181 (56.9%) | 318 |
-| With the 34 shell rows | 40 (11.4%) | 52 (14.8%) | 67 (19.0%) | 0 | 193 (54.8%) | 352 |
-| Of those, the 280 we build (Edit, Render, Retain) | 40 (14.3%) | 51 (18.2%) | 56 (20.0%) | 0 | 133 (47.5%) | 280 |
+| The 318 rows above | 41 (12.9%) | 48 (15.1%) | 52 (16.4%) | 0 | 177 (55.7%) | 318 |
+| With the 34 shell rows | 52 (14.8%) | 55 (15.6%) | 60 (17.0%) | 0 | 185 (52.6%) | 352 |
+| Of those, the 280 we build (Edit, Render, Retain) | 52 (18.6%) | 54 (19.3%) | 49 (17.5%) | 0 | 125 (44.6%) | 280 |
 
-**Plainly: of the 280 features we mean to build, 40 work (14.3%), 51 work in part (18.2%), and 189 are missing (67.5%),** whether drawn disabled or not there at all. Of the 40 that work, 11 are file facts kept on save rather than verbs a user runs.
+**Plainly: of the 280 features we mean to build, 52 work (18.6%), 54 work in part (19.3%), and 174 are missing (62.1%),** whether drawn disabled or not there at all. **Of all 352, 52 work (14.8%).** Of the 52 that work, 11 are file facts kept on save rather than verbs a user runs.
 
-**Largest gaps a PowerPoint user hits first:** edits lost on closing the tab (no autosave or warning); speaker notes cannot be typed; no Group; no Find or Replace; no links; no change of layout; no Slide Sorter; no sections; slides cannot be copied between browser tabs; no z-order; no comments; no print; no alt text.
+**Largest gaps a PowerPoint user hits first:** no Group; no Find or Replace; no links; no change of layout; no Slide Sorter; no sections; slides cannot be copied between browser tabs; no z-order; no Font dialog, strikethrough or subscript; no alt text.
 
-**Since the audit (not re-counted).** Merged after `7539ea5`, by their rows' own browser checks, not by this audit: the File tab and autosave (`FILE-01`, `SAVE-01`, `055cf13`) touch `PP-FIT-003` and `004` (Save As `.ppsx` and `.potx`), `022` (File > Info properties), `023` and `024` (browser autosave and a recovery bar; no atomic save), `263` (Print, one slide a page, through the browser), `336` (rename in the title bar) and `340` (Save As, without `.odp`); side panes (`UX-011`, `115a4c5`) touch `063` (notes typed and saved), `081` (Selection Pane) and `274`, `276` (threaded comments, replies, resolve; @mention text sent nowhere). The table and counts below stay as audited until `FIT-02` is re-run; each row's change is in its tracker row.
+**Re-audit, 2026-11-09 (`PAR-01`).** Merged after `7539ea5` and clicked in Chrome on `127.0.0.1` with `pptxts-modern-comments.pptx`: the File tab (`FILE-01`): New, Open, Info with editable properties, Save As with `.pptx`, `.potx` and `.ppsx`, Print, and rename in the title bar; autosave and the recovery bar (`SAVE-01`), a draft seen written after quiet; the Comments pane (`UX-011`), a deck's thread shown, a reply posted, saved and reopened; notes typed, saved and reopened; the Selection Pane; a hidden slide's struck, dimmed thumbnail; the lists, selection, rich paste, keys, slide copy and smart guides rows `PAR-06` and `PAR-10` to `PAR-15` had already updated. Found and fixed in the same pass: New Slide failed on every deck that had a slide (the engine's `i64` layout reached the page as a BigInt), and closing the tab gave no warning. The ribbon session's Arrange, Find, Outline, Slide Sorter, WordArt and Symbol were not on `main` and are not counted.
 
 ### The table
 
@@ -533,8 +533,8 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | --- | --- | --- | --- | --- | --- | --- |
 | PP-FIT-001 | Open and save `.pptx` | Edit | Works | Opens in the browser by picker or drop; Save and Save a Copy download it, byte-identical when unedited (`VS-04`); edits patch named nodes. No save in place: every save is a download |  |  |
 | PP-FIT-002 | Strict Open XML `.pptx` | Edit | Works | Opens normalised; the Strict fixture opens and draws |  |  |
-| PP-FIT-003 | PowerPoint Show `.ppsx` | Edit | Partial | Opens in the editor, not as a show; no way to save as `.ppsx` | 4 advanced | `PAR-57` |
-| PP-FIT-004 | Template `.potx`: open, make a deck, save as | Edit | Partial | A `.potx` opens as a deck; no "new deck from this template", no save as `.potx` | 4 advanced | `PAR-49` |
+| PP-FIT-003 | PowerPoint Show `.ppsx` | Edit | Partial | Opens in the editor, not as a show; Save As writes `.ppsx` (`FILE-01`) | 4 advanced | `PAR-57` |
+| PP-FIT-004 | Template `.potx`: open, make a deck, save as | Edit | Partial | A `.potx` opens as a deck and Save As writes `.potx` (`FILE-01`); no "new deck from this template" | 4 advanced | `PAR-49` |
 | PP-FIT-005 | Macro-enabled files `.pptm`, `.ppsm`, `.potm`: open and edit the deck | Edit | Partial | `.pptm`, `.ppsm`, `.potm` open and edit; the macro notice docs/96 specifies is not shown | 3 review and sharing | `PAR-47` |
 | PP-FIT-006 | PDF export | Edit | Works | File, Export, Download as PDF: every slide, searchable text |  |  |
 | PP-FIT-007 | XPS export | Refuse | Absent | Refused by decision | decided: not built |  |
@@ -552,9 +552,9 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-019 | Pack and Go `.ppz` | Refuse | Absent | Refused by decision | decided: not built |  |
 | PP-FIT-020 | Compatibility Checker | Edit | Absent | No Compatibility Checker | 4 advanced | `PAR-65` |
 | PP-FIT-021 | Compatibility mode for old files | Edit | Absent | No compatibility-mode banner or convert | 4 advanced | `PAR-65` |
-| PP-FIT-022 | Document properties (File, Info) | Edit | Disabled | File, Info, Properties is drawn disabled | 3 review and sharing | `PAR-45` |
-| PP-FIT-023 | AutoSave | Edit | Absent | No autosave: closing the tab loses edits, with no warning | 1 everyday editing | `PAR-01` |
-| PP-FIT-024 | AutoRecover | Edit | Absent | No recovery journal (`SAVE-01`) | 1 everyday editing | `PAR-01` |
+| PP-FIT-022 | Document properties (File, Info) | Edit | Works | File, Info shows Slides and Words and edits Title, Subject, Author, Tags, Categories, Comments, Company, Manager and custom properties, each one undo step, saved in `docProps` (`FILE-01`) |  |  |
+| PP-FIT-023 | AutoSave | Edit | Partial | The deck is drafted to this browser's IndexedDB after 5 s of quiet, at most 60 s apart and when the tab hides (`SAVE-01`); the file itself is never saved in place, as PowerPoint's AutoSave saves the cloud file | 1 everyday editing | `SAVE-01` |
+| PP-FIT-024 | AutoRecover | Edit | Works | On the next open a bar offers Restore, Download, Discard; the undo history is not recovered (`SAVE-09`) |  |  |
 | PP-FIT-025 | Open up to 2 GB | Edit | Partial | Opens in-browser; no measured limit (`CAP-01`) or stated maximum in the UI | 4 advanced | `PAR-65` |
 | PP-FIT-026 | VBA project: keep in the file | Retain | Works | VBA part kept byte-for-byte by the save path; not separately clicked |  |  |
 | PP-FIT-027 | Run a macro | Refuse | Absent | Refused by decision | decided: not built |  |
@@ -580,7 +580,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-047 | Slide size and orientation | Edit | Works | Design, Slide Size: Standard, Widescreen, Custom, with Maximize or Ensure Fit |  |  |
 | PP-FIT-048 | Mixed orientation in one deck | Refuse | Absent | Refused by decision | decided: not built |  |
 | PP-FIT-049 | Sections | Edit | Disabled | Section menu present, every item disabled; sections in a file are not shown in the thumbnail pane | 1 everyday editing | `PAR-09` |
-| PP-FIT-050 | Hide slide; reveal in show | Edit | Partial | Hide Slide works and the show skips it; the thumbnail is not struck through as PowerPoint's | 1 everyday editing | `PAR-16` |
+| PP-FIT-050 | Hide slide; reveal in show | Edit | Works | Hide Slide works and the show skips it; the thumbnail's number is struck through and its picture dimmed (`PAR-16`) |  |  |
 | PP-FIT-051 | Reuse slides, keep source formatting | Edit | Disabled | Reuse Slides is in New Slide's menu, disabled | 4 advanced | `PAR-66` |
 | PP-FIT-052 | Reuse slides from cloud storage | Host seam | Absent | Host seam, not built | decided: not built |  |
 | PP-FIT-053 | Slide update link metadata | Retain | Works | Kept in the file |  |  |
@@ -593,7 +593,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-060 | Reading view | Edit | Works | View, Reading View, from the ribbon and the status bar; Esc returns |  |  |
 | PP-FIT-061 | Slide Master, Handout Master, Notes Master views | Edit | Disabled | View, Slide Master disabled; no Handout or Notes Master | 4 advanced | `PAR-49` |
 | PP-FIT-062 | Grayscale and Pure Black and White view | Edit | Disabled | View, Grayscale disabled | 4 advanced | `PAR-62` |
-| PP-FIT-063 | Speaker notes pane | Edit | Partial | Notes pane shows the notes read-only: they cannot be typed or edited | 1 everyday editing | `PAR-02` |
+| PP-FIT-063 | Speaker notes pane | Edit | Works | Notes are typed under the slide, the notes slide created when there is none, saved and reopened (`UX-011`) |  |  |
 | PP-FIT-064 | Ruler | Edit | Disabled | View, Ruler disabled | 2 formatting | `PAR-31` |
 | PP-FIT-065 | Gridlines, snap to grid | Edit | Disabled | View, Gridlines disabled; no snap to grid | 2 formatting | `PAR-31` |
 | PP-FIT-066 | Drawing guides | Edit | Disabled | View, Guides disabled | 2 formatting | `PAR-31` |
@@ -611,7 +611,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-078 | Group, ungroup | Edit | Disabled | Group and Ungroup (Ctrl+G) disabled; the keys do nothing | 1 everyday editing | `PAR-03` |
 | PP-FIT-079 | Rotate, flip | Edit | Partial | Rotate by handle and in Size & Position; Rotate Right 90° and Flip Horizontal disabled; no Flip Vertical | 2 formatting | `PAR-24` |
 | PP-FIT-080 | Select individual objects | Edit | Partial | Click, Shift or Ctrl-click, marquee, Tab; cannot select a shape inside a group | 1 everyday editing | `PAR-03` |
-| PP-FIT-081 | Selection pane | Edit | Disabled | Selection Pane disabled | 2 formatting | `PAR-25` |
+| PP-FIT-081 | Selection pane | Edit | Works | Selection Pane lists the slide's shapes front first; rename, show and hide, Show All, Hide All, drag to reorder; saves the name, `@hidden` and the order (`UX-011`) |  |  |
 | PP-FIT-082 | Format Painter | Edit | Disabled | Format Painter disabled; no Ctrl+Shift+C/V | 2 formatting | `PAR-26` |
 | PP-FIT-083 | Eyedropper | Edit | Absent | No eyedropper in colour menus | 2 formatting | `PAR-27` |
 | PP-FIT-084 | Colours dialog, hex input | Edit | Partial | More Colors opens the browser's colour picker; no PowerPoint Colors dialog with hex, RGB, HSL and transparency | 2 formatting | `PAR-27` |
@@ -619,11 +619,11 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-086 | Sketched outline style | Edit | Absent | No sketched outline | 4 advanced | `PAR-58` |
 | PP-FIT-087 | Draw ruler | Edit | Absent | No Draw ruler | 4 advanced | `PAR-58` |
 | PP-FIT-088 | Maximum number of undos | Edit | Partial | Undo and Redo work across edits; depth not set or stated, no history list | 4 advanced | `PAR-61` |
-| PP-FIT-089 | Font, size, bold, italic and the rest | Edit | Partial | Font, size, grow, shrink, bold, italic, underline work; Strikethrough, Change Case and the Font dialog disabled; no character spacing | 2 formatting | `PAR-20` |
+| PP-FIT-089 | Font, size, bold, italic and the rest | Edit | Partial | Font, size, grow, shrink, bold, italic, underline and Change Case work; Strikethrough and Character Spacing set and save but are not drawn yet (`PAR-67`); the Font dialog is disabled | 2 formatting | `PAR-20` |
 | PP-FIT-090 | Text colour | Edit | Works | Font Color with theme, standard and More Colors |  |  |
 | PP-FIT-091 | Text highlighter | Edit | Works | Text Highlight Color, drawn (`UX-005`) |  |  |
-| PP-FIT-092 | Superscript, subscript | Edit | Disabled | Subscript and Superscript disabled | 2 formatting | `PAR-20` |
-| PP-FIT-093 | Clear formatting | Edit | Disabled | Clear All Formatting disabled; Ctrl+Space does nothing | 2 formatting | `PAR-20` |
+| PP-FIT-092 | Superscript, subscript | Edit | Partial | Superscript (Ctrl+Shift+=) and Subscript (Ctrl+=) toggle, pressed at the caret, saved as PowerPoint's `baseline` 30% and -25% and undone (`PAR-20`); the slide does not draw them raised or lowered yet (`PAR-67`) | 2 formatting | `PAR-67` |
+| PP-FIT-093 | Clear formatting | Edit | Works | Clear All Formatting (Ctrl+Space) removes every character property but language, links and proofing marks, one undo step (`PAR-20`) |  |  |
 | PP-FIT-094 | Alignment, spacing, indents | Edit | Partial | Left, centre, right, justify (and keys); Line Spacing, indents and the Paragraph dialog disabled | 2 formatting | `PAR-21` |
 | PP-FIT-095 | Bullets, numbering | Edit | Works | Bullets and Numbering galleries, Increase and Decrease List Level, Tab and Shift+Tab, Line Spacing (`PAR-06`) |  |  |
 | PP-FIT-096 | Text columns | Edit | Disabled | Columns disabled | 2 formatting | `PAR-21` |
@@ -781,7 +781,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-248 | Format background | Edit | Partial | Format Background: solid and gradient, apply to all; no picture or pattern fill, no hide background graphics | 2 formatting | `PAR-39` |
 | PP-FIT-249 | Header, footer, date, slide number | Edit | Disabled | Header & Footer disabled; stored footers draw | 2 formatting | `PAR-40` |
 | PP-FIT-250 | Handout and notes header and footer | Edit | Absent | No handout or notes headers | 4 advanced | `PAR-49` |
-| PP-FIT-251 | New presentation, template gallery | Edit | Partial | New gives a blank deck; no template gallery | 1 everyday editing | `PAR-18` |
+| PP-FIT-251 | New presentation, template gallery | Edit | Works | File, New offers Blank Presentation and six templates of our own, one for each built-in theme (Plain, Harbour, Meadow, Ember, Slate, Orchid), each tile in its theme's colours; a template opens as a new deck in its colours and fonts with nothing to undo (`PAR-18`). Opening a `.potx` as a template is `PAR-49` |  |  |
 | PP-FIT-252 | Designer (Design Ideas) | Host seam | Disabled | Designer disabled; host seam | decided: not built |  |
 | PP-FIT-253 | Designer metadata in decks | Retain | Works | Kept in the file |  |  |
 | PP-FIT-254 | Microsoft Designer image generation | Host seam | Absent | Host seam, not built | decided: not built |  |
@@ -793,7 +793,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-260 | Copilot: summarise, prepare to present | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
 | PP-FIT-261 | Copilot: Brand Kit, template check | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
 | PP-FIT-262 | Copilot: interactive slides | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
-| PP-FIT-263 | Print slides, handouts, notes | Edit | Disabled | File, Print disabled; Ctrl+P prints the browser page, not the slides | 3 review and sharing | `PAR-43` |
+| PP-FIT-263 | Print slides, handouts, notes | Edit | Partial | File, Print and Ctrl+P print every slide, one a page, through the browser's dialog (`FILE-01`); no handouts, notes pages, outline, grayscale or frame | 3 review and sharing | `PAR-43` |
 | PP-FIT-264 | Print Outline | Edit | Absent | No Print Outline | 3 review and sharing | `PAR-43` |
 | PP-FIT-265 | Print in colour, grayscale, pure black and white | Edit | Absent | No print colour options | 3 review and sharing | `PAR-43` |
 | PP-FIT-266 | Print: scale to fit, frame slides, print hidden | Edit | Absent | No print options | 3 review and sharing | `PAR-43` |
@@ -804,10 +804,10 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-271 | Share link, invite | Host seam | Partial | Share makes a room link to co-edit through this origin's server; no view-only or named people, needs the collab server running | 3 review and sharing | `PAR-48` |
 | PP-FIT-272 | Link to a slide | Edit | Absent | No link to a slide | 3 review and sharing | `PAR-48` |
 | PP-FIT-273 | Email as attachment | Host seam | Absent | Host seam, not built | decided: not built |  |
-| PP-FIT-274 | Comments: add, edit, delete, resolve | Edit | Disabled | New Comment, Delete, Previous, Next, Show Comments disabled; a deck's comments are not shown | 3 review and sharing | `PAR-42` |
+| PP-FIT-274 | Comments: add, edit, delete, resolve | Edit | Works | Comments pane: a deck's modern comments shown by slide, with markers; New, reply, resolve, delete thread, Previous and Next; saved and reopened (`UX-011`) |  |  |
 | PP-FIT-275 | Legacy comments in old decks | Edit | Absent | Legacy comments not shown | 3 review and sharing | `PAR-42` |
-| PP-FIT-276 | @mentions | Edit | Absent | No comments, so no mentions | 3 review and sharing | `PAR-42` |
-| PP-FIT-277 | Comment reactions | Edit | Absent | No comments | 3 review and sharing | `PAR-42` |
+| PP-FIT-276 | @mentions | Edit | Partial | An @mention is shown as a mention in the comment's text and sent nowhere: this build has no people to notify (`UX-011`) | 3 review and sharing | `PAR-42` |
+| PP-FIT-277 | Comment reactions | Edit | Absent | No reactions on comments | 3 review and sharing | `PAR-42` |
 | PP-FIT-278 | Real-time co-authoring, presence | Edit | Partial | Live co-editing with carets and roster when served by the collab server (`VS-09`); not available on a plain static host | 3 review and sharing | `PAR-48` |
 | PP-FIT-279 | Revision highlighting | Edit | Absent | No revision highlighting | 3 review and sharing | `PAR-48` |
 | PP-FIT-280 | Recent-activity notifications | Edit | Absent | No activity feed | 3 review and sharing | `PAR-48` |
@@ -837,7 +837,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-304 | Customise shortcuts | Edit | Absent | No shortcut customisation | 4 advanced | `PAR-61` |
 | PP-FIT-305 | Dark mode, Office theme | Edit | Works | Theme: Automatic, Light, Dark |  |  |
 | PP-FIT-306 | Touch mode | Edit | Absent | No touch mode | 4 advanced | `PAR-61` |
-| PP-FIT-307 | Recent files, pinned | Edit | Absent | No recent files list | 1 everyday editing | `PAR-19` |
+| PP-FIT-307 | Recent files, pinned | Edit | Works | File, Open and New list recent decks, kept in this browser's IndexedDB with their bytes: pin, unpin, remove, and open again from the list (`PAR-19`). Nothing uploaded |  |  |
 | PP-FIT-308 | Advanced options set | Edit | Absent | No Options page | 4 advanced | `PAR-61` |
 | PP-FIT-309 | Disable slide show hardware acceleration | Refuse | Absent | Refused by decision | decided: not built |  |
 | PP-FIT-310 | Responsive phone shell: view, present, light edit | Edit | Absent | No phone layout | 4 advanced | `PAR-63` |
@@ -854,8 +854,8 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-321 | Paste from other applications: rich text, HTML, images (Clipboard) | Edit | Works | HTML text keeps bold, italic, underline, size, colour and lists; a PNG or JPEG pastes as a picture (`PAR-11`). RTF-only sources paste as plain text |  |  |
 | PP-FIT-322 | Clipboard pane (Ribbon, Home launcher) | Edit | Disabled | Launcher disabled | 4 advanced | `PAR-61` |
 | PP-FIT-323 | Font and Paragraph dialogs (Launchers; right-click) | Edit | Disabled | Font… and Paragraph… disabled | 2 formatting | `PAR-20`, `PAR-21` |
-| PP-FIT-324 | Change Case (Ribbon, Home) | Edit | Disabled | Disabled | 2 formatting | `PAR-20` |
-| PP-FIT-325 | Character spacing (Ribbon, Home) | Edit | Absent | Not on the ribbon | 2 formatting | `PAR-20` |
+| PP-FIT-324 | Change Case (Ribbon, Home) | Edit | Works | Sentence case, lowercase, UPPERCASE, Capitalize Each Word and tOGGLE cASE, each run keeping its look, one undo step (`PAR-20`) |  |  |
+| PP-FIT-325 | Character spacing (Ribbon, Home) | Edit | Partial | Character Spacing on the Home tab: Very Tight, Tight, Normal, Loose, Very Loose, saved as `spc` (`PAR-20`); not drawn yet (`PAR-67`); no More Spacing box | 2 formatting | `PAR-67` |
 | PP-FIT-326 | Height and Width boxes on Shape and Picture Format, lock aspect ratio (Ribbon, contextual) | Edit | Disabled | Ribbon boxes disabled; Size & Position pane edits size and position | 2 formatting | `PAR-24` |
 | PP-FIT-327 | Change Shape (Ribbon, Shape Format; right-click) | Edit | Disabled | Disabled | 2 formatting | `PAR-24` |
 | PP-FIT-328 | Duplicate object (Ctrl+D) and arrow-key nudge (Keys) | Edit | Works | Ctrl+D, arrows, Ctrl+arrows |  |  |
@@ -866,11 +866,11 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-333 | Right-click menus for slide, thumbnail, shape and text (Menus) | Edit | Partial | Present; Layout, Reset Slide, Add Section, Edit Text, Edit Points, Group, Bring to Front, Link, Alt Text, Font…, Paragraph…, Numbering and New Comment disabled | 1 everyday editing | `PAR-07`, `PAR-14` |
 | PP-FIT-334 | Shift+F10 menu and Ctrl+F6 region cycling (Keys) | Edit | Works | Both registered |  |  |
 | PP-FIT-335 | Editing, Reviewing, Viewing modes (Tab row) | Edit | Disabled | Only Editing; the other two disabled | 3 review and sharing | `PAR-48` |
-| PP-FIT-336 | Rename the file from the title bar (Title bar) | Edit | Absent | The name is shown, not editable | 1 everyday editing | `PAR-17` |
+| PP-FIT-336 | Rename the file from the title bar (Title bar) | Edit | Works | Click the name in the title bar, type, Enter: Save, Save As and Export use it (`FILE-01`) |  |  |
 | PP-FIT-337 | Format Shape pane: Text Options (text box margins, wrap, autofit, vertical alignment) (Pane) | Edit | Disabled | Size & Properties edits size, position, rotation; Text Options and Text Box settings disabled | 2 formatting | `PAR-23` |
 | PP-FIT-338 | Help, Contact Support, Feedback (Ribbon, Help) | Edit | Disabled | Disabled; Keyboard Shortcuts and About work | 4 advanced | `PAR-61` |
-| PP-FIT-339 | Unsaved-changes warning on leaving the page (File operation) | Edit | Absent | Closing the tab with edits loses them without asking | 1 everyday editing | `PAR-01` |
-| PP-FIT-340 | Save As with a choice of format (`.pptx`, `.ppsx`, `.potx`, `.odp`, `.pdf`) (File) | Edit | Absent | Save writes the opened type; PDF and PNG are separate exports | 4 advanced | `PAR-57` |
+| PP-FIT-339 | Unsaved-changes warning on leaving the page (File operation) | Edit | Works | Closing or reloading the tab with unsaved edits asks first, through the browser's own leave prompt, as OpenCalc (`PAR-01`); nothing is asked for an unedited deck |  |  |
+| PP-FIT-340 | Save As with a choice of format (`.pptx`, `.ppsx`, `.potx`, `.odp`, `.pdf`) (File) | Edit | Partial | Save As (F12) offers PowerPoint Presentation, Template and Show (`FILE-01`); no `.odp`, and PDF is under Export | 4 advanced | `PAR-57` |
 | PP-FIT-341 | Text selection by double-click (word) and triple-click (paragraph), Ctrl+arrow by word, Ctrl+Home and End (Text editing) | Edit | Works | Double and triple click, Ctrl+arrows by word and paragraph, Ctrl+Home and End, Shift to extend (`PAR-12`) |  |  |
 | PP-FIT-342 | Table Layout: cell size, alignment in cell, cell margins, distribute rows and columns, text direction (Ribbon, contextual) | Edit | Absent | Only insert and delete rows and columns | 2 formatting | `PAR-34` |
 | PP-FIT-343 | Chart Design and Format: chart styles, add element, quick layout, change chart type, select data (Ribbon, contextual) | Edit | Absent | Only Edit Data | 2 formatting | `PAR-35` |
