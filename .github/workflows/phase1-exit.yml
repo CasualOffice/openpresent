@@ -158,4 +158,5 @@ jobs:
         run: echo "p1-gates ${{ needs.p1-gates.result }}"
       - name: Phase 1's closing list
         if: always()
-        run: python3 tools/phase1-exit.py --quick
+        # Gates read from p1-gates' result; owner sign-off alone prints NOT MET without failing.
+        run: python3 tools/phase1-exit.py --quick --gates-result "${{ needs.p1-gates.result }}" --sign-off-not-failing
