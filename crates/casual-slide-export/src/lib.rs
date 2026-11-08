@@ -6,6 +6,7 @@ pub mod color;
 pub mod comment;
 pub mod custom_data;
 mod d3;
+pub mod design;
 pub mod diagram;
 mod drawing;
 mod effect;

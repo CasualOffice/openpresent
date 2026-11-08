@@ -14,7 +14,8 @@
 // answer the slide count, since they may add or remove slides.
 // Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name.
 // The slide show (`VS-07`): `{ op: "plan" }`, each slide's hidden flag and transition,
-// and `{ op: "notes", index }`, a slide's speaker notes as text. Out: `{ id, ok: true, ... }` or
+// and `{ op: "notes", index }`, a slide's speaker notes as text. Design (`VS-12`):
+// `{ op: "design", fn, args }` and `{ op: "themes" }`. Out: `{ id, ok: true, ... }` or
 // `{ id, ok: false, error }`, where `error` is the engine's message with its code.
 // Nothing here fetches anything but the engine itself, from this origin.
 
@@ -24,9 +25,14 @@ import init, {
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   show_plan, slide_transition, slide_notes,
+  design_themes, design_apply_theme, design_slide_size, design_background,
   open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
 } from "./pkg/casual_slide_wasm.js";
+
+// Design (`VS-12`): `{ id, op: "design", fn, args }` calls one of these by name and
+// answers `{ value, undo, size }`; `{ op: "themes" }` lists the built-in themes.
+const DESIGN = { design_apply_theme, design_slide_size, design_background };
 
 // Text editing (`VS-05`): `{ id, op: "text", fn, args }` calls one of these by name and
 // answers `{ value, undo }`, `undo` as for the other edits.
@@ -78,6 +84,17 @@ self.onmessage = async (event) => {
     } else if (msg.op === "delete") {
       delete_shape(msg.index, msg.node);
       self.postMessage({ id, ok: true, undo: Array.from(undo_state()) });
+    } else if (msg.op === "undo" || msg.op === "redo") {
+      const slide = msg.op === "undo" ? undo() : redo();
+      // -2: every slide changed, and perhaps the size with them (`VS-12`).
+      self.postMessage({ id, ok: true, slide, undo: Array.from(undo_state()), size: Array.from(slide_size()) });
+    } else if (msg.op === "design") {
+      const fn = Object.hasOwn(DESIGN, msg.fn) ? DESIGN[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      const value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()), size: Array.from(slide_size()) });
+    } else if (msg.op === "themes") {
+      self.postMessage({ id, ok: true, themes: design_themes() });
     } else if (msg.op === "text") {
       const fn = Object.hasOwn(TEXT, msg.fn) ? TEXT[msg.fn] : null;
       if (!fn) throw new Error("unknown request");
@@ -106,7 +123,8 @@ self.onmessage = async (event) => {
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
     } else if (msg.op === "undo" || msg.op === "redo") {
       const slide = msg.op === "undo" ? undo() : redo();
-      self.postMessage({ id, ok: true, slide, count: slide_count(), undo: Array.from(undo_state()) });
+      // -2: every slide changed, and perhaps the size with them (`VS-12`).
+      self.postMessage({ id, ok: true, slide, count: slide_count(), undo: Array.from(undo_state()), size: Array.from(slide_size()) });
     } else if (msg.op === "report") {
       self.postMessage({ id, ok: true, lines: slide_report(msg.index) });
     } else {

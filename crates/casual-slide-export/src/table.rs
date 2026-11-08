@@ -5,9 +5,12 @@
 //! 1F's. So `a16:rowId`, `a16:colId`, every `extLst` and whatever else the model does not
 //! see stay where they are, and an unedited cell is not looked at.
 //!
-//! Adding or removing a table, a row, a cell or a grid column is refused as
-//! `CS-EXP-0009`, and nothing is saved: those are edit operations, which change ids and
-//! merges together, and belong to the writer tier and Phase 6.
+//! Rows, a row's cells and grid columns may also be added and removed (`VS-11`): what
+//! the two lists share at their ends is matched in place, and only the middle that
+//! differs is patched, removed or inserted, so a row inserted in the middle leaves every
+//! other row, with its `a16:rowId`, where it was. A new row or cell is written from the
+//! model through the same patches an edited one takes. Adding or removing the table
+//! itself, or the grid, is refused as `CS-EXP-0009`, and nothing is saved.
 
 use casual_slide_import::properties::{Elem, Findings, ImportLimits, ns};
 use casual_slide_import::slide::SlideLimits;
@@ -392,27 +395,92 @@ fn tr(r: &TableRow) -> Node {
 }
 
 fn patch_tr(w: &mut Writer<'_>, el: &Elem, b: &TableRow, a: &TableRow) -> Result {
-    if b.cells.len() != a.cells.len() {
-        return Err(unsupported(w, "a cell added to or removed from a row"));
-    }
     patch(w, el, Some(&tr(b)), &tr(a))?;
     if b.cells == a.cells {
         return Ok(());
     }
     let cells = cells_of(w, el, b.cells.len())?;
-    for ((element, before), after) in cells.iter().zip(&b.cells).zip(&a.cells) {
+    let blank = TableCell::default();
+    sync_list(
+        w,
+        el,
+        &cells,
+        &b.cells,
+        &a.cells,
+        "tc",
+        |w, element, before, after| patch_cell(w, element, before.unwrap_or(&blank), after),
+    )
+}
+
+/// How many items two lists share at their front, and then at their back.
+fn common_ends<T: PartialEq>(b: &[T], a: &[T]) -> (usize, usize) {
+    let front = b.iter().zip(a).take_while(|(x, y)| x == y).count();
+    let back = b
+        .iter()
+        .skip(front)
+        .rev()
+        .zip(a.iter().skip(front).rev())
+        .take_while(|(x, y)| x == y)
+        .count();
+    (front, back)
+}
+
+/// Bring the elements standing for `b` to `a`: the shared ends stay, the differing
+/// middle is patched pairwise, and the rest of it removed or inserted. A new element is
+/// patched from nothing, so it is written by the path an edit takes.
+fn sync_list<T: PartialEq>(
+    w: &mut Writer<'_>,
+    parent: &Elem,
+    elements: &[Elem],
+    b: &[T],
+    a: &[T],
+    local: &str,
+    mut each: impl FnMut(&mut Writer<'_>, &Elem, Option<&T>, &T) -> Result,
+) -> Result {
+    let (front, back) = common_ends(b, a);
+    let b_end = b.len().saturating_sub(back).max(front);
+    let a_end = a.len().saturating_sub(back).max(front);
+    let (b_mid, a_mid) = (
+        b.get(front..b_end).unwrap_or(&[]),
+        a.get(front..a_end).unwrap_or(&[]),
+    );
+    let mid_elements = elements.get(front..b_end).ok_or_else(|| malformed(w))?;
+    for ((element, before), after) in mid_elements.iter().zip(b_mid).zip(a_mid) {
         if before != after {
-            patch_cell(w, element, before, after)?;
+            each(w, element, Some(before), after)?;
         }
+    }
+    let paired = b_mid.len().min(a_mid.len());
+    for element in mid_elements.iter().skip(paired) {
+        w.tree.remove_child(parent.id, element.id);
+        w.changes += 1;
+    }
+    // New ones go before the first element of the shared back, else after the last of
+    // their kind, which keeps any `extLst` after them.
+    let anchor = match elements.get(b_end) {
+        Some(e) => Some(e.id),
+        None => {
+            let children = parent.children(w.tree, w.part)?;
+            let last = children.iter().rposition(|c| c.is(ns::DML, local));
+            match last {
+                Some(i) => children.get(i.saturating_add(1)).map(|c| c.id),
+                None => children
+                    .iter()
+                    .find(|c| c.is(ns::DML, "extLst"))
+                    .map(|c| c.id),
+            }
+        }
+    };
+    for after in a_mid.iter().skip(paired) {
+        let element = w.new_child(parent, ns::DML, "a", local)?;
+        w.tree.insert_child(parent.id, anchor, element.id);
+        each(w, &element, None, after)?;
     }
     Ok(())
 }
 
 // spec-audit: a:<tbl>
 fn patch_table(w: &mut Writer<'_>, el: &Elem, b: &Table, a: &Table) -> Result {
-    if b.rows.len() != a.rows.len() {
-        return Err(unsupported(w, "a row added to or removed from a table"));
-    }
     sync_ordered(
         w,
         el,
@@ -432,24 +500,47 @@ fn patch_table(w: &mut Writer<'_>, el: &Elem, b: &Table, a: &Table) -> Result {
             return Err(unsupported(w, "a table's grid added or removed"));
         };
         let (before, after) = (&before.grid_col, &after.grid_col);
-        if before.len() != after.len() {
-            return Err(unsupported(w, "a column added to or removed from a grid"));
-        }
         let grid = el
             .first_child(w.tree, w.part, ns::DML, "tblGrid")?
             .ok_or_else(|| malformed(w))?;
         let columns = counted(w, &grid, "gridCol", before.len())?;
-        for ((col, x), y) in columns.iter().zip(before).zip(after) {
-            patch(w, col, Some(&grid_col(x)), &grid_col(y))?;
-        }
+        sync_list(
+            w,
+            &grid,
+            &columns,
+            before,
+            after,
+            "gridCol",
+            |w, col, x, y| {
+                let x = x.map(grid_col);
+                patch(w, col, x.as_ref(), &grid_col(y))
+            },
+        )?;
     }
     if b.rows != a.rows {
         let rows = counted(w, el, "tr", b.rows.len())?;
-        for ((element, before), after) in rows.iter().zip(&b.rows).zip(&a.rows) {
-            if before != after {
-                patch_tr(w, element, before, after)?;
-            }
-        }
+        sync_list(
+            w,
+            el,
+            &rows,
+            &b.rows,
+            &a.rows,
+            "tr",
+            |w, element, before, after| {
+                match before {
+                    Some(before) => patch_tr(w, element, before, after),
+                    None => {
+                        // A new row: its attributes, then its cells into an empty row.
+                        patch(w, element, None, &tr(after))?;
+                        let empty = TableRow {
+                            height: after.height.clone(),
+                            cells: Vec::new(),
+                        };
+                        patch_tr(w, element, &empty, after)
+                    }
+                }
+            },
+        )?;
     }
     Ok(())
 }

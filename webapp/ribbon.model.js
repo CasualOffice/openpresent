@@ -33,6 +33,7 @@ const G = (id, label, tiles) => ({ kind: "gallery", id, label, tiles });
 const R = (rows) => ({ kind: "rows", rows });
 
 const NEW_SLIDE = ["home.new-slide", "home.new-slide-layout", "home.duplicate-slide", "home.delete-slide", "home.reuse-slides"];
+const SLIDE_SIZE = ["design.slide-size.standard", "design.slide-size.widescreen", "design.slide-size.custom"];
 const ZOOM = ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", "view.zoom.150", "view.zoom.200"];
 const SECTION = ["slide.section.add", "slide.section.rename", "slide.section.remove", "slide.section.collapse-all", "slide.section.expand-all"];
 const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.rotate-right", "arrange.flip-horizontal", "arrange.selection-pane"];
@@ -128,7 +129,7 @@ export const TABS = [
     { label: "Themes", fold: 3, icon: "style_guide", items: [G("design.themes", "Themes", THEMES)] },
     { label: "Variants", fold: 2, icon: "color_background", items: [G("design.variants", "Variants", THEMES.slice(0, 4))] },
     { label: "Customize", fold: 4, icon: "slide_size", items: [
-      L("design.slide-size", "slide_size", "Slide Size", { menu: ["design.slide-size"] }),
+      L("design.slide-size", "slide_size", "Slide Size", { menu: SLIDE_SIZE }),
       L("design.format-background", "color_background", "Format Background"),
     ] },
     { label: "Designer", fold: 1, icon: "design_ideas", items: [L("design.designer", "design_ideas", "Designer")] },
