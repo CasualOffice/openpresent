@@ -253,7 +253,8 @@ export function registerDesignCommands() {
     },
   });
   register("design.variants", { label: "Variants", enabled: can, run: variantsDialog });
-  register("design.slide-size", { label: "Slide Size", enabled: can, run: () => {} });
+  // The button drops the menu; run from search, it opens Custom Slide Size (`UX-006`).
+  register("design.slide-size", { label: "Slide Size", enabled: can, run: customSizeDialog });
   register("design.slide-size.standard", { label: "Standard (4:3)", enabled: can, checked: () => !!state.deck && state.deck.width === SIZES.standard[0] && state.deck.height === SIZES.standard[1], run: () => fitDialog(...SIZES.standard, "Standard (4:3)") });
   register("design.slide-size.widescreen", { label: "Widescreen (16:9)", enabled: can, checked: () => !!state.deck && state.deck.width === SIZES.widescreen[0] && state.deck.height === SIZES.widescreen[1], run: () => fitDialog(...SIZES.widescreen, "Widescreen (16:9)") });
   register("design.slide-size.custom", { label: "Custom Slide Size…", enabled: can, run: customSizeDialog });

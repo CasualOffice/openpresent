@@ -33,7 +33,7 @@ import * as objects from "./editor.objects.js";
 import * as picture from "./editor.picture.js";
 import * as home from "./editor.home.js";
 import * as clipboard from "./editor.clipboard.js";
-import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
+import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog, showModal, closeModal } from "./editor.dialogs.js";
 import * as presence from "./editor.presence.js";
 import * as views from "./editor.views.js";
 import * as arrange from "./editor.arrange.js";
@@ -295,7 +295,21 @@ function registerCommands() {
   // Normal, Outline View, Slide Sorter and Notes Page are `editor.views.js`'s (`UX-006`).
   register("view.reading", { label: "Reading View", enabled: hasDeck, checked: () => state.reading, run: () => { const on = !state.reading; views.setView("normal"); state.reading = on; changed(); slides.relayout(); } });
   register("view.notes", { label: "Notes", checked: () => state.notes, run: () => { state.notes = !state.notes; changed(); slides.relayout(); } });
-  register("view.zoom", { label: "Zoom", enabled: hasDeck, run: () => {} });
+  // The button drops the menu; run from search, it opens the same choices as a dialog
+  // (`UX-006`: no command runs nothing).
+  register("view.zoom", { label: "Zoom", enabled: hasDeck, run: () => showModal("Zoom", (body) => {
+    const grid = document.createElement("div");
+    grid.className = "op-layouts";
+    for (const id of ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", "view.zoom.150", "view.zoom.200"]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "op-btn op-layout";
+      b.textContent = allCommands().find((c) => c.id === id)?.label || id;
+      b.addEventListener("click", () => { closeModal(); run(id); });
+      grid.appendChild(b);
+    }
+    body.appendChild(grid);
+  }) });
   register("view.zoom.fit", { label: "Fit to Window", enabled: hasDeck, checked: () => state.zoom === "fit", run: () => slides.setZoom("fit") });
   for (const z of [50, 75, 100, 150, 200]) {
     register(`view.zoom.${z}`, { label: `${z}%`, enabled: hasDeck, checked: () => state.zoom === z, run: () => slides.setZoom(z) });

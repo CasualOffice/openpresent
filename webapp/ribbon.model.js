@@ -69,7 +69,7 @@ export const TABS = [
     ] },
     { label: "Slides", fold: 7, icon: "slide_add", items: [
       L("home.new-slide", "slide_add", "New Slide (Ctrl+M)", { menu: NEW_SLIDE }),
-      R([[S("home.layout", "slide_layout", "Layout", { menu: ["home.new-slide-layout"] })], [S("home.reset", "arrow_reset", "Reset")], [S("home.section", "slide_multiple", "Section", { menu: SECTION })]]),
+      R([[S("home.layout", "slide_layout", "Layout")], [S("home.reset", "arrow_reset", "Reset")], [S("home.section", "slide_multiple", "Section", { menu: SECTION })]]),
     ] },
     { label: "Font", fold: 9, icon: "text_font", launcher: "font.dialog", items: [
       R([
@@ -334,8 +334,8 @@ export const FILE_RAIL = [
 /// a separator. Run through the registry, so a verb this build lacks shows
 /// disabled, as on the ribbon.
 export const CONTEXT_MENUS = {
-  slide: ["edit.cut", "edit.copy", "edit.paste", null, "home.new-slide-layout", "home.reset", null, "design.format-background", null, "review.new-comment"],
-  thumb: ["edit.cut", "edit.copy", "edit.paste", null, "home.new-slide", "home.duplicate-slide", "home.delete-slide", null, "slide.section.add", null, "home.new-slide-layout", "home.reset", "design.format-background", null, "slideshow.hide-slide", null, "review.new-comment"],
+  slide: ["edit.cut", "edit.copy", "edit.paste", null, "home.layout", "home.reset", null, "design.format-background", null, "review.new-comment"],
+  thumb: ["edit.cut", "edit.copy", "edit.paste", null, "home.new-slide", "home.duplicate-slide", "home.delete-slide", null, "slide.section.add", null, "home.layout", "home.reset", "design.format-background", null, "slideshow.hide-slide", null, "review.new-comment"],
   shape: ["edit.cut", "edit.copy", "edit.paste", null, "shape.edit-text", "shape.edit-points", null, "arrange.group", "arrange.bring-to-front", "arrange.send-to-back", null, "insert.link", "shape.alt-text", "format.size-pane", "format.shape-pane", null, "shape.delete", null, "review.new-comment"],
   text: ["edit.cut", "edit.copy", "edit.paste", null, "font.dialog", "para.dialog", "para.bullets", "para.numbering", null, "insert.link", "format.shape-pane", null, "review.new-comment"],
 };
@@ -400,7 +400,7 @@ export const LABELS = {
   "format.text-pane": "Format Text Effects…",
   "format.size-pane": "Size and Position…",
   "home.reset": "Reset Slide",
-  "home.new-slide-layout": "Layout",
+  "home.new-slide-layout": "New Slide from Layout…",
   "picture.reset": "Reset Picture",
   "picture.reset-size": "Reset Picture & Size",
 };

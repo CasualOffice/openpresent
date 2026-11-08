@@ -56,6 +56,52 @@ labels them. `L` large, `S` small labelled, `s` small icon-only, `C` combo, `▾
 **Simplified ribbon** ([D] S10, S11): one row, the same tabs, each group's most used commands as icon
 buttons, the rest behind the group's "…" overflow; galleries become dropdowns.
 
+## Command audit, 2026-11-09 (`UX-006`)
+
+Owner, 2026-11-09: "many features on the toolbar are disabled or not implemented, like transitions". Every command
+id the ribbon model names was read from the running editor's registry (`commands.js`) in a browser on this
+build: **works** is a registered command that runs; **disabled** is drawn disabled with the reason "not available
+yet", and each such group has a tracker row; **menu** is a button that only drops its menu, live while anything in
+it is. **Faked**, a control that looks live and changes nothing, is none: the gallery tiles that said "not
+available" (Morph, Reveal, Float In…) now apply or were removed, Home > Layout no longer adds a new slide under
+that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from search open their choices.
+
+| Tab / group | Works | Disabled | Row |
+| --- | --- | --- | --- |
+| Home / Undo | Undo, Redo | | |
+| Home / Clipboard | Paste, Cut, Copy, Duplicate | Keep Text Only, Format Painter, Clipboard launcher | `RIB-03` |
+| Home / Slides | New Slide (and its menu), Reset | Layout (on an existing slide), Section and its five, Reuse Slides | `RIB-02` |
+| Home / Font | Font, Size, Grow, Shrink, Bold, Italic, Underline, Highlight, Font Color | Clear, Strikethrough, Subscript, Superscript, Change Case (4), Font… | `RIB-01` |
+| Home / Paragraph | Bullets, the four alignments | Numbering, list levels, Line Spacing, Columns, Text Direction, Align Text, Paragraph… | `RIB-01` |
+| Home / Drawing | Shapes, Quick Styles, Fill, Outline, Format Shape pane; Arrange: Bring to Front, Forward, Send Backward, to Back, Align (6), Distribute (2), Rotate Right, Left, Flip Vertical, Horizontal | Group, Ungroup, Selection Pane, Shape Effects | `RIB-03` |
+| Home / Editing | Find, Replace, Select All | Select menu's Selection Pane | `RIB-03` |
+| Home / Voice, Designer | | Dictate, Designer | `RIB-09` |
+| Insert / Slides, Tables, Images | New Slide, Table, Pictures | Reuse Slides | `RIB-02` |
+| Insert / Illustrations | Shapes, Chart (4) | Icons, 3D Models, SmartArt | `RIB-05` |
+| Insert / Camera, Forms, Add-ins, Media | | Cameo, Forms, Add-ins, Video, Audio | `RIB-05` |
+| Insert / Links | | Link, Action | `RIB-04` |
+| Insert / Comments | | Comment (the comments session's) | `COL` rows |
+| Insert / Text | Text Box | Header & Footer, WordArt | `RIB-04` |
+| Insert / Symbols | Symbol | Equation | `RIB-05` |
+| Draw / all | | Select, Lasso, Eraser, Pen, Highlighter, Ink to Shape, Ink to Math, Ink Replay | `RIB-06` |
+| Design / all | Themes, Variants, Slide Size (3), Format Background | Designer | `RIB-09` |
+| Transitions / all | Preview; gallery None, Fade, Push, Wipe, Split, Reveal, Cut, Uncover, Cover, Zoom; Effect Options (18, the effect's own shown); Duration; Apply To All; On Mouse Click; After | | |
+| Animations / all but Trigger | Preview; gallery and Add Animation (12 effects); Effect Options (8); Animation Pane; Animation Painter; Start; Duration; Delay; Move Earlier, Later | Trigger | `RIB-07` |
+| Slide Show / Start | From Beginning, From Current, Presenter View | | |
+| Slide Show / Set Up, Captions | Hide Slide | Set Up Slide Show, Rehearse with Coach, Always Use Subtitles, Subtitle Settings | `RIB-07` |
+| Review / all | | Spelling, Thesaurus, Check Accessibility, Translate, Language; Comments (the comments session's) | `RIB-08` |
+| View / Presentation Views | Normal, Outline View, Slide Sorter, Notes Page, Reading View | | |
+| View / Master, Show, Color | Notes | Slide Master, Ruler, Gridlines, Guides, Grayscale | `RIB-09` |
+| View / Zoom | Zoom (6), Fit to Window | | |
+| Help | Keyboard Shortcuts, About | Help, Contact Support, Feedback | `RIB-09` |
+| Shape Format | Shapes, Text Box, Shape Styles, Fill, Outline, Format Text pane, Arrange as Home, Size launcher | Edit Shape, Edit Points, Change Shape, Text Fill, Text Outline, Text Effects, Shape Effects, Alt Text, Group, Selection Pane, Height, Width | `RIB-10` |
+| Picture Format, Table Design, Layout, Chart Design | Reset Picture (2), Picture Styles, Crop, Arrange, Table Styles, rows and columns (6), Edit Text, Edit Data | Alt Text, Height, Width | `RIB-10` |
+| File | New, Open, render report, Save, Save a Copy, PDF, PNG, Share | Properties, Version History, Print (the File session's) | File rows |
+| Right-click menus | as the ribbon | Layout, Add Section; Edit Text, Edit Points, Group, Link, Alt Text; Font…, Paragraph…, Numbering; New Comment | as above |
+
+Menu buttons (Arrange, Align, Rotate, Group, Section, Select, Change Case) are drawn live while any command in their
+menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoint and wait with it (`RIB-04`).
+
 ## File (Backstage)
 
 | Page | Contents | Ev. |
