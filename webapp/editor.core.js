@@ -27,6 +27,7 @@ import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
 import { registerDesignCommands } from "./editor.design.js";
 import * as build from "./editor.build.js";
+import * as animate from "./editor.animate.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -117,6 +118,7 @@ export function changed() {
     b.disabled = !c || !c.enabled();
     if (c?.checked) b.setAttribute("aria-pressed", c.checked() ? "true" : "false");
   }
+  document.dispatchEvent(new CustomEvent("op-changed"));
   queueSync();
 }
 
@@ -384,6 +386,7 @@ async function boot() {
   } catch { /* private mode */ }
   selection.init();
   build.init();
+  animate.init();
   registerCommands();
   initDialogs(request);
   slides.init();

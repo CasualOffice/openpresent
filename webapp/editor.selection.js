@@ -413,6 +413,8 @@ function select(node) {
 }
 
 export function hasSelection() { return !!shape(); }
+/// The selected shape's node, or `null` (`VS-10`'s Animations tab acts on it).
+export function selectedNode() { return shape()?.node ?? null; }
 
 /// Clear the selection: a press off the slide.
 export function deselect() { if (selected != null) select(null); }

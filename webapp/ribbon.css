@@ -249,6 +249,7 @@
   font: inherit; font-size: 11px; cursor: pointer;
 }
 .rb-gal-tile:hover:not(:disabled) { border-color: var(--op-accent-color); }
+.rb-gal-tile[aria-selected="true"] { border-color: var(--op-accent-color); background: var(--op-accent-soft); }
 .rb-gal-tile:disabled { cursor: default; color: var(--op-muted-text-color); }
 .rb-gal-tile:disabled .rb-ico { opacity: .55; }
 .rb-gal-name { white-space: nowrap; }
