@@ -1,6 +1,6 @@
 # 96 — PowerPoint fit-gap: features
 
-**Status: analysis, 2026-11-07. Task `FIT-01`.** Owner instruction 12 in [03](03-OWNER-INSTRUCTIONS.md): the goal is a clone. One row per PowerPoint feature, on desktop and web, says what we do about it. Nothing here is built by being listed: no row claims anything works today, and the "Supported", "Retained" and "Matches PowerPoint" claims keep the tests set in [06](06-ROADMAP-AND-DELIVERY.md).
+**Status: analysis, 2026-11-07. Task `FIT-01`.** **What works today is in [§Parity today](#parity-today), audited 2026-11-09 (`FIT-02`).** Owner instruction 12 in [03](03-OWNER-INSTRUCTIONS.md): the goal is a clone. One row per PowerPoint feature, on desktop and web, says what we do about it. Nothing here is built by being listed: no row claims anything works today, and the "Supported", "Retained" and "Matches PowerPoint" claims keep the tests set in [06](06-ROADMAP-AND-DELIVERY.md).
 
 **What this page is not.** Commands, ribbon placement and keys are for docs/49, and detailed behaviour for docs/50, both being written separately. This page stops at whether a feature exists for us and why. It is also not the file-format inventory: [spec/](spec/README.md) holds 8730 rows on what a deck can contain, and a file construct with no user-facing verb appears here only when a decision hangs on it.
 
@@ -496,6 +496,391 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-316 | Insert phone pictures, camera | W via Android; iOS | Edit | 10 (`MOB-01`) | File input and camera on phone. The Windows-to-Android hand-off is Microsoft's own and is not copied. | Documented: [New in 2024](https://support.microsoft.com/en-us/office/what-s-new-in-powerpoint-2024-for-windows-and-mac-4330d63f-ffbb-470d-bbc2-a5f340317fbc), [Pictures from a mobile device](https://support.microsoft.com/en-us/office/foundations-experiences/add-pictures-to-a-file-by-using-your-mobile-device) |
 | PP-FIT-317 | IRM on mobile | Android | Host seam | 10 (`ENT-06`) | Same seam as desktop. | Documented: [Android phones help](https://support.microsoft.com/en-us/office/powerpoint-for-android-phones-help-f6714e00-0ee2-48d1-bd3d-e1997565861f) |
 | PP-FIT-318 | Copilot on mobile | partly | Host seam | 10 (`DEC-05`) | Same seam. Microsoft's page contradicts itself on phones. | Documented: [Copilot on mobile](https://support.microsoft.com/en-us/office/copilot-in-powerpoint-for-mobile-devices-7b3ce1ab-cfe4-47e8-a157-cecadbf0fefb) |
+
+## Parity today
+
+**Status: audit, 2026-11-09. Task `FIT-02`.** The owner, 2026-11-08: many PowerPoint features are missing, and every gap must be found. This section marks each of the 318 rows above, and 34 more that the ribbon, menus, panes, keys and file operations have and the rows above miss (`PP-FIT-319` to `352`), with what the editor does **today**, on `main` at `7539ea5`. The rows above stay the plan; this table is the state.
+
+**How it was checked.** The live editor's code was read (`webapp/`, `crates/casual-slide-wasm`), the engine built with `wasm-pack`, and the editor served on `127.0.0.1` and driven in Chrome: the command registry read at run time (242 commands, 120 of them registered disabled with "Not available yet in this build"), real decks opened (`sdk-strict-animclr`, `pptxts-modern-comments`), shapes inserted and the Arrange menu opened with a multiple selection. A Works mark rests on the registry and code, and the decisive verbs were clicked; nothing was compared against a running PowerPoint (`UX-002`, `PV-01`).
+
+| Today | Meaning |
+| --- | --- |
+| **Works** | The user can do it, end to end, and it saves |
+| **Partial** | Some of it works; the row says what is missing |
+| **Disabled** | Its button or menu item is present and greyed out, saying it is not available yet (owner instruction 46) |
+| **Faked** | Looks enabled and does nothing, or pretends. **None found:** gallery tiles this build cannot write (Morph, Reveal, Float In…) say so in the status bar and change nothing |
+| **Absent** | No control at all |
+
+**Rank** is the order a PowerPoint user meets the gap: 1 everyday editing, 2 formatting, 3 review and sharing, 4 advanced. "Decided: not built" marks Refuse and Host seam rows, which stay as the table above decides them. **Backlog** names the [14](14-EXECUTION-TRACKER.md) row that closes it; `PAR-01` to `PAR-66` are ranked in the same order.
+
+### Counts
+
+| | Works | Partial | Disabled | Faked | Absent | Total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| The 318 rows above | 30 (9.4%) | 48 (15.1%) | 58 (18.2%) | 0 | 182 (57.2%) | 318 |
+| With the 34 shell rows | 35 (9.9%) | 52 (14.8%) | 68 (19.3%) | 0 | 197 (56.0%) | 352 |
+| Of those, the 280 we build (Edit, Render, Retain) | 35 (12.5%) | 51 (18.2%) | 57 (20.4%) | 0 | 137 (48.9%) | 280 |
+
+**Plainly: of the 280 features we mean to build, 35 work (12.5%), 51 work in part (18.2%), and 194 are missing (69.3%),** whether drawn disabled or not there at all. Of the 35 that work, 11 are file facts kept on save rather than verbs a user runs.
+
+**Largest gaps a PowerPoint user hits first:** edits lost on closing the tab (no autosave or warning); speaker notes cannot be typed; no Group; no Find or Replace; no links; no numbering or list levels; no change of layout; no Slide Sorter; no sections; slides cannot be copied; nothing but plain text pastes from other apps; no z-order; no comments; no print; no alt text.
+
+### The table
+
+| ID | Feature | Disposition | Today | What is missing | Rank | Backlog |
+| --- | --- | --- | --- | --- | --- | --- |
+| PP-FIT-001 | Open and save `.pptx` | Edit | Works | Opens in the browser by picker or drop; Save and Save a Copy download it, byte-identical when unedited (`VS-04`); edits patch named nodes. No save in place: every save is a download |  |  |
+| PP-FIT-002 | Strict Open XML `.pptx` | Edit | Works | Opens normalised; the Strict fixture opens and draws |  |  |
+| PP-FIT-003 | PowerPoint Show `.ppsx` | Edit | Partial | Opens in the editor, not as a show; no way to save as `.ppsx` | 4 advanced | `PAR-57` |
+| PP-FIT-004 | Template `.potx`: open, make a deck, save as | Edit | Partial | A `.potx` opens as a deck; no "new deck from this template", no save as `.potx` | 4 advanced | `PAR-49` |
+| PP-FIT-005 | Macro-enabled files `.pptm`, `.ppsm`, `.potm`: open and edit the deck | Edit | Partial | `.pptm`, `.ppsm`, `.potm` open and edit; the macro notice docs/96 specifies is not shown | 3 review and sharing | `PAR-47` |
+| PP-FIT-006 | PDF export | Edit | Works | File, Export, Download as PDF: every slide, searchable text |  |  |
+| PP-FIT-007 | XPS export | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-008 | Office Theme `.thmx`: save and apply | Edit | Absent | No `.thmx` save or browse-for-theme | 4 advanced | `PAR-49` |
+| PP-FIT-009 | PowerPoint XML Presentation `.xml` | Edit | Absent | Flat `.xml` not accepted by the picker | 4 advanced | `PAR-57` |
+| PP-FIT-010 | Slide as PNG, JPEG, GIF, TIFF, BMP | Edit | Partial | PNG of the current slide only (1920 px); no JPEG, GIF, TIFF, BMP, no all-slides export | 4 advanced | `PAR-57` |
+| PP-FIT-011 | Slide as WMF or EMF | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-012 | Picture Presentation (each slide a picture) | Edit | Absent | No picture-presentation export | 4 advanced | `PAR-57` |
+| PP-FIT-013 | Outline as RTF: save | Edit | Absent | No outline RTF export | 4 advanced | `PAR-57` |
+| PP-FIT-014 | OpenDocument `.odp`: open and save | Edit | Absent | `.odp` neither opens nor saves | 4 advanced | `PAR-57` |
+| PP-FIT-015 | Web Page `.htm`, Single File Web Page `.mht`: save | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-016 | Web publish settings in the file | Retain | Works | Kept by the unedited save and node patching; not separately clicked |  |  |
+| PP-FIT-017 | Legacy `.ppt`, `.pps`: open | Edit | Absent | `.ppt` refused (`DEC-08`, Phase 10) | 4 advanced | `PAR-57` |
+| PP-FIT-018 | Legacy `.ppt`: save | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-019 | Pack and Go `.ppz` | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-020 | Compatibility Checker | Edit | Absent | No Compatibility Checker | 4 advanced | `PAR-65` |
+| PP-FIT-021 | Compatibility mode for old files | Edit | Absent | No compatibility-mode banner or convert | 4 advanced | `PAR-65` |
+| PP-FIT-022 | Document properties (File, Info) | Edit | Disabled | File, Info, Properties is drawn disabled | 3 review and sharing | `PAR-45` |
+| PP-FIT-023 | AutoSave | Edit | Absent | No autosave: closing the tab loses edits, with no warning | 1 everyday editing | `PAR-01` |
+| PP-FIT-024 | AutoRecover | Edit | Absent | No recovery journal (`SAVE-01`) | 1 everyday editing | `PAR-01` |
+| PP-FIT-025 | Open up to 2 GB | Edit | Partial | Opens in-browser; no measured limit (`CAP-01`) or stated maximum in the UI | 4 advanced | `PAR-65` |
+| PP-FIT-026 | VBA project: keep in the file | Retain | Works | VBA part kept byte-for-byte by the save path; not separately clicked |  |  |
+| PP-FIT-027 | Run a macro | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-028 | Trust Center macro settings | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-029 | Developer tab, VBA editor, record macro | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-030 | Action: Run macro | Retain | Partial | Kept in the file; in a show a click does nothing, but the line saying why (`SEC-N04`) is not shown | 3 review and sharing | `PAR-47` |
+| PP-FIT-031 | Action: Run program | Retain | Partial | As 030 | 3 review and sharing | `PAR-47` |
+| PP-FIT-032 | ActiveX controls in a slide | Retain | Works | Kept in the file; not drawn |  |  |
+| PP-FIT-033 | PowerPoint add-in `.ppam`: load and run | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-034 | COM add-ins | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-035 | Office Add-ins (store, My Add-ins, task pane) | Host seam | Disabled | Insert, Add-ins drawn disabled; host seam not built | decided: not built |  |
+| PP-FIT-036 | Add-in parts stored in a deck | Retain | Works | Kept in the file |  |  |
+| PP-FIT-037 | Embedded OLE object: show | Render | Partial | Fallback picture drawn where the engine reaches it; not confirmed on a real OLE deck | 4 advanced | `PAR-65` |
+| PP-FIT-038 | Embedded OLE object: double-click to edit | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-039 | Embedded Excel or Word object: edit | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-040 | Insert Object, from file, embed | Edit | Absent | No Insert Object | 4 advanced | `PAR-60` |
+| PP-FIT-041 | Insert Object, from file, link; Edit Links | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-042 | Smart tags | Retain | Works | Kept in the file |  |  |
+| PP-FIT-043 | Tags, customer data, custom XML | Retain | Works | Kept in the file |  |  |
+| PP-FIT-044 | Script links | Retain | Works | Kept in the file |  |  |
+| PP-FIT-045 | Add, rearrange, duplicate, delete slides | Edit | Works | New Slide (Ctrl+M), Duplicate, Delete, Hide, drag to reorder in thumbnails, all undoable |  |  |
+| PP-FIT-046 | Layouts: choose, reset | Edit | Partial | New Slide from Layout picks from the deck's layouts; Layout (change an existing slide's layout) and Reset Slide are disabled | 1 everyday editing | `PAR-07` |
+| PP-FIT-047 | Slide size and orientation | Edit | Works | Design, Slide Size: Standard, Widescreen, Custom, with Maximize or Ensure Fit |  |  |
+| PP-FIT-048 | Mixed orientation in one deck | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-049 | Sections | Edit | Disabled | Section menu present, every item disabled; sections in a file are not shown in the thumbnail pane | 1 everyday editing | `PAR-09` |
+| PP-FIT-050 | Hide slide; reveal in show | Edit | Partial | Hide Slide works and the show skips it; the thumbnail is not struck through as PowerPoint's | 1 everyday editing | `PAR-16` |
+| PP-FIT-051 | Reuse slides, keep source formatting | Edit | Disabled | Reuse Slides is in New Slide's menu, disabled | 4 advanced | `PAR-66` |
+| PP-FIT-052 | Reuse slides from cloud storage | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-053 | Slide update link metadata | Retain | Works | Kept in the file |  |  |
+| PP-FIT-054 | Slide Library: publish, reuse from library | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-055 | Slides from Outline (`.docx`, `.rtf`, `.txt`) | Edit | Absent | No Slides from Outline | 4 advanced | `PAR-66` |
+| PP-FIT-056 | Normal view | Edit | Works | Thumbnails, stage, notes pane, status bar |  |  |
+| PP-FIT-057 | Outline view | Edit | Disabled | View, Outline View disabled | 2 formatting | `PAR-32` |
+| PP-FIT-058 | Slide Sorter view | Edit | Disabled | View, Slide Sorter and its status-bar button disabled | 1 everyday editing | `PAR-08` |
+| PP-FIT-059 | Notes Page view | Edit | Disabled | View, Notes Page disabled | 4 advanced | `PAR-62` |
+| PP-FIT-060 | Reading view | Edit | Works | View, Reading View, from the ribbon and the status bar; Esc returns |  |  |
+| PP-FIT-061 | Slide Master, Handout Master, Notes Master views | Edit | Disabled | View, Slide Master disabled; no Handout or Notes Master | 4 advanced | `PAR-49` |
+| PP-FIT-062 | Grayscale and Pure Black and White view | Edit | Disabled | View, Grayscale disabled | 4 advanced | `PAR-62` |
+| PP-FIT-063 | Speaker notes pane | Edit | Partial | Notes pane shows the notes read-only: they cannot be typed or edited | 1 everyday editing | `PAR-02` |
+| PP-FIT-064 | Ruler | Edit | Disabled | View, Ruler disabled | 2 formatting | `PAR-31` |
+| PP-FIT-065 | Gridlines, snap to grid | Edit | Disabled | View, Gridlines disabled; no snap to grid | 2 formatting | `PAR-31` |
+| PP-FIT-066 | Drawing guides | Edit | Disabled | View, Guides disabled | 2 formatting | `PAR-31` |
+| PP-FIT-067 | Smart guides | Edit | Absent | No smart guides or snapping while dragging | 1 everyday editing | `PAR-15` |
+| PP-FIT-068 | Zoom, Fit | Edit | Works | Zoom menu, slider, percentage, Fit to Window |  |  |
+| PP-FIT-069 | New Window, Arrange All, Cascade | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-070 | Open in a chosen view | Edit | Absent | Always opens in Normal view; stored view not honoured | 4 advanced | `PAR-62` |
+| PP-FIT-071 | Saved view state in the file | Edit | Absent | `viewProps` kept but not read or written back from the UI | 4 advanced | `PAR-62` |
+| PP-FIT-072 | Shapes gallery (187 presets) | Edit | Works | Shapes gallery with every engine preset in PowerPoint's groups; click or drag to draw; adjust handles |  |  |
+| PP-FIT-073 | Text box | Edit | Works | Insert Text Box, click to type |  |  |
+| PP-FIT-074 | Freeform, Scribble, Edit Points | Edit | Disabled | Edit Points is in Edit Shape and the right-click menu, disabled; no Freeform or Scribble tool | 4 advanced | `PAR-58` |
+| PP-FIT-075 | Merge Shapes: Union, Combine, Fragment, Intersect, Subtract | Edit | Absent | No Merge Shapes | 4 advanced | `PAR-58` |
+| PP-FIT-076 | Connectors, glued to sites | Edit | Partial | Connectors draw point to point; not glued to connection sites, so they do not follow moved shapes | 2 formatting | `PAR-28` |
+| PP-FIT-077 | Align, distribute | Edit | Works | Align left, centre, right, top, middle, bottom; distribute; one undo step |  |  |
+| PP-FIT-078 | Group, ungroup | Edit | Disabled | Group and Ungroup (Ctrl+G) disabled; the keys do nothing | 1 everyday editing | `PAR-03` |
+| PP-FIT-079 | Rotate, flip | Edit | Partial | Rotate by handle and in Size & Position; Rotate Right 90° and Flip Horizontal disabled; no Flip Vertical | 2 formatting | `PAR-24` |
+| PP-FIT-080 | Select individual objects | Edit | Partial | Click, Shift or Ctrl-click, marquee, Tab; cannot select a shape inside a group | 1 everyday editing | `PAR-03` |
+| PP-FIT-081 | Selection pane | Edit | Disabled | Selection Pane disabled | 2 formatting | `PAR-25` |
+| PP-FIT-082 | Format Painter | Edit | Disabled | Format Painter disabled; no Ctrl+Shift+C/V | 2 formatting | `PAR-26` |
+| PP-FIT-083 | Eyedropper | Edit | Absent | No eyedropper in colour menus | 2 formatting | `PAR-27` |
+| PP-FIT-084 | Colours dialog, hex input | Edit | Partial | More Colors opens the browser's colour picker; no PowerPoint Colors dialog with hex, RGB, HSL and transparency | 2 formatting | `PAR-27` |
+| PP-FIT-085 | Fills, outlines, effects | Edit | Partial | Shape Fill solid or none, Shape Outline colour, weight, dash, arrows, four Shape Styles; gradient, picture, pattern fills and every effect (shadow, glow, reflection, soft edges, bevel) disabled | 2 formatting | `PAR-22` |
+| PP-FIT-086 | Sketched outline style | Edit | Absent | No sketched outline | 4 advanced | `PAR-58` |
+| PP-FIT-087 | Draw ruler | Edit | Absent | No Draw ruler | 4 advanced | `PAR-58` |
+| PP-FIT-088 | Maximum number of undos | Edit | Partial | Undo and Redo work across edits; depth not set or stated, no history list | 4 advanced | `PAR-61` |
+| PP-FIT-089 | Font, size, bold, italic and the rest | Edit | Partial | Font, size, grow, shrink, bold, italic, underline work; Strikethrough, Change Case and the Font dialog disabled; no character spacing | 2 formatting | `PAR-20` |
+| PP-FIT-090 | Text colour | Edit | Works | Font Color with theme, standard and More Colors |  |  |
+| PP-FIT-091 | Text highlighter | Edit | Works | Text Highlight Color, drawn (`UX-005`) |  |  |
+| PP-FIT-092 | Superscript, subscript | Edit | Disabled | Subscript and Superscript disabled | 2 formatting | `PAR-20` |
+| PP-FIT-093 | Clear formatting | Edit | Disabled | Clear All Formatting disabled; Ctrl+Space does nothing | 2 formatting | `PAR-20` |
+| PP-FIT-094 | Alignment, spacing, indents | Edit | Partial | Left, centre, right, justify (and keys); Line Spacing, indents and the Paragraph dialog disabled | 2 formatting | `PAR-21` |
+| PP-FIT-095 | Bullets, numbering | Edit | Partial | Bullets toggle works; Numbering, Increase and Decrease List Level disabled; Tab types a tab instead of demoting a bullet | 1 everyday editing | `PAR-06` |
+| PP-FIT-096 | Text columns | Edit | Disabled | Columns disabled | 2 formatting | `PAR-21` |
+| PP-FIT-097 | Right-to-left text and direction | Edit | Absent | No right-to-left paragraph control; Arabic decks draw | 4 advanced | `PAR-64` |
+| PP-FIT-098 | Vertical and rotated text | Edit | Disabled | Text Direction disabled | 2 formatting | `PAR-21` |
+| PP-FIT-099 | AutoFit, shrink on overflow, resize shape | Edit | Partial | AutoFit stored in the file is drawn; no control to set it (Format Shape Text Options disabled) | 2 formatting | `PAR-23` |
+| PP-FIT-100 | Split body text across slides | Edit | Absent | No split across slides | 4 advanced | `PAR-64` |
+| PP-FIT-101 | WordArt, text warps | Edit | Disabled | Insert WordArt and the Text Fill, Outline and Effects menus disabled | 2 formatting | `PAR-29` |
+| PP-FIT-102 | Wrap text around a circle | Edit | Absent | No text warp | 4 advanced | `PAR-58` |
+| PP-FIT-103 | Symbols | Edit | Disabled | Insert Symbol disabled | 2 formatting | `PAR-30` |
+| PP-FIT-104 | Hyperlinks, link colour | Edit | Disabled | Insert Link (Ctrl+K) disabled; links in a file are not clickable in a show | 1 everyday editing | `PAR-05` |
+| PP-FIT-105 | Find | Edit | Disabled | Find (Ctrl+F) disabled; Ctrl+F reaches the browser's find | 1 everyday editing | `PAR-04` |
+| PP-FIT-106 | Replace | Edit | Disabled | Replace (Ctrl+H) disabled | 1 everyday editing | `PAR-04` |
+| PP-FIT-107 | Replace Fonts | Edit | Absent | No Replace Fonts | 4 advanced | `PAR-64` |
+| PP-FIT-108 | Embed fonts (all or used characters) | Edit | Absent | No font embedding | 4 advanced | `PAR-64` |
+| PP-FIT-109 | Cloud fonts | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-110 | Spelling | Host seam | Disabled | Spelling disabled; no red squiggles; host seam not built | decided: not built |  |
+| PP-FIT-111 | Editor pane | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-112 | Thesaurus | Host seam | Disabled | Thesaurus disabled; host seam not built | decided: not built |  |
+| PP-FIT-113 | Proofing language per run | Edit | Disabled | Language disabled; run language kept but not settable | 4 advanced | `PAR-64` |
+| PP-FIT-114 | AutoCorrect | Edit | Absent | No AutoCorrect (straight quotes stay straight, no auto-bullets) | 2 formatting | `PAR-41` |
+| PP-FIT-115 | Translate | Host seam | Disabled | Translate disabled; host seam | decided: not built |  |
+| PP-FIT-116 | Dictate | Host seam | Disabled | Dictate disabled; host seam | decided: not built |  |
+| PP-FIT-117 | Immersive Reader, Speak | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-118 | Microsoft Search box | Edit | Partial | Search box in the title bar runs commands; no help or document search | 4 advanced | `PAR-61` |
+| PP-FIT-119 | Insert pictures | Edit | Works | Insert, Pictures from this device; draws and saves |  |  |
+| PP-FIT-120 | Online pictures | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-121 | Stock images, icons, cut-outs | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-122 | Icons | Edit | Disabled | Insert, Icons disabled | 2 formatting | `PAR-30` |
+| PP-FIT-123 | Clip art | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-124 | Crop, delete cropped areas | Edit | Partial | Crop by handles, Reset Picture; no Crop to Aspect Ratio, Fill, Fit, no delete cropped areas | 2 formatting | `PAR-33` |
+| PP-FIT-125 | Crop to shape | Edit | Absent | No Crop to Shape | 2 formatting | `PAR-33` |
+| PP-FIT-126 | Compress Pictures | Edit | Absent | No Compress Pictures | 4 advanced | `PAR-60` |
+| PP-FIT-127 | Discard editing data; image default resolution | Edit | Absent | No option | 4 advanced | `PAR-60` |
+| PP-FIT-128 | Picture corrections, colour, styles | Edit | Partial | Four basic Picture Styles; no Corrections, Color, picture border or effects | 2 formatting | `PAR-33` |
+| PP-FIT-129 | Artistic effects | Edit | Absent | No artistic effects | 4 advanced | `PAR-60` |
+| PP-FIT-130 | Remove Background | Edit | Absent | No Remove Background | 4 advanced | `PAR-60` |
+| PP-FIT-131 | Transparency | Edit | Absent | No picture or shape transparency control | 2 formatting | `PAR-22` |
+| PP-FIT-132 | SVG: insert, recolour | Edit | Partial | SVG decks draw (fallback); inserting an `.svg` and recolouring not built | 4 advanced | `PAR-58` |
+| PP-FIT-133 | Convert SVG to shape | Edit | Absent | No convert to shape | 4 advanced | `PAR-58` |
+| PP-FIT-134 | Linked pictures | Retain | Works | Kept in the file |  |  |
+| PP-FIT-135 | Picture link: insert | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-136 | Animated GIF: insert, play | Edit | Partial | GIF inserts as a still; does not play | 4 advanced | `PAR-60` |
+| PP-FIT-137 | Insert screenshot, window list | Edit | Absent | No Insert Screenshot | 4 advanced | `PAR-60` |
+| PP-FIT-138 | Do not auto-hyperlink screenshot | Edit | Absent | No screenshot, so no option | 4 advanced | `PAR-60` |
+| PP-FIT-139 | Screen recording | Edit | Absent | No screen recording | 4 advanced | `PAR-53` |
+| PP-FIT-140 | Photo album: create and edit | Edit | Absent | No Photo Album | 4 advanced | `PAR-60` |
+| PP-FIT-141 | Watermark | Edit | Absent | No watermark verb | 4 advanced | `PAR-60` |
+| PP-FIT-142 | Timeline, org chart from templates or SmartArt | Edit | Absent | No timeline or org chart from SmartArt | 4 advanced | `PAR-54` |
+| PP-FIT-143 | Tables: insert, rows, columns, size | Edit | Partial | Insert Table by grid, insert and delete rows and columns, type in a cell through a field; no drag to resize rows or columns, no caret editing in a cell (`VS-20`) | 1 everyday editing | `VS-20` |
+| PP-FIT-144 | Merge and split cells | Edit | Absent | No Merge or Split Cells | 2 formatting | `PAR-34` |
+| PP-FIT-145 | Table styles, borders, shading | Edit | Partial | Six Medium Style 2 tiles from the deck's styles; no borders, shading, header-row or banded-row options | 2 formatting | `PAR-34` |
+| PP-FIT-146 | Animate table parts | Edit | Absent | No table-part animation | 4 advanced | `PAR-66` |
+| PP-FIT-147 | Paste Excel range: embed, picture, text | Edit | Absent | Pasting from Excel gives plain text only, in a text box | 4 advanced | `PAR-66` |
+| PP-FIT-148 | Linked Excel chart or range: update | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-149 | Charts: classic families | Edit | Partial | Existing charts draw; Insert Chart offers column, bar, line, pie, and Edit Data edits values; no chart styles, elements, change type or formatting | 2 formatting | `PAR-35` |
+| PP-FIT-150 | Charts: 2016+ (funnel and others) | Edit | Partial | 2016+ charts draw their fallback where stored; not insertable | 4 advanced | `PAR-66` |
+| PP-FIT-151 | Map chart: geocoding | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-152 | SmartArt: create, edit, text pane | Edit | Disabled | Insert SmartArt disabled; stored SmartArt draws from its drawing part; not editable | 4 advanced | `PAR-54` |
+| PP-FIT-153 | SmartArt: convert to shapes | Edit | Absent | No convert to shapes | 4 advanced | `PAR-54` |
+| PP-FIT-154 | Equation: insert, gallery of structures | Edit | Disabled | Insert Equation disabled; stored equations draw only as their fallback | 4 advanced | `PAR-55` |
+| PP-FIT-155 | Equation: linear, UnicodeMath, LaTeX | Edit | Absent | No equation input | 4 advanced | `PAR-55` |
+| PP-FIT-156 | Equation: save to gallery | Edit | Absent | No equation gallery | 4 advanced | `PAR-55` |
+| PP-FIT-157 | Old Equation Editor objects | Render | Partial | Drawn from the fallback picture where present | 4 advanced | `PAR-55` |
+| PP-FIT-158 | 3D models: show | Edit | Partial | 3D models show their fallback picture only | 4 advanced | `PAR-56` |
+| PP-FIT-159 | 3D models: insert, rotate, pan, zoom | Edit | Disabled | Insert 3D Models disabled | 4 advanced | `PAR-56` |
+| PP-FIT-160 | 3D models: online library | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-161 | 3D animation effects | Edit | Absent | No 3D effects | 4 advanced | `PAR-56` |
+| PP-FIT-162 | Shape 3D format and rotation | Edit | Absent | Shape 3D Format and Rotation disabled in Format Shape Effects | 4 advanced | `PAR-56` |
+| PP-FIT-163 | Draw tab: pens, pencil, highlighter | Edit | Disabled | Draw tab: Select, Lasso, Eraser, Pen, Highlighter all disabled | 4 advanced | `PAR-51` |
+| PP-FIT-164 | Ink effects, pen set | Edit | Absent | No ink | 4 advanced | `PAR-51` |
+| PP-FIT-165 | Point, stroke and segment erasers | Edit | Disabled | Eraser disabled | 4 advanced | `PAR-51` |
+| PP-FIT-166 | Lasso select | Edit | Disabled | Lasso Select disabled | 4 advanced | `PAR-51` |
+| PP-FIT-167 | Automatic inking setting | Edit | Absent | No ink | 4 advanced | `PAR-51` |
+| PP-FIT-168 | Use pen to select by default | Edit | Absent | No ink | 4 advanced | `PAR-51` |
+| PP-FIT-169 | Ink to Shape | Edit | Disabled | Ink to Shape disabled | 4 advanced | `PAR-51` |
+| PP-FIT-170 | Ink to Text | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-171 | Ink to Math | Host seam | Disabled | Ink to Math disabled; host seam | decided: not built |  |
+| PP-FIT-172 | Ink Replay button | Edit | Disabled | Ink Replay disabled | 4 advanced | `PAR-51` |
+| PP-FIT-173 | Replay and Rewind ink animations | Edit | Absent | No ink | 4 advanced | `PAR-51` |
+| PP-FIT-174 | Digital pen button advances slides | Edit | Absent | No pen input in the show | 4 advanced | `PAR-51` |
+| PP-FIT-175 | Transitions gallery, effect options | Edit | Partial | Fade, Push, Wipe, Split, Cut set and play; Morph, Reveal and the rest change nothing and say so; Preview and Effect Options disabled | 2 formatting | `PAR-36` |
+| PP-FIT-176 | Transition speed and advance | Edit | Partial | Duration and Apply To All work; On Mouse Click and After disabled | 2 formatting | `PAR-36` |
+| PP-FIT-177 | Morph | Edit | Partial | Morph tile present, writes nothing; a stored Morph plays as a fade | 4 advanced | `PAR-59` |
+| PP-FIT-178 | Summary, Slide and Section Zoom | Edit | Absent | No Zoom (summary, slide, section) | 4 advanced | `PAR-59` |
+| PP-FIT-179 | Animations gallery, classes | Edit | Partial | Appear, Fade, Fly In, Pulse, Disappear, Fade Out write and play; Float In, Split, Wipe, Zoom and all others do nothing and say so; Preview and Effect Options disabled | 2 formatting | `PAR-37` |
+| PP-FIT-180 | Multiple effects on one object | Edit | Works | Add Animation adds after the others; the pane lists them |  |  |
+| PP-FIT-181 | Animation Painter | Edit | Disabled | Animation Painter disabled | 2 formatting | `PAR-37` |
+| PP-FIT-182 | Animation Pane, start, duration, delay | Edit | Partial | Animation Pane lists, reorders, deletes; Start works; Duration and Delay disabled | 2 formatting | `PAR-37` |
+| PP-FIT-183 | Motion paths | Edit | Absent | No motion paths | 4 advanced | `PAR-59` |
+| PP-FIT-184 | Trigger on click of an object | Edit | Disabled | Trigger disabled | 4 advanced | `PAR-59` |
+| PP-FIT-185 | Trigger on media bookmark | Edit | Absent | No bookmark triggers | 4 advanced | `PAR-59` |
+| PP-FIT-186 | Text by word, by line | Edit | Absent | No by-word or by-letter control | 4 advanced | `PAR-59` |
+| PP-FIT-187 | Animate a group | Edit | Partial | A group animates as one in a show where the file has it; no verb | 4 advanced | `PAR-59` |
+| PP-FIT-188 | Sound effects on animation and hyperlink | Edit | Absent | No animation sounds | 4 advanced | `PAR-59` |
+| PP-FIT-189 | Remove or turn off animation | Edit | Partial | Remove Animation and the None tile work; no "turn off animation" show option (Set Up Show disabled) | 2 formatting | `PAR-37` |
+| PP-FIT-190 | SmartArt animation | Edit | Absent | No SmartArt animation | 4 advanced | `PAR-54` |
+| PP-FIT-191 | Audio: add, remove | Edit | Disabled | Insert Audio disabled | 4 advanced | `PAR-50` |
+| PP-FIT-192 | Record audio on a slide | Edit | Absent | No audio recording | 4 advanced | `PAR-53` |
+| PP-FIT-193 | Video from a file, embed | Edit | Disabled | Insert Video disabled; video in a deck shows its poster frame only and does not play | 4 advanced | `PAR-50` |
+| PP-FIT-194 | Online video (YouTube and others) | Edit | Absent | No online video | 4 advanced | `PAR-50` |
+| PP-FIT-195 | Stream and SharePoint video | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-196 | Trim, fade, bookmark | Edit | Absent | No Playback tab | 4 advanced | `PAR-50` |
+| PP-FIT-197 | Play across slides, in background | Edit | Absent | No media playback | 4 advanced | `PAR-50` |
+| PP-FIT-198 | Sound automatically on a slide | Edit | Absent | No media playback | 4 advanced | `PAR-50` |
+| PP-FIT-199 | Poster frame, video styles | Edit | Absent | No Video Format tab | 4 advanced | `PAR-50` |
+| PP-FIT-200 | Media formats accepted | Edit | Absent | No media | 4 advanced | `PAR-50` |
+| PP-FIT-201 | Compress Media (1080p, 720p, 480p) | Edit | Absent | No media | 4 advanced | `PAR-50` |
+| PP-FIT-202 | Optimize Media Compatibility | Edit | Absent | No media | 4 advanced | `PAR-50` |
+| PP-FIT-203 | Save Media As | Edit | Absent | No media | 4 advanced | `PAR-50` |
+| PP-FIT-204 | Media captions: insert WebVTT or SRT | Edit | Absent | No captions | 4 advanced | `PAR-50` |
+| PP-FIT-205 | Media captions: generate by speech | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-206 | Media captions: translate | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-207 | From Beginning, From Current | Edit | Works | F5, Shift+F5, the Present button and the status bar; full screen |  |  |
+| PP-FIT-208 | Set Up Show: presenter, individual, kiosk | Edit | Disabled | Set Up Slide Show disabled | 4 advanced | `PAR-52` |
+| PP-FIT-209 | Self-running, loop until Esc | Edit | Absent | No kiosk or loop setting | 4 advanced | `PAR-52` |
+| PP-FIT-210 | Custom show | Edit | Absent | No custom shows | 4 advanced | `PAR-52` |
+| PP-FIT-211 | Presenter view | Edit | Works | Presenter View: current and next slide, notes, timer, count |  |  |
+| PP-FIT-212 | Multiple monitors, swap displays | Edit | Partial | Presenter View opens a second window; no display swap or monitor choice | 4 advanced | `PAR-52` |
+| PP-FIT-213 | Pen and highlighter in show | Edit | Absent | No pen or highlighter in the show | 4 advanced | `PAR-51` |
+| PP-FIT-214 | Keep or discard ink on exit | Edit | Absent | No ink in the show | 4 advanced | `PAR-51` |
+| PP-FIT-215 | Laser pointer | Edit | Absent | No laser pointer | 4 advanced | `PAR-51` |
+| PP-FIT-216 | Hide ink, erase, hide pointer | Edit | Absent | No pointer options | 4 advanced | `PAR-51` |
+| PP-FIT-217 | Black or white screen, go to slide | Edit | Works | B, W, number then Enter, Esc, as PowerPoint |  |  |
+| PP-FIT-218 | Zoom in slide show, to 400% | Edit | Absent | No zoom in the show | 4 advanced | `PAR-52` |
+| PP-FIT-219 | Action buttons, action settings: link, slide, sound | Edit | Disabled | Insert Action disabled; links and action buttons do nothing in a show | 1 everyday editing | `PAR-05` |
+| PP-FIT-220 | Rehearse Timings | Edit | Absent | No Rehearse Timings | 4 advanced | `PAR-52` |
+| PP-FIT-221 | Record narration, timings by slide | Edit | Absent | No recording | 4 advanced | `PAR-53` |
+| PP-FIT-222 | Record camera video narration | Edit | Absent | No recording | 4 advanced | `PAR-53` |
+| PP-FIT-223 | Record ink and laser gestures | Edit | Absent | No recording | 4 advanced | `PAR-53` |
+| PP-FIT-224 | Teleprompter while recording | Edit | Absent | No recording | 4 advanced | `PAR-53` |
+| PP-FIT-225 | Background blur for camera | Edit | Absent | No recording | 4 advanced | `PAR-53` |
+| PP-FIT-226 | Cameo: live camera on a slide | Edit | Disabled | Insert Cameo disabled | 4 advanced | `PAR-53` |
+| PP-FIT-227 | Cameo effects from Teams | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-228 | Reset recording to Cameo | Edit | Absent | No recording | 4 advanced | `PAR-53` |
+| PP-FIT-229 | Export recording to video | Edit | Absent | No recording | 4 advanced | `PAR-53` |
+| PP-FIT-230 | Export to video: MP4 | Edit | Absent | No video export | 4 advanced | `PAR-53` |
+| PP-FIT-231 | Export to video: WMV, MOV | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-232 | Upload to Clipchamp | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-233 | Export to animated GIF | Edit | Absent | No GIF export | 4 advanced | `PAR-53` |
+| PP-FIT-234 | Package for CD: copy to folder | Edit | Absent | No package to folder | 4 advanced | `PAR-53` |
+| PP-FIT-235 | Package for CD: burn a disc | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-236 | Live subtitles while presenting | Host seam | Disabled | Always Use Subtitles disabled; host seam | decided: not built |  |
+| PP-FIT-237 | Speaker Coach | Host seam | Disabled | Rehearse with Coach disabled; host seam | decided: not built |  |
+| PP-FIT-238 | Present Live (audience on phones) | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-239 | PowerPoint Live in Teams, Teams meeting | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-240 | Broadcast Slide Show | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-241 | Microsoft Forms in a slide | Host seam | Disabled | Insert Forms disabled; host seam | decided: not built |  |
+| PP-FIT-242 | Themes, variants | Edit | Partial | Six built-in palettes and variants apply; a deck's own or another deck's themes are not offered | 2 formatting | `PAR-38` |
+| PP-FIT-243 | Create a theme: colours, fonts | Edit | Absent | No Customize Colors or Fonts | 2 formatting | `PAR-38` |
+| PP-FIT-244 | Multiple themes in a deck | Edit | Absent | Multiple masters draw; no verb to add or pick one | 4 advanced | `PAR-49` |
+| PP-FIT-245 | Save as theme or template | Edit | Absent | No save as theme or template | 4 advanced | `PAR-49` |
+| PP-FIT-246 | Slide master: edit, add layouts | Edit | Disabled | Slide Master view disabled | 4 advanced | `PAR-49` |
+| PP-FIT-247 | Copy a master between decks | Edit | Absent | No copy master | 4 advanced | `PAR-49` |
+| PP-FIT-248 | Format background | Edit | Partial | Format Background: solid and gradient, apply to all; no picture or pattern fill, no hide background graphics | 2 formatting | `PAR-39` |
+| PP-FIT-249 | Header, footer, date, slide number | Edit | Disabled | Header & Footer disabled; stored footers draw | 2 formatting | `PAR-40` |
+| PP-FIT-250 | Handout and notes header and footer | Edit | Absent | No handout or notes headers | 4 advanced | `PAR-49` |
+| PP-FIT-251 | New presentation, template gallery | Edit | Partial | New gives a blank deck; no template gallery | 1 everyday editing | `PAR-18` |
+| PP-FIT-252 | Designer (Design Ideas) | Host seam | Disabled | Designer disabled; host seam | decided: not built |  |
+| PP-FIT-253 | Designer metadata in decks | Retain | Works | Kept in the file |  |  |
+| PP-FIT-254 | Microsoft Designer image generation | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-255 | Copilot: create a deck from a prompt | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-256 | Copilot: create from a file | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-257 | Copilot: add a slide from a file | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-258 | Copilot: rewrite, condense, generate text | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-259 | Copilot: edit, with a choice of model | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-260 | Copilot: summarise, prepare to present | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-261 | Copilot: Brand Kit, template check | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-262 | Copilot: interactive slides | Host seam | Absent | Host seam, not built (`DEC-05`) | decided: not built |  |
+| PP-FIT-263 | Print slides, handouts, notes | Edit | Disabled | File, Print disabled; Ctrl+P prints the browser page, not the slides | 3 review and sharing | `PAR-43` |
+| PP-FIT-264 | Print Outline | Edit | Absent | No Print Outline | 3 review and sharing | `PAR-43` |
+| PP-FIT-265 | Print in colour, grayscale, pure black and white | Edit | Absent | No print colour options | 3 review and sharing | `PAR-43` |
+| PP-FIT-266 | Print: scale to fit, frame slides, print hidden | Edit | Absent | No print options | 3 review and sharing | `PAR-43` |
+| PP-FIT-267 | Printer-specific options: TrueType as graphics, background | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-268 | Create Handouts in Word | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-269 | Insert PDF content: as picture or embedded object | Edit | Absent | No Insert PDF | 4 advanced | `PAR-60` |
+| PP-FIT-270 | Import from other applications | Edit | Absent | No import beyond the open formats | 4 advanced | `PAR-60` |
+| PP-FIT-271 | Share link, invite | Host seam | Partial | Share makes a room link to co-edit through this origin's server; no view-only or named people, needs the collab server running | 3 review and sharing | `PAR-48` |
+| PP-FIT-272 | Link to a slide | Edit | Absent | No link to a slide | 3 review and sharing | `PAR-48` |
+| PP-FIT-273 | Email as attachment | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-274 | Comments: add, edit, delete, resolve | Edit | Disabled | New Comment, Delete, Previous, Next, Show Comments disabled; a deck's comments are not shown | 3 review and sharing | `PAR-42` |
+| PP-FIT-275 | Legacy comments in old decks | Edit | Absent | Legacy comments not shown | 3 review and sharing | `PAR-42` |
+| PP-FIT-276 | @mentions | Edit | Absent | No comments, so no mentions | 3 review and sharing | `PAR-42` |
+| PP-FIT-277 | Comment reactions | Edit | Absent | No comments | 3 review and sharing | `PAR-42` |
+| PP-FIT-278 | Real-time co-authoring, presence | Edit | Partial | Live co-editing with carets and roster when served by the collab server (`VS-09`); not available on a plain static host | 3 review and sharing | `PAR-48` |
+| PP-FIT-279 | Revision highlighting | Edit | Absent | No revision highlighting | 3 review and sharing | `PAR-48` |
+| PP-FIT-280 | Recent-activity notifications | Edit | Absent | No activity feed | 3 review and sharing | `PAR-48` |
+| PP-FIT-281 | Version history | Host seam | Disabled | File, Info, Version History disabled; host seam | decided: not built |  |
+| PP-FIT-282 | Compare and Merge | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-283 | Revision and merge data in old decks | Retain | Works | Kept in the file |  |  |
+| PP-FIT-284 | Password to open: open a deck | Edit | Absent | Encrypted decks are refused, no password prompt | 3 review and sharing | `PAR-46` |
+| PP-FIT-285 | Password to open: set on save | Edit | Absent | No password on save | 3 review and sharing | `PAR-46` |
+| PP-FIT-286 | Password to modify | Edit | Absent | No password to modify | 3 review and sharing | `PAR-46` |
+| PP-FIT-287 | Mark as Final | Edit | Absent | No Mark as Final; a final deck is not shown read-only | 3 review and sharing | `PAR-46` |
+| PP-FIT-288 | Restrict Access (IRM) | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-289 | Sensitivity label: read, show, keep | Edit | Absent | A label in the file is kept but not shown | 3 review and sharing | `PAR-46` |
+| PP-FIT-290 | Sensitivity label: apply, mandatory, default, auto | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-291 | Dynamic watermark from a label | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-292 | Digital signature: keep, warn, drop on edit | Retain | Partial | Signature parts kept; no warning that an edit drops their validity | 3 review and sharing | `PAR-46` |
+| PP-FIT-293 | Digital signature: add, validate | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-294 | Document Inspector | Edit | Absent | No Document Inspector | 3 review and sharing | `PAR-45` |
+| PP-FIT-295 | Remove personal information on save | Edit | Absent | No remove personal information | 3 review and sharing | `PAR-45` |
+| PP-FIT-296 | Accessibility Checker, in the background | Edit | Disabled | Check Accessibility disabled | 3 review and sharing | `PAR-44` |
+| PP-FIT-297 | Reading order pane | Edit | Absent | No reading order pane | 3 review and sharing | `PAR-44` |
+| PP-FIT-298 | Alt text | Edit | Disabled | Alt Text on Shape and Picture Format disabled | 3 review and sharing | `PAR-44` |
+| PP-FIT-299 | Automatic alt text | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-300 | Accessibility ribbon, tools | Edit | Absent | No accessibility ribbon | 3 review and sharing | `PAR-44` |
+| PP-FIT-301 | Accessible PDF | Edit | Partial | PDF has real text; not tagged (`PDF-01`) | 3 review and sharing | `PAR-44` |
+| PP-FIT-302 | Customise the ribbon, export settings | Edit | Absent | No ribbon customisation | 4 advanced | `PAR-61` |
+| PP-FIT-303 | Quick Access Toolbar | Edit | Partial | Save, Undo, Redo, Start From Beginning in the title bar; not customisable | 4 advanced | `PAR-61` |
+| PP-FIT-304 | Customise shortcuts | Edit | Absent | No shortcut customisation | 4 advanced | `PAR-61` |
+| PP-FIT-305 | Dark mode, Office theme | Edit | Works | Theme: Automatic, Light, Dark |  |  |
+| PP-FIT-306 | Touch mode | Edit | Absent | No touch mode | 4 advanced | `PAR-61` |
+| PP-FIT-307 | Recent files, pinned | Edit | Absent | No recent files list | 1 everyday editing | `PAR-19` |
+| PP-FIT-308 | Advanced options set | Edit | Absent | No Options page | 4 advanced | `PAR-61` |
+| PP-FIT-309 | Disable slide show hardware acceleration | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-310 | Responsive phone shell: view, present, light edit | Edit | Absent | No phone layout | 4 advanced | `PAR-63` |
+| PP-FIT-311 | Tablet editing | Edit | Absent | No touch editing | 4 advanced | `PAR-63` |
+| PP-FIT-312 | Native iOS and Android apps | Refuse | Absent | Refused by decision | decided: not built |  |
+| PP-FIT-313 | Presenter view on phone | Edit | Absent | No phone presenter view | 4 advanced | `PAR-63` |
+| PP-FIT-314 | Morph and Designer on mobile | Edit | Absent | No mobile shell | 4 advanced | `PAR-63` |
+| PP-FIT-315 | Ink annotations saved on phone | Edit | Absent | No ink | 4 advanced | `PAR-51` |
+| PP-FIT-316 | Insert phone pictures, camera | Edit | Absent | No camera insert | 4 advanced | `PAR-63` |
+| PP-FIT-317 | IRM on mobile | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-318 | Copilot on mobile | Host seam | Absent | Host seam, not built | decided: not built |  |
+| PP-FIT-319 | Undo and Redo history list (Undo ▾) (Ribbon, Home) | Edit | Partial | Single steps work; no list of steps to undo several at once | 4 advanced | `PAR-61` |
+| PP-FIT-320 | Paste Options: Keep Source Formatting, Use Destination Theme, Picture, Keep Text Only (Ctrl+Shift+V) (Ribbon, Home; right-click) | Edit | Disabled | Paste works for shapes and text; Keep Text Only and the options are disabled | 1 everyday editing | `PAR-11` |
+| PP-FIT-321 | Paste from other applications: rich text, HTML, images (Clipboard) | Edit | Partial | Plain text pastes into an open text box; an image or formatted text from outside does nothing | 1 everyday editing | `PAR-11` |
+| PP-FIT-322 | Clipboard pane (Ribbon, Home launcher) | Edit | Disabled | Launcher disabled | 4 advanced | `PAR-61` |
+| PP-FIT-323 | Font and Paragraph dialogs (Launchers; right-click) | Edit | Disabled | Font… and Paragraph… disabled | 2 formatting | `PAR-20`, `PAR-21` |
+| PP-FIT-324 | Change Case (Ribbon, Home) | Edit | Disabled | Disabled | 2 formatting | `PAR-20` |
+| PP-FIT-325 | Character spacing (Ribbon, Home) | Edit | Absent | Not on the ribbon | 2 formatting | `PAR-20` |
+| PP-FIT-326 | Height and Width boxes on Shape and Picture Format, lock aspect ratio (Ribbon, contextual) | Edit | Disabled | Ribbon boxes disabled; Size & Position pane edits size and position | 2 formatting | `PAR-24` |
+| PP-FIT-327 | Change Shape (Ribbon, Shape Format; right-click) | Edit | Disabled | Disabled | 2 formatting | `PAR-24` |
+| PP-FIT-328 | Duplicate object (Ctrl+D) and arrow-key nudge (Keys) | Edit | Works | Ctrl+D, arrows, Ctrl+arrows |  |  |
+| PP-FIT-329 | Copy and paste slides, within and between decks (Thumbnails; keys) | Edit | Absent | Cut, Copy, Paste act on shapes only; a slide cannot be copied to another deck | 1 everyday editing | `PAR-10` |
+| PP-FIT-330 | Status bar: Slide x of y, language, accessibility (Status bar) | Edit | Partial | Slide count shown; no language or accessibility indicator | 4 advanced | `PAR-61` |
+| PP-FIT-331 | Ribbon Display Options: Classic, Simplified, show tabs only, Ctrl+F1 (Ribbon) | Edit | Works | Toggle and Ctrl+F1 |  |  |
+| PP-FIT-332 | KeyTips (Alt, Alt+Period) (Keys) | Edit | Works | Letters over tabs and commands (`UX-003`) |  |  |
+| PP-FIT-333 | Right-click menus for slide, thumbnail, shape and text (Menus) | Edit | Partial | Present; Layout, Reset Slide, Add Section, Edit Text, Edit Points, Group, Bring to Front, Link, Alt Text, Font…, Paragraph…, Numbering and New Comment disabled | 1 everyday editing | `PAR-07`, `PAR-14` |
+| PP-FIT-334 | Shift+F10 menu and Ctrl+F6 region cycling (Keys) | Edit | Works | Both registered |  |  |
+| PP-FIT-335 | Editing, Reviewing, Viewing modes (Tab row) | Edit | Disabled | Only Editing; the other two disabled | 3 review and sharing | `PAR-48` |
+| PP-FIT-336 | Rename the file from the title bar (Title bar) | Edit | Absent | The name is shown, not editable | 1 everyday editing | `PAR-17` |
+| PP-FIT-337 | Format Shape pane: Text Options (text box margins, wrap, autofit, vertical alignment) (Pane) | Edit | Disabled | Size & Properties edits size, position, rotation; Text Options and Text Box settings disabled | 2 formatting | `PAR-23` |
+| PP-FIT-338 | Help, Contact Support, Feedback (Ribbon, Help) | Edit | Disabled | Disabled; Keyboard Shortcuts and About work | 4 advanced | `PAR-61` |
+| PP-FIT-339 | Unsaved-changes warning on leaving the page (File operation) | Edit | Absent | Closing the tab with edits loses them without asking | 1 everyday editing | `PAR-01` |
+| PP-FIT-340 | Save As with a choice of format (`.pptx`, `.ppsx`, `.potx`, `.odp`, `.pdf`) (File) | Edit | Absent | Save writes the opened type; PDF and PNG are separate exports | 4 advanced | `PAR-57` |
+| PP-FIT-341 | Text selection by double-click (word) and triple-click (paragraph), Ctrl+arrow by word, Ctrl+Home and End (Text editing) | Edit | Absent | Caret moves by character and line, Shift extends; no word or paragraph selection | 1 everyday editing | `PAR-12` |
+| PP-FIT-342 | Table Layout: cell size, alignment in cell, cell margins, distribute rows and columns, text direction (Ribbon, contextual) | Edit | Absent | Only insert and delete rows and columns | 2 formatting | `PAR-34` |
+| PP-FIT-343 | Chart Design and Format: chart styles, add element, quick layout, change chart type, select data (Ribbon, contextual) | Edit | Absent | Only Edit Data | 2 formatting | `PAR-35` |
+| PP-FIT-344 | Picture Format: Change Picture, Compress, Picture Border and Effects (Ribbon, contextual) | Edit | Absent | Only Crop, Reset and four styles | 2 formatting | `PAR-33` |
+| PP-FIT-345 | Lock and unlock an object (Right-click) | Edit | Absent | No lock verb | 4 advanced | `PAR-61` |
+| PP-FIT-346 | Set as Default Shape or Text Box (Right-click) | Edit | Absent | No verb | 4 advanced | `PAR-61` |
+| PP-FIT-347 | Save as Picture (right-click a picture or shape) (Right-click) | Edit | Absent | No verb | 4 advanced | `PAR-61` |
+| PP-FIT-348 | Ctrl+mouse wheel and pinch zoom on the slide (Keys and pointer) | Edit | Absent | Zoom only from the slider and the menu | 4 advanced | `PAR-61` |
+| PP-FIT-349 | Placeholder prompts ("Click to add title") on new slides (Stage) | Edit | Works | Empty placeholders show their prompt (`PLACEHOLDER` flag) |  |  |
+| PP-FIT-350 | Slide show right-click menu and on-screen controls (Slide show) | Edit | Absent | Only keys and clicks; no menu or control bar | 4 advanced | `PAR-52` |
+| PP-FIT-351 | Keyboard shortcuts: Ctrl+K, Ctrl+F, Ctrl+H, Ctrl+G, Ctrl+Shift+G, Ctrl+[ and ], Ctrl+Space, Ctrl+P, Ctrl+Shift+C and V (Keys) | Edit | Absent | None of these is bound; Ctrl+F and Ctrl+P reach the browser | 1 everyday editing | `PAR-13` |
+| PP-FIT-352 | Bring Forward, Bring to Front, Send Backward, Send to Back (Ctrl+[ and ]) (Ribbon, Arrange; right-click) | Edit | Disabled | All four disabled on the ribbon and in the menu | 1 everyday editing | `PAR-14` |
 
 ## Roadmap asks this analysis raises
 
