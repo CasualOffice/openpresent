@@ -20,6 +20,8 @@ returns its inverse.
 | **Design** | Theme, master and layout edits through the same tree and property ops | As above |
 | **Notes, comments, sections** | Text ops on notes; per-element ops otherwise | As above |
 
+**Built** (`casual-slide-transaction`, slices 5 and 6): `SetTransform`, `DeleteNode` and `InsertNode` from Properties and Tree; `InsertText`, `DeleteRange` and `FormatRange` (bold, italic, underline) from Text; and `Restore`, which replaces a body's paragraphs `[first, first + count)` and is the inverse of every text op: the paragraphs it touched, exactly as they were, so an undo gives back the model as read and the writer then changes nothing. `Restore` transforms like a delete and insert of its range. Transform (OT) and the wire are not built yet (`VS-09`).
+
 `Batch` makes one undo step and one atomic submission. A drag is a single op committed at
 the end; intermediate positions are presence, not edits, so a 60 fps drag never floods the
 log. Other users see it live through presence, and it lands once.
