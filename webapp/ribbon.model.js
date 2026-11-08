@@ -96,7 +96,7 @@ export const TABS = [
       L("insert.icons", "icons", "Icons"),
       L("insert.3d", "cube", "3D Models"),
       L("insert.smartart", "data_area", "SmartArt"),
-      L("insert.chart", "data_bar_vertical", "Chart"),
+      L("insert.chart", "data_bar_vertical", "Chart", { menu: ["insert.chart.column", "insert.chart.bar", "insert.chart.line", "insert.chart.pie"] }),
     ] },
     { label: "Forms", fold: 1, icon: "form_new", items: [L("insert.forms", "form_new", "Forms")] },
     { label: "Add-ins", fold: 1, icon: "apps_add_in", items: [L("insert.add-ins", "apps_add_in", "Add-ins")] },
@@ -240,6 +240,25 @@ export const TABS = [
     ] },
   ] },
 ];
+
+// Contextual, while a table is selected (`VS-11`): PowerPoint's Table Design and Layout.
+TABS.push(
+  { id: "table-design", label: "Table Design", key: "JT", contextual: "table", groups: [
+    { label: "Table Styles", fold: 3, icon: "table", items: [L("table.styles", "table", "Table Styles")] },
+  ] },
+  { id: "table-layout", label: "Layout", key: "JL", contextual: "table", groups: [
+    { label: "Rows & Columns", fold: 3, icon: "table_insert_row", items: [
+      L("table.delete-rows", "table_delete_row", "Delete Rows", { menu: ["table.delete-rows", "table.delete-columns"] }),
+      R([[S("table.insert-above", "table_insert_row", "Insert Above")], [S("table.insert-below", "table_insert_row", "Insert Below")]]),
+      R([[S("table.insert-left", "table_insert_column", "Insert Left")], [S("table.insert-right", "table_insert_column", "Insert Right")]]),
+    ] },
+    { label: "Cell", fold: 2, icon: "textbox", items: [L("table.edit-cell", "textbox", "Edit Text")] },
+  ] },
+  // While a chart is selected: Chart Design's Edit Data.
+  { id: "chart-design", label: "Chart Design", key: "JC", contextual: "chart", groups: [
+    { label: "Data", fold: 2, icon: "data_bar_vertical", items: [L("chart.edit-data", "data_bar_vertical", "Edit Data")] },
+  ] },
+);
 
 /// The File page, in PowerPoint's order. As OpenCalc's: each page is a list of
 /// sections, and an item names a command, its icon, and one line of what it does.

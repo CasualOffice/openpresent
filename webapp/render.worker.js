@@ -34,6 +34,8 @@ import init, {
   transition_choice, set_slide_transition, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
   render_slide_png_hiding,
+  insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
+  table_style, set_table_style, insert_chart, chart_data, set_chart_data,
 } from "./pkg/casual_slide_wasm.js";
 
 // Design (`VS-12`): `{ id, op: "design", fn, args }` calls one of these by name and
@@ -49,6 +51,7 @@ const TEXT = {
 
 // Building a deck (`VS-08`): `{ id, op: "build", fn, args }` calls one of these by name
 // and answers `{ value, count, undo }`, `count` being the deck's slides afterwards.
+// Rich objects (`VS-11`) go the same way: tables and charts.
 const BUILD = {
   slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
@@ -63,6 +66,8 @@ const BUILD = {
 const ANIMATE = {
   transition_choice, set_slide_transition, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
+  insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
+  table_style, set_table_style, insert_chart, chart_data, set_chart_data,
 };
 
 const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });

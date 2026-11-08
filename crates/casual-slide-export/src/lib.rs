@@ -16,6 +16,7 @@ pub mod ink;
 mod line;
 pub mod math;
 pub mod media;
+pub mod new_chart;
 pub mod presentation;
 pub mod properties;
 mod retained;

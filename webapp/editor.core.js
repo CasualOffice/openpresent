@@ -29,6 +29,7 @@ import { registerDesignCommands } from "./editor.design.js";
 import * as build from "./editor.build.js";
 import * as shapes from "./editor.shapes.js";
 import * as animate from "./editor.animate.js";
+import * as objects from "./editor.objects.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -389,6 +390,7 @@ async function boot() {
   build.init();
   shapes.init();   // Insert > Shapes, adjust handles, Shape Format (`SHAPE-01`)
   animate.init();
+  objects.init();
   registerCommands();
   initDialogs(request);
   slides.init();
@@ -397,7 +399,11 @@ async function boot() {
   buildStatusBar();
   bindKeys();
   menus.init();
-  setContextual((kind) => kind === "shape" && !!state.deck && selection.hasSelection());
+  setContextual((kind) => {
+    if (kind === "table") return objects.tableSelected();
+    if (kind === "chart") return objects.chartSelected();
+    return kind === "shape" && !!state.deck && selection.hasSelection() && !objects.tableSelected() && !objects.chartSelected();
+  });
   await startRibbon(byId("workspace"));
   changed();
   status("Ready");

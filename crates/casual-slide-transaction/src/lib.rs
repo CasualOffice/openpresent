@@ -41,6 +41,7 @@ use casual_slide_model::transition::SlideTransition;
 
 mod design;
 pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE};
+pub mod rich;
 
 /// An error applying an operation. Each has a stable code (`docs/20`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,6 +84,13 @@ pub enum TxnError {
     Timing(u32),
     /// No shape on the slide has this `cNvPr/@id`, so no effect can name it (`VS-10`).
     NoTarget(u32),
+    /// The node holds no table (`VS-11`).
+    NoTable(ObjectId),
+    /// A row or column edit the table cannot take: a place past its end, its last row
+    /// or column, more than [`rich::MAX_TABLE_SIDE`], or merged cells (`VS-11`).
+    TableShape,
+    /// No chart part of this name is in the document (`VS-11`).
+    NoChart(String),
 }
 
 impl TxnError {
@@ -100,6 +108,9 @@ impl TxnError {
             Self::BadPart(_) => "CS-TXN-0007",
             Self::Timing(_) => "CS-TXN-0008",
             Self::NoTarget(_) => "CS-TXN-0009",
+            Self::NoTable(_) => "CS-TXN-0012",
+            Self::TableShape => "CS-TXN-0013",
+            Self::NoChart(_) => "CS-TXN-0014",
         }
     }
 }
@@ -166,6 +177,19 @@ impl core::fmt::Display for TxnError {
             Self::NoTarget(spid) => {
                 write!(f, "[{}] no shape on the slide has id {spid}", self.code())
             }
+            Self::NoTable(id) => write!(
+                f,
+                "[{}] shape {} in part {} holds no table",
+                self.code(),
+                id.node,
+                id.part
+            ),
+            Self::TableShape => write!(
+                f,
+                "[{}] the table cannot take that row or column edit",
+                self.code()
+            ),
+            Self::NoChart(_) => write!(f, "[{}] no such chart part", self.code()),
         }
     }
 }
@@ -395,6 +419,22 @@ pub enum Operation {
         /// On click, with or after the previous.
         start: EffectStart,
     },
+    /// Properties: a graphic frame's table, whole (`VS-11`). Its inverse is the table
+    /// it replaced. Refused on a node that holds no table.
+    SetTable {
+        /// The frame.
+        node: ObjectId,
+        /// What its table becomes.
+        table: Option<Box<casual_slide_model::table::Table>>,
+    },
+    /// Chart: a chart part's model, whole (`VS-11`): edited data, or a new chart's.
+    /// Its inverse is the part it replaced.
+    SetChart {
+        /// The chart part's name.
+        part: String,
+        /// What it becomes.
+        chart: Box<casual_slide_model::chart::ChartPart>,
+    },
     /// Several operations as one: applied in order, all or nothing, one undo step.
     Batch(Vec<Operation>),
 }
@@ -411,6 +451,8 @@ impl Operation {
             | Self::DeleteRange { object, .. }
             | Self::FormatRange { object, .. }
             | Self::Restore { object, .. } => Some(*object),
+            Self::SetTable { node, .. } => Some(*node),
+            Self::SetChart { .. } => None,
             Self::SetColorScheme { .. }
             | Self::SetFontScheme { .. }
             | Self::SetSlideSize { .. }
@@ -481,6 +523,8 @@ impl Operation {
             Self::DeleteRange { .. } => "Delete",
             Self::FormatRange { .. } => "Format",
             Self::Restore { .. } => "Edit",
+            Self::SetTable { .. } => "Table",
+            Self::SetChart { .. } => "Chart Data",
             Self::SetColorScheme { .. } | Self::SetFontScheme { .. } => "Theme",
             Self::SetSlideSize { .. } => "Slide Size",
             Self::SetBackground { .. } => "Background",
@@ -955,6 +999,9 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
     if let Some(applied) = design::apply_design(doc, &op)? {
         return Ok(applied);
     }
+    if let Some(applied) = rich::apply_rich(doc, &op)? {
+        return Ok(applied);
+    }
     let parts = doc.parts_mut();
     match op {
         Operation::SetTransform { node, transform } => {
@@ -1044,6 +1091,9 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
         | Operation::SetFontScheme { .. }
         | Operation::SetSlideSize { .. }
         | Operation::SetBackground { .. } => Err(TxnError::NoDesign),
+        // Handled by `rich::apply_rich` above.
+        Operation::SetTable { node, .. } => Err(TxnError::NoTable(node)),
+        Operation::SetChart { part, .. } => Err(TxnError::NoChart(part)),
         Operation::AddPart { entry, part } => slides::add_part(parts, *entry, *part),
         Operation::DropPart { ordinal } => slides::drop_part(parts, ordinal),
         Operation::InsertSlide { index, ordinal } => slides::insert_slide(parts, index, ordinal),
@@ -1259,6 +1309,8 @@ pub use animate::{EffectKind, EffectStart, NewEffect, TransitionKind};
 
 #[cfg(test)]
 mod animate_tests;
+#[cfg(test)]
+mod rich_tests;
 #[cfg(test)]
 mod shape_tests;
 #[cfg(test)]

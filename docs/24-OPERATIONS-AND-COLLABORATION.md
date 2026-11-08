@@ -24,6 +24,8 @@ returns its inverse.
 
 **Built for Design** (`casual-slide-transaction` `design.rs`, slice 12): `SetColorScheme` and `SetFontScheme` set one master's theme scheme whole, `SetSlideSize` the deck's `sldSz`, and `SetBackground` one part's `cSld/bg`; each sets a value and returns the one it replaced as its inverse. They reach themes and the size through the `Document` trait, which a host implements; the slide parts alone are a document without them, so a design op there is `CS-TXN-0006`. Slide Size is a `Batch` of `SetSlideSize` and a `SetTransform` per top-level shape of every slide, layout and master, so content scaling undoes with it. These are whole-value property sets: under OT they conflict per property as the Properties family does.
 
+**Built for rich objects** (`casual-slide-transaction` `rich.rs`, slice 11, `VS-11`): `SetTable` sets a graphic frame's table whole and `SetChart` a chart part's model whole, each returning the value it replaced as its inverse; charts are reached through `Document::chart_mut`. Typing in a cell, Insert and Delete Row and Column, and a Table Design style are each one `SetTable` of a table built by `rich`'s pure functions (refused on merged cells, `CS-TXN-0013`). Insert Table and Insert Chart are `InsertNode` of a frame read from a template. Whole-value sets: under OT a concurrent edit of the same table or chart conflicts as one property; finer cell ops are a later pass.
+
 `Batch` makes one undo step and one atomic submission. A drag is a single op committed at
 the end; intermediate positions are presence, not edits, so a 60 fps drag never floods the
 log. Other users see it live through presence, and it lands once.
