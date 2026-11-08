@@ -196,6 +196,7 @@ dependencies = [
  "casual-slide-import",
  "casual-slide-model",
  "casual-slide-ooxml",
+ "casual-slide-package",
  "casual-slide-render",
  "casual-slide-style",
  "casual-slide-text",

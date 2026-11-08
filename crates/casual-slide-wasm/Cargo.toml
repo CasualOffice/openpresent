@@ -42,3 +42,8 @@ wasm-bindgen = "0.2"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# `tests/present.rs` builds a deck with a hidden slide from a fixture by
+# replacing one part, through the package's own rewrite.
+casual-slide-package = { path = "../casual-slide-package" }

@@ -28,6 +28,8 @@ use wasm_bindgen::prelude::*;
 
 mod edit;
 pub use edit::{Move, Toggle};
+mod show;
+pub use show::{MAX_NOTES_CHARS, MAX_TRANSITION_MS, ShowSlide, ShowTransition};
 
 use casual_slide_transaction::{History, Operation, TxnError};
 
@@ -744,6 +746,62 @@ pub fn last_rgba_width() -> u32 {
 #[wasm_bindgen]
 pub fn slide_report(index: u32) -> Result<Vec<String>, JsError> {
     with_viewer(|v| v.report(index as usize))
+}
+
+/* ── Presenting (`VS-07`) ─────────────────────────────────────────────── */
+
+/// How each slide takes part in a slide show, two numbers a slide in order:
+/// flags (1: hidden, 2: has a transition, 4: the transition is played as it is,
+/// not as a stand-in fade), then the transition's duration in milliseconds.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` when no deck is open.
+#[wasm_bindgen]
+pub fn show_plan() -> Result<Vec<u32>, JsError> {
+    with_viewer(|v| {
+        let mut out = Vec::with_capacity(v.slide_count().saturating_mul(2));
+        for i in 0..v.slide_count() {
+            let s = v.show_slide(i)?;
+            let mut flags = u32::from(s.hidden);
+            let mut ms = 0;
+            if let Some(t) = &s.transition {
+                flags |= 2;
+                if t.played_as_is {
+                    flags |= 4;
+                }
+                ms = t.duration_ms;
+            }
+            out.extend_from_slice(&[flags, ms]);
+        }
+        Ok(out)
+    })
+}
+
+/// The transition effect into slide `index`, by its element name (`push`), or
+/// empty when it has none. For the show's report of what it played as a fade.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn slide_transition(index: u32) -> Result<String, JsError> {
+    with_viewer(|v| {
+        Ok(v.show_slide(index as usize)?
+            .transition
+            .map_or(String::new(), |t| t.effect.to_string()))
+    })
+}
+
+/// The speaker notes of slide `index` as plain text, for Presenter View; empty
+/// when it has none.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn slide_notes(index: u32) -> Result<String, JsError> {
+    with_viewer(|v| v.notes_text(index as usize))
 }
 
 /* ── Text editing (`VS-05`) ─────────────────────────────────────────────── */
