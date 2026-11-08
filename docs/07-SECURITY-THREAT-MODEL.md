@@ -95,7 +95,7 @@ lands; some planned rows have partial code, and only Tested rows may be relied o
 | --- | --- | --- | --- |
 | SEC-S01 | Broken access: view-only user submits edits | Enforced on the server per op, not by hiding buttons | Planned 9 |
 | SEC-S02 | Token theft or replay | Short-lived signed tokens, audience-bound, revocable; no token in URLs where avoidable | Planned 9 |
-| SEC-S03 | Malicious ops | Same validation as local ops; frame and rate caps; transform bounded | Planned 9 |
+| SEC-S03 | Malicious ops | Same validation as local ops; frame and rate caps; transform bounded. **Built in part (`VS-09`):** the frame limit is set on the upgrade before a byte is read (`MAX_FRAME_BYTES`), a submission over 10,000 operations is refused, a malformed message is refused with `CS-COL-0004` and the connection kept, the sender of a submission is the connection's, never the message's say-so; every wire value is range-checked before it becomes an operation (`CS-COL-0004`), and an inserted node's XML is read through `casual-slide-import` under the reader's limits; the server never parses a deck. No rate cap yet | Tested in part: `a_malformed_message_is_refused_and_the_connection_stays`, `a_value_outside_the_format_is_refused_not_applied` |
 | SEC-S04 | WOPI SSRF, forged host | `ALLOWED_HOSTS` is required; proof-key validation | Planned 10 |
 | SEC-S05 | Secrets or deck content in logs | Diagnostics carry codes and counts, not content; a gate checks | Planned 9 |
 | SEC-S06 | Tenant bleed in cache or memory | Per-document isolation; no shared glyph or image cache across tenants on the server | Planned 9 |

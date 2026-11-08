@@ -24,6 +24,11 @@ Also here: slice 6's shape operations (`VS-06`: set a node's transform, delete a
 a node), first written in `casual-slide-wasm/src/txn.rs` in the same shape and moved here
 with their tests (`shape_tests.rs`), so there is one op set and one undo stack.
 
-Not taken: cell operations, structural row and column shifts, formula rewriting, the wire
-format, sessions, transform and versions. Transform and the wire arrive with collaboration
-(`VS-09`).
+Not taken: cell operations, structural row and column shifts, formula rewriting and
+versions.
+
+Collaboration (`VS-09`, `collab/`): `session.rs`'s `ClientSession` and `ServerSession` and
+`protocol.rs`'s messages, made generic over the `Engine` and `Replica` traits, so the server
+names no model. Changed: one chunk in flight rather than 32 chained (`COL-02`); no `Draft`,
+`Resume`, snapshot policy or chunk budget; the server holds no document. Slides' wire
+operations and their transform (`collab/wire.rs`) are new, after `docs/24`'s rules.

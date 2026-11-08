@@ -20,7 +20,7 @@ returns its inverse.
 | **Design** | Theme, master and layout edits through the same tree and property ops | As above |
 | **Notes, comments, sections** | Text ops on notes; per-element ops otherwise | As above |
 
-**Built** (`casual-slide-transaction`, slices 5 and 6): `SetTransform`, `DeleteNode` and `InsertNode` from Properties and Tree; `InsertText`, `DeleteRange` and `FormatRange` (bold, italic, underline) from Text; and `Restore`, which replaces a body's paragraphs `[first, first + count)` and is the inverse of every text op: the paragraphs it touched, exactly as they were, so an undo gives back the model as read and the writer then changes nothing. `Restore` transforms like a delete and insert of its range. From Slides (slice 8, `VS-08`): `AddPart` and its inverse `DropPart` (a new or duplicated slide's part, always the next ordinal), `InsertSlide` and `RemoveSlide` (the slide list; a removed slide's part stays, so undo lists it again), `MoveSlide`, and `SetSlideShow` (Hide Slide; showing again removes `@show`). New Slide and Duplicate are a `Batch` of `AddPart` and `InsertSlide`; Insert Text Box, Shape and Picture are `InsertNode` of a node read from a template, so it is what the reader gives. From Motion (slice 10, `VS-10`, `animate.rs`): `SetTransition` (a slide's `p:transition`, `None` removes it; Apply To All is a `Batch` of them), `SetTiming` (a slide's whole `p:timing`, the inverse of every effect op, so undo restores the tree as read, ids and all), and `AddEffect`, `RemoveEffect`, `MoveEffect` and `SetEffectStart` over the main sequence: an effect from a file keeps its behaviours whole and is only regrouped, clicks and After Previous steps are rebuilt, and every `cTn/@id` is numbered again with `tn/@val` following. A timing in another shape is refused (`CS-TXN-0008`). Set layout is not built. Transform (OT) and the wire are not built yet (`VS-09`).
+**Built** (`casual-slide-transaction`, slices 5 and 6): `SetTransform`, `DeleteNode` and `InsertNode` from Properties and Tree; `InsertText`, `DeleteRange` and `FormatRange` (bold, italic, underline) from Text; and `Restore`, which replaces a body's paragraphs `[first, first + count)` and is the inverse of every text op: the paragraphs it touched, exactly as they were, so an undo gives back the model as read and the writer then changes nothing. `Restore` transforms like a delete and insert of its range. From Slides (slice 8, `VS-08`): `AddPart` and its inverse `DropPart` (a new or duplicated slide's part, always the next ordinal), `InsertSlide` and `RemoveSlide` (the slide list; a removed slide's part stays, so undo lists it again), `MoveSlide`, and `SetSlideShow` (Hide Slide; showing again removes `@show`). New Slide and Duplicate are a `Batch` of `AddPart` and `InsertSlide`; Insert Text Box, Shape and Picture are `InsertNode` of a node read from a template, so it is what the reader gives. From Motion (slice 10, `VS-10`, `animate.rs`): `SetTransition` (a slide's `p:transition`, `None` removes it; Apply To All is a `Batch` of them), `SetTiming` (a slide's whole `p:timing`, the inverse of every effect op, so undo restores the tree as read, ids and all), and `AddEffect`, `RemoveEffect`, `MoveEffect` and `SetEffectStart` over the main sequence: an effect from a file keeps its behaviours whole and is only regrouped, clicks and After Previous steps are rebuilt, and every `cTn/@id` is numbered again with `tn/@val` following. A timing in another shape is refused (`CS-TXN-0008`). Set layout is not built. Transform and the wire are built for the first co-editing slice (`VS-09`, §The server).
 
 **Built for Design** (`casual-slide-transaction` `design.rs`, slice 12): `SetColorScheme` and `SetFontScheme` set one master's theme scheme whole, `SetSlideSize` the deck's `sldSz`, and `SetBackground` one part's `cSld/bg`; each sets a value and returns the one it replaced as its inverse. They reach themes and the size through the `Document` trait, which a host implements; the slide parts alone are a document without them, so a design op there is `CS-TXN-0006`. Slide Size is a `Batch` of `SetSlideSize` and a `SetTransform` per top-level shape of every slide, layout and master, so content scaling undoes with it. These are whole-value property sets: under OT they conflict per property as the Properties family does.
 
@@ -64,8 +64,57 @@ lifecycle look engine-independent; the document-facing code does not. Plan:
 3. Move every engine-specific call behind it and compile against the slide engine.
 
 The trait is written so OpenCalc could adopt it later. It is not required to, and nothing
-here changes that repo. I have sized this by imports, not by reading all 18k lines, so
-Phase 9 opens with a read-only audit before the estimate is trusted.
+here changes that repo.
+
+### The audit (step 1, `VS-09`, 2026-11-08)
+
+Read-only, OpenCalc at `b23c67c`. `server/casual-calc-collab-server` is 16,126 lines of Rust
+in 23 files, 8,800 of them tests. Engine-specific, by what each file imports:
+
+| Part | Lines (code, tests) | Engine-specific? |
+| --- | --- | --- |
+| `document.rs` | 610 | **Yes, wholly**: imports, recalculates, exports a workbook and applies every operation to it |
+| `net.rs` (transport, ordering, fan-out) | 3,090, 4,347 | **Partly**: 10 of its 3,090 lines name the engine, all through the transaction crate's `session` and `protocol` (`ClientId`, `Submission`, `Commit`, `ClientMessage`, `ServerMessage`, `SnapshotPolicy`, `MAX_FRAME_BYTES`); the rest is axum, tokio and policy |
+| `token.rs` | 612, 482 | **Slightly**: an access level is checked against the operation kinds (`SheetFields::COMMENTS`), else JWT claims |
+| `relay.rs`, `cluster/` | 202; 2,075, 2,340 | Carries `WireOperation` and `Submission` as data; Redis, leases, election engine-free |
+| `presence.rs` | 414 | Names `Draft` and `ClientId` only |
+| `verify.rs`, `config.rs`, `http.rs`, `lifecycle.rs`, `memory.rs`, `main.rs` | 2,742, 1,334 | No; `main.rs` names `SnapshotPolicy` |
+
+So the engine-specific surface is the document session, about 5% of the code, plus a few
+types threaded through the rest. Behind it in the transaction crate: `session.rs` (1,210),
+`protocol.rs` (1,198), `wire.rs` (1,122), `transform.rs` (1,638): the client and server
+sessions are generic in shape and only name `Workbook` and `Operation`.
+
+### What `VS-09` built
+
+`casual-slide-transaction::collab` (ADR-020) is the seam: `Engine` (a wire operation, its
+transform, the protocol version) and `Replica` (apply an arrival, write and read a snapshot),
+with OpenCalc's `ClientSession` and `ServerSession` made generic over them and its protocol
+messages. Slides' `WireOp` carries Text (insert, delete, format), Properties (set
+transform) and Tree (insert a node, given as its XML element and read on arrival through the
+hardened reader, and delete one); every other operation is refused in a shared session
+before it is applied (`CS-TXN-0015`), so copies never part because an edit could not be
+sent. Rules: per property, the later in server order stands; character OT in one body; a
+parent's children as a list. **Two rules are stated here for the first time:** a delete
+takes text typed inside it or at its edges, because typed text takes its format from a
+neighbour when applied and a delete changes the neighbour; and a format grows over text
+typed where that text would take the format, judged by the sender at the range's edges
+(`typing_takes_after`). TP1 is a property test over the real model, including transforms of
+what transform made; a two-client simulation through `ServerSession` converges.
+
+`server/casual-slide-collab-server` is the copied server, in part (its `PROVENANCE.md`): one
+WebSocket per participant, a join first, ordering, acknowledgement, relay, presence and
+colours. **It holds no model**: the first participant seeds a room with the deck's bytes, and
+a joiner receives them with the log. Its CI job (`collab.yml`) starts it and runs two
+clients over real sockets.
+
+Not done in the slice's box: the browser half (the bridge's shared session, `collab.js`,
+remote carets and selections drawn, Share) is `COL-04`; tokens, resume, the cluster and the
+integrator's save are `COL-03` and `COL-05`; a typed character's format can still differ
+after three concurrent edits (`COL-01`); OpenCalc's chained pipelining diverged in the
+simulation, so a client keeps one chunk in flight (`COL-02`). Undo in a shared session works
+for moves, inserts and deletes of shapes; undo of typing is a `Restore`, which has no wire
+form yet, so it is refused there (`COL-04`).
 
 ## Presence
 
