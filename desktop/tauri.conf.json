@@ -1,0 +1,100 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "OpenPresent",
+  "version": "0.0.1",
+  "identifier": "org.casualoffice.openpresent",
+  "build": {
+    "frontendDist": "web-dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "OpenPresent",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 640,
+        "minHeight": 400,
+        "resizable": true,
+        "url": "editor.html",
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "copyright": "Copyright © CasualOffice. Licensed under Apache-2.0.",
+    "shortDescription": "A presentation app that opens .pptx.",
+    "longDescription": "OpenPresent opens PowerPoint presentations and shows their slides, with an engine that runs entirely on this machine.",
+    "fileAssociations": [
+      {
+        "ext": ["pptx"],
+        "name": "PowerPoint Presentation",
+        "description": "PowerPoint Presentation",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "role": "Viewer",
+        "rank": "Default"
+      },
+      {
+        "ext": ["pptm"],
+        "name": "PowerPoint Macro-Enabled Presentation",
+        "description": "PowerPoint Macro-Enabled Presentation",
+        "mimeType": "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
+        "role": "Viewer",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["ppsx"],
+        "name": "PowerPoint Slide Show",
+        "description": "PowerPoint Slide Show",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+        "role": "Viewer",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["ppsm"],
+        "name": "PowerPoint Macro-Enabled Slide Show",
+        "description": "PowerPoint Macro-Enabled Slide Show",
+        "mimeType": "application/vnd.ms-powerpoint.slideshow.macroEnabled.12",
+        "role": "Viewer",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["potx"],
+        "name": "PowerPoint Template",
+        "description": "PowerPoint Template",
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.template",
+        "role": "Viewer",
+        "rank": "Alternate"
+      },
+      {
+        "ext": ["potm"],
+        "name": "PowerPoint Macro-Enabled Template",
+        "description": "PowerPoint Macro-Enabled Template",
+        "mimeType": "application/vnd.ms-powerpoint.template.macroEnabled.12",
+        "role": "Viewer",
+        "rank": "Alternate"
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": "-"
+    },
+    "linux": {
+      "deb": {
+        "depends": [],
+        "desktopTemplate": "desktop-entry.desktop"
+      }
+    }
+  }
+}

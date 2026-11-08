@@ -9,8 +9,16 @@
 const byId = (id) => document.getElementById(id);
 let onOpen = null;
 
-/// Show the file picker.
+/// Show the file picker: the platform's own Open panel in the desktop app
+/// (`desktop/src/main.rs`, `VS-03`), the browser's picker otherwise.
 export function openFilePicker() {
+  const native = globalThis.__openpresentNative;
+  if (native && native.open) {
+    native.open()
+      .then((o) => o && onOpen && onOpen(o.name, o.bytes))
+      .catch((e) => console.error("[openpresent] open", e));
+    return;
+  }
   const input = byId("file-input");
   input.value = "";
   input.click();

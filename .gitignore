@@ -11,3 +11,8 @@
 node_modules/
 .claude/*
 !.claude/skills/
+# The desktop app (VS-03): its build folder, Tauri's generated schemas, and the
+# webview assets desktop/build.rs stages from webapp/ on every build.
+/desktop/target/
+/desktop/gen/
+/desktop/web-dist/

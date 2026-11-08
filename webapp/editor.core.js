@@ -245,6 +245,10 @@ function buildStatusBar() {
   byId("notes-toggle").addEventListener("click", () => run("view.notes"));
 }
 
+/// What the desktop app's bridge calls (`desktop/src/main.rs`, `VS-03`): a file
+/// the operating system handed over opens through the same `openDeck`.
+globalThis.openpresentEditor = { openDeck, runCommand: run };
+
 /* ── Boot ───────────────────────────────────────────────────────────────── */
 
 async function boot() {

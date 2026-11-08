@@ -1,0 +1,149 @@
+# The desktop app (VS-03, owner instructions 42 and 44): OpenCalc's Tauri shell around the
+# same `webapp/`, bundled on Linux, macOS and Windows. Copied from the `desktop` job of
+# OpenCalc's `.github/workflows/ci.yml` at `5d42a07` (desktop/PROVENANCE.md).
+#
+# Changed from OpenCalc: all three platforms run on pull requests too, not Linux alone, since
+# bundling on all three is this slice's end point; and the self-check opens a fixture deck
+# through the double-click route and requires the engine to have drawn a slide in the webview.
+#
+# Everything here runs on GitHub's runners, never on the owner's machine (owner instruction 38).
+name: desktop
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  desktop-bundle:
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # One bundle format per platform, chosen as OpenCalc did for what CI produces without
+        # fetching more tooling: `.deb` (an AppImage downloads linuxdeploy), `.app` (a `.dmg`
+        # needs a mountable volume), and NSIS. `artifact` is where it must appear.
+        include:
+          - os: ubuntu-latest
+            bundles: deb
+            artifact: target/release/bundle/deb
+          - os: macos-latest
+            bundles: app
+            artifact: target/release/bundle/macos
+          - os: windows-latest
+            bundles: nsis
+            artifact: target/release/bundle/nsis
+    runs-on: ${{ matrix.os }}
+    # Windows runners default to pwsh; every step below is bash.
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # The Tauri v2 prerequisites for Ubuntu. `4.1`: Tauri 2 links the GTK4-era webkit2gtk.
+      - name: Install the Linux webview and bundler dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            file
+      # Built here, never taken from the tree: `webapp/pkg/` is not committed, and
+      # `desktop/build.rs` refuses a release build without it. The out-dir is relative to the
+      # crate, as in OpenCalc, because Git bash on Windows mangles an absolute `/d/a/...` path
+      # on its way into a native program.
+      - name: Build the engine the webview loads
+        run: |
+          set -euo pipefail
+          cargo install wasm-pack --version 0.14.0 --locked
+          wasm-pack build crates/casual-slide-wasm --release --target web --out-dir ../../webapp/pkg
+      # `desktop/` is its own cargo workspace, so the root `checks` job reaches none of it.
+      # Format, lint and the shell's own tests run here; platform-independent, so Linux only.
+      - name: Format, lint and test the desktop shell
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          cargo fmt --manifest-path desktop/Cargo.toml -- --check
+          cargo clippy --manifest-path desktop/Cargo.toml --all-targets --locked -- -D warnings
+          cargo test --manifest-path desktop/Cargo.toml --locked
+      - name: Install the Tauri CLI
+        run: cargo install tauri-cli --version "^2.0.0" --locked
+      # Unsigned. `tauri build` runs `cargo build --release`, where `desktop/build.rs` panics if
+      # the engine step above left nothing behind.
+      - name: Build the desktop bundle
+        working-directory: desktop
+        run: cargo tauri build --bundles ${{ matrix.bundles }}
+      # `tauri build` has exited 0 having emitted nothing (OpenCalc), so the bundle is looked
+      # for on disk, and an empty directory does not count.
+      - name: A bundle was actually produced
+        run: |
+          set -euo pipefail
+          dir="desktop/${{ matrix.artifact }}"
+          if [ ! -d "$dir" ]; then
+            echo "::error::$dir does not exist: tauri build produced no ${{ matrix.bundles }} bundle"
+            find desktop/target/release/bundle -maxdepth 3 2>/dev/null || echo "(no bundle directory at all)"
+            exit 1
+          fi
+          if [ -z "$(find "$dir" -mindepth 1 -print -quit)" ]; then
+            echo "::error::$dir is empty: tauri build produced no ${{ matrix.bundles }} bundle"
+            exit 1
+          fi
+          du -sh "$dir"/* || true
+          echo "bundled ${{ matrix.bundles }} for ${{ matrix.os }}"
+      # **The built binary is run, and must draw** (OpenCalc's TAURI-020, extended). A deck is
+      # named on the command line, the route a double-click takes on Linux and Windows; the
+      # page collects it through the bridge, the engine opens it in the webview's worker, and
+      # the check passes only when the stage shows a drawn slide. Linux only: macOS and Windows
+      # runners have no session a GUI process can attach to from a step.
+      - name: The built app opens a deck handed to it and draws it
+        if: runner.os == 'Linux'
+        env:
+          WEBKIT_DISABLE_DMABUF_RENDERER: "1"
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends xvfb
+          bin="desktop/target/release/openpresent-desktop"
+          [ -x "$bin" ] || { echo "::error::no desktop binary to run"; exit 1; }
+          deck="$PWD/fixtures/generated/area-shape-tree.pptx"
+          [ -f "$deck" ] || { echo "::error::$deck is missing"; exit 1; }
+          timeout 240 xvfb-run -a "$bin" --self-check "$deck" | tee "$RUNNER_TEMP/self-check.log"
+          grep -q '^SELF-CHECK ok$' "$RUNNER_TEMP/self-check.log"
+      # A desktop entry that declares MimeType with no field code in Exec cannot be handed a
+      # file, and file managers leave it out of "Open With" (OpenCalc's TAURI-017).
+      - name: The Linux desktop entry can be handed a file
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          deb="$(find desktop/${{ matrix.artifact }} -name '*.deb' -print -quit)"
+          [ -n "$deb" ] || { echo "::error::no .deb to inspect"; exit 1; }
+          work="$(mktemp -d)"
+          ( cd "$work" && ar x "$OLDPWD/$deb" && tar xf data.tar.* )
+          entry="$(find "$work/usr/share/applications" -name '*.desktop' -print -quit)"
+          [ -n "$entry" ] || { echo "::error::the .deb ships no desktop entry"; exit 1; }
+          cat "$entry"
+          grep -q '^MimeType=.*presentationml' "$entry" || { echo "::error::no .pptx MimeType in $entry"; exit 1; }
+          exec_line="$(grep '^Exec=' "$entry" || true)"
+          printf '%s' "$exec_line" | grep -qE '%[fFuU]( |$)' \
+            || { echo "::error::$exec_line takes no file argument"; exit 1; }
+          echo "ok: $exec_line"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktop-${{ matrix.os }}
+          path: desktop/${{ matrix.artifact }}
+          retention-days: 7

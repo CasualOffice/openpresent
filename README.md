@@ -61,7 +61,8 @@ OpenPresent is designed around that problem:
 | Comments, sections, zoom, labels, tags, custom XML | ✅ Tier 1M closed |
 | Rendering to PNG and PDF | 🟡 Phase 2 started: slides to PNG; PDF not yet |
 | Viewing a deck in the browser: thumbnails, slide, slide show (`VS-01`) | 🟡 Built, untested in a browser; CI publishes it with the gallery |
-| Editing, co-editing, desktop app | ⬜ Phases 3 to 10 |
+| Desktop app: the same viewer in a native window, Open panel, double-click a `.pptx` (`VS-03`) | 🟡 Built; CI bundles it for Linux, macOS and Windows, not yet seen green |
+| Editing, co-editing | ⬜ Later slices |
 
 **All Phase 1 tiers, 1A to 1N and 1R, are closed** (2026-11-08). Of 8,739 checklist rows, 7,843 are marked `y` or `r` in model, import and export; 469 more are `n/a` in a column that does not apply to them; the 427 others each carry a named reason in `docs/spec/open-rows.tsv` or are accounted for by their members, and `tools/spec-audit` checks every one. What each tier still lacks is in the [tracker](docs/14-EXECUTION-TRACKER.md) under "Tier gates".
 

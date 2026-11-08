@@ -69,7 +69,10 @@ def own_checks(root):
     # CLAUDE.md: one roadmap, one tracker.
     for md in root.rglob("*.md"):
         rel = md.relative_to(root)
-        if rel.parts[0] in {"target", "fuzz"} or ".claude" in rel.parts or str(rel).startswith("crates/casual-slide-text"):
+        # `desktop/` build output (VS-03): its own target folder, Tauri's `gen/`, and the
+        # staged copy of `webapp/`. Dependencies' READMEs there need not be UTF-8.
+        build_output = rel.parts[:2] in {("desktop", "target"), ("desktop", "gen"), ("desktop", "web-dist")}
+        if rel.parts[0] in {"target", "fuzz"} or build_output or ".claude" in rel.parts or str(rel).startswith("crates/casual-slide-text"):
             continue
         text = md.read_text(encoding="utf8")
         if str(rel) != TRACKER and "| ID | Title | St |" in text:

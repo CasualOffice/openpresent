@@ -35,6 +35,14 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 Every ribbon command PowerPoint has is present. The ones this build cannot run are
 registered disabled, with the reason in their tooltip (owner, 2026-11-08), never faked.
 
+## In the desktop app
+
+`desktop/` (`VS-03`) embeds this folder unchanged. Two hooks are its only wiring:
+`editor.core.js` sets `globalThis.openpresentEditor = { openDeck, runCommand }`, and
+`openFilePicker` in `editor.files.js` calls `globalThis.__openpresentNative.open()`, the
+platform's Open panel, when the desktop's bridge has installed it. In a browser neither exists
+and nothing changes.
+
 ## Provenance
 
 Copied from OpenCalc (`../opencalc/webapp`) at commit `b23c67c` on 2026-11-08, same

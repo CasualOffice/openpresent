@@ -4,7 +4,7 @@ CI is part of the architecture. The jobs below are a **contract**: stable names,
 change is not mergeable until they pass. Adapted from OpenCalc's docs/15 at `b23c67c`,
 keeping its number. Owner: `GOV-01`.
 
-**Current state:** Phase 0. Sixteen jobs run in five workflows, listed below. Nothing is
+**Current state:** Phase 0. Seventeen jobs run in six workflows, listed below. Nothing is
 released, and no release workflow exists yet.
 
 ## Test levels
@@ -50,6 +50,7 @@ reached its workflow and not its table.
 | `p1-gates` | `phase1-exit.yml` | The gates in CLAUDE.md, exactly as listed, with F4 and the SDK required | `P1X-01`: the closing list's gates item |
 | `gallery-build` | `gallery.yml` | Builds `render-deck` (fails naming it while it is missing), renders `fixtures/real` and a few generated decks with it and with LibreOffice from apt under `unshare -n`, then `tools/gallery/build.py` writes `index.html`; first it builds `casual-slide-wasm` with `wasm-pack` (0.14.0), and last copies `webapp/` and the engine to `app/` and checks each file the viewer needs is there and not empty (`VS-01`); kept as the `gallery` artifact. Runs on push to main, pull requests and on demand | `FH-02`: our slides beside LibreOffice's, labelled "LibreOffice", never "PowerPoint"; an empty gallery fails |
 | `gallery-deploy` | `gallery.yml` | `actions/deploy-pages` of the gallery, from main only, with `pages: write` on this job alone; needs Pages' source set to "GitHub Actions" | `FH-02`: the gallery viewable at the repository's Pages URL; `VS-01`: the viewer at `app/editor.html` beside it |
+| `desktop-bundle` | `desktop.yml` | On Linux, macOS and Windows, on push to main, pull requests and on demand: builds `casual-slide-wasm` with `wasm-pack` (0.14.0) into `webapp/pkg`, then `cargo tauri build` of `desktop/` as `.deb`, `.app` and NSIS, and checks the bundle is on disk and not empty. On Linux also fmt, clippy `-D warnings` and tests of `desktop/`, the built binary run under xvfb with a fixture deck on its command line (`--self-check`, which passes only when the slide is drawn), and the `.deb`'s desktop entry checked to take a file. Copied from OpenCalc's `desktop` job at `5d42a07` | `VS-03`: the desktop app bundles on three OSs and draws as the web does |
 | `p1-evidence` | `phase1-exit.yml` | `phase1-evidence.py merge` of each job's record into `tools/phase1-evidence.json`, kept as the `phase1-evidence` artifact, then `tools/phase1-exit.py --quick` | The closing list, read from evidence made on GitHub |
 
 **Every job is read-only** (`permissions: contents: read`), **every action is pinned to a full

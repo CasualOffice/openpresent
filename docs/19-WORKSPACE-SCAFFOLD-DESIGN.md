@@ -70,13 +70,23 @@ ops), and `-odp` until Phase 10. No crate exists without a first consumer, excep
 ```
 server/    casual-slide-collab-server, -host, -wopi, -mcp, -secrets
 webapp/    editor and site; ribbon, command registry and tokens ported from opencalc (webapp/README.md)
-desktop/   Tauri, Phase 10
+desktop/   the Tauri app (VS-03): its own cargo workspace around webapp/, from opencalc (desktop/PROVENANCE.md)
 sdk/       @openslide/deck and friends, Phase 10
 schemas/   vendored standards, see schemas/README.md
 tools/     spec-checklist, fidelity, benchmark, check-* gates
 fixtures/  checksummed corpus
 fuzz/      separate workspace
 ```
+
+## The desktop app
+
+`desktop/` (`VS-03`) is a separate cargo workspace, as `fuzz/` is and as OpenCalc's is
+(OpenCalc's ADR-023): Tauri's tree is large and no engine build should carry it. It depends on no
+`casual-slide-*` crate. The engine runs in the webview as WebAssembly from the same `webapp/`
+the site serves, so the desktop draws what the web draws by construction. Its dependencies are
+`tauri`, `tauri-plugin-dialog` (the platform's Open panel, called from Rust only), `serde`, and
+`tauri-build` at build time; its lockfile is not yet under `cargo deny` and `cargo audit`
+(`DESK-01`). `desktop.yml` builds, lints, tests and bundles it ([15](15-CI-AND-RELEASE-GATES.md)).
 
 ## Provenance
 
