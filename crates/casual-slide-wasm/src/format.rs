@@ -5,7 +5,7 @@
 //! writer, which patches only the run and paragraph properties that differ.
 //!
 //! The font list is OpenCalc's (`casual-calc-wasm/src/style.rs` `font_families` at
-//! `b23c67c`, owner instruction 52): the picker offers the shared substitution table's
+//! `b23c67c`, owner instruction 53): the picker offers the shared substitution table's
 //! families, each named with the bundled face it renders as.
 
 use casual_slide_model::fill::Fill;

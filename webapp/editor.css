@@ -205,6 +205,11 @@ body {
 }
 /* An open text box: PowerPoint's dashed outline; its handles still resize it. */
 .sel-box.is-editing { border-style: dashed; cursor: text; }
+/* A multiple selection: an outline round each shape, the primary one heavier (`UX-003`). */
+.sel-box.is-multi { border: 1px solid #5f5f5f; }
+.sel-box.is-multi.is-primary { border-width: 2px; }
+/* The marquee a drag from an empty part of the slide draws. */
+.sel-marquee { position: absolute; box-sizing: border-box; border: 1px dashed #5f5f5f; background: rgba(0, 0, 0, 0.06); pointer-events: none; }
 /* The shape being dragged: the slide picture clipped to it, carried by a transform. */
 .sel-ghost { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; opacity: 0.7; pointer-events: none; will-change: transform; }
 .sel-ghost img { display: block; width: 100%; height: 100%; user-select: none; }
@@ -483,6 +488,17 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 }
 .shp-menu-item:hover, .shp-menu-item:focus-visible { background: var(--op-surface-color); outline: none; }
 .shp-more { position: relative; }
+/* The Font and Font Size lists (`UX-003`), as OpenCalc's combo: a box to type in over
+   a column of rows, each font's row in its own face. */
+.op-combo-pop { width: 220px; }
+.op-combo-input { width: 100%; box-sizing: border-box; margin-bottom: 4px; padding: 3px 6px; font: inherit; font-size: 13px; }
+.op-combo-list { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
+.op-combo-list .combo-item {
+  display: block; width: 100%; padding: 4px 8px; border: 0; border-radius: 3px; box-sizing: border-box;
+  background: none; color: inherit; font-size: 14px; text-align: left; cursor: pointer; white-space: nowrap;
+}
+.op-combo-list .combo-item:hover, .op-combo-list .combo-item.active { background: var(--op-surface-color); }
+.op-combo-list .combo-item.checked { font-weight: 600; }
 .shp-color-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .shp-styles { width: 404px; }
 .shp-style-grid { display: grid; grid-template-columns: repeat(7, 52px); gap: 4px; }

@@ -105,7 +105,7 @@ function remember(item) {
 
 let pop = null;
 
-function closePop() {
+export function closePop() {
   if (!pop) return;
   pop.remove();
   pop = null;
@@ -118,6 +118,8 @@ function popKey(e) { if (e.key === "Escape") { e.stopPropagation(); closePop(); 
 
 /// The button that ran command `id`, to drop a popover from; else the stage.
 function anchorFor(ids) {
+  // A control of the Format pane (`UX-003`) anchors its own popover.
+  if (ids instanceof Element) return ids.getBoundingClientRect();
   // The control pressed: a gallery tile or a menu's button.
   const active = document.activeElement;
   if (active?.closest?.(".op-ribbon")) {
@@ -133,7 +135,7 @@ function anchorFor(ids) {
   return byId("stage").getBoundingClientRect();
 }
 
-function openPop(ids, cls, build) {
+export function openPop(ids, cls, build) {
   closePop();
   pop = el("div", `shp-pop ${cls}`);
   pop.setAttribute("role", "dialog");
@@ -486,7 +488,7 @@ function variations(hex) {
   return [[20000, 80000, "Lighter 80%"], [40000, 60000, "Lighter 60%"], [60000, 40000, "Lighter 40%"], [75000, 0, "Darker 25%"], [50000, 0, "Darker 50%"]];
 }
 
-async function palette() {
+export async function palette() {
   try {
     return (await request({ op: "build", fn: "slide_palette", args: [state.current] }, { priority: 9 })).value;
   } catch {
@@ -506,7 +508,7 @@ function swatch(css, title, spec, onPick) {
 
 /// PowerPoint's colour menu: Theme Colors with their tints, Standard Colors, a none
 /// item and More Colors. `onPick` gets the engine's colour form, or `none`.
-function colourMenu(p, colours, noneLabel, onPick) {
+export function colourMenu(p, colours, noneLabel, onPick) {
   const none = el("button", "shp-menu-item", noneLabel);
   none.type = "button";
   none.addEventListener("click", () => { closePop(); onPick("none"); });
@@ -670,7 +672,13 @@ export function init() {
   // Home > Drawing and the Shape Format tab (`ribbon.model.js`) share these ids.
   register("drawing.fill", { label: "Shape Fill", enabled: formattable, run: fillMenu });
   register("drawing.outline", { label: "Shape Outline", enabled: formattable, run: outlineMenu });
-  register("drawing.quick-styles", { label: "Shape Styles", enabled: formattable, run: stylesMenu });
+  // A gallery tile applies its own style at once, in Accent 1 as PowerPoint's
+  // in-ribbon row shows them (`UX-003`); More opens the whole grid.
+  const TILE_ROWS = { "Colored Outline": 0, "Colored Fill": 1, "Light 1 Fill": 2, "Intense Effect": 5 };
+  register("drawing.quick-styles", {
+    label: "Shape Styles", enabled: formattable, run: stylesMenu,
+    pick: (name) => (name in TILE_ROWS ? format("Shape Style", "set_shape_style", [TILE_ROWS[name], 1]) : stylesMenu()),
+  });
   selection.onPaint(paintHandles);
   window.addEventListener("resize", () => paintHandles(sel));
 }

@@ -36,12 +36,16 @@ const NEW_SLIDE = ["home.new-slide", "home.new-slide-layout", "home.duplicate-sl
 const SLIDE_SIZE = ["design.slide-size.standard", "design.slide-size.widescreen", "design.slide-size.custom"];
 const ZOOM = ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", "view.zoom.150", "view.zoom.200"];
 const SECTION = ["slide.section.add", "slide.section.rename", "slide.section.remove", "slide.section.collapse-all", "slide.section.expand-all"];
-const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.rotate-right", "arrange.flip-horizontal", "arrange.selection-pane"];
+const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.distribute-horizontal", "arrange.distribute-vertical", "arrange.rotate-right", "arrange.flip-horizontal", "arrange.selection-pane"];
 const SELECT = ["edit.select-all", "arrange.selection-pane"];
 const PRESENT = ["slideshow.from-beginning", "slideshow.from-current", "slideshow.presenter-view"];
 
-// Our own gallery swatches: plain colour pairs, not Microsoft's theme artwork.
-const THEMES = [["Plain", "#ffffff", "#156082"], ["Lagoon", "#1e5155", "#6ad7cf"], ["Meadow", "#ffffff", "#6f9a3f"], ["Graphite", "#3b3b3b", "#d0a54b"], ["Paper", "#f4efe1", "#b34a3c"], ["Dusk", "#2b2d42", "#ef8354"]];
+// Our own gallery swatches: plain colour pairs, not Microsoft's theme artwork. The
+// themes are the engine's built-in ones (`casual-slide-wasm` `THEMES`), by name, each
+// tile its `lt2` and `accent1`; a click applies it (`UX-003`).
+const THEMES = [["Plain", "#e8ecf0", "#3a6ea5"], ["Harbour", "#dde7f0", "#1f6fb2"], ["Meadow", "#eef3e6", "#5b8c3a"], ["Ember", "#f7ece8", "#c0392b"], ["Slate", "#e5e9f0", "#5e81ac"], ["Orchid", "#f2eaf6", "#8e44ad"]];
+// PowerPoint's Medium Style 2 row, by its style ids (`editor.objects.js`).
+const TABLE_STYLES = [["Medium Style 2 - Accent 1", "#dbe5f1", "#4472c4"], ["Medium Style 2 - Accent 2", "#fbe4d5", "#ed7d31"], ["Medium Style 2 - Accent 3", "#ededed", "#a5a5a5"], ["Medium Style 2 - Accent 4", "#fff2cc", "#ffc000"], ["Medium Style 2 - Accent 5", "#deebf6", "#5b9bd5"], ["Medium Style 2 - Accent 6", "#e2efd9", "#70ad47"]];
 const TRANSITIONS = [["None", "dismiss"], ["Morph", "shape_union"], ["Fade", "slide_transition"], ["Push", "arrow_next"], ["Wipe", "arrow_previous"], ["Split", "layout_row_two_split_top"], ["Reveal", "eye"], ["Cut", "cut"]];
 const ANIMATIONS = [["None", "dismiss"], ["Appear", "sparkle"], ["Fade", "text_effects_sparkle"], ["Fly In", "arrow_next"], ["Float In", "arrow_maximize"], ["Split", "layout_row_two_split_top"], ["Wipe", "arrow_previous"], ["Zoom", "zoom_in"]];
 const SHAPE_STYLES = [["Colored Outline", "#ffffff", "#156082"], ["Colored Fill", "#156082", "#156082"], ["Light 1 Fill", "#dbe9f4", "#156082"], ["Intense Effect", "#0e4a63", "#0e4a63"]];
@@ -53,7 +57,7 @@ export const TABS = [
     ] },
     { label: "Clipboard", fold: 6, icon: "clipboard_paste", launcher: "edit.clipboard", items: [
       L("edit.paste", "clipboard_paste", "Paste (Ctrl+V)", { menu: ["edit.paste", "edit.paste-text"] }),
-      R([[S("edit.cut", "cut", "Cut (Ctrl+X)")], [S("edit.copy", "copy", "Copy (Ctrl+C)")], [S("home.format-painter", "paint_brush", "Format Painter")]]),
+      R([[S("edit.cut", "cut", "Cut (Ctrl+X)")], [S("edit.copy", "copy", "Copy (Ctrl+C)", { menu: ["edit.copy", "edit.duplicate"] })], [S("home.format-painter", "paint_brush", "Format Painter")]]),
     ] },
     { label: "Slides", fold: 7, icon: "slide_add", items: [
       L("home.new-slide", "slide_add", "New Slide (Ctrl+M)", { menu: NEW_SLIDE }),
@@ -64,12 +68,12 @@ export const TABS = [
         [C("font.name", "Font", 110), C("font.size", "Font Size", 48), I("font.increase", "font_increase", "Increase Font Size (Ctrl+Shift+>)"), I("font.decrease", "font_decrease", "Decrease Font Size (Ctrl+Shift+<)"), I("font.clear", "text_clear_formatting", "Clear All Formatting (Ctrl+Space)")],
         [I("font.bold", "text_bold", "Bold (Ctrl+B)"), I("font.italic", "text_italic", "Italic (Ctrl+I)"), I("font.underline", "text_underline", "Underline (Ctrl+U)"), I("font.strike", "text_strikethrough", "Strikethrough"),
          I("font.subscript", "text_subscript", "Subscript (Ctrl+=)"), I("font.superscript", "text_superscript", "Superscript (Ctrl+Shift++)"), I("font.case", "text_change_case", "Change Case", { menu: ["font.case.sentence", "font.case.lower", "font.case.upper", "font.case.title"] }),
-         I("font.highlight", "highlight", "Text Highlight Color", { menu: ["font.highlight"] }), I("font.color", "text_color", "Font Color", { menu: ["font.color"] })],
+         I("font.highlight", "highlight", "Text Highlight Color"), I("font.color", "text_color", "Font Color")],
       ]),
     ] },
     { label: "Paragraph", fold: 8, icon: "text_align_left", launcher: "para.dialog", items: [
       R([
-        [I("para.bullets", "text_bullet_list_ltr", "Bullets", { menu: ["para.bullets"] }), I("para.numbering", "text_number_list_ltr", "Numbering", { menu: ["para.numbering"] }), I("para.indent-less", "text_indent_decrease", "Decrease List Level (Shift+Tab)"), I("para.indent-more", "text_indent_increase", "Increase List Level (Tab)"), I("para.line-spacing", "text_line_spacing", "Line Spacing", { menu: ["para.line-spacing"] })],
+        [I("para.bullets", "text_bullet_list_ltr", "Bullets"), I("para.numbering", "text_number_list_ltr", "Numbering", { menu: ["para.numbering"] }), I("para.indent-less", "text_indent_decrease", "Decrease List Level (Shift+Tab)"), I("para.indent-more", "text_indent_increase", "Increase List Level (Tab)"), I("para.line-spacing", "text_line_spacing", "Line Spacing", { menu: ["para.line-spacing"] })],
         [I("para.left", "text_align_left", "Align Left (Ctrl+L)"), I("para.center", "text_align_center", "Center (Ctrl+E)"), I("para.right", "text_align_right", "Align Right (Ctrl+R)"), I("para.justify", "text_align_justify", "Justify (Ctrl+J)"),
          I("para.columns", "text_column_two", "Columns", { menu: ["para.columns"] }), I("para.direction", "text_direction_rotate_270_right", "Text Direction", { menu: ["para.direction"] }), I("para.align-text", "align_center_vertical", "Align Text", { menu: ["para.align-text"] })],
       ]),
@@ -244,7 +248,7 @@ export const TABS = [
 // Contextual, while a table is selected (`VS-11`): PowerPoint's Table Design and Layout.
 TABS.push(
   { id: "table-design", label: "Table Design", key: "JT", contextual: "table", groups: [
-    { label: "Table Styles", fold: 3, icon: "table", items: [L("table.styles", "table", "Table Styles")] },
+    { label: "Table Styles", fold: 3, icon: "table", items: [G("table.styles", "Table Styles", TABLE_STYLES)] },
   ] },
   { id: "table-layout", label: "Layout", key: "JL", contextual: "table", groups: [
     { label: "Rows & Columns", fold: 3, icon: "table_insert_row", items: [
@@ -352,6 +356,9 @@ export const LABELS = {
   "arrange.align-top": "Align Top",
   "arrange.align-middle": "Align Middle",
   "arrange.align-bottom": "Align Bottom",
+  "arrange.distribute-horizontal": "Distribute Horizontally",
+  "arrange.distribute-vertical": "Distribute Vertically",
+  "edit.duplicate": "Duplicate (Ctrl+D)",
   "arrange.rotate-right": "Rotate Right 90°",
   "arrange.flip-horizontal": "Flip Horizontal",
   "arrange.selection-pane": "Selection Pane",
