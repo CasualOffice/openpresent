@@ -645,6 +645,20 @@ export function selectedNode() { return shape()?.node ?? null; }
 /// The selected shape's box and flags, or null (`VS-11`: tables and charts read it).
 export function selectedShape() { return shape(); }
 
+/// A right-click at `e`, before its menu opens: a shape not selected is selected
+/// first, as PowerPoint does, so the menu acts on what was clicked; one already
+/// selected keeps the selection it is part of, and text being typed in stays so.
+/// A right-click on an empty part of the slide clears the selection (`UX-003`).
+export function selectForMenu(e) {
+  if (!state.deck || shapesFor !== state.current) return;
+  const found = hit(pointer(e));
+  if (found && chosen().some((s) => s.node === found.node)) return;
+  if (!found && text.editing()) return;
+  text.stop();
+  select(found ? found.node : null);
+  byId("stage").focus({ preventScroll: true });
+}
+
 /// Clear the selection: a press off the slide.
 export function deselect() { if (selected != null || others.length) select(null); }
 

@@ -30,6 +30,7 @@ import * as build from "./editor.build.js";
 import * as shapes from "./editor.shapes.js";
 import * as animate from "./editor.animate.js";
 import * as objects from "./editor.objects.js";
+import * as picture from "./editor.picture.js";
 import * as home from "./editor.home.js";
 import * as clipboard from "./editor.clipboard.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
@@ -413,6 +414,7 @@ async function boot() {
   shapes.init();   // Insert > Shapes, adjust handles, Shape Format (`SHAPE-01`)
   animate.init();
   objects.init();
+  picture.init();  // Picture Format: Crop, Reset Picture, Picture Styles (`UX-003`)
   home.init();       // the Home tab's Font and Paragraph groups (`UX-003`)
   clipboard.init();  // Cut, Copy, Paste and Duplicate (`UX-003`)
   registerCommands();
@@ -427,7 +429,8 @@ async function boot() {
   setContextual((kind) => {
     if (kind === "table") return objects.tableSelected();
     if (kind === "chart") return objects.chartSelected();
-    return kind === "shape" && !!state.deck && selection.hasSelection() && !objects.tableSelected() && !objects.chartSelected();
+    if (kind === "picture") return picture.pictureSelected();
+    return kind === "shape" && !!state.deck && selection.hasSelection() && !objects.tableSelected() && !objects.chartSelected() && !picture.pictureSelected();
   });
   await startRibbon(byId("workspace"));
   changed();

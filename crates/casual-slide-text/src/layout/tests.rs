@@ -8,6 +8,7 @@ fn style(size: f32) -> RunStyle {
         italic: false,
         color: Rgba::BLACK,
         underline: None,
+        highlight: None,
     }
 }
 
