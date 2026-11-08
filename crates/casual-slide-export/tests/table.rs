@@ -996,8 +996,10 @@ fn rows_and_columns_are_added_and_removed_in_place() {
         let grid = &mut t.tbl_grid.as_mut().unwrap().grid_col;
         grid.push(grid[0].clone());
         for row in &mut t.rows {
-            let mut cell = TableCell::default();
-            cell.tx_body = row.cells[0].tx_body.clone();
+            let cell = TableCell {
+                tx_body: row.cells[0].tx_body.clone(),
+                ..TableCell::default()
+            };
             row.cells.push(cell);
         }
     })
