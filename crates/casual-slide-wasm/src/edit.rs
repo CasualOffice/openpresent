@@ -10,7 +10,7 @@ use casual_slide_model::shape::ObjectId;
 use casual_slide_model::text::{CharacterProperties, TextBody, TextItem, UnderlineType};
 use casual_slide_render::display::Affine;
 use casual_slide_text::CaretLine;
-use casual_slide_transaction::{Attribute, TextOp, body_length, locate, paragraph_start};
+use casual_slide_transaction::{Attribute, Operation, body_length, locate, paragraph_start};
 
 use crate::{BridgeError, Viewer};
 
@@ -346,8 +346,7 @@ impl Viewer {
 
     /// Apply an edit through the history. `typing` folds it into the typing burst it
     /// continues, so one undo takes back a run of keystrokes.
-    pub fn edit(&mut self, op: TextOp, typing: bool) -> Result<bool, BridgeError> {
-        let object = op.object();
+    pub fn edit(&mut self, op: Operation, typing: bool) -> Result<bool, BridgeError> {
         let mark = match self.typing {
             Some(mark) if typing => mark,
             _ => self.history.undo_mark(),
@@ -355,11 +354,8 @@ impl Viewer {
         let changed = self
             .history
             .apply(self.deck.parts_mut(), op)
-            .map_err(|e| BridgeError::Edit(e.code()))?;
+            .map_err(BridgeError::Edit)?;
         if changed {
-            if let Some(object) = object {
-                self.edited.insert(object.part);
-            }
             self.reports.clear();
             if typing {
                 self.history.group_since(mark);
@@ -386,7 +382,7 @@ impl Viewer {
         }
         let on = !which.is_on(props_at(self.body(object)?, start));
         self.edit(
-            TextOp::FormatRange {
+            Operation::FormatRange {
                 object,
                 start,
                 end,
@@ -408,37 +404,10 @@ impl Viewer {
             | u32::from(Toggle::Underline.is_on(p)) << 2)
     }
 
-    /// Undo the last step. Returns the shape it changed.
-    pub fn undo(&mut self) -> Result<Option<ObjectId>, BridgeError> {
-        self.typing = None;
-        let done = self
-            .history
-            .undo(self.deck.parts_mut())
-            .map_err(|e| BridgeError::Edit(e.code()))?;
-        self.reports.clear();
-        Ok(done.and_then(|op| op.object()))
-    }
-
-    /// Redo the last undone step. Returns the shape it changed.
-    pub fn redo(&mut self) -> Result<Option<ObjectId>, BridgeError> {
-        self.typing = None;
-        let done = self
-            .history
-            .redo(self.deck.parts_mut())
-            .map_err(|e| BridgeError::Edit(e.code()))?;
-        self.reports.clear();
-        Ok(done.and_then(|op| op.object()))
-    }
-
     /// End the typing burst, so the next keystroke starts a new undo step: the caret
     /// moved, or the user clicked elsewhere.
     pub fn break_typing(&mut self) {
         self.typing = None;
-    }
-
-    /// Whether there is anything to undo, and to redo: bits 1 and 2.
-    pub fn undo_state(&self) -> u32 {
-        u32::from(self.history.can_undo()) | u32::from(self.history.can_redo()) << 1
     }
 }
 

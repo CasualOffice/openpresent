@@ -240,8 +240,8 @@ impl Deck {
         &self.parts
     }
 
-    /// The deck's slide-like parts, to edit. What is drawn next is drawn from them; the
-    /// file is untouched until a save brings it to them.
+    /// The deck's slide-like parts, to edit (`VS-06`). The next drawing draws them as
+    /// they then stand; the file is not touched until a save.
     pub fn parts_mut(&mut self) -> &mut SlideParts {
         &mut self.parts
     }

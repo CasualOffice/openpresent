@@ -4,8 +4,10 @@
 //! 42). Its contract is kept: every [`apply`] returns the **inverse** operation, so undo
 //! and redo are inverse replay through [`History`], never a second implementation that
 //! can drift. The operations are slides' text operations from
-//! `docs/24-OPERATIONS-AND-COLLABORATION.md`: insert text, delete a range, format a
-//! range, each over one shape's text body.
+//! `docs/24-OPERATIONS-AND-COLLABORATION.md`: from the Text family, insert text, delete
+//! a range and format a range over one shape's text body (`VS-05`); from the Properties
+//! and Tree families, set a node's transform and delete or insert a node (`VS-06`, moved
+//! here from `casual-slide-wasm`'s `txn.rs`). One op set, one undo stack.
 //!
 //! # Positions
 //!
@@ -17,13 +19,13 @@
 //!
 //! # Inverses
 //!
-//! The inverse of each operation is [`TextOp::Restore`]: the paragraphs it touched, as
+//! The inverse of each operation is [`Operation::Restore`]: the paragraphs it touched, as
 //! they were. So an undo gives back the very model that was read, run for run, and the
 //! writer, which patches only what differs from the file (ADR-013), then changes nothing.
 //!
 //! Nothing here reads a file; offsets come from the host and are checked, never trusted.
 
-use casual_slide_model::shape::ObjectId;
+use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::SlideParts;
 use casual_slide_model::text::{
     CharacterProperties, LineBreak, Paragraph, TextBody, TextItem, TextRun, UnderlineType,
@@ -35,6 +37,9 @@ use casual_slide_model::text::{
 pub enum TxnError {
     /// No shape has this id, or its part was not read.
     NoSuchObject(ObjectId),
+    /// The shape tree's own root cannot be removed, nor a node put under a parent
+    /// that is not there.
+    NoParent(ObjectId),
     /// The shape has no text body to edit.
     NoText(ObjectId),
     /// An offset or a paragraph range is past the end of the body.
@@ -53,9 +58,10 @@ impl TxnError {
     pub fn code(&self) -> &'static str {
         match self {
             Self::NoSuchObject(_) => "CS-TXN-0001",
-            Self::NoText(_) => "CS-TXN-0002",
-            Self::OutOfRange { .. } => "CS-TXN-0003",
-            Self::EmptyBody(_) => "CS-TXN-0004",
+            Self::NoParent(_) => "CS-TXN-0002",
+            Self::NoText(_) => "CS-TXN-0003",
+            Self::OutOfRange { .. } => "CS-TXN-0004",
+            Self::EmptyBody(_) => "CS-TXN-0005",
         }
     }
 }
@@ -66,6 +72,13 @@ impl core::fmt::Display for TxnError {
             Self::NoSuchObject(id) => write!(
                 f,
                 "[{}] no shape {} in part {}",
+                self.code(),
+                id.node,
+                id.part
+            ),
+            Self::NoParent(id) => write!(
+                f,
+                "[{}] shape {} in part {} has no parent to change",
                 self.code(),
                 id.node,
                 id.part
@@ -116,9 +129,31 @@ impl Attribute {
     }
 }
 
-/// One text operation (`docs/24`, the Text family).
+/// One edit of the model (`docs/24`).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TextOp {
+#[non_exhaustive]
+pub enum Operation {
+    /// Properties: set a node's `xfrm`. `None` removes it.
+    SetTransform {
+        /// The node.
+        node: ObjectId,
+        /// What it becomes.
+        transform: Option<Transform>,
+    },
+    /// Tree: remove a node and everything under it.
+    DeleteNode {
+        /// The node.
+        node: ObjectId,
+    },
+    /// Tree: put a node back under `parent` at `index` among its children.
+    InsertNode {
+        /// The group, or the shape tree's root.
+        parent: ObjectId,
+        /// Its place, in z-order.
+        index: usize,
+        /// The node and its subtree.
+        node: Box<ShapeNode>,
+    },
     /// Insert `text` at `at`. A line feed splits the paragraph, keeping its properties on
     /// both halves; a vertical tab (U+000B) is a line break, as PowerPoint's Shift+Enter.
     /// Other control characters, which XML cannot hold, are dropped. Typed text takes the
@@ -165,29 +200,39 @@ pub enum TextOp {
         paragraphs: Vec<Paragraph>,
     },
     /// Several operations as one: applied in order, all or nothing, one undo step.
-    Batch(Vec<TextOp>),
+    Batch(Vec<Operation>),
 }
 
-impl TextOp {
+impl Operation {
     /// The shape the operation edits; for a batch, its first member's.
     pub fn object(&self) -> Option<ObjectId> {
         match self {
+            Self::SetTransform { node, .. } | Self::DeleteNode { node } => Some(*node),
+            Self::InsertNode { node, .. } => Some(node.id),
             Self::InsertText { object, .. }
             | Self::DeleteRange { object, .. }
             | Self::FormatRange { object, .. }
             | Self::Restore { object, .. } => Some(*object),
-            Self::Batch(ops) => ops.iter().find_map(TextOp::object),
+            Self::Batch(ops) => ops.iter().find_map(Operation::object),
         }
+    }
+
+    /// The part this operation edits, for a host that shows it. The first, for a batch.
+    pub fn part(&self) -> Option<u32> {
+        self.object().map(|o| o.part)
     }
 
     /// A short name for a menu label: "Undo Typing".
     pub fn label(&self) -> &'static str {
         match self {
+            Self::SetTransform { .. } => "Move",
+            Self::DeleteNode { .. } => "Delete",
+            Self::InsertNode { .. } => "Insert",
             Self::InsertText { .. } => "Typing",
             Self::DeleteRange { .. } => "Delete",
             Self::FormatRange { .. } => "Format",
             Self::Restore { .. } => "Edit",
-            Self::Batch(ops) => ops.first().map_or("Edit", TextOp::label),
+            Self::Batch(ops) => ops.first().map_or("Edit", Operation::label),
         }
     }
 }
@@ -393,7 +438,7 @@ fn keep_char(ch: char) -> bool {
 type Place = (usize, usize);
 
 /// What applying did: the inverse, and whether anything changed.
-type Applied = (TextOp, bool);
+type Applied = (Operation, bool);
 
 fn apply_insert(
     body: &mut TextBody,
@@ -445,7 +490,7 @@ fn apply_insert(
     let count = current - first + 1;
     let changed = count != 1 || body.paragraphs.get(first) != Some(&before);
     Ok((
-        TextOp::Restore {
+        Operation::Restore {
             object,
             first,
             count,
@@ -496,7 +541,7 @@ fn apply_delete(
     let before: Vec<Paragraph> = body.paragraphs.get(p0..=p1).unwrap_or_default().to_vec();
     if start == end {
         return Ok((
-            TextOp::Restore {
+            Operation::Restore {
                 object,
                 first: p0,
                 count: 1,
@@ -538,7 +583,7 @@ fn apply_delete(
     }
     let changed = body.paragraphs.get(p0) != before.first() || before.len() != 1;
     Ok((
-        TextOp::Restore {
+        Operation::Restore {
             object,
             first: p0,
             count: 1,
@@ -586,7 +631,7 @@ fn apply_format(
     }
     let changed = body.paragraphs.get(p0..=p1) != Some(before.as_slice());
     Ok((
-        TextOp::Restore {
+        Operation::Restore {
             object,
             first: p0,
             count: before.len(),
@@ -618,7 +663,7 @@ fn apply_restore(
     let old: Vec<Paragraph> = body.paragraphs.splice(first..end, paragraphs).collect();
     let changed = body.paragraphs.get(first..first + new_count) != Some(old.as_slice());
     Ok((
-        TextOp::Restore {
+        Operation::Restore {
             object,
             first,
             count: new_count,
@@ -628,28 +673,87 @@ fn apply_restore(
     ))
 }
 
-fn apply_inner(parts: &mut SlideParts, op: TextOp) -> Result<Applied, TxnError> {
+fn root_mut(parts: &mut SlideParts, part: u32) -> Option<&mut ShapeNode> {
+    parts.get_mut(part)?.shape_tree_mut()
+}
+
+/// The parent of `id` in the tree under `root`, and the child's index. Iterative.
+fn parent_of(root: &mut ShapeNode, id: ObjectId) -> Option<(&mut ShapeNode, usize)> {
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(at) = node.children.iter().position(|c| c.id == id) {
+            return Some((node, at));
+        }
+        stack.extend(node.children.iter_mut());
+    }
+    None
+}
+
+fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnError> {
     match op {
-        TextOp::InsertText { object, at, text } => {
+        Operation::SetTransform { node, transform } => {
+            let shape = parts
+                .get_mut(node.part)
+                .and_then(|p| p.node_mut(node))
+                .ok_or(TxnError::NoSuchObject(node))?;
+            let changed = shape.transform != transform;
+            let before = core::mem::replace(&mut shape.transform, transform);
+            Ok((
+                Operation::SetTransform {
+                    node,
+                    transform: before,
+                },
+                changed,
+            ))
+        }
+        Operation::DeleteNode { node } => {
+            let root = root_mut(parts, node.part).ok_or(TxnError::NoSuchObject(node))?;
+            if root.id == node {
+                return Err(TxnError::NoParent(node));
+            }
+            let (parent, index) = parent_of(root, node).ok_or(TxnError::NoSuchObject(node))?;
+            let removed = parent.children.remove(index);
+            Ok((
+                Operation::InsertNode {
+                    parent: parent.id,
+                    index,
+                    node: Box::new(removed),
+                },
+                true,
+            ))
+        }
+        Operation::InsertNode {
+            parent,
+            index,
+            node,
+        } => {
+            let root = root_mut(parts, parent.part).ok_or(TxnError::NoParent(parent))?;
+            let holder = root.find_mut(parent).ok_or(TxnError::NoParent(parent))?;
+            let at = index.min(holder.children.len());
+            let id = node.id;
+            holder.children.insert(at, *node);
+            Ok((Operation::DeleteNode { node: id }, true))
+        }
+        Operation::InsertText { object, at, text } => {
             apply_insert(body_mut(parts, object)?, object, at, &text)
         }
-        TextOp::DeleteRange { object, start, end } => {
+        Operation::DeleteRange { object, start, end } => {
             apply_delete(body_mut(parts, object)?, object, start, end)
         }
-        TextOp::FormatRange {
+        Operation::FormatRange {
             object,
             start,
             end,
             attribute,
         } => apply_format(body_mut(parts, object)?, object, start, end, &attribute),
-        TextOp::Restore {
+        Operation::Restore {
             object,
             first,
             count,
             paragraphs,
         } => apply_restore(body_mut(parts, object)?, object, first, count, paragraphs),
-        TextOp::Batch(ops) => {
-            let mut inverses: Vec<TextOp> = Vec::with_capacity(ops.len());
+        Operation::Batch(ops) => {
+            let mut inverses: Vec<Operation> = Vec::with_capacity(ops.len());
             let mut changed = false;
             for op in ops {
                 match apply_inner(parts, op) {
@@ -667,13 +771,13 @@ fn apply_inner(parts: &mut SlideParts, op: TextOp) -> Result<Applied, TxnError> 
                 }
             }
             inverses.reverse();
-            Ok((TextOp::Batch(inverses), changed))
+            Ok((Operation::Batch(inverses), changed))
         }
     }
 }
 
 /// Apply `op` to the deck's parts and return its inverse. On an error nothing changed.
-pub fn apply(parts: &mut SlideParts, op: TextOp) -> Result<TextOp, TxnError> {
+pub fn apply(parts: &mut SlideParts, op: Operation) -> Result<Operation, TxnError> {
     apply_inner(parts, op).map(|(inverse, _)| inverse)
 }
 
@@ -684,8 +788,8 @@ pub fn apply(parts: &mut SlideParts, op: TextOp) -> Result<TextOp, TxnError> {
 /// never down, so an undo after a save still reads as unsaved work.
 #[derive(Debug, Default)]
 pub struct History {
-    undo: Vec<TextOp>,
-    redo: Vec<TextOp>,
+    undo: Vec<Operation>,
+    redo: Vec<Operation>,
     depth: Option<usize>,
     applied: u64,
     pushes: u64,
@@ -720,7 +824,7 @@ impl History {
 
     /// Apply `op`, recording its inverse and clearing redo. Returns whether anything
     /// changed; a change of nothing leaves no undo entry.
-    pub fn apply(&mut self, parts: &mut SlideParts, op: TextOp) -> Result<bool, TxnError> {
+    pub fn apply(&mut self, parts: &mut SlideParts, op: Operation) -> Result<bool, TxnError> {
         let (inverse, changed) = apply_inner(parts, op)?;
         if !changed {
             return Ok(false);
@@ -757,7 +861,7 @@ impl History {
         // Inverses run newest first.
         let mut members = self.undo.split_off(self.undo.len() - n);
         members.reverse();
-        self.undo.push(TextOp::Batch(members));
+        self.undo.push(Operation::Batch(members));
         self.pushes -= n as u64 - 1;
         true
     }
@@ -778,12 +882,12 @@ impl History {
     }
 
     /// What undo would apply, without applying it.
-    pub fn peek_undo(&self) -> Option<&TextOp> {
+    pub fn peek_undo(&self) -> Option<&Operation> {
         self.undo.last()
     }
 
     /// Undo the last step; returns what it applied, `None` with nothing to undo.
-    pub fn undo(&mut self, parts: &mut SlideParts) -> Result<Option<TextOp>, TxnError> {
+    pub fn undo(&mut self, parts: &mut SlideParts) -> Result<Option<Operation>, TxnError> {
         let Some(op) = self.undo.pop() else {
             return Ok(None);
         };
@@ -802,7 +906,7 @@ impl History {
     }
 
     /// Redo the last undone step; returns what it applied.
-    pub fn redo(&mut self, parts: &mut SlideParts) -> Result<Option<TextOp>, TxnError> {
+    pub fn redo(&mut self, parts: &mut SlideParts) -> Result<Option<Operation>, TxnError> {
         let Some(op) = self.redo.pop() else {
             return Ok(None);
         };
@@ -821,5 +925,7 @@ impl History {
     }
 }
 
+#[cfg(test)]
+mod shape_tests;
 #[cfg(test)]
 mod tests;

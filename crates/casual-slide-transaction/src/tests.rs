@@ -82,7 +82,7 @@ fn sample() -> SlideParts {
 }
 
 /// Apply, check, then apply the inverse and require the very model back.
-fn round_trip(op: TextOp, expect: &str) -> SlideParts {
+fn round_trip(op: Operation, expect: &str) -> SlideParts {
     let mut parts = sample();
     let original = parts.clone();
     let inverse = apply(&mut parts, op).unwrap();
@@ -98,7 +98,7 @@ fn round_trip(op: TextOp, expect: &str) -> SlideParts {
 #[test]
 fn typed_text_joins_the_run_before_it_and_takes_its_properties() {
     let edited = round_trip(
-        TextOp::InsertText {
+        Operation::InsertText {
             object: SHAPE,
             at: 11,
             text: "!".into(),
@@ -113,7 +113,7 @@ fn typed_text_joins_the_run_before_it_and_takes_its_properties() {
 #[test]
 fn a_line_feed_splits_the_paragraph_and_a_vertical_tab_is_a_line_break() {
     round_trip(
-        TextOp::InsertText {
+        Operation::InsertText {
             object: SHAPE,
             at: 5,
             text: ",\nnew".into(),
@@ -121,7 +121,7 @@ fn a_line_feed_splits_the_paragraph_and_a_vertical_tab_is_a_line_break() {
         "Hello,\nnew world\nSecond",
     );
     round_trip(
-        TextOp::InsertText {
+        Operation::InsertText {
             object: SHAPE,
             at: 0,
             text: "a\u{b}b".into(),
@@ -133,7 +133,7 @@ fn a_line_feed_splits_the_paragraph_and_a_vertical_tab_is_a_line_break() {
 #[test]
 fn control_characters_xml_cannot_hold_are_dropped() {
     round_trip(
-        TextOp::InsertText {
+        Operation::InsertText {
             object: SHAPE,
             at: 0,
             text: "x\u{0}\u{1b}\ty".into(),
@@ -145,7 +145,7 @@ fn control_characters_xml_cannot_hold_are_dropped() {
 #[test]
 fn a_delete_within_and_across_runs_and_paragraphs_inverts_exactly() {
     round_trip(
-        TextOp::DeleteRange {
+        Operation::DeleteRange {
             object: SHAPE,
             start: 3,
             end: 8,
@@ -153,7 +153,7 @@ fn a_delete_within_and_across_runs_and_paragraphs_inverts_exactly() {
         "Helrld\nSecond",
     );
     let merged = round_trip(
-        TextOp::DeleteRange {
+        Operation::DeleteRange {
             object: SHAPE,
             start: 9,
             end: 15,
@@ -166,7 +166,7 @@ fn a_delete_within_and_across_runs_and_paragraphs_inverts_exactly() {
 #[test]
 fn formatting_a_range_splits_runs_at_its_ends() {
     let edited = round_trip(
-        TextOp::FormatRange {
+        Operation::FormatRange {
             object: SHAPE,
             start: 2,
             end: 8,
@@ -189,19 +189,19 @@ fn an_offset_past_the_end_is_refused_and_changes_nothing() {
     let before = parts.clone();
     let err = apply(
         &mut parts,
-        TextOp::DeleteRange {
+        Operation::DeleteRange {
             object: SHAPE,
             start: 0,
             end: 99,
         },
     )
     .unwrap_err();
-    assert_eq!(err.code(), "CS-TXN-0003");
+    assert_eq!(err.code(), "CS-TXN-0004");
     assert_eq!(parts, before);
     let missing = ObjectId { part: 0, node: 9 };
     let err = apply(
         &mut parts,
-        TextOp::InsertText {
+        Operation::InsertText {
             object: missing,
             at: 0,
             text: "x".into(),
@@ -217,13 +217,13 @@ fn a_failing_batch_takes_back_what_it_did() {
     let before = parts.clone();
     let err = apply(
         &mut parts,
-        TextOp::Batch(vec![
-            TextOp::InsertText {
+        Operation::Batch(vec![
+            Operation::InsertText {
                 object: SHAPE,
                 at: 0,
                 text: "x".into(),
             },
-            TextOp::DeleteRange {
+            Operation::DeleteRange {
                 object: SHAPE,
                 start: 0,
                 end: 999,
@@ -231,7 +231,7 @@ fn a_failing_batch_takes_back_what_it_did() {
         ]),
     )
     .unwrap_err();
-    assert_eq!(err.code(), "CS-TXN-0003");
+    assert_eq!(err.code(), "CS-TXN-0004");
     assert_eq!(parts, before);
 }
 
@@ -245,7 +245,7 @@ fn history_groups_typing_into_one_undo_and_redoes_it() {
         history
             .apply(
                 &mut parts,
-                TextOp::InsertText {
+                Operation::InsertText {
                     object: SHAPE,
                     at: n,
                     text: ch.to_string(),
@@ -270,7 +270,7 @@ fn an_edit_that_changes_nothing_leaves_no_undo_and_keeps_redo() {
     history
         .apply(
             &mut parts,
-            TextOp::InsertText {
+            Operation::InsertText {
                 object: SHAPE,
                 at: 0,
                 text: "x".into(),
@@ -281,7 +281,7 @@ fn an_edit_that_changes_nothing_leaves_no_undo_and_keeps_redo() {
     let changed = history
         .apply(
             &mut parts,
-            TextOp::DeleteRange {
+            Operation::DeleteRange {
                 object: SHAPE,
                 start: 2,
                 end: 2,

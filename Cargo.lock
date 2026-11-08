@@ -197,6 +197,7 @@ dependencies = [
  "casual-slide-model",
  "casual-slide-ooxml",
  "casual-slide-render",
+ "casual-slide-style",
  "casual-slide-text",
  "casual-slide-transaction",
  "tiny-skia",

@@ -78,7 +78,7 @@ fn edit_like_a_user(v: &mut Viewer) -> (ObjectId, bool) {
     v.break_typing();
     for (n, ch) in "Typed".chars().enumerate() {
         v.edit(
-            TextOp::InsertText {
+            Operation::InsertText {
                 object,
                 at: n,
                 text: ch.to_string(),
@@ -172,7 +172,7 @@ fn undoing_every_edit_saves_the_file_that_was_opened() {
     // Typing is one step, bold another.
     assert!(v.undo().unwrap().is_some());
     assert!(v.undo().unwrap().is_some());
-    assert_eq!(v.undo_state() & 1, 0, "nothing left to undo");
+    assert!(!v.can_undo_redo().0, "nothing left to undo");
     assert_eq!(v.save().unwrap(), source);
     // And redo brings both back.
     v.redo().unwrap();
@@ -187,7 +187,7 @@ fn a_bad_offset_is_refused_with_its_code_and_changes_nothing() {
     let (object, _, _) = first_box(&v);
     let err = v
         .edit(
-            TextOp::DeleteRange {
+            Operation::DeleteRange {
                 object,
                 start: 0,
                 end: 1_000_000,
@@ -195,7 +195,7 @@ fn a_bad_offset_is_refused_with_its_code_and_changes_nothing() {
             false,
         )
         .unwrap_err();
-    assert_eq!(err.code(), "CS-TXN-0003");
+    assert_eq!(err.code(), "CS-TXN-0004");
     assert_eq!(v.save().unwrap(), source);
 }
 

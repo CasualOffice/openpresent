@@ -2,7 +2,9 @@
 // delete, select, Bold, Italic and Underline, undo and redo.
 //
 // The engine keeps the text and lays it out; this module keeps only where the
-// caret is (`editor.selection.js`) and draws it. A click becomes a hit test in
+// caret is and draws it. Shapes are selected by `editor.selection.js` (`VS-06`);
+// a double click on a shape's text, or a click while a text box is open, places
+// the caret here, and the shape's outline steps aside while it is. A click becomes a hit test in
 // the engine, the caret and the selection come back as slide coordinates and are
 // drawn in an SVG over the slide picture, and keystrokes go to a hidden textarea
 // so the browser's own input methods work. Every edit is one engine call, applied
@@ -13,9 +15,9 @@
 // a hidden input owns focus and IME, and the canvas only draws.
 
 import { state, request, changed, status } from "./editor.core.js";
-import { selection, select, clearSelection, textRange } from "./editor.selection.js";
-import { register } from "./commands.js";
+import { register, run } from "./commands.js";
 import * as slides from "./editor.slides.js";
+import * as shapes from "./editor.selection.js";
 
 const SVG = "http://www.w3.org/2000/svg";
 const byId = (id) => document.getElementById(id);
@@ -25,15 +27,24 @@ const TEXT_PRIORITY = 8;
 
 let overlay = null;    // <svg> over the slide
 let input = null;      // hidden <textarea>
-let undoBits = 0;      // bit 1 undo, bit 2 redo
 let formatBits = 0;    // bit 1 bold, 2 italic, 4 underline
 let composing = false;
 let dragging = false;
 let blink = 0;
 
+/// The open text box: the shape as `[part, node]` and the caret's anchor and focus,
+/// character offsets in its body (`docs/24`). No document text.
+const selection = { object: null, editing: false, anchor: 0, focus: 0 };
+const select = (patch) => Object.assign(selection, patch);
+const clearSelection = () => select({ object: null, editing: false, anchor: 0, focus: 0 });
+const textRange = () => [Math.min(selection.anchor, selection.focus), Math.max(selection.anchor, selection.focus)];
+
+/// Whether a text box is open, for the shape selection to stand aside.
+export const editing = () => selection.editing;
+
 async function call(fn, ...args) {
   const r = await request({ op: "text", fn, args }, { priority: TEXT_PRIORITY });
-  undoBits = r.undo | 0;
+  if (r.undo && ["text_insert", "text_delete", "text_toggle"].includes(fn)) shapes.noteUndoState(r.undo);
   return r.value;
 }
 
@@ -91,7 +102,6 @@ async function paint() {
 
 /// After an edit: redraw the slide and its thumbnail, then the caret.
 async function afterEdit() {
-  byId("doc-state").textContent = "Edited";
   await slides.redraw();
   slides.refreshThumb(state.current);
   await paint();
@@ -109,9 +119,12 @@ function stopEditing() {
   changed();
 }
 
-async function onPointerDown(e) {
+/// A click while a text box is open moves the caret, or closes the box when it
+/// lands outside any; a double click (`opening`) opens the box under it.
+async function onPointerDown(e, opening = false) {
   if (!state.deck || state.reading || e.button !== 0) return;
   if (!e.target.closest("#slide-frame")) { stopEditing(); return; }
+  if (!selection.editing && !opening) return;
   const [x, y] = toSlide(e.clientX, e.clientY);
   const index = state.current;
   if (e.shiftKey && selection.editing) {
@@ -126,9 +139,10 @@ async function onPointerDown(e) {
   e.preventDefault();
   const object = [hit[0], hit[1]];
   await call("edit_break_typing");
-  select({ slide: index, object, editing: true, anchor: hit[2], focus: hit[2] });
+  shapes.reset(false);
+  select({ object, editing: true, anchor: hit[2], focus: hit[2] });
   input.focus({ preventScroll: true });
-  dragging = true;
+  dragging = !opening;
   paint();
 }
 
@@ -195,19 +209,24 @@ function toggle(which) {
   });
 }
 
-function history(fn) {
-  return serial(async () => {
-    if (!state.deck) return;
-    const changedObject = await call(fn);
-    if (!changedObject.length) return;
-    if (selection.editing) {
-      const [part, node] = obj();
-      try {
-        const length = await call("text_length", part, node);
-        select({ anchor: Math.min(selection.anchor, length), focus: Math.min(selection.focus, length) });
-      } catch { clearSelection(); }
+function history(id) {
+  call("edit_break_typing").catch(() => {});
+  run(id);
+}
+
+/// The stage was drawn again, after an undo, a redo or a move: keep the caret
+/// inside the body, or close the box if its shape is gone.
+export function refresh() {
+  if (!selection.editing) return;
+  serial(async () => {
+    const [part, node] = obj();
+    try {
+      const length = await call("text_length", part, node);
+      select({ anchor: Math.min(selection.anchor, length), focus: Math.min(selection.focus, length) });
+      await paint();
+    } catch {
+      stopEditing();
     }
-    await afterEdit();
   });
 }
 
@@ -251,10 +270,10 @@ function onKeyDown(e) {
   if (mod && !e.altKey && key === "b") toggle(0);
   else if (mod && !e.altKey && key === "i") toggle(1);
   else if (mod && !e.altKey && key === "u") toggle(2);
-  else if (mod && !e.altKey && key === "z" && !e.shiftKey) history("edit_undo");
-  else if (mod && !e.altKey && (key === "y" || (key === "z" && e.shiftKey))) history("edit_redo");
+  else if (mod && !e.altKey && key === "z" && !e.shiftKey) history("edit.undo");
+  else if (mod && !e.altKey && (key === "y" || (key === "z" && e.shiftKey))) history("edit.redo");
   else if (mod && !e.altKey && key === "a") selectAll();
-  else if (mod && !e.altKey && key === "s") import("./commands.js").then((c) => c.run("file.save"));
+  else if (mod && !e.altKey && key === "s") run("file.save");
   else if (e.key === "Backspace") remove(-1);
   else if (e.key === "Delete") remove(1);
   else if (e.key === "Enter") insert(e.shiftKey ? "\v" : "\n", false);
@@ -279,33 +298,22 @@ function onInput(e) {
 
 /* ── Commands ───────────────────────────────────────────────────────────── */
 
-/// Bold, Italic and Underline in the Home ribbon, and Undo and Redo, through the
-/// registry. Called by the core before it fills in the commands not built yet.
+/// Bold, Italic and Underline in the Home ribbon, through the registry. Undo and
+/// Redo are `editor.selection.js`'s, over the one history. Called by the core
+/// before it fills in the commands not built yet.
 export function registerTextCommands() {
-  const editing = () => !!state.deck && selection.editing;
-  register("font.bold", { label: "Bold", shortcut: "Ctrl+B", enabled: editing, checked: () => editing() && !!(formatBits & 1), run: () => toggle(0) });
-  register("font.italic", { label: "Italic", shortcut: "Ctrl+I", enabled: editing, checked: () => editing() && !!(formatBits & 2), run: () => toggle(1) });
-  register("font.underline", { label: "Underline", shortcut: "Ctrl+U", enabled: editing, checked: () => editing() && !!(formatBits & 4), run: () => toggle(2) });
-  register("edit.undo", { label: "Undo", shortcut: "Ctrl+Z", enabled: () => !!state.deck && !!(undoBits & 1), run: () => history("edit_undo") });
-  register("edit.redo", { label: "Redo", shortcut: "Ctrl+Y", enabled: () => !!state.deck && !!(undoBits & 2), run: () => history("edit_redo") });
-}
-
-/// Undo and redo from the page's own keys, when no text box is open.
-export function handleGlobalKey(e) {
-  const mod = e.ctrlKey || e.metaKey;
-  if (!mod || e.altKey || !state.deck) return false;
-  const key = e.key.toLowerCase();
-  if (key === "z" && !e.shiftKey) { history("edit_undo"); return true; }
-  if (key === "y" || (key === "z" && e.shiftKey)) { history("edit_redo"); return true; }
-  return false;
+  const open = () => !!state.deck && selection.editing;
+  register("font.bold", { label: "Bold", shortcut: "Ctrl+B", enabled: open, checked: () => open() && !!(formatBits & 1), run: () => toggle(0) });
+  register("font.italic", { label: "Italic", shortcut: "Ctrl+I", enabled: open, checked: () => open() && !!(formatBits & 2), run: () => toggle(1) });
+  register("font.underline", { label: "Underline", shortcut: "Ctrl+U", enabled: open, checked: () => open() && !!(formatBits & 4), run: () => toggle(2) });
 }
 
 /// A new deck, or another slide: no text is open.
 export function reset() {
+  if (selection.editing) input?.blur();
   clearSelection();
   clearOverlay();
   clearInterval(blink);
-  undoBits = state.deck ? undoBits : 0;
 }
 
 /* ── Wiring ─────────────────────────────────────────────────────────────── */
@@ -330,9 +338,11 @@ export function init() {
   new ResizeObserver(size).observe(frame);
   new MutationObserver(size).observe(frame, { attributes: true, attributeFilter: ["hidden"] });
 
-  byId("stage").addEventListener("mousedown", onPointerDown);
-  window.addEventListener("mousemove", onPointerMove);
-  window.addEventListener("mouseup", () => { dragging = false; });
+  // Capture, so an open box sees its clicks before the shape selection does.
+  byId("stage").addEventListener("pointerdown", (e) => onPointerDown(e), true);
+  byId("stage").addEventListener("dblclick", (e) => onPointerDown(e, true));
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", () => { dragging = false; });
   input.addEventListener("keydown", onKeyDown);
   input.addEventListener("input", onInput);
   input.addEventListener("compositionstart", () => { composing = true; });

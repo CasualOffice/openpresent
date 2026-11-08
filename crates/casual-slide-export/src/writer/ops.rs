@@ -90,6 +90,16 @@ pub enum Op {
         /// The shape.
         shape_id: u32,
     },
+    /// Remove any shape (`sp`, `pic`, `grpSp`, `graphicFrame`, `cxnSp`, `contentPart`)
+    /// by its `cNvPr/@id`, with every relationship only it used; a shape inside
+    /// `mc:AlternateContent` takes the whole choice with it. Refused for a shape an
+    /// animation targets, or an id two shapes share (`VS-06`).
+    RemoveShape {
+        /// Which slide.
+        slide: SlideRef,
+        /// The shape.
+        shape_id: u32,
+    },
     /// Point one relationship of a slide at new media. Other referrers keep the old
     /// part (`INV-SP-04`).
     ReplaceMedia {
@@ -352,6 +362,7 @@ impl Draft<'_> {
                 content_type,
             } => self.add_picture(slide, bytes, extension, content_type),
             Op::RemovePicture { slide, shape_id } => self.remove_picture(slide, *shape_id),
+            Op::RemoveShape { slide, shape_id } => self.remove_shape(slide, *shape_id),
             Op::ReplaceMedia {
                 slide,
                 rel_id,
@@ -852,6 +863,76 @@ impl Draft<'_> {
         let Some(pic) = found else {
             return Err(bad("no such picture", wanted));
         };
+        self.remove_element(&part, pic)
+    }
+
+    fn remove_shape(&mut self, slide: &SlideRef, shape_id: u32) -> Result<(), WriterError> {
+        const SHAPES: [&str; 6] = ["sp", "pic", "grpSp", "graphicFrame", "cxnSp", "contentPart"];
+        let (_, entry) = self.slide(slide)?;
+        let part = Self::slide_part(&entry)?;
+        let wanted = shape_id.to_string();
+        let tree = self.tree(&part)?;
+        let elements = all_elements(tree);
+        let mut found: Vec<ElementId> = elements
+            .iter()
+            .copied()
+            .filter(|&el| {
+                tree.local_name(el) == "cNvPr"
+                    && tree.plain_attribute(el, "id").as_deref() == Some(wanted.as_str())
+            })
+            .filter_map(|c| {
+                tree.parent_element(c)
+                    .and_then(|nv| tree.parent_element(nv))
+            })
+            .filter(|&shape| SHAPES.contains(&tree.local_name(shape)))
+            .map(|shape| {
+                // A shape in `mc:Choice` or `mc:Fallback` goes with the whole
+                // `mc:AlternateContent`, so no branch is left naming it alone.
+                let mut top = shape;
+                while let Some(parent) = tree.parent_element(top) {
+                    if matches!(
+                        tree.local_name(parent),
+                        "Choice" | "Fallback" | "AlternateContent"
+                    ) {
+                        top = parent;
+                    } else {
+                        break;
+                    }
+                }
+                top
+            })
+            .collect();
+        found.dedup();
+        let shape = match found.as_slice() {
+            [one] => *one,
+            [] => return Err(bad("no such shape", wanted)),
+            _ => return Err(bad("a shape id two shapes share", wanted)),
+        };
+        // `INV-ID-06`: an animation naming the shape would dangle.
+        let animated = elements.iter().any(|&el| {
+            tree.plain_attribute(el, "spid").as_deref() == Some(wanted.as_str()) && {
+                let mut at = tree.parent_element(el);
+                let mut in_timing = false;
+                while let Some(here) = at {
+                    if tree.local_name(here) == "timing" {
+                        in_timing = true;
+                        break;
+                    }
+                    at = tree.parent_element(here);
+                }
+                in_timing
+            }
+        });
+        if animated {
+            return Err(bad("an animated shape", wanted));
+        }
+        self.remove_element(&part, shape)
+    }
+
+    /// Remove `pic`, an element of `part`, and each relationship only it used.
+    fn remove_element(&mut self, part: &str, pic: ElementId) -> Result<(), WriterError> {
+        let part = part.to_owned();
+        let tree = self.tree(&part)?;
         let held: Vec<String> = all_elements(tree)
             .into_iter()
             .filter(|&el| {

@@ -10,7 +10,8 @@ Taken from it, and changed only where slides need it:
 - `History`: paired undo and redo stacks over `apply`; an operation that changed nothing
   leaves no undo entry and keeps the redo stack; `undo_mark` and `group_since` fold a gesture
   (here, a burst of typing) into one undo step; `edits_applied` counts up and never down, so
-  a host can ask whether there is unsaved work. The bound on depth is kept.
+  a host can ask whether there is unsaved work. The bound on depth is kept; the hold of a
+  mark past the bound (`HOLD_CEILING`) is not, since a typing burst is far under it.
 - `Batch`: one undo step, applied all or nothing.
 
 Changed: the operations are slides' text operations from `docs/24` (insert text, delete
@@ -18,6 +19,10 @@ range, format range) over a shape's text body, addressed by `ObjectId` and a cha
 offset in the body, where a paragraph break counts as one character. The inverse of each is
 `Restore`, which puts back the paragraphs the operation touched exactly as they were, so an
 undo gives back the very model that was read and the writer then changes nothing.
+
+Also here: slice 6's shape operations (`VS-06`: set a node's transform, delete and insert
+a node), first written in `casual-slide-wasm/src/txn.rs` in the same shape and moved here
+with their tests (`shape_tests.rs`), so there is one op set and one undo stack.
 
 Not taken: cell operations, structural row and column shifts, formula rewriting, the wire
 format, sessions, transform and versions. Transform and the wire arrive with collaboration
