@@ -82,8 +82,9 @@ pre {{ background: #f4f4f4; padding: .5rem; overflow: auto; }}
 <h1>OpenPresent slide gallery</h1>
 <p>Left: OpenPresent's renderer. Right: the reference rendered by LibreOffice
 ({html.escape(lo_version)}), not PowerPoint. Commit {html.escape(commit)}.</p>
-<p><a href="app/editor.html">Open your own deck in the viewer</a>: it runs in your browser,
-and the file is never uploaded (VS-01).</p>
+<p><a href="../index.html">OpenPresent home</a> · <a href="../editor.html">Open your own deck
+in the editor</a>: it runs in your browser, and the file is never uploaded (VS-01). The site
+puts this gallery at <code>gallery/</code>, beside the editor (SITE-01).</p>
 <ul>{toc}</ul>
 {"".join(sections)}
 </body></html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<!-- The user guide. Layout (page head, table of contents beside the body) is OpenCalc's
+     `webapp/docs.html` at `b23c67c` (webapp/README.md). OpenCalc's page is an SDK guide;
+     OpenPresent has no SDK yet, so this one guides a person using the editor (`SITE-01`). -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'" />
+    <title>OpenPresent docs: open, present and export a deck</title>
+    <meta name="description" content="How to use OpenPresent: open a PowerPoint deck in the browser or on the desktop, present it, and export it to PDF or PNG." />
+    <meta name="theme-color" content="#0e7490" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e7490'/%3E%3Crect x='7' y='9' width='18' height='12' rx='1.5' fill='none' stroke='%23fff' stroke-width='2.4'/%3E%3Cpath d='M16 21v4M11 25h10' stroke='%23fff' stroke-width='2.4'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./site.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="./index.html" aria-label="OpenPresent home">
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="m-bg" width="32" height="32" rx="7"/><rect class="m-ln" x="7" y="9" width="18" height="12" rx="1.5"/><path class="m-ln" d="M16 21v4M11 25h10"/></svg>
+          OpenPresent
+        </a>
+        <nav class="nav-links">
+          <a href="./index.html#product">Features</a>
+          <a href="./docs.html" aria-current="page">Docs</a>
+          <a href="./gallery/index.html">Gallery</a>
+          <a href="./deploy.html">Self-host</a>
+          <a href="./download.html">Download</a>
+          <a href="https://github.com/CasualOffice/openpresent">GitHub</a>
+        </nav>
+        <div class="header-actions">
+          <a class="btn btn-primary btn-sm" href="./editor.html"><span class="btn-cta-label">Open the editor</span><span class="sr-only"> (OpenPresent in your browser)</span><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.3 4.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4L14.6 11H3a1 1 0 1 1 0-2h11.6l-3.3-3.3a1 1 0 0 1 0-1.4Z"/></svg></a>
+          <details class="menu">
+            <summary aria-label="Menu"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 5.5a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 5.5Zm0 4.5a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10Zm.75 3.75a.75.75 0 0 0 0 1.5h12.5a.75.75 0 0 0 0-1.5H3.75Z"/></svg></summary>
+            <nav class="menu-panel" aria-label="Main (mobile)">
+              <a href="./index.html#product">Features</a>
+              <a href="./docs.html" aria-current="page">Docs</a>
+              <a href="./gallery/index.html">Gallery</a>
+              <a href="./deploy.html">Self-host</a>
+              <a href="./download.html">Download</a>
+              <a href="https://github.com/CasualOffice/openpresent">GitHub</a>
+              <a href="./editor.html">Open the editor</a>
+            </nav>
+          </details>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <header class="page-head">
+        <div class="wrap">
+          <div class="head-copy">
+            <p class="eyebrow">Docs · user guide</p>
+            <h1>Open, present and export a deck.</h1>
+            <p class="lede">Everything the editor does today, and how to do it: in the browser at <a href="./editor.html">editor.html</a>, or in the desktop app, which is the same editor in a native window.</p>
+            <div class="cta-row"><a class="btn btn-primary" href="./editor.html">Open the editor</a><a class="btn btn-secondary" href="#limits">What it does not do yet</a></div>
+          </div>
+        </div>
+      </header>
+      <div class="wrap doc">
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-h">Start</p>
+          <a href="#open">Open a deck</a>
+          <a href="#files">Which files</a>
+          <a href="#damaged">Damaged decks</a>
+          <p class="toc-h">Use</p>
+          <a href="#move">Move between slides</a>
+          <a href="#present">Present</a>
+          <a href="#report">What a slide leaves out</a>
+          <p class="toc-h">Save and export</p>
+          <a href="#save">Save</a>
+          <a href="#pdf">PDF</a>
+          <a href="#png">PNG</a>
+          <p class="toc-h">Notes</p>
+          <a href="#desktop">The desktop app</a>
+          <a href="#privacy">Privacy and safety</a>
+          <a href="#keys">Keyboard shortcuts</a>
+          <a href="#limits">Limits</a>
+          <a href="#bugs">Report a problem</a>
+        </nav>
+
+        <article class="body">
+          <div class="callout warn">
+            <p><b>Early preview.</b> OpenPresent views, presents and exports decks today; it does not edit them yet. Nothing here claims to look exactly as PowerPoint draws a slide: our output has not yet been checked against PowerPoint itself, and the <a href="./gallery/index.html">gallery</a> compares it with LibreOffice instead.</p>
+          </div>
+
+          <h2 id="open">Open a deck</h2>
+          <p>Open <a href="./editor.html">the editor</a> and choose <b>File → Open</b> (<kbd>Ctrl</kbd>+<kbd>O</kbd>), or drop a file anywhere on the window. The deck is read by the engine, compiled to WebAssembly and running in your own browser; it is never uploaded.</p>
+          <p>The thumbnail pane on the left shows every slide. Click one to show it in the middle. The status bar says which slide you are on and how many there are.</p>
+
+          <h2 id="files">Which files</h2>
+          <table>
+            <tr><th>Extension</th><th>What it is</th></tr>
+            <tr><td><code>.pptx</code></td><td>A presentation</td></tr>
+            <tr><td><code>.pptm</code></td><td>A presentation with macros. The macros are kept in the file and never run</td></tr>
+            <tr><td><code>.ppsx</code>, <code>.ppsm</code></td><td>A slide show, opened like a presentation</td></tr>
+            <tr><td><code>.potx</code>, <code>.potm</code></td><td>A template, opened like a presentation</td></tr>
+          </table>
+          <p>The old binary <code>.ppt</code> format, from before 2007, is not read.</p>
+
+          <h2 id="damaged">Damaged decks</h2>
+          <p>A deck that another program refuses often still opens here. A truncated or padded archive, a missing or broken content-types part, broken relationships and malformed XML each get the best reading the engine can make, and the rest of the deck opens. What was repaired or set aside is recorded rather than hidden.</p>
+          <p>Only a file with nothing readable in it is refused. The message names an error code you can quote in a bug report, and never the content of your file.</p>
+
+          <h2 id="move">Move between slides</h2>
+          <p>Use the arrow keys, <kbd>Page Up</kbd> and <kbd>Page Down</kbd>, or the space bar. <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last slide. The <b>View</b> tab has Reading View, which fills the window with the slide (<kbd>Esc</kbd> leaves it), and Fit to Window.</p>
+
+          <h2 id="present">Present</h2>
+          <p><b>Slide Show → From Beginning</b> (<kbd>F5</kbd>) or <b>From Current Slide</b> (<kbd>Shift</kbd>+<kbd>F5</kbd>) shows the deck full screen. Move on with a click, the right arrow, <kbd>Page Down</kbd>, <kbd>Enter</kbd> or the space bar; go back with the left arrow or <kbd>Page Up</kbd>. <kbd>Esc</kbd> ends the show.</p>
+          <p>Slides are shown as they are drawn in the editor. Transitions and animations are kept in the file but not played yet, and there is no presenter view yet.</p>
+
+          <h2 id="report">What a slide leaves out</h2>
+          <p>The renderer is not finished, and it says so. When a slide uses something that is not drawn yet, the status bar says so, and <b>File → Info → What this slide leaves out</b> lists each feature by name. Nothing missing is passed off as drawn.</p>
+
+          <h2 id="save">Save</h2>
+          <p><b>File → Save</b> (<kbd>Ctrl</kbd>+<kbd>S</kbd>) or <b>Save a Copy</b> writes the deck back as a <code>.pptx</code>. Since nothing can be edited yet, what you get is the deck you opened, byte for byte. In the browser it arrives as a download; on the desktop, where you choose.</p>
+
+          <h2 id="pdf">PDF</h2>
+          <p><b>File → Export → Create PDF</b> writes every slide as one page of a PDF. The text in it is real text, so you can search it and copy it, rather than a picture of text.</p>
+
+          <h2 id="png">PNG</h2>
+          <p><b>File → Export → Export Slide as PNG</b> saves the current slide as a picture 1920 pixels wide, its height following the slide's own shape.</p>
+
+          <h2 id="desktop">The desktop app</h2>
+          <p>The desktop app wraps the same editor and engine in a native window for macOS, Windows and Linux. Open a deck from its Open panel, or double-click a <code>.pptx</code>, <code>.pptm</code>, <code>.ppsx</code>, <code>.ppsm</code>, <code>.potx</code> or <code>.potm</code> once the app is installed. It needs no network. See <a href="./download.html">Download</a> for where to get it and what your system will say the first time.</p>
+
+          <h2 id="privacy">Privacy and safety</h2>
+          <ul>
+            <li>Your deck is read in your browser, or in the desktop app, and is never sent anywhere.</li>
+            <li>No macro ever runs. Macros in a <code>.pptm</code> are kept so the file is not damaged, nothing more.</li>
+            <li>Pictures and links that point outside the file are never fetched.</li>
+            <li>Every file is treated as hostile: archive bombs, entity expansion and path tricks are neutralized, and no text from a deck is ever put into the page as HTML.</li>
+          </ul>
+
+          <h2 id="keys">Keyboard shortcuts</h2>
+          <table>
+            <tr><th>Keys</th><th>Does</th></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open a deck</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
+            <tr><td><kbd>F5</kbd></td><td>Slide show from the beginning</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>F5</kbd></td><td>Slide show from the current slide</td></tr>
+            <tr><td><kbd>Page Down</kbd>, <kbd>Page Up</kbd>, arrows</td><td>Next or previous slide</td></tr>
+            <tr><td><kbd>Home</kbd>, <kbd>End</kbd></td><td>First or last slide</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Leave the slide show or Reading View</td></tr>
+          </table>
+          <p><b>Help → Keyboard Shortcuts</b> in the editor lists them too.</p>
+
+          <h2 id="limits">Limits</h2>
+          <ul>
+            <li><b>No editing yet.</b> Editing text comes next, then moving and resizing shapes, then building slides. The ribbon shows those commands already, disabled, so you can see where each will be.</li>
+            <li><b>Drawing is not complete.</b> Some features are not drawn yet; each is named, as described under <a href="#report">What a slide leaves out</a>.</li>
+            <li><b>No transitions, animations or presenter view</b> in the slide show yet.</li>
+            <li><b>No co-editing</b> yet.</li>
+            <li><b>Not checked against PowerPoint.</b> Before a release, our output is checked in PowerPoint itself. Until then, nothing here claims to match it.</li>
+          </ul>
+
+          <h2 id="bugs">Report a problem</h2>
+          <p>A deck that opens wrongly, attached to an <a href="https://github.com/CasualOffice/openpresent/issues">issue on GitHub</a>, is the most useful thing you can send. Only attach a file you are free to share. For a security problem, follow <a href="https://github.com/CasualOffice/openpresent/blob/main/SECURITY.md">SECURITY.md</a> instead of opening a public issue.</p>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="foot-grid">
+          <div>
+            <a class="brand" href="./index.html"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="m-bg" width="32" height="32" rx="7"/><rect class="m-ln" x="7" y="9" width="18" height="12" rx="1.5"/><path class="m-ln" d="M16 21v4M11 25h10"/></svg>OpenPresent</a>
+            <p class="foot-tag">An open-source presentation editor built for PowerPoint files, and the engine behind it.</p>
+          </div>
+          <nav class="foot-col" aria-labelledby="f-product">
+            <h2 id="f-product">Product</h2>
+            <ul>
+              <li><a href="./editor.html">Open the editor</a></li>
+              <li><a href="./download.html">Download for desktop</a></li>
+              <li><a href="./index.html#today">What works today</a></li>
+              <li><a href="./index.html#roadmap">Roadmap</a></li>
+            </ul>
+          </nav>
+          <nav class="foot-col" aria-labelledby="f-dev">
+            <h2 id="f-dev">Use it</h2>
+            <ul>
+              <li><a href="./docs.html">User guide</a></li>
+              <li><a href="./gallery/index.html">Slide gallery</a></li>
+              <li><a href="./deploy.html">Self-hosting guide</a></li>
+            </ul>
+          </nav>
+          <nav class="foot-col" aria-labelledby="f-project">
+            <h2 id="f-project">Project</h2>
+            <ul>
+              <li><a href="https://github.com/CasualOffice/openpresent">GitHub</a></li>
+              <li><a href="https://github.com/CasualOffice/openpresent/blob/main/docs/02-ARCHITECTURE.md">Architecture</a></li>
+              <li><a href="https://github.com/CasualOffice/openpresent/blob/main/docs/14-EXECUTION-TRACKER.md">Execution tracker</a></li>
+              <li><a href="https://github.com/CasualOffice/openpresent/blob/main/LICENSE">License</a></li>
+            </ul>
+          </nav>
+        </div>
+        <div class="foot-bottom">
+          <span>© 2026 CasualOffice · Apache-2.0 · Early preview.</span>
+          <span>Not affiliated with Microsoft. PowerPoint is a trademark of Microsoft Corporation.</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

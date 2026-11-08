@@ -12,7 +12,11 @@ web and as a desktop app, so a PowerPoint user needs no teaching.
 The engine is built first, and fidelity comes before features: a deck opened and saved by OpenPresent
 should keep everything PowerPoint put in it.
 
-> **Pre-alpha.** The file engine is under construction; nothing renders yet, and there is no editor.
+**Website and editor: https://casualoffice.github.io/openpresent/**. Open a deck in the
+[editor](https://casualoffice.github.io/openpresent/editor.html), or see our renders beside
+LibreOffice's in the [slide gallery](https://casualoffice.github.io/openpresent/gallery/index.html).
+
+> **Pre-alpha.** It views, presents and exports decks; it does not edit them yet.
 > See [Status](#status) for exactly what works today.
 
 Part of [CasualOffice](https://github.com/CasualOffice), with
@@ -60,7 +64,7 @@ OpenPresent is designed around that problem:
 | OLE, VML, 3D models: kept with their fallback | 🟡 Built, tier open |
 | Comments, sections, zoom, labels, tags, custom XML | ✅ Tier 1M closed |
 | Rendering to PNG and PDF | 🟡 Phase 2 started: slides to PNG, and to PDF with real, extractable text (`VS-04`) |
-| Viewing a deck in the browser: thumbnails, slide, slide show (`VS-01`) | 🟡 Built, untested in a browser; CI publishes it with the gallery |
+| Viewing a deck in the browser: thumbnails, slide, slide show (`VS-01`) | 🟡 Built, untested in a browser; CI publishes it at the [site](https://casualoffice.github.io/openpresent/editor.html) (`SITE-01`) |
 | Desktop app: the same viewer in a native window, Open panel, double-click a `.pptx` (`VS-03`) | 🟡 Built; CI bundles it for Linux, macOS and Windows, not yet seen green |
 | Save and export in the browser: Save (byte-identical unedited), PDF, slide as PNG (`VS-04`) | 🟡 Built; its engine tests run on CI, untested in a browser |
 | Editing, co-editing | ⬜ Later slices |

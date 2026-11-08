@@ -1,0 +1,199 @@
+# The project's GitHub Pages site (SITE-01): the marketing pages and the editor at the root,
+# and the slide gallery under `gallery/`. Copied from OpenCalc's `.github/workflows/pages.yml`
+# at `b23c67c` (same owner, Apache-2.0, owner instruction 42): build the engine with
+# wasm-pack, copy `webapp/` to the site's root with the engine in `pkg/`, assert the pages
+# that must exist, deploy on push to main. The editor is at `editor.html`, as OpenCalc's is.
+#
+# Changed from OpenCalc's:
+# - The gallery (FH-02, owner instruction 43) is folded in, so this is the only workflow that
+#   deploys to Pages; it was `gallery.yml`, which published the gallery at the root and the
+#   viewer at `app/`. Two workflows deploying would overwrite each other's site.
+# - The front page's pictures are slides drawn by our own `render-deck` here, from decks in
+#   fixtures/real, never mock-ups. A missing picture fails the job by name.
+# - The deploy needs the site and lets the gallery fail: the gallery renders with LibreOffice
+#   for up to 90 minutes and has failed before, and that must not hold the site back. A
+#   failed gallery is replaced by a page saying so and linking the run, never hidden.
+# - On main, a run in progress is not cancelled by the next push, since the gallery is long
+#   and a busy day would otherwise never deploy; GitHub keeps only the newest waiting run.
+# - No `?v=` stamping yet: OpenCalc's `tools/stamp-site.py` imports its dev server, which
+#   OpenPresent does not have. Tracked as SITE-02.
+#
+# LibreOffice comes from apt and runs headless under `unshare --net`, only here on the
+# runner, never on the owner's machine (owner instructions 23, 33, 38). Its renders are
+# labelled "LibreOffice", never "PowerPoint" (PV-01).
+#
+# Custom domain: none is set here. A `CNAME` file does nothing for a site deployed by
+# Actions; the domain is set in the repository's Settings > Pages, as OpenCalc's is.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  # The generated decks shown beside the real ones in the gallery; a name that is missing
+  # is skipped.
+  GALLERY_GENERATED: "text-basic.pptx area-shape-tree.pptx area-fill.pptx area-text.pptx area-table.pptx image.pptx"
+  # The real decks whose first slide is drawn for the front page. Each is CC BY 4.0 and
+  # credited beside its picture in webapp/index.html (fixtures/real/README.md).
+  SHOT_DECKS: "z7753256-cdif-en z17310490-vierfelder-de z21464709-souzou-ja z19828779-education-ar"
+
+jobs:
+  site-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build the engine to WebAssembly
+        run: |
+          set -euo pipefail
+          cargo install wasm-pack --version 0.14.0 --locked
+          wasm-pack build crates/casual-slide-wasm --release --target web --out-dir "$RUNNER_TEMP/pkg"
+      - name: Build render-deck
+        run: cargo build --release --locked -p casual-slide-render --example render-deck
+      # Copy by listing the directory, not by naming files: OpenCalc's hand-written list
+      # drifted and its deployed site 404'd on pages that worked locally.
+      - name: Assemble the site
+        run: |
+          set -euo pipefail
+          mkdir -p site/pkg site/shots
+          cp webapp/*.html webapp/*.js webapp/*.css webapp/*.svg site/
+          cp "$RUNNER_TEMP/pkg/casual_slide_wasm.js" "$RUNNER_TEMP/pkg/casual_slide_wasm_bg.wasm" site/pkg/
+      - name: Draw the front page's slides with our renderer
+        run: |
+          set -euo pipefail
+          for deck in $SHOT_DECKS; do
+            out="$RUNNER_TEMP/shots/$deck"
+            mkdir -p "$out"
+            target/release/examples/render-deck "fixtures/real/$deck.pptx" "$out" 96
+            cp "$out/slide-001.png" "site/shots/$deck.png"
+          done
+      # The pages that must exist, asserted rather than assumed: a silent 404 on the
+      # deployed site is the failure OpenCalc's job once had.
+      - name: Check the site is complete
+        run: |
+          set -euo pipefail
+          for f in index.html docs.html deploy.html download.html style.css site.js \
+                   editor.html editor.js editor.core.js editor.files.js editor.slides.js \
+                   editor.dialogs.js render.worker.js commands.js ribbon.js ribbon.model.js \
+                   editor.css ribbon.css ribbon.tokens.css icons.fluent.svg \
+                   pkg/casual_slide_wasm.js pkg/casual_slide_wasm_bg.wasm; do
+            [ -s "site/$f" ] || { echo "::error::site/$f is missing or empty"; exit 1; }
+          done
+          for deck in $SHOT_DECKS; do
+            [ -s "site/shots/$deck.png" ] || { echo "::error::site/shots/$deck.png was not drawn"; exit 1; }
+            grep -q "shots/$deck.png" site/index.html || { echo "::error::$deck is drawn but index.html does not show it"; exit 1; }
+          done
+          echo "site: $(find site -type f | wc -l) files, $(du -sh site | cut -f1); engine $(du -h site/pkg/casual_slide_wasm_bg.wasm | cut -f1)"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: site
+          path: site
+          retention-days: 30
+
+  gallery-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build render-deck
+        run: cargo build --release --locked -p casual-slide-render --example render-deck
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils
+      # Ubuntu's AppArmor refuses unprivileged user namespaces by default; `unshare` needs one.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: soffice --version | tee "$RUNNER_TEMP/lo-version.txt"
+      - name: Render each deck, ours and LibreOffice's
+        env:
+          OPENPRESENT_ALLOW_SOFFICE: "1"
+        run: |
+          set -uo pipefail
+          out=gallery
+          mkdir -p "$out"
+          decks=$(ls fixtures/real/*.pptx)
+          for g in $GALLERY_GENERATED; do
+            if [ -f "fixtures/generated/$g" ]; then decks="$decks fixtures/generated/$g"; fi
+          done
+          for deck in $decks; do
+            name=$(basename "$deck" .pptx)
+            mkdir -p "$out/$name/ours" "$out/$name/lo"
+            # A deck our renderer fails on is shown as failed, not hidden.
+            timeout 300 target/release/examples/render-deck "$deck" "$out/$name/ours" > "$out/$name/ours.log" 2>&1 \
+              || echo "exit $?" >> "$out/$name/ours.log"
+            pdfdir=$(mktemp -d)
+            timeout 300 unshare -r -n soffice --headless --norestore \
+              "-env:UserInstallation=file://$RUNNER_TEMP/lo-profile" \
+              --convert-to pdf --outdir "$pdfdir" "$deck" > "$out/$name/lo.log" 2>&1 \
+              || echo "exit $?" >> "$out/$name/lo.log"
+            if [ -f "$pdfdir/$name.pdf" ]; then
+              pdftoppm -png -r 96 "$pdfdir/$name.pdf" "$out/$name/lo/slide" >> "$out/$name/lo.log" 2>&1
+            fi
+            rm -rf "$pdfdir"
+          done
+      - name: Build the gallery's index.html
+        run: python3 tools/gallery/build.py gallery --lo-version "$(cat "$RUNNER_TEMP/lo-version.txt")" --commit "$GITHUB_SHA"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gallery
+          path: gallery
+          retention-days: 30
+
+  # Publishes from main only, with `pages: write` on this job alone. Pages' source is
+  # "GitHub Actions" (set by the owner on 2026-11-08). Runs when the site built, whatever
+  # became of the gallery.
+  pages-deploy:
+    if: >-
+      always() && needs.site-build.result == 'success'
+      && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [site-build, gallery-build]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: site
+          path: site
+      - if: needs.gallery-build.result == 'success'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: gallery
+          path: site/gallery
+      # The site links `gallery/index.html` from every page; a failed gallery says so there.
+      - name: Say so when the gallery did not build
+        if: needs.gallery-build.result != 'success'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULT: ${{ needs.gallery-build.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p site/gallery
+          cat > site/gallery/index.html <<EOF
+          <!DOCTYPE html>
+          <html lang="en"><head><meta charset="utf-8">
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'">
+          <title>OpenPresent slide gallery</title></head><body>
+          <h1>OpenPresent slide gallery</h1>
+          <p>The gallery did not build for commit ${GITHUB_SHA} (result: ${RESULT}).
+          The <a href="${RUN_URL}">workflow run</a> says why.</p>
+          <p><a href="../index.html">OpenPresent home</a> · <a href="../editor.html">Open the editor</a></p>
+          </body></html>
+          EOF
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

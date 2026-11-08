@@ -1,10 +1,13 @@
 # webapp: the OpenPresent viewer and site
 
-A static site: a landing page, deploy and download pages, and the editor page,
+A static site: a landing page, docs, deploy and download pages, and the editor page,
 which today opens a `.pptx` and shows its slides (`VS-01`, the first vertical slice,
 owner instruction 44). The engine runs as WebAssembly in a worker; the deck is read
 from a file the user picks or drops and never leaves the browser. CI builds it and
-publishes it beside the slide gallery, at `app/`, through `.github/workflows/gallery.yml`.
+publishes it to https://casualoffice.github.io/openpresent/ through
+`.github/workflows/pages.yml`, as OpenCalc publishes its own (`SITE-01`): this folder at the
+site's root, the editor at `editor.html`, the slide gallery at `gallery/`, and the slides
+on the front page drawn by `render-deck` into `shots/` at build time.
 
 ## Build and serve
 
@@ -30,7 +33,8 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `ribbon.js`, `ribbon.model.js` | The ribbon, File page and Quick Access Toolbar, drawn from the model |
 | `editor.css`, `ribbon.css`, `ribbon.tokens.css` | Tokens (accent `DEC-03`), regions, the ribbon |
 | `icons.fluent.svg` | Fluent UI System Icons sprite |
-| `index.html`, `deploy.html`, `download.html`, `style.css` | The site |
+| `index.html`, `docs.html`, `deploy.html`, `download.html` | The site: landing, user guide, self-hosting, desktop downloads. Strict CSP, no inline style or script |
+| `style.css`, `site.js` | The site's stylesheet and its small script (reveals, mobile menu, docs contents); never loaded by the editor |
 
 Every ribbon command PowerPoint has is present. The ones this build cannot run are
 registered disabled, with the reason in their tooltip (owner, 2026-11-08), never faked.
@@ -67,4 +71,14 @@ owner, Apache-2.0 (owner instruction 42), with `oc` prefixes renamed `op`:
 - `icons.fluent.svg`: OpenCalc's generated sprite, verbatim, from
   `@fluentui/svg-icons` 1.1.344 (MIT, Copyright Microsoft Corporation), as its
   header says.
-- `style.css` and the site pages: OpenCalc's structure and class names; the content is new.
+- `style.css`: OpenCalc's, with every green turned to cyan (the brand values are
+  `editor.css`'s), the Inter web font left out so the system face is used, and a
+  `.shots` block added for the real renders.
+- `site.js`: verbatim but for its header note.
+- `index.html`, `docs.html`, `download.html`, `deploy.html`: OpenCalc's pages' structure,
+  classes, header, footer and tone. The words are new, since only true claims may stand
+  (`SITE-01`, `PV-01`): `docs.html` is a user guide rather than an SDK guide, `download.html`
+  points at CI artifacts as there is no release, and `deploy.html` covers static hosting,
+  as there is no server. The animated hero and illustrations are not carried; the pictures
+  are real renders. Inline `style` attributes and the download page's inline script are
+  dropped, so the pages hold a strict CSP.
