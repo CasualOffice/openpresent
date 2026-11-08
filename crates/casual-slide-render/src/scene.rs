@@ -849,6 +849,62 @@ impl<'a> Builder<'a> {
         self.text_in(node, body, layer, transform, rect, style);
     }
 
+    /// The text's own frame, turned as `bodyPr/@vert` and `@rot` say: `vert` and
+    /// `eaVert` a quarter turn clockwise, `vert270` a quarter turn the other way,
+    /// the lines laid out across the box's height, about its centre. `eaVert` is
+    /// drawn as `vert`, East Asian characters turned with the rest, and the stacked
+    /// kinds (`wordArtVert`, `wordArtVertRtl`, `mongolianVert`) horizontal; each is
+    /// reported.
+    fn turn_text(
+        &mut self,
+        chain: &casual_slide_style::text::TextChain<'_>,
+        body: &TextBody,
+        transform: Affine,
+        rect: TextRect,
+    ) -> (Affine, TextRect) {
+        let vertical = chain
+            .body(body.properties.as_ref(), |b| b.vertical)
+            .map(|r| r.value);
+        let rot = chain
+            .body(body.properties.as_ref(), |b| b.rotation)
+            .map_or(0, |r| r.value);
+        let quarter = match vertical {
+            Some(TextVertical::Vert) => 90.0,
+            Some(TextVertical::EaVert) => {
+                self.report
+                    .note("eaVert text (East Asian characters turned)");
+                90.0
+            }
+            Some(TextVertical::Vert270) => 270.0,
+            Some(TextVertical::Horz) | None => 0.0,
+            Some(_) => {
+                self.report.note("stacked vertical text (drawn horizontal)");
+                0.0
+            }
+        };
+        let degrees = quarter + f64::from(rot) / 60_000.0;
+        if degrees == 0.0 {
+            return (transform, rect);
+        }
+        let (cx, cy) = ((rect.l + rect.r) / 2.0, (rect.t + rect.b) / 2.0);
+        let turned =
+            transform.then_after(&Affine::translate(cx, cy).then_after(
+                &Affine::rotate_degrees(degrees).then_after(&Affine::translate(-cx, -cy)),
+            ));
+        if quarter == 0.0 {
+            return (turned, rect);
+        }
+        // Lines run along the box's height: the frame's sides swap about the centre.
+        let (hw, hh) = ((rect.b - rect.t) / 2.0, (rect.r - rect.l) / 2.0);
+        let swapped = TextRect {
+            l: cx - hw,
+            t: cy - hh,
+            r: cx + hw,
+            b: cy + hh,
+        };
+        (turned, swapped)
+    }
+
     /// Lay out `body` in `rect` of `node`'s space, with `node`'s text chain, and push
     /// its glyph runs.
     fn text_in(
@@ -868,6 +924,7 @@ impl<'a> Builder<'a> {
         let chain = self
             .chain
             .text_chain(node, self.scene.default_text_style, object_defaults);
+        let (transform, rect) = self.turn_text(&chain, body, transform, rect);
         let env = TextEnv {
             colors: self.text_colors(
                 style
@@ -913,13 +970,6 @@ impl<'a> Builder<'a> {
         }
         for _ in &layout.missing_scripts {
             self.report.note("script with no face");
-        }
-        if body.properties.as_ref().is_some_and(|b| {
-            b.rotation.is_some_and(|r| r != 0)
-                || b.vertical.is_some_and(|v| v != TextVertical::Horz)
-        }) {
-            self.report
-                .note("rotated or vertical text (drawn horizontal)");
         }
         for run in layout.runs {
             if run.synthetic_bold {

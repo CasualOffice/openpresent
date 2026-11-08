@@ -427,6 +427,25 @@ fn a_tiled_picture_fill_repeats_the_picture() {
     );
 }
 
+/// `bodyPr/@vert="vert"` turns the text a quarter turn: its ink is taller than wide
+/// (FH-03: `area-text` drew every vertical kind horizontal).
+#[test]
+fn vertical_text_runs_down_the_box() {
+    let mut deck = open("area-text.pptx");
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    // "vert vert", third box of the third row.
+    let (mut x0, mut x1, mut y0, mut y1) = (u32::MAX, 0, u32::MAX, 0);
+    for y in 335..425 {
+        for x in 385..543 {
+            if pixel(&png, x, y)[0] < 128 {
+                (x0, x1, y0, y1) = (x0.min(x), x1.max(x), y0.min(y), y1.max(y));
+            }
+        }
+    }
+    assert!(x1 > x0 && y1 > y0, "no text in the box");
+    assert!(y1 - y0 > 3 * (x1 - x0), "ink {}x{}", x1 - x0, y1 - y0);
+}
+
 fn open_real(name: &str) -> Deck {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../fixtures/real")
