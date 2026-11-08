@@ -101,6 +101,10 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 
 Counted from the registry at the end of the `UX-006` session: of 248 command ids the ribbon, File page and menus
 name, 160 run and 88 are disabled with their reason (114 of 238 were disabled at its start); none runs nothing.
+Recounted after merging `main` at `cd8f503` (File, panes and comments, text formatting): of 286 ids, 219 run and 67
+are disabled; two more, Change Case and Character Spacing, are menu buttons. Some rows of the table above that
+`main` built since (Strikethrough, Subscript, Superscript, Change Case, the Selection Pane, Comments, Properties,
+Print) are now live; the table is kept as audited and these counts are the state.
 Menu buttons (Arrange, Align, Rotate, Group, Section, Select, Change Case) are drawn live while any command in their
 menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoint; the web ribbon names Header & Footer only.
 
