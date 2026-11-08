@@ -2272,8 +2272,10 @@ pub fn text_grow(part: u32, node: u32, start: u32, end: u32, up: bool) -> Result
     with_viewer(|v| v.grow_text(object(part, node), (start as usize, end as usize), up))
 }
 
-/// Paragraph alignment (`what` 0: `l`, `ctr`, `r`, `just`) or Bullets (`what` 1: `on`,
-/// `off`, `toggle`) for the paragraphs `[start, end)` touches.
+/// Paragraph alignment (`what` 0: `l`, `ctr`, `r`, `just`), Bullets (`what` 1: `on`,
+/// `off`, `toggle` or a gallery style), Numbering (`what` 2: `toggle`, `off` or a
+/// scheme), List Level (`what` 3: `up`, `down`) or Line Spacing (`what` 4: lines) for
+/// the paragraphs `[start, end)` touches (`PAR-06`).
 ///
 /// # Errors
 ///
@@ -2294,6 +2296,60 @@ pub fn text_set_paragraphs(
             what,
             value,
         )
+    })
+}
+
+/// Paste formatted text from another application over `[start, end)` (`PAR-11`), one
+/// undo step: `texts` the runs, `looks` five numbers a run (bold, italic, underline as
+/// -1 unsaid, 0 or 1; size in hundredths of a point and colour as `0xRRGGBB`, -1
+/// unsaid), `lists` two a pasted paragraph (0 plain, 1 bulleted, 2 numbered; level).
+/// Where the caret lands.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a range past the text, lists not in twos or looks not in fives, or
+/// past the paste bound of 262144 characters; the edit's own code.
+#[wasm_bindgen]
+pub fn text_paste_rich(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    texts: Vec<String>,
+    looks: Vec<i32>,
+    lists: Vec<u8>,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        if looks.len() != texts.len().saturating_mul(5) || !lists.len().is_multiple_of(2) {
+            return Err(BridgeError::BadArgument);
+        }
+        let flag = |n: i32| (n >= 0).then_some(n > 0);
+        let pieces: Vec<format::RichPiece> = texts
+            .into_iter()
+            .zip(looks.chunks_exact(5))
+            .map(|(text, l)| format::RichPiece {
+                text,
+                bold: l.first().copied().and_then(flag),
+                italic: l.get(1).copied().and_then(flag),
+                underline: l.get(2).copied().and_then(flag),
+                size: l.get(3).copied().filter(|&n| n > 0),
+                color: l.get(4).copied().and_then(|n| u32::try_from(n).ok()),
+            })
+            .collect();
+        let paragraphs: Vec<format::RichParagraph> = lists
+            .chunks_exact(2)
+            .map(|p| format::RichParagraph {
+                list: p.first().copied().unwrap_or(0),
+                level: p.get(1).copied().unwrap_or(0),
+            })
+            .collect();
+        v.paste_rich(
+            object(part, node),
+            (start as usize, end as usize),
+            &pieces,
+            &paragraphs,
+        )
+        .map(to_u32)
     })
 }
 
@@ -2338,6 +2394,46 @@ pub fn copy_shapes(index: u32, nodes: Vec<u32>) -> Result<u32, JsError> {
     let n = to_u32(clip.len());
     clipboard::keep(clip);
     Ok(n)
+}
+
+/// Copy slides `indices` to the engine's clipboard for the thumbnail pane (`PAR-10`),
+/// which outlives the deck; how many it holds.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for no slide, too many, or one that is not there.
+#[wasm_bindgen]
+pub fn copy_slides(indices: Vec<u32>) -> Result<u32, JsError> {
+    let indices: Vec<usize> = indices.into_iter().map(|i| i as usize).collect();
+    let clip = with_viewer(|v| v.copy_slides(&indices))?;
+    let n = to_u32(clip.len());
+    clipboard::keep_slides(clip);
+    Ok(n)
+}
+
+/// How many slides the engine's clipboard holds.
+#[wasm_bindgen]
+pub fn clipboard_slides() -> u32 {
+    clipboard::kept_slides().map_or(0, |c| to_u32(c.len()))
+}
+
+/// Paste the engine's slides at place `at`, one undo step: `[first place, how many,
+/// objects left out]`, the last only when they came from another deck.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a place past the end; the edit's own code.
+#[wasm_bindgen]
+pub fn paste_slides(at: u32) -> Result<Vec<u32>, JsError> {
+    let Some(clip) = clipboard::kept_slides() else {
+        return Ok(Vec::new());
+    };
+    with_viewer(|v| {
+        let other = !clip.from(v);
+        let first = v.paste_slides(at as usize, &clip)?;
+        let skipped = if other { clip.skipped() } else { 0 };
+        Ok(vec![to_u32(first), to_u32(clip.len()), to_u32(skipped)])
+    })
 }
 
 /// How many shapes the engine's clipboard holds.

@@ -238,6 +238,52 @@ function highlight() {
   });
 }
 
+/* ── Lists and line spacing (`PAR-06`) ──────────────────────────────────── */
+
+/// The Bullets gallery, as PowerPoint's: the engine's style name, the character it
+/// writes (Wingdings' for the symbol ones), and the name.
+export const BULLET_STYLES = [
+  ["round", "•", "Filled Round Bullets"], ["hollow", "o", "Hollow Round Bullets"],
+  ["square", "§", "Filled Square Bullets"], ["hollow-square", "q", "Hollow Square Bullets"],
+  ["star", "v", "Star Bullets"], ["arrow", "Ø", "Arrow Bullets"], ["check", "ü", "Checkmark Bullets"],
+];
+/// The Numbering gallery: the scheme the engine writes and how it reads.
+export const NUMBER_STYLES = [
+  ["arabicPeriod", "1. 2. 3."], ["arabicParenR", "1) 2) 3)"], ["romanUcPeriod", "I. II. III."],
+  ["alphaUcPeriod", "A. B. C."], ["alphaLcParenR", "a) b) c)"], ["alphaLcPeriod", "a. b. c."], ["romanLcPeriod", "i. ii. iii."],
+];
+/// The Line Spacing menu, in lines.
+export const LINE_SPACINGS = ["1.0", "1.5", "2.0", "2.5", "3.0"];
+
+/// Increase (`up`) or Decrease (`down`) List Level, for the ribbon and Tab and Shift+Tab.
+export const listLevel = (way) => apply("text_set_paragraphs", [3, way], way === "up" ? "Increase List Level" : "Decrease List Level", { whole: true });
+
+function registerLists() {
+  const para = (args, label) => () => apply("text_set_paragraphs", args, label, { whole: true });
+  register("para.bullets.none", { label: "None", enabled: canFormat, checked: () => canFormat() && !current()?.[4], run: para([1, "off"], "Bullets: None") });
+  for (const [name, ch, label] of BULLET_STYLES) {
+    register(`para.bullets.${name}`, { label, enabled: canFormat, checked: () => canFormat() && current()?.[4] === `c:${ch}`, run: para([1, name], label) });
+  }
+  register("para.numbering", {
+    label: "Numbering", enabled: canFormat,
+    checked: () => canFormat() && !!current()?.[4]?.startsWith("n:"),
+    run: para([2, "toggle"], "Numbering"),
+  });
+  register("para.numbering.none", { label: "None", enabled: canFormat, checked: () => canFormat() && !current()?.[4], run: para([2, "off"], "Numbering: None") });
+  for (const [scheme, label] of NUMBER_STYLES) {
+    register(`para.numbering.${scheme}`, { label, enabled: canFormat, checked: () => canFormat() && current()?.[4] === `n:${scheme}`, run: para([2, scheme], `Numbering: ${label}`) });
+  }
+  register("para.indent-more", { label: "Increase List Level", shortcut: "Tab", enabled: canFormat, run: () => listLevel("up") });
+  register("para.indent-less", { label: "Decrease List Level", shortcut: "Shift+Tab", enabled: canFormat, run: () => listLevel("down") });
+  for (const v of LINE_SPACINGS) {
+    register(`para.line-spacing.${v}`, {
+      label: v, enabled: canFormat,
+      checked: () => canFormat() && !!current()?.[6] && Number(current()[6]) === Number(v),
+      run: para([4, v], `Line Spacing: ${v}`),
+    });
+  }
+}
+
 /* ── Commands ───────────────────────────────────────────────────────────── */
 
 export function init() {
@@ -265,6 +311,7 @@ export function init() {
     checked: () => canFormat() && current()?.[3] === "1",
     run: () => apply("text_set_paragraphs", [1, "toggle"], "Bullets", { whole: true }),
   });
+  registerLists();
   document.addEventListener("op-changed", () => { readShown(); });
 }
 

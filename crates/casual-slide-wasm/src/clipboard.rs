@@ -14,16 +14,19 @@
 //! writer adds it to the file and then patches it to the model (ADR-013).
 
 use std::cell::{Cell, RefCell};
+use std::collections::BTreeSet;
 
 use casual_slide_export::writer::MediaBytes;
 use casual_slide_model::fill::Fill;
-use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
+use casual_slide_model::shape::{NodeKind, ObjectId, PlaceholderType, ShapeNode};
+use casual_slide_model::slide::{PartEntry, SlidePart};
+use casual_slide_model::text::TextBody;
 use casual_slide_model::text::{Bullet, CharacterProperties, TextItem};
 use casual_slide_transaction::Operation;
 
 #[cfg(test)]
 use crate::build::spid;
-use crate::build::{MAX_PICTURE_BYTES, embed, highest, sniff};
+use crate::build::{MAX_PICTURE_BYTES, Origin, embed, highest, renumber_part, sniff};
 use crate::{BridgeError, Viewer};
 
 /// The most shapes one copy holds: PowerPoint's own slide holds no more in practice,
@@ -64,9 +67,98 @@ impl Clip {
     }
 }
 
+/// The most slides one copy holds.
+pub const MAX_CLIP_SLIDES: usize = 1000;
+
+/// A text placeholder's kind, for pasting its text into the destination layout's
+/// matching placeholder: 0 a title, 1 a subtitle, 2 a body or content placeholder.
+type PlaceholderKey = (u8, Option<u32>);
+
+/// A copied text placeholder's key and its text.
+type PlaceholderText = (PlaceholderKey, Option<TextBody>);
+
+/// One copied slide (`PAR-10`): the slide itself, for a paste into the deck it came
+/// from, and its shapes made ready for another deck.
+#[derive(Debug, Clone)]
+pub struct ClipSlide {
+    /// Its part ordinal in the deck it came from.
+    ordinal: u32,
+    entry: PartEntry,
+    part: SlidePart,
+    /// Its layout's name, to find the destination's layout of that name.
+    layout_name: Option<String>,
+    /// Every shape another deck can take, in z-order: a text placeholder's key and
+    /// paragraphs beside its copy as an ordinary shape.
+    shapes: Vec<(Option<PlaceholderText>, ClipShape)>,
+    /// Objects another deck cannot take yet: a group, a table, a chart, another frame,
+    /// a picture that is not PNG or JPEG, or a shape naming its slide's relationships.
+    skipped: usize,
+}
+
+/// What Copy put on the engine's clipboard from the thumbnail pane: whole slides.
+#[derive(Debug, Clone)]
+pub struct SlideClip {
+    serial: u64,
+    slides: Vec<ClipSlide>,
+}
+
+impl SlideClip {
+    /// How many slides it holds.
+    pub fn len(&self) -> usize {
+        self.slides.len()
+    }
+
+    /// Whether it holds none.
+    pub fn is_empty(&self) -> bool {
+        self.slides.is_empty()
+    }
+
+    /// Whether it was copied from the deck `viewer` has open.
+    pub fn from(&self, viewer: &Viewer) -> bool {
+        self.serial == viewer.serial
+    }
+
+    /// How many objects a paste into another deck leaves out, for the host to say so.
+    pub fn skipped(&self) -> usize {
+        self.slides.iter().map(|s| s.skipped).sum()
+    }
+}
+
 thread_local! {
     static NEXT_SERIAL: Cell<u64> = const { Cell::new(0) };
     pub(crate) static CLIPBOARD: RefCell<Option<Clip>> = const { RefCell::new(None) };
+    static SLIDE_CLIPBOARD: RefCell<Option<SlideClip>> = const { RefCell::new(None) };
+}
+
+/// Keep `clip` as what a paste into the thumbnail pane pastes.
+pub(crate) fn keep_slides(clip: SlideClip) {
+    SLIDE_CLIPBOARD.with(|c| *c.borrow_mut() = Some(clip));
+}
+
+/// The slides Copy kept, if any.
+pub(crate) fn kept_slides() -> Option<SlideClip> {
+    SLIDE_CLIPBOARD.with(|c| c.borrow().clone())
+}
+
+/// A text placeholder's key, or `None` for one whose content the destination's layout
+/// supplies itself (date, footer, slide number, header) or that is not text.
+fn placeholder_key(node: &ShapeNode) -> Option<Option<PlaceholderKey>> {
+    let Some(ph) = node.placeholder() else {
+        return Some(None);
+    };
+    let kind = match ph.placeholder_type {
+        Some(PlaceholderType::Title | PlaceholderType::CtrTitle) => 0,
+        Some(PlaceholderType::SubTitle) => 1,
+        None | Some(PlaceholderType::Body | PlaceholderType::Obj) => 2,
+        Some(
+            PlaceholderType::Dt
+            | PlaceholderType::Ftr
+            | PlaceholderType::SldNum
+            | PlaceholderType::Hdr,
+        ) => return None,
+        Some(_) => return Some(None),
+    };
+    Some(Some((kind, ph.idx)))
 }
 
 /// A number no other deck opened in this session has.
@@ -134,25 +226,12 @@ impl Viewer {
         let mut chosen: Vec<ShapeNode> = Vec::with_capacity(nodes.len());
         for child in &tree.children {
             if nodes.contains(&child.id.node) {
-                let mut copy = child.clone();
                 // A placeholder is copied as an ordinary shape at the box it is drawn
                 // in, with what it inherited from its layout and master written into
                 // it, as PowerPoint pastes one where no layout placeholder follows it
                 // (`UX-004`): the writer cannot yet add a placeholder, and another
                 // slide's layout may have no match.
-                if copy.placeholder().is_some() {
-                    if let Some(t) = chain.transform(child) {
-                        let mut own = copy.transform.unwrap_or_default();
-                        own.offset = Some(t.value.offset);
-                        own.extent = Some(t.value.extent);
-                        copy.transform = Some(own);
-                    }
-                    self.fold_inherited(child, &chain, &mut copy);
-                    if let Some(app) = copy.app.as_mut() {
-                        app.placeholder = None;
-                    }
-                }
-                chosen.push(copy);
+                chosen.push(self.folded_copy(child, &chain));
             }
         }
         if chosen.len() != nodes.len() {
@@ -171,6 +250,221 @@ impl Viewer {
             part: ordinal,
             shapes,
         })
+    }
+
+    /// Copy slides `indices` (`PAR-10`). Nothing is refused: what another deck cannot
+    /// take is counted, and a paste into this deck takes everything.
+    pub fn copy_slides(&mut self, indices: &[usize]) -> Result<SlideClip, BridgeError> {
+        if indices.is_empty() || indices.len() > MAX_CLIP_SLIDES {
+            return Err(BridgeError::BadArgument);
+        }
+        let mut slides = Vec::with_capacity(indices.len());
+        for &index in indices {
+            let ordinal = self.slide_ordinal(index)?;
+            let parts = self.deck.parts();
+            let part = parts.get(ordinal).ok_or(BridgeError::BadArgument)?.clone();
+            let entry = parts
+                .structure
+                .entry(ordinal)
+                .ok_or(BridgeError::BadArgument)?
+                .clone();
+            let layout_name = entry
+                .layout
+                .and_then(|l| parts.get(l))
+                .and_then(|l| l.common.as_ref())
+                .and_then(|c| c.name.clone());
+            let chain = casual_slide_style::Chain::of(parts, ordinal);
+            let mut ready = Vec::new();
+            let mut skipped = 0usize;
+            for child in part.shape_tree().map_or(&[][..], |t| &t.children[..]) {
+                let Some(key) = placeholder_key(child) else {
+                    continue;
+                };
+                let movable = matches!(
+                    child.kind,
+                    NodeKind::Shape | NodeKind::Connector | NodeKind::Picture
+                );
+                if !movable || holds_relationship(child) {
+                    skipped += 1;
+                    continue;
+                }
+                let key = key.map(|k| (k, child.text_body.as_deref().cloned()));
+                ready.push((key, self.folded_copy(child, &chain)));
+            }
+            let mut shapes = Vec::with_capacity(ready.len());
+            for (key, node) in ready {
+                let picture = match node.kind {
+                    NodeKind::Picture => match self.picture_bytes(ordinal, &node) {
+                        Ok(p) => Some(p),
+                        Err(_) => {
+                            skipped += 1;
+                            continue;
+                        }
+                    },
+                    _ => None,
+                };
+                shapes.push((key, ClipShape { node, picture }));
+            }
+            slides.push(ClipSlide {
+                ordinal,
+                entry,
+                part,
+                layout_name,
+                shapes,
+                skipped,
+            });
+        }
+        Ok(SlideClip {
+            serial: self.serial,
+            slides,
+        })
+    }
+
+    /// Paste `clip`'s slides at place `at`, in order, as one undo step; the first's place.
+    /// Into the deck they came from, each is a copy of its slide, as Duplicate Slide
+    /// makes. Into another, PowerPoint's Use Destination Theme: each takes the layout of
+    /// its own layout's name here, or the current slide's, its titles and body text
+    /// fill that layout's placeholders, and its other shapes and pictures are added.
+    pub fn paste_slides(&mut self, at: usize, clip: &SlideClip) -> Result<usize, BridgeError> {
+        let count = self.deck.parts().structure.slides.len();
+        if at > count || clip.slides.is_empty() {
+            return Err(BridgeError::BadArgument);
+        }
+        let mut ordinal = self.next_ordinal()?;
+        let mut list = Vec::with_capacity(clip.slides.len());
+        for (k, slide) in clip.slides.iter().enumerate() {
+            let place = at + k;
+            let here = clip.serial == self.serial && self.deck.parts().get(slide.ordinal).is_some();
+            if here {
+                let mut part = slide.part.clone();
+                let mut entry = slide.entry.clone();
+                renumber_part(&mut part, ordinal);
+                entry.id = ObjectId::part(ordinal);
+                entry.part = format!("ppt/slides/openpresent-new-{ordinal}.xml");
+                entry.notes = None;
+                self.deck.share_relationships(slide.ordinal, ordinal);
+                list.push((place, entry, part, Origin::Copy(slide.ordinal)));
+            } else {
+                let layout = self.layout_for(slide.layout_name.as_deref(), at)?;
+                let (entry, mut part) = self.layout_slide(layout, ordinal)?;
+                self.fill_slide(&mut part, ordinal, slide)?;
+                list.push((place, entry, part, Origin::Layout(layout)));
+            }
+            ordinal = ordinal.checked_add(1).ok_or(BridgeError::BadArgument)?;
+        }
+        self.add_slide_parts(list)?;
+        Ok(at)
+    }
+
+    /// The layout a slide from another deck goes on: this deck's layout of the same
+    /// name, else the layout of the slide before place `at`, else the first.
+    fn layout_for(&self, name: Option<&str>, at: usize) -> Result<u32, BridgeError> {
+        let layouts = self.layouts();
+        if let Some(name) = name
+            && let Some((o, _)) = layouts.iter().find(|(_, n)| n.eq_ignore_ascii_case(name))
+        {
+            return Ok(*o);
+        }
+        at.checked_sub(1)
+            .and_then(|i| self.layout_of(i))
+            .or_else(|| self.layout_of(at))
+            .or_else(|| layouts.first().map(|(o, _)| *o))
+            .ok_or(BridgeError::BadArgument)
+    }
+
+    /// Put a copied slide's content on new slide `part`: text into the placeholders that
+    /// match, the rest added as new shapes with fresh ids and their pictures' bytes.
+    fn fill_slide(
+        &mut self,
+        part: &mut SlidePart,
+        ordinal: u32,
+        slide: &ClipSlide,
+    ) -> Result<(), BridgeError> {
+        let (mut top_spid, mut top_node) = highest(part);
+        let tree = part.shape_tree_mut().ok_or(BridgeError::BadArgument)?;
+        let mut used = BTreeSet::new();
+        for (key, shape) in &slide.shapes {
+            if let Some((key, body)) = key {
+                let matches = |c: &ShapeNode, exact: bool| {
+                    placeholder_key(c)
+                        .flatten()
+                        .is_some_and(|k| k.0 == key.0 && (!exact || k.1 == key.1))
+                };
+                let found = (0..tree.children.len())
+                    .find(|i| {
+                        !used.contains(i) && tree.children.get(*i).is_some_and(|c| matches(c, true))
+                    })
+                    .or_else(|| {
+                        (0..tree.children.len()).find(|i| {
+                            !used.contains(i)
+                                && tree.children.get(*i).is_some_and(|c| matches(c, false))
+                        })
+                    });
+                if let Some(i) = found
+                    && let Some(target) = tree.children.get_mut(i)
+                {
+                    used.insert(i);
+                    if let (Some(from), Some(to)) = (body, target.text_body.as_mut()) {
+                        to.paragraphs.clone_from(&from.paragraphs);
+                    }
+                    continue;
+                }
+            }
+            let mut node = shape.node.clone();
+            match self.shared_mint() {
+                Some(m) => (top_spid, top_node) = (m, m),
+                None => {
+                    top_spid = top_spid.checked_add(1).ok_or(BridgeError::BadArgument)?;
+                    top_node = top_node.checked_add(1).ok_or(BridgeError::BadArgument)?;
+                }
+            }
+            node.id = ObjectId {
+                part: ordinal,
+                node: top_node,
+            };
+            node.children.clear();
+            let nv = node.non_visual.get_or_insert_with(Default::default);
+            nv.spid = Some(top_spid);
+            nv.creation_id = None;
+            node.start_connection = None;
+            node.end_connection = None;
+            if let Some(picture) = &shape.picture {
+                self.shared_media_fits(picture.bytes.len())?;
+                let (rel, key) = self.mint_media();
+                let blip = node
+                    .properties
+                    .picture
+                    .as_mut()
+                    .and_then(|p| p.blip.as_mut())
+                    .ok_or(BridgeError::CannotCopy)?;
+                blip.embed = Some(rel.clone());
+                blip.link = None;
+                self.deck
+                    .add_media(ordinal, &rel, &key, picture.bytes.clone());
+                self.new_media.insert(rel, picture.clone());
+            }
+            tree.children.push(node);
+        }
+        Ok(())
+    }
+
+    /// A shape as a copy holds it: a placeholder as an ordinary shape at the box it is
+    /// drawn in, with what it inherited written into it (see [`Viewer::copy_shapes`]).
+    fn folded_copy(&self, child: &ShapeNode, chain: &casual_slide_style::Chain<'_>) -> ShapeNode {
+        let mut copy = child.clone();
+        if copy.placeholder().is_some() {
+            if let Some(t) = chain.transform(child) {
+                let mut own = copy.transform.unwrap_or_default();
+                own.offset = Some(t.value.offset);
+                own.extent = Some(t.value.extent);
+                copy.transform = Some(own);
+            }
+            self.fold_inherited(child, chain, &mut copy);
+            if let Some(app) = copy.app.as_mut() {
+                app.placeholder = None;
+            }
+        }
+        copy
     }
 
     /// Write into `copy` what placeholder `original` draws with from its layout and

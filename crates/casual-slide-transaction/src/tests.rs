@@ -468,3 +468,37 @@ fn a_paragraph_range_past_the_body_is_refused_before_anything_changes() {
         assert_eq!(parts, before);
     }
 }
+
+#[test]
+fn list_level_left_margin_and_line_spacing_set_one_paragraph_and_undo() {
+    use casual_slide_model::text::{TextSpacing, Written};
+    let mut parts = sample();
+    let before = parts.clone();
+    let mut history = History::new();
+    let change = |c| Operation::FormatParagraphs {
+        object: SHAPE,
+        first: 1,
+        count: 1,
+        change: c,
+    };
+    let spacing = TextSpacing::Percent(Written::new(casual_slide_model::presentation::Percentage(
+        150_000,
+    )));
+    for c in [
+        ParagraphChange::Level(Some(2)),
+        ParagraphChange::MarginLeft(Some(742_950)),
+        ParagraphChange::LineSpacing(Some(spacing.clone())),
+    ] {
+        assert!(history.apply(&mut parts, change(c)).unwrap());
+    }
+    let p1 = body(&parts).paragraphs[1].properties.as_deref().unwrap();
+    assert_eq!(p1.level, Some(2));
+    assert_eq!(p1.margin_left, Some(742_950));
+    assert_eq!(p1.indent, None);
+    assert_eq!(p1.line_spacing, Some(spacing));
+    assert!(body(&parts).paragraphs[0].properties.is_none());
+    for _ in 0..3 {
+        history.undo(&mut parts).unwrap();
+    }
+    assert_eq!(parts, before);
+}

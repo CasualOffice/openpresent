@@ -102,6 +102,8 @@ No presence in the status bar: the footer roster this build had first is removed
 
 ## Keyboard (web table, docs/49 S3)
 
+Bound in `webapp/editor.keys.js` (`PAR-13`): each key runs its command through the registry, ahead of the browser's own; a command not built yet is named in the status bar.
+
 | Keys | Does | Keys | Does |
 | --- | --- | --- | --- |
 | Ctrl+M | New slide | Ctrl+D | Duplicate object |
@@ -109,7 +111,11 @@ No presence in the status bar: the footer roster this build had first is removed
 | Ctrl+B, I, U | Bold, italic, underline | Ctrl+L, E, R, J | Align left, centre, right, justify |
 | Ctrl+Shift+>, < | Font size up, down | Ctrl+Space | Clear formatting |
 | Ctrl+K | Link | Ctrl+F | Find |
-| Ctrl+[ , ] | Back, forward one layer (web) | Ctrl+G, Ctrl+Shift+G | Group, ungroup |
+| Ctrl+[ , ] | Back, forward one layer (web); in an open text box, font size down, up (desktop) | Ctrl+G, Ctrl+Shift+G | Group, ungroup |
+| Ctrl+H | Replace | Ctrl+P | Print |
+| Ctrl+Shift+V | Paste, keep text only | Ctrl+Alt+V | Paste Special |
+| Tab, Shift+Tab | At a paragraph's start: list level down, up | Alt+Shift+Right, Left | List level down, up |
+| Ctrl+Left, Right | Word before, next (text) | Ctrl+Up, Down; Ctrl+Home, End | Paragraph before, next; start, end of the box |
 | F5, Shift+F5, Alt+F5 | Present from start, current, presenter | Alt+Q | Search |
 | Ctrl+F1 | Show or hide the ribbon | Ctrl+F6 | Next region |
 | Shift+F10 | Context menu | Alt+Period | KeyTips (web) |

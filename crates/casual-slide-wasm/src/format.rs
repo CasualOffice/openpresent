@@ -9,9 +9,15 @@
 //! families, each named with the bundled face it renders as.
 
 use casual_slide_model::fill::Fill;
+use casual_slide_model::presentation::Percentage;
 use casual_slide_model::presentation::TextFont;
+use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::ObjectId;
-use casual_slide_model::text::{Bullet, BulletFont, TextAlign, TextBody};
+use casual_slide_model::text::CharacterProperties;
+use casual_slide_model::text::{
+    AutonumberScheme, Bullet, BulletFont, ParagraphProperties, TextAlign, TextBody, TextSpacing,
+    Written,
+};
 use casual_slide_model::theme::FontCollectionIndex;
 use casual_slide_style::text::{FontScript, RunFont, TextChain};
 use casual_slide_transaction::{
@@ -36,6 +42,95 @@ pub const MIN_FONT_POINTS: f64 = 1.0;
 /// Where a bulleted paragraph's text starts and its bullet hangs, EMU: what PowerPoint
 /// writes when Bullets is turned on in a text box (0.3125 inch).
 const BULLET_MARGIN: i32 = 285_750;
+
+/// Where a numbered paragraph's text starts and its number hangs, EMU: what PowerPoint
+/// writes when Numbering is turned on in a text box (0.375 inch).
+const NUMBER_MARGIN: i32 = 342_900;
+
+/// How far each list level steps a paragraph that states its own left margin, EMU:
+/// half an inch, as PowerPoint's Increase List Level moves a text box's paragraph.
+const LEVEL_STEP: i32 = 457_200;
+
+/// The deepest list level, from 0: `ST_TextIndentLevelType`'s 8.
+const MAX_LEVEL: u8 = 8;
+
+/// The Bullets gallery: each choice's name, character, font, panose, pitch family and
+/// charset, as PowerPoint writes them (Filled Round, Hollow Round, Filled Square,
+/// Hollow Square, Star, Arrow and Checkmark Bullets).
+const BULLET_STYLES: &[(&str, &str, &str, &str, i8, i8)] = &[
+    ("round", "\u{2022}", "Arial", "020B0604020202020204", 34, 0),
+    ("hollow", "o", "Courier New", "02070309020205020404", 49, 0),
+    (
+        "square",
+        "\u{a7}",
+        "Wingdings",
+        "05000000000000000000",
+        2,
+        2,
+    ),
+    (
+        "hollow-square",
+        "q",
+        "Wingdings",
+        "05000000000000000000",
+        2,
+        2,
+    ),
+    ("star", "v", "Wingdings", "05000000000000000000", 2, 2),
+    ("arrow", "\u{d8}", "Wingdings", "05000000000000000000", 2, 2),
+    ("check", "\u{fc}", "Wingdings", "05000000000000000000", 2, 2),
+];
+
+/// The Numbering gallery's schemes, as PowerPoint lists them.
+pub const NUMBER_SCHEMES: &[&str] = &[
+    "arabicPeriod",
+    "arabicParenR",
+    "romanUcPeriod",
+    "alphaUcPeriod",
+    "alphaLcParenR",
+    "alphaLcPeriod",
+    "romanLcPeriod",
+];
+
+/// The bounds a Line Spacing multiple keeps to, in lines.
+const MIN_LINE_SPACING: f64 = 0.1;
+const MAX_LINE_SPACING: f64 = 9.99;
+
+/// The most characters one paste from another application inserts: a bound on what
+/// the clipboard's HTML can make the engine do, far past any slide's text.
+pub const MAX_PASTE_CHARS: usize = 262_144;
+
+/// The most runs one paste carries.
+pub const MAX_PASTE_PIECES: usize = 8_192;
+
+/// One run of text pasted from another application (`PAR-11`): its text, with line
+/// feeds between paragraphs and vertical tabs for line breaks, and the look the
+/// clipboard's HTML gave it. `None` leaves an attribute to the text it lands in.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RichPiece {
+    /// The text. Control characters other than line feed, vertical tab and tab are
+    /// dropped.
+    pub text: String,
+    /// Bold.
+    pub bold: Option<bool>,
+    /// Italic.
+    pub italic: Option<bool>,
+    /// Single underline, or none.
+    pub underline: Option<bool>,
+    /// Size, hundredths of a point; kept within `ST_TextFontSize`.
+    pub size: Option<i32>,
+    /// Colour, `0xRRGGBB`.
+    pub color: Option<u32>,
+}
+
+/// What a pasted paragraph is: `list` 0 plain, 1 bulleted, 2 numbered; `level` from 0.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RichParagraph {
+    /// 0 plain, 1 bulleted, 2 numbered.
+    pub list: u8,
+    /// The list level, from 0; past 8 it is 8.
+    pub level: u8,
+}
 
 /// The longest font name the Font box takes, in characters.
 const MAX_FONT_NAME_CHARS: usize = 64;
@@ -206,11 +301,26 @@ impl Viewer {
             .as_ref()
             .and_then(|c| c.paragraph(para, |p| p.bullet.as_ref()))
             .is_some_and(|r| is_bulleted(Some(r.value)));
+        let bullet = chain
+            .as_ref()
+            .and_then(|c| c.paragraph(para, |p| p.bullet.as_ref()))
+            .map_or(String::new(), |r| bullet_token(r.value));
+        let level = casual_slide_style::text::paragraph_level(para);
+        let spacing = chain
+            .as_ref()
+            .and_then(|c| c.paragraph(para, |p| p.line_spacing.as_ref()))
+            .map_or(String::new(), |r| match r.value {
+                TextSpacing::Percent(p) => lines_text(p.value().0),
+                TextSpacing::Points(_) => String::new(),
+            });
         Ok(vec![
             font,
             size_text(size),
             align.to_owned(),
             if bulleted { "1" } else { "0" }.to_owned(),
+            bullet,
+            level.to_string(),
+            spacing,
         ])
     }
 
@@ -316,8 +426,10 @@ impl Viewer {
         self.edit(Operation::Batch(ops), false)
     }
 
-    /// Paragraph alignment (`what` 0: `l`, `ctr`, `r`, `just`) or Bullets (`what` 1:
-    /// `on`, `off`, `toggle`) for the paragraphs `[start, end)` touches. One undo step.
+    /// Paragraph alignment (`what` 0: `l`, `ctr`, `r`, `just`), Bullets (`what` 1: `on`,
+    /// `off`, `toggle` or a gallery style), Numbering (`what` 2), List Level (`what` 3:
+    /// `up`, `down`) or Line Spacing (`what` 4: lines, 0.1 to 9.99) for the paragraphs
+    /// `[start, end)` touches. One undo step.
     pub fn set_paragraphs(
         &mut self,
         object: ObjectId,
@@ -348,6 +460,25 @@ impl Viewer {
                 }]
             }
             1 => self.bullet_ops(object, body, first, count, value)?,
+            2 => self.number_ops(object, body, first, count, value)?,
+            3 => level_ops(object, body, first, count, value)?,
+            4 => {
+                let lines: f64 = value.trim().parse().map_err(|_| BridgeError::BadArgument)?;
+                if !(MIN_LINE_SPACING..=MAX_LINE_SPACING).contains(&lines) {
+                    return Err(BridgeError::BadArgument);
+                }
+                // In range, so the product fits an `i32`.
+                #[allow(clippy::cast_possible_truncation)]
+                let thousandths = (lines * 100_000.0).round() as i32;
+                vec![Operation::FormatParagraphs {
+                    object,
+                    first,
+                    count,
+                    change: ParagraphChange::LineSpacing(Some(TextSpacing::Percent(Written::new(
+                        Percentage(thousandths),
+                    )))),
+                }]
+            }
             _ => return Err(BridgeError::BadArgument),
         };
         self.edit(Operation::Batch(ops), false)
@@ -369,11 +500,215 @@ impl Viewer {
                 .and_then(|c| c.paragraph(props(i), |p| p.bullet.as_ref()))
                 .is_some_and(|r| is_bulleted(Some(r.value)))
         };
+        let style = BULLET_STYLES.iter().find(|s| s.0 == value);
         let on = match value {
             "on" => true,
             "off" => false,
             // On unless the first paragraph already has bullets, as PowerPoint toggles.
             "toggle" => !bulleted(first),
+            _ if style.is_some() => true,
+            _ => return Err(BridgeError::BadArgument),
+        };
+        let (_, ch, face, panose, pitch, charset) = style.copied().unwrap_or(BULLET_STYLES[0]);
+        let char_bullet = ParagraphChange::Bullet(
+            Some(Bullet::Char(Some(ch.to_owned()))),
+            Some(BulletFont::Font(TextFont {
+                typeface: face.to_owned(),
+                panose: Some(panose.to_owned()),
+                pitch_family: Some(pitch),
+                charset: Some(charset),
+            })),
+        );
+        let mut ops = Vec::new();
+        for i in first..first + count {
+            let margin = chain
+                .as_ref()
+                .and_then(|c| c.paragraph(props(i), |p| p.margin_left))
+                .map_or(0, |r| r.value);
+            let one = |change| Operation::FormatParagraphs {
+                object,
+                first: i,
+                count: 1,
+                change,
+            };
+            if on {
+                // Bullets on leaves a bulleted paragraph be; a chosen style replaces
+                // numbers and other bullets alike, unless the paragraph has it already.
+                if style.is_none() && bulleted(i) {
+                    continue;
+                }
+                if let ParagraphChange::Bullet(b, f) = &char_bullet
+                    && props(i).is_some_and(|p| p.bullet == *b && p.bullet_font == *f)
+                {
+                    continue;
+                }
+                ops.push(one(char_bullet.clone()));
+                // A paragraph at the left edge gets PowerPoint's hanging indent.
+                if margin == 0 {
+                    ops.push(one(ParagraphChange::Indent {
+                        margin_left: Some(BULLET_MARGIN),
+                        indent: Some(-BULLET_MARGIN),
+                    }));
+                }
+            } else {
+                if !bulleted(i) {
+                    continue;
+                }
+                ops.push(one(ParagraphChange::Bullet(Some(Bullet::None), None)));
+                if margin != 0 {
+                    ops.push(one(ParagraphChange::Indent {
+                        margin_left: Some(0),
+                        indent: Some(0),
+                    }));
+                }
+            }
+        }
+        Ok(ops)
+    }
+
+    /// Paste formatted text from another application (`PAR-11`) over `[start, end)`:
+    /// each piece inserted with its look, then each pasted paragraph given its list,
+    /// all one undo step. Where the caret lands, after the pasted text.
+    pub fn paste_rich(
+        &mut self,
+        object: ObjectId,
+        (start, end): (usize, usize),
+        pieces: &[RichPiece],
+        paragraphs: &[RichParagraph],
+    ) -> Result<usize, BridgeError> {
+        let (start, end) = (start.min(end), start.max(end));
+        let body = self.body(object)?;
+        if end > body_length(body) || pieces.len() > MAX_PASTE_PIECES {
+            return Err(BridgeError::BadArgument);
+        }
+        // Each piece starts from the look of the text it lands in, as typing there
+        // would, and sets what the clipboard said over it.
+        let base = props_at(
+            body,
+            if start < end {
+                start
+            } else {
+                start.saturating_sub(1)
+            },
+        )
+        .cloned()
+        .unwrap_or_default();
+        let mut ops = Vec::new();
+        if start < end {
+            ops.push(Operation::DeleteRange { object, start, end });
+        }
+        let mut at = start;
+        let mut total = 0usize;
+        for piece in pieces {
+            let text: String = piece
+                .text
+                .chars()
+                .filter(|c| !c.is_control() || matches!(c, '\n' | '\t' | '\u{b}'))
+                .collect();
+            let n = text.chars().count();
+            total = total.saturating_add(n);
+            if total > MAX_PASTE_CHARS {
+                return Err(BridgeError::BadArgument);
+            }
+            if n == 0 {
+                continue;
+            }
+            let mut look = base.clone();
+            if let Some(b) = piece.bold {
+                look.bold = Some(b);
+            }
+            if let Some(i) = piece.italic {
+                look.italic = Some(i);
+            }
+            if let Some(u) = piece.underline {
+                look.underline = Some(if u {
+                    casual_slide_model::text::UnderlineType::Sng
+                } else {
+                    casual_slide_model::text::UnderlineType::None
+                });
+            }
+            if let Some(size) = piece.size {
+                look.size = Some(size.clamp(100, 400_000));
+            }
+            if let Some(rgb) = piece.color.filter(|&c| c <= 0x00FF_FFFF) {
+                let [_, r, g, b] = rgb.to_be_bytes();
+                look.fill = Some(Fill::Solid(Some(casual_slide_model::color::Color::srgb(
+                    r, g, b,
+                ))));
+            }
+            // Absent stays absent: a look with nothing in it writes no `rPr`.
+            let properties = (look != CharacterProperties::default()).then(|| Box::new(look));
+            ops.push(Operation::InsertRun {
+                object,
+                at,
+                text,
+                properties,
+            });
+            at += n;
+        }
+        let mark = self.history.undo_mark();
+        if !ops.is_empty() {
+            self.edit(Operation::Batch(ops), false)?;
+        }
+        // The lists, on the body as the insert left it.
+        let (first, _) = locate(self.body(object)?, start)?;
+        let mut list_ops = Vec::new();
+        for (k, para) in paragraphs.iter().enumerate() {
+            let i = first + k;
+            let body = self.body(object)?;
+            if i >= body.paragraphs.len() {
+                break;
+            }
+            let value = match para.list {
+                1 => self.bullet_ops(object, body, i, 1, "round")?,
+                2 => self.number_ops(object, body, i, 1, "arabicPeriod")?,
+                _ => Vec::new(),
+            };
+            list_ops.extend(value);
+            let level = para.level.min(MAX_LEVEL);
+            if level > 0 {
+                list_ops.push(Operation::FormatParagraphs {
+                    object,
+                    first: i,
+                    count: 1,
+                    change: ParagraphChange::Level(Some(level)),
+                });
+            }
+        }
+        if !list_ops.is_empty() {
+            self.edit(Operation::Batch(list_ops), false)?;
+        }
+        self.history.group_since(mark);
+        Ok(at)
+    }
+
+    /// Numbering (`what` 2): `toggle`, `off`, or a scheme from [`NUMBER_SCHEMES`] for
+    /// the paragraphs `first..first + count`, with PowerPoint's hanging indent where a
+    /// paragraph starts at the left edge.
+    fn number_ops(
+        &self,
+        object: ObjectId,
+        body: &TextBody,
+        first: usize,
+        count: usize,
+        value: &str,
+    ) -> Result<Vec<Operation>, BridgeError> {
+        let chain = self.chain_of(object);
+        let props = |i: usize| body.paragraphs.get(i).and_then(|p| p.properties.as_deref());
+        let bullet = |i: usize| {
+            chain
+                .as_ref()
+                .and_then(|c| c.paragraph(props(i), |p| p.bullet.as_ref()))
+                .map(|r| r.value.clone())
+        };
+        let numbered = |i: usize| matches!(bullet(i), Some(Bullet::AutoNumber { .. }));
+        let scheme = match value {
+            "off" => None,
+            "toggle" if numbered(first) => None,
+            "toggle" => Some(AutonumberScheme::ArabicPeriod),
+            v if NUMBER_SCHEMES.contains(&v) => {
+                Some(AutonumberScheme::parse_lexical(v).ok_or(BridgeError::BadArgument)?)
+            }
             _ => return Err(BridgeError::BadArgument),
         };
         let mut ops = Vec::new();
@@ -388,28 +723,27 @@ impl Viewer {
                 count: 1,
                 change,
             };
-            if on {
-                if bulleted(i) {
+            if let Some(scheme) = scheme {
+                let start_at = match bullet(i) {
+                    Some(Bullet::AutoNumber { start_at, .. }) => start_at,
+                    _ => None,
+                };
+                let want = Bullet::AutoNumber {
+                    scheme: Some(scheme),
+                    start_at,
+                };
+                if props(i).is_some_and(|p| p.bullet.as_ref() == Some(&want)) {
                     continue;
                 }
-                ops.push(one(ParagraphChange::Bullet(
-                    Some(Bullet::Char(Some("\u{2022}".to_owned()))),
-                    Some(BulletFont::Font(TextFont {
-                        typeface: "Arial".to_owned(),
-                        panose: Some("020B0604020202020204".to_owned()),
-                        pitch_family: Some(34),
-                        charset: Some(0),
-                    })),
-                )));
-                // A paragraph at the left edge gets PowerPoint's hanging indent.
+                ops.push(one(ParagraphChange::Bullet(Some(want), None)));
                 if margin == 0 {
                     ops.push(one(ParagraphChange::Indent {
-                        margin_left: Some(BULLET_MARGIN),
-                        indent: Some(-BULLET_MARGIN),
+                        margin_left: Some(NUMBER_MARGIN),
+                        indent: Some(-NUMBER_MARGIN),
                     }));
                 }
             } else {
-                if !bulleted(i) {
+                if !numbered(i) {
                     continue;
                 }
                 ops.push(one(ParagraphChange::Bullet(Some(Bullet::None), None)));
@@ -489,6 +823,75 @@ pub fn font_families_json() -> String {
         })
         .collect();
     format!("[{}]", items.join(","))
+}
+
+/// Increase (`up`) or Decrease (`down`) List Level for paragraphs `first..first +
+/// count`: `lvl` steps within 0 to 8, written absent at 0 as PowerPoint leaves it, and a
+/// paragraph that states its own left margin moves with it by [`LEVEL_STEP`].
+fn level_ops(
+    object: ObjectId,
+    body: &TextBody,
+    first: usize,
+    count: usize,
+    value: &str,
+) -> Result<Vec<Operation>, BridgeError> {
+    let up = match value {
+        "up" => true,
+        "down" => false,
+        _ => return Err(BridgeError::BadArgument),
+    };
+    let mut ops = Vec::new();
+    for i in first..first + count {
+        let own: Option<&ParagraphProperties> =
+            body.paragraphs.get(i).and_then(|p| p.properties.as_deref());
+        let level = casual_slide_style::text::paragraph_level(own);
+        let next = if up {
+            level.saturating_add(1).min(MAX_LEVEL)
+        } else {
+            level.saturating_sub(1)
+        };
+        if next == level {
+            continue;
+        }
+        let one = |change| Operation::FormatParagraphs {
+            object,
+            first: i,
+            count: 1,
+            change,
+        };
+        ops.push(one(ParagraphChange::Level((next > 0).then_some(next))));
+        if let Some(margin) = own.and_then(|p| p.margin_left) {
+            let moved = if up {
+                margin.saturating_add(LEVEL_STEP)
+            } else {
+                margin.saturating_sub(LEVEL_STEP).max(0)
+            };
+            ops.push(one(ParagraphChange::MarginLeft(Some(moved))));
+        }
+    }
+    Ok(ops)
+}
+
+/// What the Bullets and Numbering galleries show as chosen: `c:` and the character,
+/// `n:` and the scheme, `p:` for a picture, or empty.
+fn bullet_token(b: &Bullet) -> String {
+    match b {
+        Bullet::Char(Some(c)) => format!("c:{c}"),
+        Bullet::AutoNumber { scheme, .. } => format!(
+            "n:{}",
+            scheme
+                .unwrap_or(AutonumberScheme::ArabicPeriod)
+                .to_lexical()
+        ),
+        Bullet::Picture(_) => "p:".to_owned(),
+        Bullet::Char(None) | Bullet::None => String::new(),
+    }
+}
+
+/// Line spacing in thousandths of a percent as the menu shows it: `1`, `1.5`.
+fn lines_text(thousandths: i32) -> String {
+    let s = format!("{:.2}", f64::from(thousandths) / 100_000.0);
+    s.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 fn json_string(s: &str) -> String {

@@ -37,7 +37,7 @@ use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{Background, PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
     Bullet, BulletFont, CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TextAlign,
-    TextBody, TextItem, TextRun, UnderlineType,
+    TextBody, TextItem, TextRun, TextSpacing, UnderlineType,
 };
 use casual_slide_model::theme::{ColorScheme, FontScheme, ShapeStyle};
 use casual_slide_model::timing::{SlideTiming, Slot};
@@ -259,6 +259,13 @@ pub enum ParagraphChange {
         /// `@indent`.
         indent: Option<i32>,
     },
+    /// `pPr/@lvl`, from 0: Increase and Decrease List Level, Tab and Shift+Tab.
+    Level(Option<u8>),
+    /// `pPr/@marL` alone, EMU: where a list level's text starts when the paragraph
+    /// states its own margin.
+    MarginLeft(Option<i32>),
+    /// `pPr/lnSpc`: Line Spacing.
+    LineSpacing(Option<TextSpacing>),
 }
 
 impl ParagraphChange {
@@ -276,6 +283,9 @@ impl ParagraphChange {
                 p.margin_left = *margin_left;
                 p.indent = *indent;
             }
+            Self::Level(v) => p.level = *v,
+            Self::MarginLeft(v) => p.margin_left = *v,
+            Self::LineSpacing(v) => p.line_spacing.clone_from(v),
         }
     }
 }

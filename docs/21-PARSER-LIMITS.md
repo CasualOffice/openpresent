@@ -336,6 +336,11 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_CROP` | `99_000` | Thousandths of a percent Crop may cut from one side, or two opposite sides together, so some of the picture stays (`UX-003`) | CS-WSM-0006 | Tested: `a_crop_cutting_everything_or_a_shape_not_a_picture_is_refused` |
 | `MAX_PAD` | `1_000_000` | Thousandths of a percent a negative crop may pad one side (`UX-003`) | CS-WSM-0006 | Untested |
 | `MAX_FONT_POINTS` | `4000.0` | Points the Font Size box takes, `ST_TextFontSize`'s bound (`UX-003`) | CS-WSM-0006 | `home_tests::a_bad_size_or_colour_is_refused_and_changes_nothing` |
+| `MAX_CLIP_SLIDES` | `1000` | Slides one Copy in the thumbnail pane takes (`PAR-10`) | CS-WSM-0006 | Untested |
+| `MAX_LEVEL` | `8` | The deepest list level Increase List Level and a paste make, `ST_TextIndentLevelType` (`PAR-06`) | none: clamped | `home_tests::numbering_list_levels_and_line_spacing_save_read_back_and_undo` |
+| `MAX_LINE_SPACING` | `9.99` | Lines Line Spacing takes; below `MIN_LINE_SPACING` 0.1 or above, refused (`PAR-06`) | CS-WSM-0006 | `home_tests::numbering_list_levels_and_line_spacing_save_read_back_and_undo` |
+| `MAX_PASTE_CHARS` | `262_144` | Characters one paste from another application inserts (`PAR-11`) | CS-WSM-0006 | Untested |
+| `MAX_PASTE_PIECES` | `8_192` | Runs one paste from another application carries (`PAR-11`) | CS-WSM-0006 | Untested |
 | `MAX_FONT_NAME_CHARS` | `64` | Characters of a name typed in the Font box (`UX-003`) | None: the name is cut; control characters are dropped | Untested |
 | `MAX_LINE_WIDTH` | `20_116_800` | EMU of an outline weight Shape Outline sets, PowerPoint's 1584 points (`SHAPE-01`) | None: a wider one is set to the bound | Untested |
 

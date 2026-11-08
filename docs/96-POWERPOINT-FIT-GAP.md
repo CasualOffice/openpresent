@@ -499,7 +499,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 ## Parity today
 
-**Status: audit, 2026-11-09. Task `FIT-02`.** The owner, 2026-11-08: many PowerPoint features are missing, and every gap must be found. This section marks each of the 318 rows above, and 34 more that the ribbon, menus, panes, keys and file operations have and the rows above miss (`PP-FIT-319` to `352`), with what the editor does **today**, on `main` at `7539ea5`. The rows above stay the plan; this table is the state.
+**Status: audit, 2026-11-09. Task `FIT-02`; rows 067, 095, 320, 321, 329, 341 and 351 updated by `PAR-06`, `PAR-10` to `PAR-13` and `PAR-15`.** The owner, 2026-11-08: many PowerPoint features are missing, and every gap must be found. This section marks each of the 318 rows above, and 34 more that the ribbon, menus, panes, keys and file operations have and the rows above miss (`PP-FIT-319` to `352`), with what the editor does **today**, on `main` at `7539ea5`. The rows above stay the plan; this table is the state.
 
 **How it was checked.** The live editor's code was read (`webapp/`, `crates/casual-slide-wasm`), the engine built with `wasm-pack`, and the editor served on `127.0.0.1` and driven in Chrome: the command registry read at run time (242 commands, 120 of them registered disabled with "Not available yet in this build"), real decks opened (`sdk-strict-animclr`, `pptxts-modern-comments`), shapes inserted and the Arrange menu opened with a multiple selection. A Works mark rests on the registry and code, and the decisive verbs were clicked; nothing was compared against a running PowerPoint (`UX-002`, `PV-01`).
 
@@ -517,13 +517,13 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 | | Works | Partial | Disabled | Faked | Absent | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| The 318 rows above | 30 (9.4%) | 48 (15.1%) | 58 (18.2%) | 0 | 182 (57.2%) | 318 |
-| With the 34 shell rows | 35 (9.9%) | 52 (14.8%) | 68 (19.3%) | 0 | 197 (56.0%) | 352 |
-| Of those, the 280 we build (Edit, Render, Retain) | 35 (12.5%) | 51 (18.2%) | 57 (20.4%) | 0 | 137 (48.9%) | 280 |
+| The 318 rows above | 32 (10.1%) | 47 (14.8%) | 58 (18.2%) | 0 | 181 (56.9%) | 318 |
+| With the 34 shell rows | 40 (11.4%) | 52 (14.8%) | 67 (19.0%) | 0 | 193 (54.8%) | 352 |
+| Of those, the 280 we build (Edit, Render, Retain) | 40 (14.3%) | 51 (18.2%) | 56 (20.0%) | 0 | 133 (47.5%) | 280 |
 
-**Plainly: of the 280 features we mean to build, 35 work (12.5%), 51 work in part (18.2%), and 194 are missing (69.3%),** whether drawn disabled or not there at all. Of the 35 that work, 11 are file facts kept on save rather than verbs a user runs.
+**Plainly: of the 280 features we mean to build, 40 work (14.3%), 51 work in part (18.2%), and 189 are missing (67.5%),** whether drawn disabled or not there at all. Of the 40 that work, 11 are file facts kept on save rather than verbs a user runs.
 
-**Largest gaps a PowerPoint user hits first:** edits lost on closing the tab (no autosave or warning); speaker notes cannot be typed; no Group; no Find or Replace; no links; no numbering or list levels; no change of layout; no Slide Sorter; no sections; slides cannot be copied; nothing but plain text pastes from other apps; no z-order; no comments; no print; no alt text.
+**Largest gaps a PowerPoint user hits first:** edits lost on closing the tab (no autosave or warning); speaker notes cannot be typed; no Group; no Find or Replace; no links; no change of layout; no Slide Sorter; no sections; slides cannot be copied between browser tabs; no z-order; no comments; no print; no alt text.
 
 ### The table
 
@@ -595,7 +595,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-064 | Ruler | Edit | Disabled | View, Ruler disabled | 2 formatting | `PAR-31` |
 | PP-FIT-065 | Gridlines, snap to grid | Edit | Disabled | View, Gridlines disabled; no snap to grid | 2 formatting | `PAR-31` |
 | PP-FIT-066 | Drawing guides | Edit | Disabled | View, Guides disabled | 2 formatting | `PAR-31` |
-| PP-FIT-067 | Smart guides | Edit | Absent | No smart guides or snapping while dragging | 1 everyday editing | `PAR-15` |
+| PP-FIT-067 | Smart guides | Edit | Works | Smart guides while moving (`PAR-15`): edges and centres snap to other shapes' and the slide's, red dashed guides; Alt turns it off. Spacing guides and resize snapping not yet |  |  |
 | PP-FIT-068 | Zoom, Fit | Edit | Works | Zoom menu, slider, percentage, Fit to Window |  |  |
 | PP-FIT-069 | New Window, Arrange All, Cascade | Refuse | Absent | Refused by decision | decided: not built |  |
 | PP-FIT-070 | Open in a chosen view | Edit | Absent | Always opens in Normal view; stored view not honoured | 4 advanced | `PAR-62` |
@@ -623,7 +623,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-092 | Superscript, subscript | Edit | Disabled | Subscript and Superscript disabled | 2 formatting | `PAR-20` |
 | PP-FIT-093 | Clear formatting | Edit | Disabled | Clear All Formatting disabled; Ctrl+Space does nothing | 2 formatting | `PAR-20` |
 | PP-FIT-094 | Alignment, spacing, indents | Edit | Partial | Left, centre, right, justify (and keys); Line Spacing, indents and the Paragraph dialog disabled | 2 formatting | `PAR-21` |
-| PP-FIT-095 | Bullets, numbering | Edit | Partial | Bullets toggle works; Numbering, Increase and Decrease List Level disabled; Tab types a tab instead of demoting a bullet | 1 everyday editing | `PAR-06` |
+| PP-FIT-095 | Bullets, numbering | Edit | Works | Bullets and Numbering galleries, Increase and Decrease List Level, Tab and Shift+Tab, Line Spacing (`PAR-06`) |  |  |
 | PP-FIT-096 | Text columns | Edit | Disabled | Columns disabled | 2 formatting | `PAR-21` |
 | PP-FIT-097 | Right-to-left text and direction | Edit | Absent | No right-to-left paragraph control; Arabic decks draw | 4 advanced | `PAR-64` |
 | PP-FIT-098 | Vertical and rotated text | Edit | Disabled | Text Direction disabled | 2 formatting | `PAR-21` |
@@ -848,8 +848,8 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-317 | IRM on mobile | Host seam | Absent | Host seam, not built | decided: not built |  |
 | PP-FIT-318 | Copilot on mobile | Host seam | Absent | Host seam, not built | decided: not built |  |
 | PP-FIT-319 | Undo and Redo history list (Undo ▾) (Ribbon, Home) | Edit | Partial | Single steps work; no list of steps to undo several at once | 4 advanced | `PAR-61` |
-| PP-FIT-320 | Paste Options: Keep Source Formatting, Use Destination Theme, Picture, Keep Text Only (Ctrl+Shift+V) (Ribbon, Home; right-click) | Edit | Disabled | Paste works for shapes and text; Keep Text Only and the options are disabled | 1 everyday editing | `PAR-11` |
-| PP-FIT-321 | Paste from other applications: rich text, HTML, images (Clipboard) | Edit | Partial | Plain text pastes into an open text box; an image or formatted text from outside does nothing | 1 everyday editing | `PAR-11` |
+| PP-FIT-320 | Paste Options: Keep Source Formatting, Use Destination Theme, Picture, Keep Text Only (Ctrl+Shift+V) (Ribbon, Home; right-click) | Edit | Partial | Keep Source Formatting, Use Destination Theme and Keep Text Only (Ctrl+Shift+V) in the Paste menu, redoing the last paste (`PAR-11`); no Picture option and no floating Paste Options button | 1 everyday editing | `PAR-11` |
+| PP-FIT-321 | Paste from other applications: rich text, HTML, images (Clipboard) | Edit | Works | HTML text keeps bold, italic, underline, size, colour and lists; a PNG or JPEG pastes as a picture (`PAR-11`). RTF-only sources paste as plain text |  |  |
 | PP-FIT-322 | Clipboard pane (Ribbon, Home launcher) | Edit | Disabled | Launcher disabled | 4 advanced | `PAR-61` |
 | PP-FIT-323 | Font and Paragraph dialogs (Launchers; right-click) | Edit | Disabled | Font… and Paragraph… disabled | 2 formatting | `PAR-20`, `PAR-21` |
 | PP-FIT-324 | Change Case (Ribbon, Home) | Edit | Disabled | Disabled | 2 formatting | `PAR-20` |
@@ -857,7 +857,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-326 | Height and Width boxes on Shape and Picture Format, lock aspect ratio (Ribbon, contextual) | Edit | Disabled | Ribbon boxes disabled; Size & Position pane edits size and position | 2 formatting | `PAR-24` |
 | PP-FIT-327 | Change Shape (Ribbon, Shape Format; right-click) | Edit | Disabled | Disabled | 2 formatting | `PAR-24` |
 | PP-FIT-328 | Duplicate object (Ctrl+D) and arrow-key nudge (Keys) | Edit | Works | Ctrl+D, arrows, Ctrl+arrows |  |  |
-| PP-FIT-329 | Copy and paste slides, within and between decks (Thumbnails; keys) | Edit | Absent | Cut, Copy, Paste act on shapes only; a slide cannot be copied to another deck | 1 everyday editing | `PAR-10` |
+| PP-FIT-329 | Copy and paste slides, within and between decks (Thumbnails; keys) | Edit | Partial | Slides copy and paste in the thumbnail pane, several with Ctrl+ and Shift+click, within a deck and into another opened in the same tab, with pictures (`PAR-10`). Not between two browser tabs; groups, tables and charts stay behind in another deck, and the status bar says how many | 1 everyday editing | `PAR-10` |
 | PP-FIT-330 | Status bar: Slide x of y, language, accessibility (Status bar) | Edit | Partial | Slide count shown; no language or accessibility indicator | 4 advanced | `PAR-61` |
 | PP-FIT-331 | Ribbon Display Options: Classic, Simplified, show tabs only, Ctrl+F1 (Ribbon) | Edit | Works | Toggle and Ctrl+F1 |  |  |
 | PP-FIT-332 | KeyTips (Alt, Alt+Period) (Keys) | Edit | Works | Letters over tabs and commands (`UX-003`) |  |  |
@@ -869,7 +869,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-338 | Help, Contact Support, Feedback (Ribbon, Help) | Edit | Disabled | Disabled; Keyboard Shortcuts and About work | 4 advanced | `PAR-61` |
 | PP-FIT-339 | Unsaved-changes warning on leaving the page (File operation) | Edit | Absent | Closing the tab with edits loses them without asking | 1 everyday editing | `PAR-01` |
 | PP-FIT-340 | Save As with a choice of format (`.pptx`, `.ppsx`, `.potx`, `.odp`, `.pdf`) (File) | Edit | Absent | Save writes the opened type; PDF and PNG are separate exports | 4 advanced | `PAR-57` |
-| PP-FIT-341 | Text selection by double-click (word) and triple-click (paragraph), Ctrl+arrow by word, Ctrl+Home and End (Text editing) | Edit | Absent | Caret moves by character and line, Shift extends; no word or paragraph selection | 1 everyday editing | `PAR-12` |
+| PP-FIT-341 | Text selection by double-click (word) and triple-click (paragraph), Ctrl+arrow by word, Ctrl+Home and End (Text editing) | Edit | Works | Double and triple click, Ctrl+arrows by word and paragraph, Ctrl+Home and End, Shift to extend (`PAR-12`) |  |  |
 | PP-FIT-342 | Table Layout: cell size, alignment in cell, cell margins, distribute rows and columns, text direction (Ribbon, contextual) | Edit | Absent | Only insert and delete rows and columns | 2 formatting | `PAR-34` |
 | PP-FIT-343 | Chart Design and Format: chart styles, add element, quick layout, change chart type, select data (Ribbon, contextual) | Edit | Absent | Only Edit Data | 2 formatting | `PAR-35` |
 | PP-FIT-344 | Picture Format: Change Picture, Compress, Picture Border and Effects (Ribbon, contextual) | Edit | Absent | Only Crop, Reset and four styles | 2 formatting | `PAR-33` |
@@ -879,7 +879,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-348 | Ctrl+mouse wheel and pinch zoom on the slide (Keys and pointer) | Edit | Absent | Zoom only from the slider and the menu | 4 advanced | `PAR-61` |
 | PP-FIT-349 | Placeholder prompts ("Click to add title") on new slides (Stage) | Edit | Works | Empty placeholders show their prompt (`PLACEHOLDER` flag) |  |  |
 | PP-FIT-350 | Slide show right-click menu and on-screen controls (Slide show) | Edit | Absent | Only keys and clicks; no menu or control bar | 4 advanced | `PAR-52` |
-| PP-FIT-351 | Keyboard shortcuts: Ctrl+K, Ctrl+F, Ctrl+H, Ctrl+G, Ctrl+Shift+G, Ctrl+[ and ], Ctrl+Space, Ctrl+P, Ctrl+Shift+C and V (Keys) | Edit | Absent | None of these is bound; Ctrl+F and Ctrl+P reach the browser | 1 everyday editing | `PAR-13` |
+| PP-FIT-351 | Keyboard shortcuts: Ctrl+K, Ctrl+F, Ctrl+H, Ctrl+G, Ctrl+Shift+G, Ctrl+[ and ], Ctrl+Space, Ctrl+P, Ctrl+Shift+C and V (Keys) | Edit | Works | Each key runs its command or names it as not available yet, ahead of the browser (`PAR-13`, `editor.keys.js`) |  |  |
 | PP-FIT-352 | Bring Forward, Bring to Front, Send Backward, Send to Back (Ctrl+[ and ]) (Ribbon, Arrange; right-click) | Edit | Disabled | All four disabled on the ribbon and in the menu | 1 everyday editing | `PAR-14` |
 
 ## Roadmap asks this analysis raises

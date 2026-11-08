@@ -38,6 +38,10 @@ const ZOOM = ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", 
 const SECTION = ["slide.section.add", "slide.section.rename", "slide.section.remove", "slide.section.collapse-all", "slide.section.expand-all"];
 const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.distribute-horizontal", "arrange.distribute-vertical", "arrange.rotate-right", "arrange.flip-horizontal", "arrange.selection-pane"];
 const SELECT = ["edit.select-all", "arrange.selection-pane"];
+// The Bullets and Numbering galleries and Line Spacing (`PAR-06`, `editor.home.js`).
+const BULLETS = ["para.bullets", "para.bullets.none", "para.bullets.round", "para.bullets.hollow", "para.bullets.square", "para.bullets.hollow-square", "para.bullets.star", "para.bullets.arrow", "para.bullets.check"];
+const NUMBERING = ["para.numbering", "para.numbering.none", "para.numbering.arabicPeriod", "para.numbering.arabicParenR", "para.numbering.romanUcPeriod", "para.numbering.alphaUcPeriod", "para.numbering.alphaLcParenR", "para.numbering.alphaLcPeriod", "para.numbering.romanLcPeriod"];
+const LINE_SPACING = ["para.line-spacing.1.0", "para.line-spacing.1.5", "para.line-spacing.2.0", "para.line-spacing.2.5", "para.line-spacing.3.0"];
 const PRESENT = ["slideshow.from-beginning", "slideshow.from-current", "slideshow.presenter-view"];
 
 // Our own gallery swatches: plain colour pairs, not Microsoft's theme artwork. The
@@ -58,7 +62,7 @@ export const TABS = [
       R([[I("edit.undo", "arrow_undo", "Undo (Ctrl+Z)")], [I("edit.redo", "arrow_redo", "Redo (Ctrl+Y)")]]),
     ] },
     { label: "Clipboard", fold: 6, icon: "clipboard_paste", launcher: "edit.clipboard", items: [
-      L("edit.paste", "clipboard_paste", "Paste (Ctrl+V)", { menu: ["edit.paste", "edit.paste-text"] }),
+      L("edit.paste", "clipboard_paste", "Paste (Ctrl+V)", { menu: ["edit.paste", "edit.paste-keep-source", "edit.paste-dest-theme", "edit.paste-text"] }),
       R([[S("edit.cut", "cut", "Cut (Ctrl+X)")], [S("edit.copy", "copy", "Copy (Ctrl+C)", { menu: ["edit.copy", "edit.duplicate"] })], [S("home.format-painter", "paint_brush", "Format Painter")]]),
     ] },
     { label: "Slides", fold: 7, icon: "slide_add", items: [
@@ -75,7 +79,7 @@ export const TABS = [
     ] },
     { label: "Paragraph", fold: 8, icon: "text_align_left", launcher: "para.dialog", items: [
       R([
-        [I("para.bullets", "text_bullet_list_ltr", "Bullets"), I("para.numbering", "text_number_list_ltr", "Numbering", { menu: ["para.numbering"] }), I("para.indent-less", "text_indent_decrease", "Decrease List Level (Shift+Tab)"), I("para.indent-more", "text_indent_increase", "Increase List Level (Tab)"), I("para.line-spacing", "text_line_spacing", "Line Spacing", { menu: ["para.line-spacing"] })],
+        [I("para.bullets", "text_bullet_list_ltr", "Bullets", { menu: BULLETS }), I("para.numbering", "text_number_list_ltr", "Numbering", { menu: NUMBERING }), I("para.indent-less", "text_indent_decrease", "Decrease List Level (Shift+Tab)"), I("para.indent-more", "text_indent_increase", "Increase List Level (Tab)"), I("para.line-spacing", "text_line_spacing", "Line Spacing", { menu: LINE_SPACING })],
         [I("para.left", "text_align_left", "Align Left (Ctrl+L)"), I("para.center", "text_align_center", "Center (Ctrl+E)"), I("para.right", "text_align_right", "Align Right (Ctrl+R)"), I("para.justify", "text_align_justify", "Justify (Ctrl+J)"),
          I("para.columns", "text_column_two", "Columns", { menu: ["para.columns"] }), I("para.direction", "text_direction_rotate_270_right", "Text Direction", { menu: ["para.direction"] }), I("para.align-text", "align_center_vertical", "Align Text", { menu: ["para.align-text"] })],
       ]),
