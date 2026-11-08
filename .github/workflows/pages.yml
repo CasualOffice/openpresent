@@ -46,7 +46,7 @@ env:
   CARGO_TERM_COLOR: always
   # The generated decks shown beside the real ones in the gallery; a name that is missing
   # is skipped.
-  GALLERY_GENERATED: "text-basic.pptx area-shape-tree.pptx area-fill.pptx area-text.pptx area-table.pptx image.pptx"
+  GALLERY_GENERATED: "text-basic.pptx area-shape-tree.pptx area-fill.pptx area-text.pptx text-font-effects.pptx area-table.pptx image.pptx"
   # The slides drawn for the front page, as `deck:slide`, saved as `shots/deck-slide.png`.
   # Each deck is CC BY 4.0 and credited in webapp/index.html (fixtures/real/README.md).
   SHOTS: "z7753256-cdif-en:001 z7753256-cdif-en:023 z17310490-vierfelder-de:001 z19828779-education-ar:006 z19828779-education-ar:011"

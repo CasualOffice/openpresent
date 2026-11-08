@@ -1023,6 +1023,34 @@ impl<'a> Builder<'a> {
                 }),
                 text: run.text,
             });
+            // Strikethrough, over the glyphs, in the run's colour (`PAR-67`).
+            if let Some(line) = run.strike {
+                let paint = Paint::Solid(Rgba {
+                    r: run.color.r,
+                    g: run.color.g,
+                    b: run.color.b,
+                    a: run.color.a,
+                });
+                for y in strike_centres(&line) {
+                    self.items.push(DisplayItem::Path {
+                        object: Some(node.id),
+                        layer,
+                        transform,
+                        path: vec![
+                            PathCmd::MoveTo(pt(line.x0), pt(y)),
+                            PathCmd::LineTo(pt(line.x1), pt(y)),
+                        ],
+                        fill: None,
+                        stroke: Some(Stroke {
+                            paint: paint.clone(),
+                            width: pt(line.thickness),
+                            dash: Vec::new(),
+                            cap: Cap::Butt,
+                            join: Join::Bevel,
+                        }),
+                    });
+                }
+            }
             if let Some(line) = run.underline {
                 let (strokes, note) = underline_strokes(&line);
                 if let Some(note) = note {
@@ -1577,6 +1605,15 @@ fn underline_strokes(
             Some("wavy underline (drawn straight)"),
         ),
         U::WavyDbl => (double(), Some("wavy underline (drawn straight)")),
+    }
+}
+
+/// The centre of each line a strikethrough draws: one at the face's strikeout
+/// position, or two a thickness either side of it for `dblStrike` (`PAR-67`).
+fn strike_centres(s: &casual_slide_text::Strikethrough) -> Vec<f32> {
+    match s.kind {
+        casual_slide_text::StrikeKind::Single => vec![s.y],
+        casual_slide_text::StrikeKind::Double => vec![s.y - s.thickness, s.y + s.thickness],
     }
 }
 

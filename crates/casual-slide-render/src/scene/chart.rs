@@ -591,8 +591,7 @@ impl<'a> Builder<'a> {
                 b: color.b,
                 a: color.a,
             },
-            underline: None,
-            highlight: None,
+            ..RunStyle::default()
         };
         let body = BodyLayout {
             wrap: false,

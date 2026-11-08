@@ -39,7 +39,7 @@ import init, {
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
   collab_begin, collab_end, collab_flush, collab_acknowledge, collab_unacknowledged,
   collab_receive, collab_replay, collab_map_offset, collab_presence, protocol_version,
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case, text_set_font,
   font_families, font_css_stack, font_face_bytes,
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
   copy_slides, clipboard_slides, paste_slides,
@@ -79,7 +79,7 @@ const TEXT = {
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   // The Home tab's Font and Paragraph groups, and Copy of text (`UX-003`).
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case, text_set_font,
 };
 
 // Building a deck (`VS-08`): `{ id, op: "build", fn, args }` calls one of these by name

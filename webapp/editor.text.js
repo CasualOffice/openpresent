@@ -76,7 +76,7 @@ async function call(fn, ...args) {
 }
 
 const obj = () => selection.object;
-const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_run", "text_grow", "text_set_paragraphs", "text_paste_rich", "text_change_case"]);
+const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_run", "text_grow", "text_set_paragraphs", "text_paste_rich", "text_change_case", "text_set_font"]);
 
 /* ── Drawing the caret and selection ────────────────────────────────────── */
 

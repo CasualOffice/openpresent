@@ -25,7 +25,7 @@ import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
 import { openPop, closePop, palette, colourMenu } from "./editor.shapes.js";
-import { errorDialog } from "./editor.dialogs.js";
+import { errorDialog, showModal, closeModal } from "./editor.dialogs.js";
 
 /// PowerPoint's Font Size list, as the engine's `SIZE_LADDER`.
 const SIZE_LADDER = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96];
@@ -284,6 +284,160 @@ function registerLists() {
   }
 }
 
+/* ── The Font dialog (`PAR-20`) ─────────────────────────────────────────── */
+
+/// The Underline style list, as PowerPoint's Font dialog names them.
+const UNDERLINES = [["none", "(none)"], ["words", "Words only"], ["sng", "Single"], ["dbl", "Double"], ["heavy", "Heavy"],
+  ["dotted", "Dotted"], ["dottedHeavy", "Dotted heavy"], ["dash", "Dash"], ["dashHeavy", "Dash heavy"], ["dashLong", "Long dash"],
+  ["dashLongHeavy", "Long dash heavy"], ["dotDash", "Dot dash"], ["dotDashHeavy", "Dot dash heavy"], ["dotDotDash", "Dot dot dash"],
+  ["dotDotDashHeavy", "Dot dot dash heavy"], ["wavy", "Wavy"], ["wavyHeavy", "Wavy heavy"], ["wavyDbl", "Wavy double"]];
+
+/// The Font dialog, on its Font or Character Spacing page. Its tabs are OpenCalc's
+/// Format Cells dialog's (`webapp/editor.dialogs.js` at `b23c67c`, `formatCellsDialog`:
+/// `addTab` and the pages' setters gathered for one OK; owner instruction 42). One
+/// change: OK sends only the fields the user changed, as one engine call and one undo
+/// step, so a selection whose runs differ keeps what was not touched, as PowerPoint's.
+async function fontDialog(startOn = "Font") {
+  if (!canFormat()) return;
+  const cur = current() || [];
+  const was = {
+    font: cur[0] || "", size: cur[1] || "",
+    style: `${cur[7] === "1" ? "b" : ""}${cur[8] === "1" ? "i" : ""}`,
+    underline: cur[9] || "none", strike: cur[10] || "none",
+    baseline: Number(cur[11] || 0), spacing: cur[12] ? Number(cur[12]) : 0,
+  };
+  let families = [];
+  try { families = (await fontList()).list.map((x) => x.n); } catch { /* typed names still apply */ }
+  showModal("Font", (body) => {
+    const tabs = el("div", "fc-tabs");
+    const pages = el("div", "fc-pages");
+    const made = [];
+    const addTab = (name, build) => {
+      const b = el("button", "fc-tab", name);
+      b.type = "button";
+      const page = el("div", "fc-page");
+      build(page);
+      const show = () => {
+        for (const [tb, pg] of made) { tb.classList.remove("on"); pg.hidden = true; }
+        b.classList.add("on");
+        page.hidden = false;
+      };
+      b.addEventListener("click", show);
+      tabs.appendChild(b);
+      pages.appendChild(page);
+      made.push([b, page, show, name]);
+    };
+    const field = (page, label, control) => {
+      const l = el("label", "dz-field", label);
+      l.appendChild(control);
+      page.appendChild(l);
+      return control;
+    };
+    const select = (options, value) => {
+      const s = el("select");
+      for (const [v, t] of options) { const o = el("option", null, t); o.value = v; s.appendChild(o); }
+      s.value = value;
+      return s;
+    };
+    const check = (row, label, on) => {
+      const l = el("label", "fc-check");
+      const c = el("input");
+      c.type = "checkbox";
+      c.checked = on;
+      l.append(c, el("span", null, label));
+      row.appendChild(l);
+      return c;
+    };
+    let font, style, size, colour, colourSet = false, underline, strike, dstrike, sup, sub, offset, spacing, by;
+    addTab("Font", (page) => {
+      font = el("input");
+      font.type = "text";
+      font.value = was.font;
+      font.setAttribute("list", "op-font-dialog-families");
+      const list = el("datalist");
+      list.id = "op-font-dialog-families";
+      for (const n of families) { const o = el("option"); o.value = n; list.appendChild(o); }
+      field(page, "Latin text font", font);
+      page.appendChild(list);
+      style = field(page, "Font style", select([["", "Regular"], ["i", "Italic"], ["b", "Bold"], ["bi", "Bold Italic"]], was.style));
+      size = el("input");
+      size.type = "number"; size.min = "1"; size.max = "4000"; size.step = "0.5";
+      size.value = was.size;
+      field(page, "Size", size);
+      colour = el("input");
+      colour.type = "color";
+      colour.value = "#000000";
+      colour.addEventListener("input", () => { colourSet = true; });
+      field(page, "Font color", colour);
+      underline = field(page, "Underline style", select(UNDERLINES, was.underline));
+      page.appendChild(el("p", "fc-label", "Effects"));
+      const row = el("div", "fc-row");
+      strike = check(row, "Strikethrough", was.strike === "single");
+      dstrike = check(row, "Double Strikethrough", was.strike === "double");
+      sup = check(row, "Superscript", was.baseline > 0);
+      sub = check(row, "Subscript", was.baseline < 0);
+      page.appendChild(row);
+      offset = el("input");
+      offset.type = "number"; offset.min = "-100"; offset.max = "100"; offset.step = "1";
+      offset.value = String(was.baseline);
+      field(page, "Offset (%)", offset);
+      // Each pair excludes the other, and a script takes PowerPoint's own offset.
+      strike.addEventListener("change", () => { if (strike.checked) dstrike.checked = false; });
+      dstrike.addEventListener("change", () => { if (dstrike.checked) strike.checked = false; });
+      sup.addEventListener("change", () => { if (sup.checked) { sub.checked = false; offset.value = "30"; } else offset.value = "0"; });
+      sub.addEventListener("change", () => { if (sub.checked) { sup.checked = false; offset.value = "-25"; } else offset.value = "0"; });
+    });
+    addTab("Character Spacing", (page) => {
+      const kind = was.spacing > 0 ? "expanded" : was.spacing < 0 ? "condensed" : "normal";
+      spacing = field(page, "Spacing", select([["normal", "Normal"], ["expanded", "Expanded"], ["condensed", "Condensed"]], kind));
+      by = el("input");
+      by.type = "number"; by.min = "0"; by.max = "1584"; by.step = "0.1";
+      by.value = String(Math.abs(was.spacing) || "");
+      field(page, "By (pt)", by);
+      spacing.addEventListener("change", () => {
+        if (spacing.value === "normal") by.value = "";
+        else if (!Number(by.value)) by.value = "1";
+      });
+    });
+    const note = el("p", "op-muted", "");
+    const actions = el("div", "op-confirm-actions");
+    const cancel = el("button", "op-btn", "Cancel");
+    cancel.type = "button";
+    cancel.addEventListener("click", closeModal);
+    const ok = el("button", "op-btn primary", "OK");
+    ok.type = "button";
+    ok.addEventListener("click", () => {
+      const fields = [];
+      const put = (k, v) => fields.push(k, String(v));
+      const name = font.value.trim();
+      if (name && name !== was.font) put("font", name);
+      if (size.value && Number(size.value) !== Number(was.size)) {
+        const n = Number(size.value);
+        if (!(n >= 1 && n <= 4000)) { note.textContent = "Enter a size from 1 to 4000 points."; return; }
+        put("size", n);
+      }
+      if (style.value !== was.style) { put("bold", style.value.includes("b") ? 1 : 0); put("italic", style.value.includes("i") ? 1 : 0); }
+      if (colourSet) put("color", `srgb ${colour.value.slice(1).toUpperCase()}`);
+      if (underline.value !== was.underline) put("underline", underline.value);
+      const st = dstrike.checked ? "double" : strike.checked ? "single" : "none";
+      if (st !== was.strike) put("strike", st);
+      let base = sup.checked || sub.checked ? Math.round(Number(offset.value)) : 0;
+      if (!Number.isFinite(base) || Math.abs(base) > 100) { note.textContent = "Enter an offset from -100% to 100%."; return; }
+      if (sub.checked && base > 0) base = -base;
+      if (sup.checked && base < 0) base = -base;
+      if (base !== was.baseline) put("baseline", base);
+      const amount = spacing.value === "normal" ? 0 : Number(by.value) * (spacing.value === "condensed" ? -1 : 1);
+      if (!Number.isFinite(amount) || Math.abs(amount) > 1584) { note.textContent = "Enter spacing from 0 to 1584 points."; return; }
+      if (amount !== was.spacing) put("spacing", amount ? amount : "");
+      closeModal();
+      if (fields.length) apply("text_set_font", [fields], "Font");
+    });
+    actions.append(cancel, ok);
+    body.append(tabs, pages, note, actions);
+    (made.find((m) => m[3] === startOn) || made[0])[2]();
+  });
+}
+
 /* ── Commands ───────────────────────────────────────────────────────────── */
 
 export function init() {
@@ -314,6 +468,8 @@ export function init() {
   for (const [id, label, pts] of [["very-tight", "Very Tight", "-3"], ["tight", "Tight", "-1.5"], ["normal", "Normal", ""], ["loose", "Loose", "3"], ["very-loose", "Very Loose", "6"]]) {
     register(`font.spacing.${id}`, { label, enabled: canFormat, run: () => setRun(4, pts, `Character Spacing: ${label}`) });
   }
+  register("font.spacing.more", { label: "More Spacing…", enabled: canFormat, run: () => fontDialog("Character Spacing") });
+  register("font.dialog", { label: "Font…", shortcut: "Ctrl+Shift+F", enabled: canFormat, run: () => fontDialog("Font") });
   register("font.highlight", { label: "Text Highlight Color", enabled: canFormat, run: highlight });
   for (const [id, token, label, key] of [["para.left", "l", "Align Left", "Ctrl+L"], ["para.center", "ctr", "Center", "Ctrl+E"], ["para.right", "r", "Align Right", "Ctrl+R"], ["para.justify", "just", "Justify", "Ctrl+J"]]) {
     register(id, {

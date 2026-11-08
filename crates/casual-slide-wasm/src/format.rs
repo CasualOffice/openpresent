@@ -197,6 +197,18 @@ fn spacing_from_text(value: &str) -> Option<i32> {
     Some((points * 10.0).round() as i32 * 10)
 }
 
+/// `@baseline`'s thousandths of a percent from the Font dialog's Offset, a percentage
+/// from -100 to 100 in whole percents, as PowerPoint's box takes it (`PAR-20`).
+fn baseline_from_text(value: &str) -> Option<i32> {
+    let percent: f64 = value.trim().trim_end_matches('%').trim().parse().ok()?;
+    if !percent.is_finite() || percent.abs() > 100.0 {
+        return None;
+    }
+    // Within 100, so the product fits an `i32`.
+    #[allow(clippy::cast_possible_truncation)]
+    Some(percent.round() as i32 * 1000)
+}
+
 /// The next size up or down the ladder from `hundredths`; past its ends, steps of ten
 /// points up and one down, within `ST_TextFontSize`. Not measured against PowerPoint.
 pub fn step_size(hundredths: i32, up: bool) -> i32 {
@@ -293,8 +305,10 @@ impl Viewer {
     }
 
     /// What the Home tab shows for the character before `offset` in `object`, as
-    /// drawn: `[font, size in points, alignment token, "1" if bulleted]`. A value no
-    /// level states is empty. The font name is the document's: the host shows it
+    /// drawn: `[font, size in points, alignment token, "1" if bulleted, bullet, list
+    /// level, line spacing, bold, italic, underline token, strike (`none`, `single`,
+    /// `double`), baseline percent, character spacing points]`. A value no level states
+    /// is empty. The font name is the document's: the host shows it
     /// through `textContent` only.
     pub fn run_state(&self, object: ObjectId, offset: usize) -> Result<Vec<String>, BridgeError> {
         let body = self.body(object)?;
@@ -333,14 +347,47 @@ impl Viewer {
                 TextSpacing::Percent(p) => lines_text(p.value().0),
                 TextSpacing::Points(_) => String::new(),
             });
+        // What the Font dialog opens with (`PAR-20`): each as drawn, own or inherited.
+        let c = chain.as_ref();
+        let flag = |on: bool| if on { "1" } else { "0" }.to_owned();
+        let bold = c
+            .and_then(|c| c.run(run, para, |p| p.bold))
+            .is_some_and(|r| r.value);
+        let italic = c
+            .and_then(|c| c.run(run, para, |p| p.italic))
+            .is_some_and(|r| r.value);
+        let underline = c
+            .and_then(|c| c.run(run, para, |p| p.underline))
+            .map_or("none".to_owned(), |r| r.value.to_lexical());
+        let strike = c
+            .and_then(|c| c.run(run, para, |p| p.strike))
+            .map_or("none", |r| match r.value {
+                casual_slide_model::text::StrikeType::SngStrike => "single",
+                casual_slide_model::text::StrikeType::DblStrike => "double",
+                casual_slide_model::text::StrikeType::NoStrike => "none",
+            });
+        let baseline = c
+            .and_then(|c| c.run(run, para, |p| p.baseline.as_ref()))
+            .map_or(0, |r| r.value.value().0 / 1000);
+        let char_spacing = c
+            .and_then(|c| c.run(run, para, |p| p.spacing.as_ref()))
+            .map_or(String::new(), |r| {
+                format!("{}", f64::from(r.value.value().0) / 100.0)
+            });
         Ok(vec![
             font,
             size_text(size),
             align.to_owned(),
-            if bulleted { "1" } else { "0" }.to_owned(),
+            flag(bulleted),
             bullet,
             level.to_string(),
             spacing,
+            flag(bold),
+            flag(italic),
+            underline,
+            strike.to_owned(),
+            baseline.to_string(),
+            char_spacing,
         ])
     }
 
@@ -400,6 +447,95 @@ impl Viewer {
             },
             false,
         )
+    }
+
+    /// The Font dialog's OK (`PAR-20`): every field it states, over `[start, end)`, as
+    /// one undo step. `fields` are name and value pairs, a field left out unchanged:
+    /// `font` a family; `size` points; `bold`, `italic` `1` or `0`; `underline` an
+    /// `ST_TextUnderlineType` token; `color` a colour in [`parse_color`]'s form, or empty
+    /// for automatic; `strike` `none`, `single` or `double`; `baseline` a percentage of
+    /// the size, positive raised, `0` for neither; `spacing` points, empty for normal.
+    ///
+    /// # Errors
+    ///
+    /// [`BridgeError::BadArgument`] for a field it does not know or a value it cannot
+    /// read; nothing is changed then.
+    pub fn set_font(
+        &mut self,
+        object: ObjectId,
+        (start, end): (usize, usize),
+        fields: &[(&str, &str)],
+    ) -> Result<bool, BridgeError> {
+        use casual_slide_model::properties::Lexical as _;
+        use casual_slide_model::text::{StrikeType, UnderlineType};
+        let (start, end) = (start.min(end), start.max(end));
+        if start == end {
+            return Ok(false);
+        }
+        let flag = |v: &str| match v {
+            "1" => Ok(true),
+            "0" => Ok(false),
+            _ => Err(BridgeError::BadArgument),
+        };
+        let mut ops = Vec::with_capacity(fields.len());
+        for &(name, value) in fields {
+            let attribute = match name {
+                // The Font group's own readings, so the dialog and the ribbon agree.
+                "font" => {
+                    let name: String = value
+                        .trim()
+                        .chars()
+                        .filter(|c| !c.is_control())
+                        .take(MAX_FONT_NAME_CHARS)
+                        .collect();
+                    if name.is_empty() {
+                        return Err(BridgeError::BadArgument);
+                    }
+                    Attribute::Latin(Some(Box::new(TextFont {
+                        typeface: name,
+                        panose: None,
+                        pitch_family: None,
+                        charset: None,
+                    })))
+                }
+                "size" => {
+                    Attribute::Size(Some(size_from_text(value).ok_or(BridgeError::BadArgument)?))
+                }
+                "spacing" if value.trim().is_empty() => Attribute::Spacing(None),
+                "spacing" => Attribute::Spacing(Some(
+                    spacing_from_text(value).ok_or(BridgeError::BadArgument)?,
+                )),
+                "bold" => Attribute::Bold(Some(flag(value)?)),
+                "italic" => Attribute::Italic(Some(flag(value)?)),
+                "underline" => Attribute::Underline(Some(
+                    UnderlineType::parse_lexical(value).ok_or(BridgeError::BadArgument)?,
+                )),
+                "color" if value.is_empty() => Attribute::Fill(None),
+                "color" => Attribute::Fill(Some(Fill::Solid(Some(
+                    parse_color(value).ok_or(BridgeError::BadArgument)?,
+                )))),
+                "strike" => Attribute::Strike(Some(match value {
+                    "none" => StrikeType::NoStrike,
+                    "single" => StrikeType::SngStrike,
+                    "double" => StrikeType::DblStrike,
+                    _ => return Err(BridgeError::BadArgument),
+                })),
+                "baseline" => Attribute::Baseline(Some(
+                    baseline_from_text(value).ok_or(BridgeError::BadArgument)?,
+                )),
+                _ => return Err(BridgeError::BadArgument),
+            };
+            ops.push(Operation::FormatRange {
+                object,
+                start,
+                end,
+                attribute,
+            });
+        }
+        if ops.is_empty() {
+            return Ok(false);
+        }
+        self.edit(Operation::Batch(ops), false)
     }
 
     /// Change Case over `[start, end)` (`PAR-20`): `sentence`, `lower`, `upper`,

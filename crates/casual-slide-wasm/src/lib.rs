@@ -2259,8 +2259,8 @@ pub fn set_chart_data(index: u32, node: u32, data: Vec<String>) -> Result<bool, 
 
 /* ── The Home tab's Font and Paragraph groups, and the clipboard (`UX-003`) ── */
 
-/// What the Font, Size, alignment and Bullets controls show for the character before
-/// `offset`: `[font, size in points, alignment token, "1" if bulleted]`.
+/// What the Font, Size, alignment and Bullets controls, and the Font dialog, show for
+/// the character before `offset`, as [`Viewer::run_state`] lists them.
 ///
 /// # Errors
 ///
@@ -2268,6 +2268,33 @@ pub fn set_chart_data(index: u32, node: u32, data: Vec<String>) -> Result<bool, 
 #[wasm_bindgen]
 pub fn text_run_state(part: u32, node: u32, offset: u32) -> Result<Vec<String>, JsError> {
     with_viewer(|v| v.run_state(object(part, node), offset as usize))
+}
+
+/// The Font dialog's OK over `[start, end)` (`PAR-20`): `fields` alternate a name and
+/// its value, as [`Viewer::set_font`] reads them. One undo step.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a field or value it cannot read, or an odd count; the edit's own
+/// `CS-TXN` code.
+#[wasm_bindgen]
+pub fn text_set_font(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    fields: Vec<String>,
+) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        if !fields.len().is_multiple_of(2) {
+            return Err(BridgeError::BadArgument);
+        }
+        let pairs: Vec<(&str, &str)> = fields
+            .chunks_exact(2)
+            .map(|p| (p[0].as_str(), p[1].as_str()))
+            .collect();
+        v.set_font(object(part, node), (start as usize, end as usize), &pairs)
+    })
 }
 
 /// Change Case over `[start, end)` (`PAR-20`): `mode` `sentence`, `lower`, `upper`,

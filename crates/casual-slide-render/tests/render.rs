@@ -514,3 +514,80 @@ fn a_glow_fades_smoothly_like_a_gaussian_blur() {
         "no one step takes a third of it: {profile:?}"
     );
 }
+
+/// `PAR-67`: strikethrough draws one or two lines through its run, a superscript and a
+/// subscript are raised and lowered at two thirds of their size, and `spc` widens a run.
+#[test]
+fn strikethrough_scripts_and_character_spacing_draw() {
+    use casual_slide_render::display::PathCmd;
+    let deck = open("text-font-effects.pptx");
+    let (list, _) = deck.display_list(0).unwrap();
+    // (text, size, first glyph's x, its baseline y, last glyph's x), in EMU.
+    let runs: Vec<(String, f64, f64, f64, f64)> = list
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            DisplayItem::GlyphRun {
+                text, size, glyphs, ..
+            } if !glyphs.is_empty() => Some((
+                text.clone(),
+                *size,
+                glyphs[0].x,
+                glyphs[0].y,
+                glyphs[glyphs.len() - 1].x,
+            )),
+            _ => None,
+        })
+        .collect();
+    let find = |t: &str, nth: usize| {
+        runs.iter()
+            .filter(|r| r.0 == t)
+            .nth(nth)
+            .unwrap_or_else(|| panic!("no run {t:?} #{nth} in {runs:?}"))
+            .clone()
+    };
+    let pt = 12_700.0;
+    // E = mc², the 2 raised 30% of 28 pt and drawn at 18.67 pt.
+    let (mc, sup) = (find("E = mc", 0), find("2", 0));
+    assert!((sup.1 - 28.0 * 2.0 / 3.0 * pt).abs() < 1.0, "{sup:?}");
+    assert!(
+        (mc.3 - sup.3 - 0.3 * 28.0 * pt).abs() < 1.0,
+        "{mc:?} {sup:?}"
+    );
+    // H₂O, the 2 lowered 25%.
+    let (h, sub) = (find("H", 0), find("2", 1));
+    assert!((sub.1 - 28.0 * 2.0 / 3.0 * pt).abs() < 1.0, "{sub:?}");
+    assert!(
+        (sub.3 - h.3 - 0.25 * 28.0 * pt).abs() < 1.0,
+        "{h:?} {sub:?}"
+    );
+    // Six letters: five gaps of 6 pt more between the first glyph and the last.
+    let (spaced, plain) = (find("Spaced", 0), find("Spaced", 1));
+    let wide = (spaced.4 - spaced.2) - (plain.4 - plain.2);
+    assert!((wide - 5.0 * 6.0 * pt).abs() < 1.0, "{wide}");
+    // The text boxes have no outline: the only stroked lines are the three strikes,
+    // one single and a double's two, above their runs' baselines.
+    let strikes: Vec<f64> = list
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            DisplayItem::Path {
+                stroke: Some(_),
+                path,
+                ..
+            } => match path.as_slice() {
+                [PathCmd::MoveTo(_, y), PathCmd::LineTo(_, y1)] if y == y1 => Some(*y),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect();
+    assert_eq!(strikes.len(), 3, "{strikes:?}");
+    let struck = find("Struck text", 1);
+    assert!(
+        strikes
+            .iter()
+            .any(|y| *y < struck.3 && *y > struck.3 - 0.5 * 28.0 * pt),
+        "{strikes:?} {struck:?}"
+    );
+}
