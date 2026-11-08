@@ -1,0 +1,48 @@
+# The collaboration server (VS-09): OpenCalc's `server/casual-calc-collab-server`
+# at `b23c67c`, copied in part behind the seam in `casual-slide-transaction::collab`
+# (PROVENANCE.md, docs/24).
+#
+# A separate cargo workspace, as `desktop/` is, for OpenCalc's reason (its ADR-023):
+# an async runtime and an HTTP stack do not belong in the engine's dependency graph,
+# and `cargo check --target wasm32-unknown-unknown --workspace` must not see them.
+# CI builds, lints and tests this workspace in `collab.yml`.
+[workspace]
+
+[package]
+name = "casual-slide-collab-server"
+version = "0.0.0"
+publish = false
+edition = "2024"
+rust-version = "1.88.0"
+license = "Apache-2.0"
+description = "The OpenPresent collaboration server: orders, transforms and relays edits; never reads a deck."
+
+[dependencies]
+# The seam: wire operations, transform and the protocol. No model, import or export.
+casual-slide-transaction = { path = "../../crates/casual-slide-transaction" }
+# As OpenCalc's server (MIT or Apache-2.0 each).
+axum = { version = "0.8", default-features = false, features = ["ws", "http1", "tokio", "query"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+futures-util = "0.3"
+
+[dev-dependencies]
+# The two-client test drives real sockets and real replicas.
+tokio-tungstenite = "0.24"
+casual-slide-model = { path = "../../crates/casual-slide-model" }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[[bin]]
+name = "casual-slide-collab-server"
+path = "src/main.rs"
+
+[lib]
+name = "casual_slide_collab_server"
+path = "src/lib.rs"

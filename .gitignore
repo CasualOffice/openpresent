@@ -14,5 +14,6 @@ node_modules/
 # The desktop app (VS-03): its build folder, Tauri's generated schemas, and the
 # webview assets desktop/build.rs stages from webapp/ on every build.
 /desktop/target/
+/server/*/target/
 /desktop/gen/
 /desktop/web-dist/

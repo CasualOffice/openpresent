@@ -1,0 +1,38 @@
+# Collaboration (VS-09): build, lint and test the collaboration server's workspace, which
+# starts the server on 127.0.0.1 and runs two clients against it (`tests/two_clients.rs`):
+# each edits the same text box and moves the same shape at once, and both must end with
+# the same deck, with a late joiner catching up to it. Modelled on OpenCalc's collab
+# server job; everything runs on GitHub's runners.
+name: collab
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collab-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  collab-server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: server/casual-slide-collab-server
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: rustup component add rustfmt clippy
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo build --locked
+      - name: Two clients through a running server
+        run: cargo test --locked
