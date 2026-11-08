@@ -82,7 +82,7 @@ jobs:
         run: sudo apt-get install -y libxml2-utils
       - if: runner.os == 'Linux'
         run: echo "F4_REQUIRED=1" >> "$GITHUB_ENV"
-      - run: cargo test --workspace --all-features --locked
+      - run: cargo test --workspace --all-features --locked --no-fail-fast
 
   msrv:
     runs-on: ubuntu-latest
