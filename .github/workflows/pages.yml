@@ -23,7 +23,10 @@
 # labelled "LibreOffice", never "PowerPoint" (PV-01).
 #
 # Custom domain: none is set here. A `CNAME` file does nothing for a site deployed by
-# Actions; the domain is set in the repository's Settings > Pages, as OpenCalc's is.
+# Actions; the domain is set in the repository's Settings > Pages, as OpenCalc's is. Set the
+# repository variable SITE_URL to it as well, so canonical links, Open Graph cards and
+# sitemap.xml name it (tools/site/build.py, SITE-03). Every link inside the site is relative,
+# so the pages work under `/openpresent/` and at a domain's root alike.
 name: pages
 
 on:
@@ -44,9 +47,12 @@ env:
   # The generated decks shown beside the real ones in the gallery; a name that is missing
   # is skipped.
   GALLERY_GENERATED: "text-basic.pptx area-shape-tree.pptx area-fill.pptx area-text.pptx area-table.pptx image.pptx"
-  # The real decks whose first slide is drawn for the front page. Each is CC BY 4.0 and
-  # credited beside its picture in webapp/index.html (fixtures/real/README.md).
-  SHOT_DECKS: "z7753256-cdif-en z17310490-vierfelder-de z21464709-souzou-ja z19828779-education-ar"
+  # The slides drawn for the front page, as `deck:slide`, saved as `shots/deck-slide.png`.
+  # Each deck is CC BY 4.0 and credited in webapp/index.html (fixtures/real/README.md).
+  SHOTS: "z7753256-cdif-en:001 z7753256-cdif-en:023 z17310490-vierfelder-de:001 z19828779-education-ar:006 z19828779-education-ar:011"
+  # The deck behind "Try a sample deck", served as `samples/sample-deck.pptx`; CC BY 4.0,
+  # credited on the front page.
+  SAMPLE_DECK: z7753256-cdif-en
 
 jobs:
   site-build:
@@ -69,15 +75,45 @@ jobs:
           mkdir -p site/pkg site/shots
           cp webapp/*.html webapp/*.js webapp/*.css webapp/*.svg site/
           cp "$RUNNER_TEMP/pkg/casual_slide_wasm.js" "$RUNNER_TEMP/pkg/casual_slide_wasm_bg.wasm" site/pkg/
+          mkdir -p site/samples
+          cp "fixtures/real/$SAMPLE_DECK.pptx" site/samples/sample-deck.pptx
       - name: Draw the front page's slides with our renderer
         run: |
           set -euo pipefail
-          for deck in $SHOT_DECKS; do
+          for shot in $SHOTS; do
+            deck=${shot%:*}; n=${shot#*:}
             out="$RUNNER_TEMP/shots/$deck"
-            mkdir -p "$out"
-            target/release/examples/render-deck "fixtures/real/$deck.pptx" "$out" 96
-            cp "$out/slide-001.png" "site/shots/$deck.png"
+            if [ ! -d "$out" ]; then
+              mkdir -p "$out"
+              target/release/examples/render-deck "fixtures/real/$deck.pptx" "$out" 96
+            fi
+            cp "$out/slide-$n.png" "site/shots/$deck-$n.png"
           done
+      # A real screenshot of the editor, taken by the runner's Chrome against the assembled
+      # site (SITE-03). It is a picture the page can live without: if Chrome is missing or
+      # fails, the step warns and tools/site/build.py drops the section that shows it.
+      - name: Screenshot the editor in Chrome
+        run: |
+          set -uo pipefail
+          python3 -m http.server 8000 --bind 127.0.0.1 -d site > "$RUNNER_TEMP/http.log" 2>&1 &
+          srv=$!
+          for _ in $(seq 1 40); do curl -fs -o /dev/null http://127.0.0.1:8000/editor.html && break; sleep 0.25; done
+          chrome=$(command -v google-chrome || command -v chromium || true)
+          if [ -n "$chrome" ]; then
+            timeout 120 "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+              --force-device-scale-factor=1 --window-size=1440,900 --virtual-time-budget=20000 \
+              --screenshot="$PWD/site/shots/editor.png" http://127.0.0.1:8000/editor.html \
+              || echo "::warning::Chrome could not screenshot the editor; the front page drops that section"
+          else
+            echo "::warning::No Chrome on the runner; the front page drops the editor's screenshot"
+          fi
+          kill "$srv" 2>/dev/null || true
+      # Canonical and Open Graph URLs for the site's address (a repository variable
+      # SITE_URL, for a custom domain), the `if:` blocks, robots.txt and sitemap.xml.
+      - name: Finish the pages
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://casualoffice.github.io/openpresent' }}
+        run: python3 tools/site/build.py site --site-url "$SITE_URL"
       # The pages that must exist, asserted rather than assumed: a silent 404 on the
       # deployed site is the failure OpenCalc's job once had.
       - name: Check the site is complete
@@ -90,9 +126,13 @@ jobs:
                    pkg/casual_slide_wasm.js pkg/casual_slide_wasm_bg.wasm; do
             [ -s "site/$f" ] || { echo "::error::site/$f is missing or empty"; exit 1; }
           done
-          for deck in $SHOT_DECKS; do
-            [ -s "site/shots/$deck.png" ] || { echo "::error::site/shots/$deck.png was not drawn"; exit 1; }
-            grep -q "shots/$deck.png" site/index.html || { echo "::error::$deck is drawn but index.html does not show it"; exit 1; }
+          for f in robots.txt sitemap.xml samples/sample-deck.pptx; do
+            [ -s "site/$f" ] || { echo "::error::site/$f is missing or empty"; exit 1; }
+          done
+          for shot in $SHOTS; do
+            name="${shot%:*}-${shot#*:}"
+            [ -s "site/shots/$name.png" ] || { echo "::error::site/shots/$name.png was not drawn"; exit 1; }
+            grep -q "shots/$name.png" site/index.html || { echo "::error::$name is drawn but index.html does not show it"; exit 1; }
           done
           echo "site: $(find site -type f | wc -l) files, $(du -sh site | cut -f1); engine $(du -h site/pkg/casual_slide_wasm_bg.wasm | cut -f1)"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

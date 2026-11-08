@@ -1,20 +1,60 @@
 <!doctype html>
 <!-- The landing page. Its structure, classes and tone are OpenCalc's `webapp/index.html`
      at `b23c67c` (same owner, Apache-2.0; webapp/README.md), adapted to a presentation
-     editor. Every claim is something the editor does today (`SITE-01`); nothing here says
-     OpenPresent matches PowerPoint (`PV-01`). The pictures are slides drawn by our own
-     renderer on CI, from decks in fixtures/real, never mock-ups. -->
+     editor and taken further by `SITE-03`: a demo strip of real renders, our own SVG
+     illustrations, a comparison, an FAQ and search metadata. Every claim is something the
+     editor does today (`SITE-01`); nothing here says OpenPresent matches PowerPoint (`PV-01`).
+     The pictures are slides drawn by our own renderer on CI, from decks in fixtures/real, and
+     the editor as Chrome shows it on CI, never mock-ups.
+
+     Absolute URLs name https://casualoffice.github.io/openpresent/; tools/site/build.py
+     rewrites them for another address. A block between an `if:FILE` comment and
+     a `/if:FILE` comment is dropped by that tool when CI could not make FILE. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'" />
-    <title>OpenPresent: the open-source presentation editor for PowerPoint files</title>
-    <meta name="description" content="OpenPresent is an open-source presentation editor built for PowerPoint files. Open a .pptx in your browser or on your desktop, present it, and export PDF or PNG. Nothing is uploaded." />
+    <title>OpenPresent: open-source presentation editor for .pptx files</title>
+    <meta name="description" content="Open, edit, present and export PowerPoint (.pptx) decks in your browser or on your desktop. Open source under Apache-2.0, and your file is never uploaded." />
+    <link rel="canonical" href="https://casualoffice.github.io/openpresent/" />
     <meta name="theme-color" content="#0e7490" />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OpenPresent" />
+    <meta property="og:title" content="OpenPresent: open-source presentation editor for .pptx files" />
+    <meta property="og:description" content="Open, edit, present and export .pptx decks in your browser or on your desktop. Apache-2.0, and nothing is uploaded." />
+    <meta property="og:url" content="https://casualoffice.github.io/openpresent/" />
+    <meta property="og:image" content="https://casualoffice.github.io/openpresent/shots/z7753256-cdif-en-001.png" />
+    <meta property="og:image:alt" content="A slide from a real deck, drawn by OpenPresent's own renderer" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OpenPresent: open-source presentation editor for .pptx files" />
+    <meta name="twitter:description" content="Open, edit, present and export .pptx decks in your browser or on your desktop. Apache-2.0, and nothing is uploaded." />
+    <meta name="twitter:image" content="https://casualoffice.github.io/openpresent/shots/z7753256-cdif-en-001.png" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e7490'/%3E%3Crect x='7' y='9' width='18' height='12' rx='1.5' fill='none' stroke='%23fff' stroke-width='2.4'/%3E%3Cpath d='M16 21v4M11 25h10' stroke='%23fff' stroke-width='2.4'/%3E%3C/svg%3E" />
+    <link rel="preload" as="image" href="./shots/z7753256-cdif-en-001.png" fetchpriority="high" />
     <link rel="stylesheet" href="./style.css" />
     <script type="module" src="./site.js"></script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "OpenPresent",
+      "description": "An open-source presentation editor for PowerPoint (.pptx) files. Open, edit, present and export decks in the browser or on the desktop; the file is never uploaded.",
+      "url": "https://casualoffice.github.io/openpresent/",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "Presentation software",
+      "operatingSystem": "Web browser, Windows, macOS, Linux",
+      "browserRequirements": "Requires a browser with WebAssembly and JavaScript modules",
+      "downloadUrl": "https://casualoffice.github.io/openpresent/download.html",
+      "image": "https://casualoffice.github.io/openpresent/shots/z7753256-cdif-en-001.png",
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Organization", "name": "CasualOffice", "url": "https://github.com/CasualOffice" },
+      "sameAs": ["https://github.com/CasualOffice/openpresent"]
+    }
+    </script>
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
@@ -25,13 +65,14 @@
           <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="m-bg" width="32" height="32" rx="7"/><rect class="m-ln" x="7" y="9" width="18" height="12" rx="1.5"/><path class="m-ln" d="M16 21v4M11 25h10"/></svg>
           OpenPresent
         </a>
-        <nav class="nav-links">
+        <nav class="nav-links" aria-label="Main">
           <a href="#product">Features</a>
           <a href="./docs.html">Docs</a>
           <a href="./gallery/index.html">Gallery</a>
           <a href="./deploy.html">Self-host</a>
           <a href="./download.html">Download</a>
-          <a href="https://github.com/CasualOffice/openpresent">GitHub</a>
+          <a href="#faq">FAQ</a>
+          <a class="nav-gh" href="https://github.com/CasualOffice/openpresent"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7 0-.7 0-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.6.2-3.3 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 5 18.3 5.3 18.3 5.3c.7 1.7.2 2.9.1 3.3.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/></svg>GitHub</a>
         </nav>
         <div class="header-actions">
           <a class="btn btn-primary btn-sm" href="./editor.html"><span class="btn-cta-label">Open the editor</span><span class="sr-only"> (OpenPresent in your browser)</span><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.3 4.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4L14.6 11H3a1 1 0 1 1 0-2h11.6l-3.3-3.3a1 1 0 0 1 0-1.4Z"/></svg></a>
@@ -43,6 +84,7 @@
               <a href="./gallery/index.html">Gallery</a>
               <a href="./deploy.html">Self-host</a>
               <a href="./download.html">Download</a>
+              <a href="#faq">FAQ</a>
               <a href="https://github.com/CasualOffice/openpresent">GitHub</a>
               <a href="./editor.html">Open the editor</a>
             </nav>
@@ -54,136 +96,226 @@
     <main id="main">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <section id="top" class="hero" aria-labelledby="hero-h">
+        <div class="hero-glow" aria-hidden="true"></div>
         <div class="wrap">
           <div class="hero-grid">
             <div class="hero-copy">
               <p class="eyebrow">Open source · Apache-2.0 · Early preview</p>
-              <h1 id="hero-h">Your PowerPoint decks, open anywhere.</h1>
+              <h1 id="hero-h">Your decks, <span class="hl">open anywhere</span>.</h1>
               <p class="lede">
-                OpenPresent is an open-source presentation editor built for
-                PowerPoint files. Today it opens a <code>.pptx</code> in your
-                browser or on your desktop, shows every slide, presents it full
-                screen, and exports PDF and PNG. Editing is coming next.
+                OpenPresent is an open-source presentation editor for PowerPoint
+                files. Open a <code>.pptx</code> in your browser or on your desktop,
+                edit its text, shapes and slides, present it full screen, and export
+                PDF or PNG. Your file never leaves your machine.
               </p>
               <div class="cta-row">
                 <a class="btn btn-primary btn-lg" href="./editor.html">Open the editor</a>
-                <a class="btn btn-secondary btn-lg" href="./download.html">Download for desktop</a>
-                <a class="btn btn-quiet btn-lg link-arrow" href="./docs.html">Read the docs <span class="arr" aria-hidden="true">→</span></a>
+                <a class="btn btn-secondary btn-lg" href="./samples/sample-deck.pptx" download="OpenPresent sample deck.pptx" data-sample="./samples/sample-deck.pptx" data-sample-name="Sample deck.pptx"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6.3 3.2A1 1 0 0 0 4.8 4v12a1 1 0 0 0 1.5.9l10-6a1 1 0 0 0 0-1.8l-10-6Z"/></svg>Try a sample deck</a>
               </div>
               <p class="hero-note">
-                <span>No sign-up, nothing uploaded</span>
-                <span>The engine runs on your machine</span>
+                <span><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M10 2a4 4 0 0 0-4 4v2H5a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 5 18h10a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 15 8h-1V6a4 4 0 0 0-4-4Zm2.5 6h-5V6a2.5 2.5 0 0 1 5 0v2Z"/></svg>No sign-up, nothing uploaded</span>
+                <span><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M15.8 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.2 10.5a1 1 0 1 1 1.4-1.4l3 3 6.8-6.8a1 1 0 0 1 1.4 0Z"/></svg>Web, macOS, Windows, Linux</span>
+                <span><a class="gh-inline" href="https://github.com/CasualOffice/openpresent"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5Z"/></svg>Star it on GitHub</a></span>
               </p>
+              <p class="sample-note small muted" data-sample-status hidden></p>
             </div>
 
-            <figure class="shot">
-              <div class="window">
-                <div class="window-bar">
+            <!-- A strip of real renders, played as the editor plays a deck. Without
+                 script, or with reduced motion, it shows the first slide and the
+                 thumbnails still pick a slide. -->
+            <figure class="demo" data-demo aria-labelledby="demo-cap">
+              <div class="demo-win">
+                <div class="demo-bar">
                   <span class="wdot"></span><span class="wdot"></span><span class="wdot"></span>
-                  <span class="window-title">z7753256-cdif-en.pptx · slide 1</span>
+                  <span class="demo-title" data-demo-title>z7753256-cdif-en.pptx</span>
+                  <span class="demo-count" data-demo-count aria-live="off">Slide 1 of 5</span>
                 </div>
-                <img src="./shots/z7753256-cdif-en.png" alt="The first slide of a real deck from the test corpus, as OpenPresent draws it" />
+                <div class="demo-body">
+                  <div class="demo-rail" role="group" aria-label="Pick a slide">
+                    <button class="demo-thumb is-on" type="button" aria-pressed="true" aria-label="Slide 1: an English title slide" data-name="z7753256-cdif-en.pptx"><img src="./shots/z7753256-cdif-en-001.png" alt="" width="1280" height="720" decoding="async" /></button>
+                    <button class="demo-thumb" type="button" aria-pressed="false" aria-label="Slide 2: a block diagram on a dark theme" data-name="z19828779-education-ar.pptx"><img src="./shots/z19828779-education-ar-011.png" alt="" width="960" height="720" loading="lazy" decoding="async" /></button>
+                    <button class="demo-thumb" type="button" aria-pressed="false" aria-label="Slide 3: a German table" data-name="z17310490-vierfelder-de.pptx"><img src="./shots/z17310490-vierfelder-de-001.png" alt="" width="1280" height="720" loading="lazy" decoding="async" /></button>
+                    <button class="demo-thumb" type="button" aria-pressed="false" aria-label="Slide 4: a comparison table" data-name="z19828779-education-ar.pptx"><img src="./shots/z19828779-education-ar-006.png" alt="" width="960" height="720" loading="lazy" decoding="async" /></button>
+                    <button class="demo-thumb" type="button" aria-pressed="false" aria-label="Slide 5: a diagram with connectors" data-name="z7753256-cdif-en.pptx"><img src="./shots/z7753256-cdif-en-023.png" alt="" width="1280" height="720" loading="lazy" decoding="async" /></button>
+                  </div>
+                  <div class="demo-stage">
+                    <img class="demo-slide is-on" src="./shots/z7753256-cdif-en-001.png" alt="The title slide of an English deck from the test corpus, as OpenPresent draws it" width="1280" height="720" fetchpriority="high" decoding="async" />
+                    <img class="demo-slide" src="./shots/z19828779-education-ar-011.png" alt="A block diagram on a dark theme, as OpenPresent draws it" width="960" height="720" loading="lazy" decoding="async" />
+                    <img class="demo-slide" src="./shots/z17310490-vierfelder-de-001.png" alt="A German slide with a coloured table on diagnostic tests, as OpenPresent draws it" width="1280" height="720" loading="lazy" decoding="async" />
+                    <img class="demo-slide" src="./shots/z19828779-education-ar-006.png" alt="A comparison table on a dark theme, as OpenPresent draws it" width="960" height="720" loading="lazy" decoding="async" />
+                    <img class="demo-slide" src="./shots/z7753256-cdif-en-023.png" alt="A slide with a diagram of boxes and connectors, as OpenPresent draws it" width="1280" height="720" loading="lazy" decoding="async" />
+                  </div>
+                </div>
+                <div class="demo-foot">
+                  <span class="demo-progress" aria-hidden="true"><i></i></span>
+                  <button class="demo-toggle" type="button" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 4.5a1 1 0 0 1 1 1v9a1 1 0 1 1-2 0v-9a1 1 0 0 1 1-1Zm8 0a1 1 0 0 1 1 1v9a1 1 0 1 1-2 0v-9a1 1 0 0 1 1-1Z"/></svg><span>Pause</span><span class="sr-only"> the slides</span></button>
+                </div>
               </div>
-              <figcaption>
-                Drawn by OpenPresent on our CI from a real deck, not a mock-up.
-                Arofan Gregory, <em>Functional Breakdown and High-Level Recommendations</em>,
-                <a href="https://doi.org/10.5281/zenodo.7753256">doi:10.5281/zenodo.7753256</a>, CC BY 4.0.
+              <figcaption id="demo-cap">
+                Real slides drawn by OpenPresent's renderer when this site was built,
+                from three CC BY decks in our test corpus. Not mock-ups; <a href="#renders">credits below</a>.
               </figcaption>
             </figure>
           </div>
 
           <div class="proof">
-            <div class="rv"><b>66</b><span>real decks written by PowerPoint open and save with every XML part byte-identical</span></div>
-            <div class="rv"><b>187</b><span>preset shapes, every one the format defines, with the same geometry on every platform</span></div>
-            <div class="rv"><b>8,739</b><span>elements, attributes and values of the format, each tracked as a row</span></div>
+            <div class="rv"><b data-count="66">66</b><span>real decks written by PowerPoint open and save with every XML part byte-identical</span></div>
+            <div class="rv"><b data-count="187">187</b><span>preset shapes, every one the format defines, with the same geometry on every platform</span></div>
+            <div class="rv"><b data-count="8739">8,739</b><span>elements, attributes and values of the format, each tracked as a row</span></div>
             <div class="rv"><b>0</b><span>macros run, and nothing fetched from the network</span></div>
           </div>
         </div>
       </section>
 
-      <!-- ── Real renders ──────────────────────────────────────────────────── -->
-      <section id="renders" class="section" aria-labelledby="renders-h">
-        <div class="wrap">
-          <div class="section-head split">
-            <div>
-              <p class="eyebrow"><span class="num">01</span> Real renders, not mock-ups</p>
-              <h2 id="renders-h">Slides drawn by our own engine.</h2>
-            </div>
-            <p>Each picture is the first slide of a real deck, drawn by OpenPresent's renderer when this site was built. The <a href="./gallery/index.html">slide gallery</a> shows every slide of every deck beside LibreOffice's rendering of the same file, so you can judge the difference yourself.</p>
-          </div>
-          <div class="shots">
-            <figure>
-              <div class="frame"><img src="./shots/z17310490-vierfelder-de.png" alt="A German slide on diagnostic tests, as OpenPresent draws it" loading="lazy" /></div>
-              <figcaption>Bernd Röhrig, <em>Diagnostischer Test: 4-Felder Tafel</em>, <a href="https://doi.org/10.5281/zenodo.17310490">doi:10.5281/zenodo.17310490</a>, CC BY 4.0.</figcaption>
-            </figure>
-            <figure>
-              <div class="frame"><img src="./shots/z21464709-souzou-ja.png" alt="A Japanese slide, as OpenPresent draws it" loading="lazy" /></div>
-              <figcaption>Hiroshi Yamakawa, <em>「創造的知能」研究アーカイブ</em>, <a href="https://doi.org/10.5281/zenodo.21464709">doi:10.5281/zenodo.21464709</a>, CC BY 4.0.</figcaption>
-            </figure>
-            <figure>
-              <div class="frame"><img src="./shots/z19828779-education-ar.png" alt="An Arabic slide, as OpenPresent draws it" loading="lazy" /></div>
-              <figcaption>Tarek Barhoum, <em>education platform</em>, <a href="https://doi.org/10.5281/zenodo.19828779">doi:10.5281/zenodo.19828779</a>, CC BY 4.0.</figcaption>
-            </figure>
-          </div>
-          <p class="io-note">The decks are unmodified and keep their own licences; the full list is in <a href="https://github.com/CasualOffice/openpresent/blob/main/fixtures/real/README.md">fixtures/real</a>. The reference beside them in the gallery is <b>LibreOffice, not PowerPoint</b>: until our output has been checked against PowerPoint itself, nothing here claims to match it.</p>
-        </div>
-      </section>
-
-      <!-- ── What it is ────────────────────────────────────────────────────── -->
+      <!-- ── Features ──────────────────────────────────────────────────────── -->
       <section id="product" class="section tint" aria-labelledby="product-h">
         <div class="wrap">
           <div class="section-head">
-            <p class="eyebrow"><span class="num">02</span> What it is</p>
-            <h2 id="product-h">A presentation editor for PowerPoint files, built in the open.</h2>
-            <p class="section-lede">The ribbon, tabs and shortcuts of the presentation app you already know, over an engine whose first job is to keep your file intact.</p>
+            <p class="eyebrow"><span class="num">01</span> What it does</p>
+            <h2 id="product-h">Open, edit, present, export. In the open.</h2>
+            <p class="section-lede">A presentation editor with the ribbon and shortcuts you already know, over an engine whose first job is to keep your file intact.</p>
           </div>
 
           <div class="bento">
             <article class="tile w7 rv">
+              <div class="tile-art il-wrap">
+                <svg class="il" viewBox="0 0 360 200" role="img" aria-label="Three files, .pptx, .pptm and .potx, flow into the OpenPresent engine, which reports what it opened: slides, shapes and text, tables and charts, one part kept as it was, and nothing dropped." focusable="false">
+                  <g class="pop"><rect class="sh" x="20" y="28" width="74" height="42" rx="6"/><rect class="pp" x="16" y="24" width="74" height="42" rx="6"/><text class="tb mono" x="26" y="41" font-size="11" font-weight="700">.pptx</text><rect class="ln" x="26" y="50" width="52" height="4" rx="2"/><rect class="ln" x="26" y="57" width="36" height="4" rx="2"/></g>
+                  <g class="pop"><rect class="sh" x="20" y="83" width="74" height="42" rx="6"/><rect class="pp" x="16" y="79" width="74" height="42" rx="6"/><text class="tbl mono" x="26" y="96" font-size="11" font-weight="700">.pptm</text><rect class="ln" x="26" y="105" width="52" height="4" rx="2"/><rect class="ln" x="26" y="112" width="30" height="4" rx="2"/></g>
+                  <g class="pop"><rect class="sh" x="20" y="138" width="74" height="42" rx="6"/><rect class="pp" x="16" y="134" width="74" height="42" rx="6"/><text class="ta mono" x="26" y="151" font-size="11" font-weight="700">.potx</text><rect class="ln" x="26" y="160" width="46" height="4" rx="2"/><rect class="ln" x="26" y="167" width="38" height="4" rx="2"/></g>
+                  <path class="flow" d="M92 45 C122 45 124 92 146 96"/>
+                  <path class="flow" d="M92 100 L146 100"/>
+                  <path class="flow" d="M92 155 C122 155 124 108 146 104"/>
+                  <g class="pop"><rect class="sh" x="153" y="73" width="56" height="56" rx="10"/><rect class="bs" x="149" y="69" width="56" height="56" rx="10"/><rect class="bk" x="149" y="69" width="56" height="56" rx="10"/><rect class="bk" x="161" y="82" width="32" height="21" rx="2"/><path class="bk" d="M177 103v8M169 111h16"/><text class="tm mono" x="177" y="142" font-size="8.5" text-anchor="middle">engine</text></g>
+                  <path class="flow" d="M208 98 L236 98"/>
+                  <g class="pop"><rect class="sh" x="244" y="24" width="104" height="156" rx="8"/><rect class="pp" x="240" y="20" width="104" height="156" rx="8"/>
+                    <text class="t" x="251" y="38" font-size="9" font-weight="650">What was opened</text>
+                    <path class="k" d="M240 46h104" opacity=".25"/>
+                    <circle class="bs" cx="256" cy="60" r="6"/><path class="bk" d="M253 60l2 2 4-4" stroke-width="1.5"/><text class="t" x="268" y="63" font-size="9">Slides and text</text>
+                    <circle class="bs" cx="256" cy="80" r="6"/><path class="bk" d="M253 80l2 2 4-4" stroke-width="1.5"/><text class="t" x="268" y="83" font-size="9">Shapes, pictures</text>
+                    <circle class="bs" cx="256" cy="100" r="6"/><path class="bk" d="M253 100l2 2 4-4" stroke-width="1.5"/><text class="t" x="268" y="103" font-size="9">Tables, charts</text>
+                    <circle class="ams" cx="256" cy="120" r="6"/><circle class="am" cx="256" cy="120" r="2"/><text class="t" x="268" y="123" font-size="9">1 part kept as is</text>
+                    <path class="k" d="M240 138h104" opacity=".25"/>
+                    <text class="tb" x="251" y="161" font-size="17" font-weight="700">0</text><text class="t" x="266" y="160" font-size="9.5">dropped</text>
+                  </g>
+                </svg>
+              </div>
               <div class="tile-body">
                 <span class="tag">.pptx · .pptm · .ppsx · .potx</span>
                 <h3>Opens your decks. Never drops anything quietly.</h3>
-                <p>Shapes, text, pictures, tables, charts, SmartArt and themes are read into one model. Anything the model does not hold yet is kept byte for byte, and what a slide uses that is not drawn yet is named, feature by feature, in the editor. Saving a deck you have not changed gives back the same bytes.</p>
+                <p>Shapes, text, pictures, tables, charts, SmartArt and themes are read into one model. Anything the model does not hold yet is kept byte for byte, and what a slide uses that is not drawn yet is named, feature by feature.</p>
               </div>
             </article>
 
             <article class="tile w5 rv">
+              <div class="tile-art il-wrap">
+                <svg class="il" viewBox="0 0 320 200" role="img" aria-label="A damaged file with a torn edge passes through a repair step and opens as a deck, with a note that two repairs were made." focusable="false">
+                  <g class="pop"><rect class="sh" x="34" y="44" width="80" height="80" rx="6"/><path class="pp" d="M30 46a6 6 0 0 1 6-6h68a6 6 0 0 1 6 6v74l-10 8-10-8-10 10-12-10-10 9-10-8-10 9-8-6Z"/><text class="ta mono" x="42" y="62" font-size="11" font-weight="700">.pptx</text><rect class="ln" x="42" y="72" width="54" height="4" rx="2"/><rect class="ln" x="42" y="80" width="40" height="4" rx="2"/><rect class="ln" x="42" y="88" width="48" height="4" rx="2"/><path class="ak" d="M76 98l-6 8 7 3-6 9"/></g>
+                  <path class="flow" d="M118 94 L148 94"/>
+                  <g class="pop"><circle class="ams" cx="166" cy="94" r="16"/><path class="ak" d="M159 101l9-9m-2-5a5 5 0 1 0 6 6"/></g>
+                  <path class="flow" d="M184 94 L206 94"/>
+                  <g class="pop"><rect class="sh" x="216" y="54" width="92" height="80" rx="6"/><rect class="pp" x="212" y="50" width="92" height="80" rx="6"/><rect class="bs" x="220" y="58" width="76" height="44" rx="3"/><rect class="br" x="228" y="68" width="40" height="6" rx="3"/><rect class="ln" x="228" y="80" width="56" height="4" rx="2"/><rect class="ln" x="228" y="88" width="44" height="4" rx="2"/><circle class="br" cx="230" cy="116" r="6"/><path d="M227 116l2 2 4-4" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><text class="t" x="241" y="119" font-size="8.5">Opened</text></g>
+                  <g class="pop"><rect class="ams" x="196" y="146" width="112" height="22" rx="11"/><text class="ta" x="252" y="160" font-size="8.5" font-weight="650" text-anchor="middle">2 repairs, each named</text></g>
+                </svg>
+              </div>
               <div class="tile-body">
                 <span class="tag">Recovery</span>
                 <h3>Opens damaged decks.</h3>
-                <p>A truncated archive, broken XML or a missing content-types part gets the best reading we can make, and the deck opens. Hostile content is neutralized rather than obeyed, and only a file with nothing readable in it is refused, naming why.</p>
+                <p>A truncated archive, broken XML or a missing content-types part gets the best reading we can make, and the deck opens. Hostile content is neutralized rather than obeyed; only a file with nothing readable in it is refused, naming why.</p>
               </div>
             </article>
 
             <article class="tile rv">
+              <div class="tile-art il-wrap">
+                <svg class="il" viewBox="0 0 320 200" role="img" aria-label="A slide being edited: a title with a blinking caret, a selected shape with eight resize handles and a rotate handle, and Bold, Italic and Underline buttons." focusable="false">
+                  <rect class="sh" x="34" y="30" width="256" height="150" rx="6"/><rect class="pp" x="30" y="26" width="256" height="150" rx="6"/>
+                  <text class="t" x="50" y="58" font-size="15" font-weight="700">Quarterly review</text><rect class="br blink" x="181" y="45" width="2" height="17"/>
+                  <rect class="ln" x="50" y="70" width="110" height="5" rx="2.5"/><rect class="ln" x="50" y="81" width="90" height="5" rx="2.5"/><rect class="ln" x="50" y="92" width="100" height="5" rx="2.5"/>
+                  <g class="pop"><rect class="bs" x="178" y="86" width="80" height="62" rx="4"/><rect class="sel" x="178" y="86" width="80" height="62"/>
+                    <g class="br"><rect x="175" y="83" width="6" height="6"/><rect x="215" y="83" width="6" height="6"/><rect x="255" y="83" width="6" height="6"/><rect x="175" y="114" width="6" height="6"/><rect x="255" y="114" width="6" height="6"/><rect x="175" y="145" width="6" height="6"/><rect x="215" y="145" width="6" height="6"/><rect x="255" y="145" width="6" height="6"/></g>
+                    <path class="bk" d="M218 83v-10" stroke-width="1.2"/><circle class="pp" cx="218" cy="70" r="4"/></g>
+                  <g class="pop"><rect class="sh" x="56" y="136" width="96" height="30" rx="7"/><rect class="pp" x="52" y="132" width="96" height="30" rx="7"/>
+                    <g class="key"><rect class="bs" x="58" y="137" width="24" height="20" rx="4"/><text class="tb" x="70" y="151.5" font-size="11" font-weight="800" text-anchor="middle">B</text></g>
+                    <g class="key k2"><rect class="ps" x="88" y="137" width="24" height="20" rx="4"/><text class="t" x="100" y="151.5" font-size="11" font-style="italic" font-weight="600" text-anchor="middle">I</text></g>
+                    <g class="key k3"><rect class="ps" x="118" y="137" width="24" height="20" rx="4"/><text class="t" x="130" y="151.5" font-size="11" text-decoration="underline" font-weight="600" text-anchor="middle">U</text></g></g>
+                  <g class="glide"><path class="ptr" d="M262 132l12 5-5 1.6-2.4 5Z"/></g>
+                </svg>
+              </div>
               <div class="tile-body">
-                <span class="tag">Slide show · PDF · PNG</span>
-                <h3>Present and export.</h3>
-                <p>Full-screen slide show from the start or the current slide. A PDF of the whole deck, with real text you can search and copy, or the current slide as a 1920-pixel PNG.</p>
+                <span class="tag">Edit</span>
+                <h3>Edit text, shapes and slides.</h3>
+                <p>Click into a text box and type, with bold, italic, underline and undo. Move, resize, rotate and delete shapes; add slides, text boxes, shapes and pictures; change the theme and slide size.</p>
               </div>
             </article>
 
             <article class="tile rv">
+              <div class="tile-art il-wrap">
+                <svg class="il" viewBox="0 0 320 200" role="img" aria-label="A slide show on a large screen, started with the F5 key, beside a presenter view with the next slide, notes and a running timer." focusable="false">
+                  <g class="pop"><rect class="sh" x="24" y="30" width="176" height="112" rx="6"/><rect class="ink" x="20" y="26" width="176" height="112" rx="6"/><rect class="paper" x="30" y="36" width="156" height="92" rx="2"/><rect class="br" x="42" y="50" width="86" height="9" rx="2"/><rect class="ln" x="42" y="68" width="120" height="5" rx="2.5"/><rect class="ln" x="42" y="79" width="104" height="5" rx="2.5"/><rect class="bs" x="42" y="92" width="50" height="26" rx="3"/><rect class="vis" x="98" y="98" width="30" height="20" rx="3"/><rect class="ams" x="134" y="88" width="30" height="30" rx="3"/><path class="k" d="M108 138v14M84 152h48"/></g>
+                  <g class="pop"><rect class="sh" x="216" y="46" width="88" height="96" rx="6"/><rect class="pp" x="212" y="42" width="88" height="96" rx="6"/><text class="tm" x="220" y="56" font-size="7.5" font-weight="650">NEXT</text><rect class="bs" x="220" y="60" width="72" height="34" rx="2"/><rect class="br" x="226" y="66" width="34" height="5" rx="2"/><rect class="ln" x="220" y="102" width="70" height="4" rx="2"/><rect class="ln" x="220" y="110" width="56" height="4" rx="2"/><text class="tb mono" x="220" y="130" font-size="10" font-weight="700">04:12</text><circle class="br blink" cx="290" cy="127" r="3"/></g>
+                  <g class="key"><rect class="sh" x="66" y="160" width="40" height="28" rx="6"/><rect class="pp" x="62" y="156" width="40" height="28" rx="6"/><text class="tb mono" x="82" y="175" font-size="11" font-weight="700" text-anchor="middle">F5</text></g>
+                  <text class="tm" x="112" y="175" font-size="9">present from the start</text>
+                </svg>
+              </div>
               <div class="tile-body">
-                <span class="tag">macOS · Windows · Linux</span>
-                <h3>A desktop app too.</h3>
-                <p>The same viewer in a native window. Open a deck from the Open panel, or double-click a <code>.pptx</code>; no network needed.</p>
+                <span class="tag">Slide show</span>
+                <h3>Present it.</h3>
+                <p>Full screen from the start (<kbd>F5</kbd>) or the current slide (<kbd>Shift</kbd>+<kbd>F5</kbd>), with PowerPoint's keys. Presenter View shows the next slide, your notes and a timer.</p>
               </div>
             </article>
 
             <article class="tile rv">
+              <div class="tile-art il-wrap">
+                <svg class="il" viewBox="0 0 320 200" role="img" aria-label="A deck is exported two ways: to a PDF whose text can be searched, and to a 1920-pixel PNG picture of one slide." focusable="false">
+                  <g class="pop"><rect class="sh" x="34" y="72" width="80" height="54" rx="4"/><rect class="pp" x="38" y="64" width="80" height="54" rx="4"/><rect class="pp" x="34" y="70" width="80" height="54" rx="4"/><rect class="pp" x="30" y="76" width="80" height="54" rx="4"/><rect class="br" x="40" y="86" width="40" height="6" rx="3"/><rect class="ln" x="40" y="98" width="58" height="4" rx="2"/><rect class="ln" x="40" y="106" width="46" height="4" rx="2"/><text class="tm mono" x="70" y="148" font-size="8.5" text-anchor="middle">deck</text></g>
+                  <path class="flow" d="M118 96 C150 96 156 58 196 58"/>
+                  <path class="flow" d="M118 106 C150 106 156 142 196 142"/>
+                  <g class="pop"><rect class="sh" x="208" y="22" width="78" height="70" rx="5"/><rect class="pp" x="204" y="18" width="78" height="70" rx="5"/><rect fill="#b42318" x="212" y="26" width="26" height="13" rx="3"/><text x="225" y="35.5" font-size="8" font-weight="800" fill="#fff" text-anchor="middle">PDF</text><rect class="ln" x="212" y="46" width="62" height="4" rx="2"/><rect class="bls" x="212" y="54" width="44" height="6" rx="2"/><rect class="ln" x="212" y="64" width="54" height="4" rx="2"/><rect class="ln" x="212" y="72" width="40" height="4" rx="2"/><path class="blk" d="M210 57h50"/></g>
+                  <g class="pop"><rect class="sh" x="208" y="110" width="78" height="62" rx="5"/><rect class="pp" x="204" y="106" width="78" height="62" rx="5"/><rect class="bs" x="210" y="112" width="66" height="40" rx="2"/><path class="brf" d="M212 150l18-20 12 12 8-8 24 16Z"/><circle class="br" cx="262" cy="122" r="5"/><text class="tm mono" x="243" y="162" font-size="8" text-anchor="middle">PNG · 1920 px</text></g>
+                </svg>
+              </div>
               <div class="tile-body">
-                <span class="tag">Private by design</span>
-                <h3>Your file stays with you.</h3>
-                <p>The engine runs in your browser as WebAssembly. Nothing is uploaded, no macro ever runs, and links inside a deck are never fetched.</p>
+                <span class="tag">PDF · PNG · .pptx</span>
+                <h3>Save and export.</h3>
+                <p>Save gives back a <code>.pptx</code>: parts you did not touch come back byte for byte, and an edit patches only what changed. Export a PDF with real, searchable text, or a slide as a 1920-pixel PNG.</p>
               </div>
             </article>
 
-            <article class="tile w12 rv">
+            <article class="tile w7 rv">
+              <div class="tile-art il-wrap">
+                <svg class="il" viewBox="0 0 360 200" role="img" aria-label="The same deck open in a web browser and in a desktop app window, side by side." focusable="false">
+                  <g class="pop"><rect class="sh" x="24" y="34" width="168" height="128" rx="8"/><rect class="pp" x="20" y="30" width="168" height="128" rx="8"/><path class="k" d="M20 50h168" opacity=".35"/><circle class="ln" cx="32" cy="40" r="3"/><circle class="ln" cx="42" cy="40" r="3"/><circle class="ln" cx="52" cy="40" r="3"/><rect class="ps" x="64" y="35" width="112" height="10" rx="5"/><path class="bk" d="M70 40h0" stroke-width="3"/><text class="tm mono" x="76" y="43" font-size="6.5">…/openpresent/editor.html</text>
+                    <rect class="ln" x="28" y="58" width="26" height="15" rx="2"/><rect class="ln" x="28" y="78" width="26" height="15" rx="2"/><rect class="ln" x="28" y="98" width="26" height="15" rx="2"/><rect class="sel2" x="28" y="58" width="26" height="15" rx="2"/>
+                    <rect class="bs" x="62" y="58" width="118" height="70" rx="2"/><rect class="br" x="72" y="70" width="62" height="7" rx="3"/><rect class="ln" x="72" y="84" width="90" height="4" rx="2"/><rect class="ln" x="72" y="92" width="72" height="4" rx="2"/>
+                    <text class="tm" x="104" y="148" font-size="8.5" text-anchor="middle">In your browser</text></g>
+                  <g class="pop"><rect class="sh" x="208" y="34" width="132" height="98" rx="8"/><rect class="pp" x="204" y="30" width="132" height="98" rx="8"/><path class="k" d="M204 46h132" opacity=".35"/><circle class="ams" cx="214" cy="38" r="3"/><circle class="bs" cx="224" cy="38" r="3"/><circle class="ln" cx="234" cy="38" r="3"/>
+                    <rect class="bs" x="214" y="54" width="112" height="64" rx="2"/><rect class="br" x="224" y="66" width="58" height="7" rx="3"/><rect class="ln" x="224" y="80" width="84" height="4" rx="2"/><rect class="ln" x="224" y="88" width="66" height="4" rx="2"/>
+                    <path class="k" d="M250 128l-6 18h52l-6-18"/><path class="k" d="M236 146h68"/>
+                    <text class="tm" x="270" y="164" font-size="8.5" text-anchor="middle">macOS · Windows · Linux</text></g>
+                  <path class="flow" d="M190 94 L202 94"/>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <span class="tag">Web · desktop</span>
+                <h3>In the browser, and a desktop app too.</h3>
+                <p>The same editor in a native window for macOS, Windows and Linux. Open a deck from the Open panel, or double-click a <code>.pptx</code>; no network needed. The desktop builds are early, unsigned previews.</p>
+              </div>
+            </article>
+
+            <article class="tile w5 rv">
+              <div class="tile-art il-wrap">
+                <svg class="il" viewBox="0 0 320 200" role="img" aria-label="An open-source history: commits on a main branch, a contributed branch merging back with its checks passing, and an Apache-2.0 licence card." focusable="false">
+                  <path class="k" d="M30 110h170" opacity=".5"/>
+                  <path class="bk" d="M70 110c0-30 20-40 40-40h40c20 0 30 10 30 40"/>
+                  <g class="pop"><circle class="pp" cx="40" cy="110" r="7"/><circle class="pp" cx="70" cy="110" r="7"/><circle class="pp" cx="130" cy="110" r="7"/><circle class="br" cx="180" cy="110" r="8"/></g>
+                  <g class="pop"><circle class="bs" cx="110" cy="70" r="7"/><circle class="bs" cx="150" cy="70" r="7"/><rect class="pp" x="96" y="24" width="70" height="20" rx="10"/><circle class="br" cx="108" cy="34" r="5"/><path d="M105.6 34l1.6 1.6 3-3" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><text class="t" x="117" y="37" font-size="8">checks pass</text></g>
+                  <g class="pop"><rect class="sh" x="208" y="56" width="104" height="96" rx="7"/><rect class="pp" x="204" y="52" width="104" height="96" rx="7"/><text class="tb" x="214" y="72" font-size="10" font-weight="750">Apache-2.0</text><rect class="ln" x="214" y="82" width="66" height="4" rx="2"/><rect class="ln" x="214" y="90" width="58" height="4" rx="2"/><rect class="ln" x="214" y="98" width="62" height="4" rx="2"/><text class="tm mono" x="214" y="120" font-size="7.5">unsafe: forbidden</text><text class="tm mono" x="214" y="132" font-size="7.5">parsers: fuzzed</text></g>
+                </svg>
+              </div>
               <div class="tile-body">
                 <span class="tag">Apache-2.0 · Rust · no telemetry</span>
                 <h3>Open source, all the way down.</h3>
-                <p>Every line is on GitHub: the engine, the editor and the desktop shell. <code>unsafe</code> is forbidden, every parser is bounded and has a fuzz target, and coverage of the file format is measured row by row rather than claimed. Decks that open wrongly, attached to an issue, are the most useful thing you can send.</p>
+                <p>The engine, the editor and the desktop shell are on GitHub. <code>unsafe</code> is forbidden, every parser is bounded and fuzzed, and coverage of the format is measured row by row.</p>
                 <p><a class="link-arrow" href="https://github.com/CasualOffice/openpresent">Read the source <span class="arr" aria-hidden="true">→</span></a></p>
               </div>
             </article>
@@ -191,15 +323,97 @@
         </div>
       </section>
 
-      <!-- ── What works today ──────────────────────────────────────────────── -->
-      <section id="today" class="section" aria-labelledby="today-h">
+      <!-- ── Private by design ─────────────────────────────────────────────── -->
+      <section id="private" class="section" aria-labelledby="private-h">
         <div class="wrap">
           <div class="section-head split">
             <div>
-              <p class="eyebrow"><span class="num">03</span> Shipping now</p>
+              <p class="eyebrow"><span class="num">02</span> Private by design</p>
+              <h2 id="private-h">Your deck never leaves your device.</h2>
+            </div>
+            <p>The engine is compiled to WebAssembly and runs inside your browser, or inside the desktop app. There is no server to send a deck to: opening, drawing, editing and exporting all happen on your machine.</p>
+          </div>
+          <div class="private rv">
+            <div class="private-box">
+              <span class="private-label"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M10 2a4 4 0 0 0-4 4v2H5a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 5 18h10a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 15 8h-1V6a4 4 0 0 0-4-4Zm2.5 6h-5V6a2.5 2.5 0 0 1 5 0v2Z"/></svg>Your browser or desktop</span>
+              <ol class="pipe" aria-label="What happens to a deck">
+                <li><span class="node">your .pptx</span></li>
+                <li><span class="node hub">engine · WebAssembly</span></li>
+                <li><span class="node">edit · present</span></li>
+                <li><span class="node">.pptx · PDF · PNG</span></li>
+              </ol>
+            </div>
+            <div class="private-out">
+              <svg class="il nocloud" viewBox="0 0 120 80" aria-hidden="true" focusable="false"><path class="ps" d="M34 62a16 16 0 0 1-2-31.8A22 22 0 0 1 74 24a18 18 0 0 1 14 38Z"/><path class="ak" d="M22 72L98 10"/></svg>
+              <div><strong>Nothing goes out.</strong><p>No upload, no account, no telemetry. Macros are never run, and links inside a deck are never fetched.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+<!-- if:shots/editor.png -->
+      <!-- ── The editor ────────────────────────────────────────────────────── -->
+      <section id="editor" class="section tint" aria-labelledby="editor-h">
+        <div class="wrap">
+          <div class="section-head split">
+            <div>
+              <p class="eyebrow">The editor</p>
+              <h2 id="editor-h">A ribbon you already know.</h2>
+            </div>
+            <p>PowerPoint's tabs, groups and shortcuts, with every command it has present. What this build cannot do yet is shown disabled, with the reason in its tooltip, rather than faked.</p>
+          </div>
+          <figure class="editor-shot rv">
+            <div class="window">
+              <div class="window-bar"><span class="wdot"></span><span class="wdot"></span><span class="wdot"></span><span class="window-title">OpenPresent · editor.html</span></div>
+              <img src="./shots/editor.png" alt="The OpenPresent editor in a browser: the ribbon, the slide thumbnails, a blank title slide and the status bar" width="1440" height="900" loading="lazy" decoding="async" />
+            </div>
+            <figcaption>A screenshot of the editor taken by Chrome on our CI when this site was built.</figcaption>
+          </figure>
+          <div class="cta-row editor-cta">
+            <a class="btn btn-primary" href="./editor.html">Open the editor</a>
+            <a class="btn btn-secondary" href="./samples/sample-deck.pptx" download="OpenPresent sample deck.pptx" data-sample="./samples/sample-deck.pptx" data-sample-name="Sample deck.pptx">Try a sample deck</a>
+          </div>
+        </div>
+      </section>
+<!-- /if:shots/editor.png -->
+
+      <!-- ── Real renders ──────────────────────────────────────────────────── -->
+      <section id="renders" class="section" aria-labelledby="renders-h">
+        <div class="wrap">
+          <div class="section-head split">
+            <div>
+              <p class="eyebrow"><span class="num">03</span> Real renders, not mock-ups</p>
+              <h2 id="renders-h">Slides drawn by our own engine.</h2>
+            </div>
+            <p>Each picture is a slide of a real deck, drawn by OpenPresent's renderer when this site was built. The <a href="./gallery/index.html">slide gallery</a> shows every slide of every deck beside LibreOffice's rendering of the same file, so you can judge the difference yourself.</p>
+          </div>
+          <div class="shots">
+            <figure class="rv">
+              <div class="frame"><img src="./shots/z17310490-vierfelder-de-001.png" alt="A German slide on diagnostic tests, as OpenPresent draws it" width="1280" height="720" loading="lazy" decoding="async" /></div>
+              <figcaption>Bernd Röhrig, <em>Diagnostischer Test: 4-Felder Tafel</em>, <a href="https://doi.org/10.5281/zenodo.17310490">doi:10.5281/zenodo.17310490</a>, CC BY 4.0.</figcaption>
+            </figure>
+            <figure class="rv">
+              <div class="frame"><img src="./shots/z7753256-cdif-en-023.png" alt="A slide with a diagram of boxes and connectors, as OpenPresent draws it" width="1280" height="720" loading="lazy" decoding="async" /></div>
+              <figcaption>Arofan Gregory, <em>Functional Breakdown and High-Level Recommendations</em>, <a href="https://doi.org/10.5281/zenodo.7753256">doi:10.5281/zenodo.7753256</a>, CC BY 4.0. Also our sample deck.</figcaption>
+            </figure>
+            <figure class="rv">
+              <div class="frame"><img src="./shots/z19828779-education-ar-011.png" alt="A block diagram on a dark theme, as OpenPresent draws it" width="960" height="720" loading="lazy" decoding="async" /></div>
+              <figcaption>Tarek Barhoum, <em>education platform</em>, <a href="https://doi.org/10.5281/zenodo.19828779">doi:10.5281/zenodo.19828779</a>, CC BY 4.0.</figcaption>
+            </figure>
+          </div>
+          <p class="io-note">The slides at the top come from these three decks. The decks are unmodified and keep their own licences; the full list is in <a href="https://github.com/CasualOffice/openpresent/blob/main/fixtures/real/README.md">fixtures/real</a>. The reference beside them in the gallery is <b>LibreOffice, not PowerPoint</b>: until our output has been checked against PowerPoint itself, nothing here claims to match it.</p>
+        </div>
+      </section>
+
+      <!-- ── What works today ──────────────────────────────────────────────── -->
+      <section id="today" class="section tint" aria-labelledby="today-h">
+        <div class="wrap">
+          <div class="section-head split">
+            <div>
+              <p class="eyebrow"><span class="num">04</span> Shipping now</p>
               <h2 id="today-h">What works today</h2>
             </div>
-            <p>A list of what the editor does now, not a roadmap. What is still to come is under <a href="#roadmap">Honest status</a> below.</p>
+            <p>A list of what the editor does now, not a roadmap. It is an early preview: what is still to come is under <a href="#roadmap">Honest status</a> below.</p>
           </div>
           <div class="checks">
             <div class="check-col rv">
@@ -208,38 +422,68 @@
                 <li>Pick a file, or drop it on the window</li>
                 <li><code>.pptx</code>, <code>.pptm</code>, <code>.ppsx</code>, <code>.ppsm</code>, <code>.potx</code>, <code>.potm</code></li>
                 <li>Damaged decks get a best reading</li>
-                <li>A file that cannot be read is named with its error code</li>
+                <li>What a slide leaves out, listed by feature</li>
               </ul>
             </div>
             <div class="check-col rv">
-              <h3>View</h3>
+              <h3>Edit</h3>
               <ul>
-                <li>Thumbnail pane, slide and status bar</li>
-                <li>Shapes, fills, lines, effects, pictures and text</li>
-                <li>Tables, charts and SmartArt</li>
-                <li>What a slide leaves out, listed by feature</li>
+                <li>Type into text, with bold, italic, underline</li>
+                <li>Move, resize, rotate and delete shapes</li>
+                <li>New, duplicate, hide and reorder slides</li>
+                <li>Text boxes, shapes, pictures; themes and slide size</li>
               </ul>
             </div>
             <div class="check-col rv">
               <h3>Present</h3>
               <ul>
-                <li>Slide show from the beginning (<kbd>F5</kbd>)</li>
-                <li>Or from the current slide (<kbd>Shift</kbd>+<kbd>F5</kbd>)</li>
-                <li>Reading view and fit-to-window zoom</li>
-                <li>Arrow keys, Page Up and Page Down, Home and End</li>
+                <li>From the start (<kbd>F5</kbd>) or this slide (<kbd>Shift</kbd>+<kbd>F5</kbd>)</li>
+                <li>Presenter View with notes and a timer</li>
+                <li>Transitions shown as fades</li>
+                <li>Black and white screens, jump to a slide</li>
               </ul>
             </div>
             <div class="check-col rv">
               <h3>Save and export</h3>
               <ul>
+                <li>Save a <code>.pptx</code>, patching only what changed</li>
                 <li>Create PDF: every slide, with searchable text</li>
                 <li>Export the current slide as PNG</li>
-                <li>Save gives back an unedited deck byte for byte</li>
-                <li>In the browser and on the desktop</li>
+                <li>Undo and redo every edit</li>
               </ul>
             </div>
           </div>
-          <p class="io-note"><b>Not yet.</b> Editing text and shapes, building slides, presenter view, transitions and animations in the slide show, and co-editing. The ribbon already shows those commands, disabled, so you can see where each will be.</p>
+          <p class="io-note"><b>Not yet.</b> Co-editing, autosave, animations in the slide show, editing tables and charts, and comments. The ribbon already shows those commands, disabled, so you can see where each will be.</p>
+        </div>
+      </section>
+
+      <!-- ── Compare ───────────────────────────────────────────────────────── -->
+      <section id="compare" class="section" aria-labelledby="compare-h">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow"><span class="num">05</span> Where it fits</p>
+            <h2 id="compare-h">Open source, in the browser, and private.</h2>
+            <p class="section-lede">Most ways of opening a deck ask you to install a suite or to upload the file to someone's server. OpenPresent does neither, and it is honest about being younger than both.</p>
+          </div>
+          <div class="cmp cmp5 rv" role="table" aria-label="How OpenPresent compares with other kinds of presentation software">
+            <div class="cmp-row cmp-head" role="row">
+              <div class="cmp-approach" role="columnheader">Kind of tool</div>
+              <div role="columnheader">Runs in a browser</div><div role="columnheader">File stays on your device</div><div role="columnheader">Open source</div><div role="columnheader">Desktop app</div><div role="columnheader">Mature, complete</div>
+            </div>
+            <div class="cmp-row" role="row">
+              <div class="cmp-approach" role="rowheader"><b>A desktop office suite</b><span>installed on your computer</span></div>
+              <div class="no" role="cell">No</div><div class="yes" role="cell">Yes</div><div class="part" role="cell">Varies</div><div class="yes" role="cell">Yes</div><div class="yes" role="cell">Yes</div>
+            </div>
+            <div class="cmp-row" role="row">
+              <div class="cmp-approach" role="rowheader"><b>A cloud slides service</b><span>edited on the provider's servers</span></div>
+              <div class="yes" role="cell">Yes</div><div class="no" role="cell">No</div><div class="part" role="cell">Rarely</div><div class="part" role="cell">Varies</div><div class="yes" role="cell">Yes</div>
+            </div>
+            <div class="cmp-row cmp-hi" role="row">
+              <div class="cmp-approach" role="rowheader"><b>OpenPresent</b><span>one Rust engine, web and desktop</span></div>
+              <div class="yes" role="cell">Yes</div><div class="yes" role="cell">Yes</div><div class="yes" role="cell">Yes, Apache-2.0</div><div class="yes" role="cell">Yes, preview</div><div class="no" role="cell">Not yet</div>
+            </div>
+          </div>
+          <p class="cmp-note">Kinds of tool, not products. OpenPresent is an early preview: it has fewer features than a mature suite today, and its output has not yet been checked against PowerPoint.</p>
         </div>
       </section>
 
@@ -248,7 +492,7 @@
         <div class="wrap">
           <div class="split-2">
             <div>
-              <p class="eyebrow"><span class="num">04</span> Self-hosted</p>
+              <p class="eyebrow"><span class="num">06</span> Self-hosted</p>
               <h2 id="selfhost-h" class="h2">Put the editor on your own site.</h2>
               <p>
                 The editor is static files: HTML, JavaScript, CSS and one
@@ -263,7 +507,7 @@
             </div>
             <div class="code-card rv">
               <div class="code-head"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>terminal</span><span class="code-crate">wasm-pack</span></div>
-<pre><code><span class="c"># build the engine into the editor's folder</span>
+<pre class="seq"><code><span class="c"># build the engine into the editor's folder</span>
 <span class="k">$</span> wasm-pack build crates/casual-slide-wasm --release \
     --target web --out-dir ../../webapp/pkg
 <span class="c"># then serve webapp/ from any web server</span>
@@ -282,9 +526,9 @@
       <section id="roadmap" class="section tint" aria-labelledby="roadmap-h">
         <div class="wrap">
           <div class="section-head">
-            <p class="eyebrow"><span class="num">05</span> Honest status</p>
+            <p class="eyebrow"><span class="num">07</span> Honest status</p>
             <h2 id="roadmap-h">Where it is, and what's next.</h2>
-            <p class="section-lede">The file engine came first: reading, modelling and writing a deck without losing anything. Now it ships in thin slices you can use, each one deepened in later passes.</p>
+            <p class="section-lede">The file engine came first: reading, modelling and writing a deck without losing anything. Now it ships in thin slices you can use, each deepened in later passes.</p>
           </div>
           <ol class="phases">
             <li class="phase is-done">
@@ -293,13 +537,13 @@
               <span class="status done"><span class="dot"></span>Tiers closed</span>
             </li>
             <li class="phase is-prog">
-              <div class="phase-id">Slices 1–4</div>
-              <div class="phase-body"><div class="phase-title">View, desktop, save and export</div><div class="phase-detail">The browser viewer, the desktop app, Save, PDF and PNG. Built and running; drawing is deepened slice by slice, tables, charts and effects first.</div></div>
-              <span class="status prog"><span class="dot"></span>In progress</span>
+              <div class="phase-id">Slices 1–8</div>
+              <div class="phase-body"><div class="phase-title">View, desktop, save, edit, present, build slides</div><div class="phase-detail">The browser editor and the desktop app; Save, PDF and PNG; typing and formatting with undo; moving and resizing shapes; the slide show and Presenter View; new slides, shapes and pictures. Built and usable, each still being deepened and tested in more browsers.</div></div>
+              <span class="status prog"><span class="dot"></span>Early preview</span>
             </li>
             <li class="phase">
-              <div class="phase-id">Slices 5–8</div>
-              <div class="phase-body"><div class="phase-title">Edit text, move shapes, present, build slides</div><div class="phase-detail">Typing and formatting with undo, moving and resizing shapes, presenter view with notes, then new slides, shapes and pictures with autosave.</div></div>
+              <div class="phase-id">Next</div>
+              <div class="phase-body"><div class="phase-title">Autosave, animations, rich objects, design</div><div class="phase-detail">Autosave so a crash loses nothing, animations in the slide show, editing table cells and chart data, and the rest of the Design tab.</div></div>
               <span class="status"><span class="dot"></span>Next</span>
             </li>
             <li class="phase">
@@ -311,16 +555,60 @@
         </div>
       </section>
 
+      <!-- ── FAQ ───────────────────────────────────────────────────────────── -->
+      <section id="faq" class="section" aria-labelledby="faq-h">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow"><span class="num">08</span> Questions</p>
+            <h2 id="faq-h">Frequently asked</h2>
+          </div>
+          <div class="faq">
+            <details class="rv">
+              <summary><h3>Is OpenPresent free?</h3></summary>
+              <p>Yes. It is open source under the Apache-2.0 licence: free to use, to change and to host yourself, with no account and no licence check.</p>
+            </details>
+            <details class="rv">
+              <summary><h3>Is my presentation uploaded anywhere?</h3></summary>
+              <p>No. The engine runs as WebAssembly inside your browser, or inside the desktop app. The deck is read from the file you pick and never sent to a server, and the site loads no trackers and no third-party scripts or fonts.</p>
+            </details>
+            <details class="rv">
+              <summary><h3>Which files does it open?</h3></summary>
+              <p><code>.pptx</code>, <code>.pptm</code>, <code>.ppsx</code>, <code>.ppsm</code>, <code>.potx</code> and <code>.potm</code>: the Office Open XML formats PowerPoint has saved since 2007. The older binary <code>.ppt</code> format is not read.</p>
+            </details>
+            <details class="rv">
+              <summary><h3>Does it look exactly like PowerPoint?</h3></summary>
+              <p>We do not claim that. Our renders are compared with LibreOffice's in the public <a href="./gallery/index.html">slide gallery</a>, and some features are not drawn yet; each slide names what it leaves out. Before any release our output will be checked in PowerPoint itself.</p>
+            </details>
+            <details class="rv">
+              <summary><h3>Will saving change my file?</h3></summary>
+              <p>Saving a deck you have not edited gives back the same bytes. When you edit, only the parts you changed are rewritten, node by node; everything else, including what OpenPresent does not model yet, is kept as it was.</p>
+            </details>
+            <details class="rv">
+              <summary><h3>What about macros?</h3></summary>
+              <p>Macros are never run. A <code>.pptm</code> opens, and its macro project is kept in the file untouched, so saving does not strip it.</p>
+            </details>
+            <details class="rv">
+              <summary><h3>Can I use it offline?</h3></summary>
+              <p>Yes, with the <a href="./download.html">desktop app</a> for macOS, Windows and Linux. Today the builds are early, unsigned previews made by our CI; the download page explains the one-time step each system needs.</p>
+            </details>
+            <details class="rv">
+              <summary><h3>How can I help?</h3></summary>
+              <p>Try your own decks, and when one opens wrongly, <a href="https://github.com/CasualOffice/openpresent/issues">open an issue</a> with the file if you can share it. A star on <a href="https://github.com/CasualOffice/openpresent">GitHub</a> helps others find the project.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
       <!-- ── Final ─────────────────────────────────────────────────────────── -->
-      <section class="section final" aria-labelledby="final-h">
+      <section class="section final tint" aria-labelledby="final-h">
         <div class="wrap">
           <svg class="mark bigmark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect class="m-bg" width="32" height="32" rx="7"/><rect class="m-ln" x="7" y="9" width="18" height="12" rx="1.5" pathLength="1"/><path class="m-ln" d="M16 21v4M11 25h10" pathLength="1"/></svg>
           <h2 id="final-h">Open a deck and see it.</h2>
-          <p class="lede">No sign-up, no upload, no install. Bring a <code>.pptx</code>, page through it, present it, and export it.</p>
+          <p class="lede">No sign-up, no upload, no install. Bring a <code>.pptx</code>, or try our sample, then edit it, present it and export it.</p>
           <div class="cta-row">
             <a class="btn btn-primary btn-lg" href="./editor.html">Open the editor</a>
-            <a class="btn btn-secondary btn-lg" href="./download.html">Download for desktop</a>
-            <a class="btn btn-secondary btn-lg" href="https://github.com/CasualOffice/openpresent">Star on GitHub</a>
+            <a class="btn btn-secondary btn-lg" href="./samples/sample-deck.pptx" download="OpenPresent sample deck.pptx" data-sample="./samples/sample-deck.pptx" data-sample-name="Sample deck.pptx">Try a sample deck</a>
+            <a class="btn btn-secondary btn-lg" href="https://github.com/CasualOffice/openpresent"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7 0-.7 0-.7 1.2 0 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.6.2-3.3 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 5 18.3 5.3 18.3 5.3c.7 1.7.2 2.9.1 3.3.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/></svg>Star on GitHub</a>
           </div>
         </div>
       </section>
@@ -340,6 +628,7 @@
               <li><a href="./download.html">Download for desktop</a></li>
               <li><a href="./index.html#today">What works today</a></li>
               <li><a href="./index.html#roadmap">Roadmap</a></li>
+              <li><a href="./index.html#faq">FAQ</a></li>
             </ul>
           </nav>
           <nav class="foot-col" aria-labelledby="f-dev">
@@ -348,6 +637,7 @@
               <li><a href="./docs.html">User guide</a></li>
               <li><a href="./gallery/index.html">Slide gallery</a></li>
               <li><a href="./deploy.html">Self-hosting guide</a></li>
+              <li><a href="https://github.com/CasualOffice/openpresent/issues">Report a deck that opens wrongly</a></li>
             </ul>
           </nav>
           <nav class="foot-col" aria-labelledby="f-project">
@@ -362,7 +652,7 @@
         </div>
         <div class="foot-bottom">
           <span>© 2026 CasualOffice · Apache-2.0 · Early preview.</span>
-          <span>Not affiliated with Microsoft. PowerPoint is a trademark of Microsoft Corporation.</span>
+          <span>Not affiliated with or endorsed by Microsoft. PowerPoint is a trademark of Microsoft Corporation.</span>
         </div>
       </div>
     </footer>
