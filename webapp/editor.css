@@ -185,6 +185,17 @@ body {
   position: absolute; left: 50%; top: -24px; width: 12px; height: 12px; margin-left: -6px;
   box-sizing: border-box; background: #fff; border: 1.5px solid #5f5f5f; border-radius: 50%; cursor: grab;
 }
+/* An open text box: PowerPoint's dashed outline; its handles still resize it. */
+.sel-box.is-editing { border-style: dashed; cursor: text; }
+/* The shape being dragged: the slide picture clipped to it, carried by a transform. */
+.sel-ghost { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; opacity: 0.7; pointer-events: none; will-change: transform; }
+.sel-ghost img { display: block; width: 100%; height: 100%; user-select: none; }
+/* An empty text placeholder: where to click, as PowerPoint's prompt. Not printed. */
+.sel-prompt {
+  position: absolute; box-sizing: border-box; border: 1px dashed #b4b4b4; transform-origin: 50% 50%;
+  display: flex; align-items: center; justify-content: center; pointer-events: none;
+  color: #8a8a8a; font: 400 clamp(10px, 2.2vw, 28px) / 1.2 "Segoe UI", system-ui, sans-serif; overflow: hidden;
+}
 .slide-img { display: block; width: 100%; height: 100%; user-select: none; }
 
 /* Text editing (`VS-05`): the caret and selection over the slide picture, in slide

@@ -114,7 +114,9 @@ function stageCssWidth() {
   return (state.deck.width / EMU_PER_INCH) * 96 * (state.zoom / 100);
 }
 
-async function drawStage() {
+/// Draw the stage. `quiet`, while typing: only the picture, without reading the
+/// shapes, the caret or the report again, which the typing path does itself.
+async function drawStage({ quiet = false } = {}) {
   if (!state.deck || !state.deck.count) return;
   const token = ++stageToken;
   const index = state.current;
@@ -122,14 +124,20 @@ async function drawStage() {
   const frame = byId("slide-frame");
   frame.style.width = `${css}px`;
   frame.style.height = `${css * aspect()}px`;
-  const url = await draw(index, css * dpr(), 5);
+  const url = await draw(index, css * dpr(), quiet ? 9 : 5);
   if (!url) return;
+  // Decoded before it is shown, so the picture and the caret drawn with it change
+  // in the same frame, and the old picture stays until then.
+  const next = new Image();
+  next.src = url;
+  try { await next.decode(); } catch { /* shown as it is */ }
   if (token !== stageToken) { URL.revokeObjectURL(url); return; }
   const img = byId("slide-img");
   img.src = url;
   img.alt = `Slide ${index + 1}`;
   if (stageUrl) URL.revokeObjectURL(stageUrl);
   stageUrl = url;
+  if (quiet) return;
   showReport(index);
   selection.refresh();
   text.refresh();
@@ -165,8 +173,8 @@ async function showReport(index) {
 }
 
 /// Redraw the stage now, after a text edit (`VS-05`). Resolves once it is shown.
-export function redraw() {
-  return drawStage();
+export function redraw(opts) {
+  return drawStage(opts);
 }
 
 /// Draw slide `i`'s thumbnail again, after an edit changed it.
