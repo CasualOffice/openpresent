@@ -525,6 +525,8 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 **Largest gaps a PowerPoint user hits first:** edits lost on closing the tab (no autosave or warning); speaker notes cannot be typed; no Group; no Find or Replace; no links; no numbering or list levels; no change of layout; no Slide Sorter; no sections; slides cannot be copied; nothing but plain text pastes from other apps; no z-order; no comments; no print; no alt text.
 
+**Since the audit (not re-counted).** Merged after `7539ea5`, by their rows' own browser checks, not by this audit: the File tab and autosave (`FILE-01`, `SAVE-01`, `055cf13`) touch `PP-FIT-003` and `004` (Save As `.ppsx` and `.potx`), `022` (File > Info properties), `023` and `024` (browser autosave and a recovery bar; no atomic save), `263` (Print, one slide a page, through the browser), `336` (rename in the title bar) and `340` (Save As, without `.odp`); side panes (`UX-011`, `115a4c5`) touch `063` (notes typed and saved), `081` (Selection Pane) and `274`, `276` (threaded comments, replies, resolve; @mention text sent nowhere). The table and counts below stay as audited until `FIT-02` is re-run; each row's change is in its tracker row.
+
 ### The table
 
 | ID | Feature | Disposition | Today | What is missing | Rank | Backlog |
