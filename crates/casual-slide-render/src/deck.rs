@@ -58,6 +58,8 @@ pub struct Deck {
     unreadable_media: BTreeSet<String>,
     /// Masters whose theme could not be read.
     pub themes_unread: u32,
+    /// The property parts, as read or as edited since (File > Info).
+    properties: casual_slide_model::properties::DocumentProperties,
 }
 
 impl core::fmt::Debug for Deck {
@@ -170,12 +172,25 @@ impl Deck {
             media: BTreeMap::new(),
             unreadable_media: BTreeSet::new(),
             themes_unread,
+            properties: deck.properties,
         })
     }
 
     /// How many slides the deck has.
     pub fn slide_count(&self) -> usize {
         self.parts.structure.slides.len()
+    }
+
+    /// The document properties (`docProps/core.xml`, `app.xml`, `custom.xml`), as read
+    /// or as edited since. The file is not touched until a save.
+    pub fn properties(&self) -> &casual_slide_model::properties::DocumentProperties {
+        &self.properties
+    }
+
+    /// The document properties, to edit (File > Info). The file is not touched until
+    /// a save.
+    pub fn properties_mut(&mut self) -> &mut casual_slide_model::properties::DocumentProperties {
+        &mut self.properties
     }
 
     /// The slide size, EMU.

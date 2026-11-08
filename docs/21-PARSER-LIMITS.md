@@ -329,6 +329,8 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_PARTICIPANT` | `4095` | Participants a room numbers, each minting node numbers and `cNvPr/@id`s from its own range of 2^20 (`casual-slide-wasm` `collab`, `COL-04`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_TEXT` | `1 << 20` | Characters of one inserted text on the wire (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's XML on the wire, which is then read under the reader's own limits (`VS-09`) | CS-COL-0004 | Untested |
+| `MAX_PROPERTY_CHARS` | `32_767` | Characters of one File > Info property a user types (`casual-slide-wasm` `file`, `FILE-01`) | None: the value is cut; characters XML 1.0 cannot hold are dropped | Tested: `values_past_the_bounds_are_cut_and_characters_xml_cannot_hold_are_dropped` |
+| `MAX_CUSTOM_NAME_CHARS` | `255` | Characters of a custom property's name, Office's limit (`FILE-01`) | None: the name is cut | Tested: as `MAX_PROPERTY_CHARS` |
 | `MAX_CLIP_SHAPES` | `1000` | Shapes one Copy, Paste, Duplicate, group move or group delete takes (`UX-003`) | CS-WSM-0006 | Untested |
 | `MAX_CROP` | `99_000` | Thousandths of a percent Crop may cut from one side, or two opposite sides together, so some of the picture stays (`UX-003`) | CS-WSM-0006 | Tested: `a_crop_cutting_everything_or_a_shape_not_a_picture_is_refused` |
 | `MAX_PAD` | `1_000_000` | Thousandths of a percent a negative crop may pad one side (`UX-003`) | CS-WSM-0006 | Untested |

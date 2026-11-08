@@ -185,6 +185,11 @@ impl Document for DeckDoc<'_> {
     fn chart_mut(&mut self, part: &str) -> Option<&mut casual_slide_model::chart::ChartPart> {
         self.0.chart_mut(part)
     }
+    fn properties_mut(
+        &mut self,
+    ) -> Option<&mut casual_slide_model::properties::DocumentProperties> {
+        Some(self.0.properties_mut())
+    }
 }
 
 /// Whether an operation changes more than one slide's picture: a theme or the slide

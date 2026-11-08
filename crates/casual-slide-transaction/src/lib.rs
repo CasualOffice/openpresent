@@ -508,6 +508,13 @@ pub enum Operation {
         /// What it becomes.
         chart: Box<casual_slide_model::chart::ChartPart>,
     },
+    /// File > Info: the document properties, all three parts, whole. Its inverse is the
+    /// properties it replaced, so undo gives back the very model that was read and the
+    /// writer then patches nothing.
+    SetDocumentProperties {
+        /// What they become.
+        properties: Box<casual_slide_model::properties::DocumentProperties>,
+    },
     /// Several operations as one: applied in order, all or nothing, one undo step.
     Batch(Vec<Operation>),
 }
@@ -526,7 +533,7 @@ impl Operation {
             | Self::FormatParagraphs { object, .. }
             | Self::Restore { object, .. } => Some(*object),
             Self::SetTable { node, .. } => Some(*node),
-            Self::SetChart { .. } => None,
+            Self::SetChart { .. } | Self::SetDocumentProperties { .. } => None,
             Self::SetColorScheme { .. }
             | Self::SetFontScheme { .. }
             | Self::SetSlideSize { .. }
@@ -599,6 +606,7 @@ impl Operation {
             Self::Restore { .. } => "Edit",
             Self::SetTable { .. } => "Table",
             Self::SetChart { .. } => "Chart Data",
+            Self::SetDocumentProperties { .. } => "Properties",
             Self::SetColorScheme { .. } | Self::SetFontScheme { .. } => "Theme",
             Self::SetSlideSize { .. } => "Slide Size",
             Self::SetBackground { .. } => "Background",
@@ -1233,7 +1241,8 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
         Operation::SetColorScheme { .. }
         | Operation::SetFontScheme { .. }
         | Operation::SetSlideSize { .. }
-        | Operation::SetBackground { .. } => Err(TxnError::NoDesign),
+        | Operation::SetBackground { .. }
+        | Operation::SetDocumentProperties { .. } => Err(TxnError::NoDesign),
         // Handled by `rich::apply_rich` above.
         Operation::SetTable { node, .. } => Err(TxnError::NoTable(node)),
         Operation::SetChart { part, .. } => Err(TxnError::NoChart(part)),

@@ -38,6 +38,13 @@ pub trait Document {
         let _ = part;
         None
     }
+
+    /// The document properties (File > Info), if this document holds them.
+    fn properties_mut(
+        &mut self,
+    ) -> Option<&mut casual_slide_model::properties::DocumentProperties> {
+        None
+    }
 }
 
 impl Document for SlideParts {
@@ -119,6 +126,17 @@ pub(crate) fn apply_design<D: Document + ?Sized>(
                 Operation::SetBackground {
                     part,
                     background: before.map(Box::new),
+                },
+                changed,
+            )
+        }
+        Operation::SetDocumentProperties { properties } => {
+            let slot = doc.properties_mut().ok_or(TxnError::NoDesign)?;
+            let changed = **properties != *slot;
+            let before = core::mem::replace(slot, (**properties).clone());
+            (
+                Operation::SetDocumentProperties {
+                    properties: Box::new(before),
                 },
                 changed,
             )

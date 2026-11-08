@@ -35,6 +35,8 @@ mod collab;
 pub use collab::MAX_PARTICIPANT;
 mod clipboard;
 mod edit;
+mod file;
+pub use file::{CustomKind, PROPERTY_KEYS};
 mod format;
 #[cfg(test)]
 mod home_tests;
@@ -247,6 +249,8 @@ pub struct Viewer {
     /// Each master's theme as opened, and the slide size (`VS-12`).
     original_themes: BTreeMap<u32, casual_slide_model::theme::Theme>,
     original_size: (i64, i64),
+    /// The document properties as opened: what a save patches `docProps` from.
+    original_properties: casual_slide_model::properties::DocumentProperties,
     history: History,
     /// Chart parts of the file whose data was edited (`VS-11`), patched at save.
     edited_charts: std::collections::BTreeSet<String>,
@@ -275,12 +279,14 @@ impl Viewer {
         let original = deck.parts().clone();
         let original_themes = deck.themes().clone();
         let original_size = deck.size();
+        let original_properties = deck.properties().clone();
         Ok(Self {
             deck,
             reports: BTreeMap::new(),
             original,
             original_themes,
             original_size,
+            original_properties,
             history: History::with_depth(Some(UNDO_DEPTH)),
             edited_charts: std::collections::BTreeSet::new(),
             typing: None,
