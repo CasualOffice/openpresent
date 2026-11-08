@@ -102,6 +102,26 @@ the deck's, so font substitution dominates slides with small text, in both rende
 whose two renders have different slide counts (hidden slides, a failed render) is not scored,
 and says so. It is recorded, not a gate.
 
+**Measured so far** (mean share of pixels differing, over the gallery's 111 scored slides, read
+from each run's `fidelity.json`; agreement with LibreOffice, never a PowerPoint measure):
+
+| Run | At | LibreOffice | Mean differ (agree) | Median | SSIM mean | Within 5% | Within 1% |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 42492516147, first score (`FH-03`) | 2026-11-08 | as recorded in the run | 7.7% (92.3%) | — | 0.83 | — | — |
+| 42496976677 (`FH-05`) | 2026-11-08 | as recorded in the run | 6.7% (93.3%) | — | — | — | — |
+| 42511686894 | `1ba6443` | 26.2.6.3 | **5.4% (94.6%)** | 4.4% | 0.869 | 64 | 14 |
+
+After `FH-06`'s three fixes, a local `render-deck` of the same decks scored against run
+42512837899's LibreOffice images gives 5.0% mean (95.0% agreement), median 3.7%, SSIM 0.874,
+70 within 5% and 14 within 1%: a local measure on the same references, not a CI run, until the
+next `pages` run records it.
+
+The gains came from fixes in our renderer (`FH-03`, `FH-05`, `FH-04`'s done items), from the
+harness cropping rather than resampling the reference, and from giving the runner's LibreOffice
+Carlito, Caladea and Noto CJK, so part of the change is the reference, not us. The latest numbers
+are on the [gallery](https://casualoffice.github.io/openpresent/gallery/), labelled with the
+LibreOffice version and commit.
+
 ## Corpus
 
 | Set | Source | Purpose |

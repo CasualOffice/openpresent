@@ -59,13 +59,14 @@ function menuFromKeyboard() {
 
 /// Ctrl+F6 order on the web (docs/49): slide, notes, status bar, title bar,
 /// ribbon, thumbnails.
-const REGIONS = ["#stage", "#notes-pane", ".bottom-bar button:not(:disabled)", ".rb-search-input", ".rb-tab.is-on", "#thumbs"];
+const REGIONS = ["#stage", "#notes-pane", "#pane-host:not([hidden])", ".bottom-bar button:not(:disabled)", ".rb-search-input", ".rb-tab.is-on", "#thumbs"];
 function cycleRegion(dir) {
   const els = REGIONS.map((s) => document.querySelector(s)).filter((n) => n && n.offsetParent !== null);
   if (!els.length) return;
   const i = els.findIndex((n) => n.contains(document.activeElement));
   const next = els[(i + dir + els.length) % els.length];
-  if (next.id === "notes-pane" && !next.hasAttribute("tabindex")) next.tabIndex = -1;
+  // The notes are edited in place (`UX-011`): the region's focus is their text box.
+  if (next.id === "notes-pane") { byId("notes-text")?.focus({ preventScroll: true }); return; }
   next.focus({ preventScroll: true });
 }
 

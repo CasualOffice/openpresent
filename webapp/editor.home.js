@@ -238,6 +238,52 @@ function highlight() {
   });
 }
 
+/* ── Lists and line spacing (`PAR-06`) ──────────────────────────────────── */
+
+/// The Bullets gallery, as PowerPoint's: the engine's style name, the character it
+/// writes (Wingdings' for the symbol ones), and the name.
+export const BULLET_STYLES = [
+  ["round", "•", "Filled Round Bullets"], ["hollow", "o", "Hollow Round Bullets"],
+  ["square", "§", "Filled Square Bullets"], ["hollow-square", "q", "Hollow Square Bullets"],
+  ["star", "v", "Star Bullets"], ["arrow", "Ø", "Arrow Bullets"], ["check", "ü", "Checkmark Bullets"],
+];
+/// The Numbering gallery: the scheme the engine writes and how it reads.
+export const NUMBER_STYLES = [
+  ["arabicPeriod", "1. 2. 3."], ["arabicParenR", "1) 2) 3)"], ["romanUcPeriod", "I. II. III."],
+  ["alphaUcPeriod", "A. B. C."], ["alphaLcParenR", "a) b) c)"], ["alphaLcPeriod", "a. b. c."], ["romanLcPeriod", "i. ii. iii."],
+];
+/// The Line Spacing menu, in lines.
+export const LINE_SPACINGS = ["1.0", "1.5", "2.0", "2.5", "3.0"];
+
+/// Increase (`up`) or Decrease (`down`) List Level, for the ribbon and Tab and Shift+Tab.
+export const listLevel = (way) => apply("text_set_paragraphs", [3, way], way === "up" ? "Increase List Level" : "Decrease List Level", { whole: true });
+
+function registerLists() {
+  const para = (args, label) => () => apply("text_set_paragraphs", args, label, { whole: true });
+  register("para.bullets.none", { label: "None", enabled: canFormat, checked: () => canFormat() && !current()?.[4], run: para([1, "off"], "Bullets: None") });
+  for (const [name, ch, label] of BULLET_STYLES) {
+    register(`para.bullets.${name}`, { label, enabled: canFormat, checked: () => canFormat() && current()?.[4] === `c:${ch}`, run: para([1, name], label) });
+  }
+  register("para.numbering", {
+    label: "Numbering", enabled: canFormat,
+    checked: () => canFormat() && !!current()?.[4]?.startsWith("n:"),
+    run: para([2, "toggle"], "Numbering"),
+  });
+  register("para.numbering.none", { label: "None", enabled: canFormat, checked: () => canFormat() && !current()?.[4], run: para([2, "off"], "Numbering: None") });
+  for (const [scheme, label] of NUMBER_STYLES) {
+    register(`para.numbering.${scheme}`, { label, enabled: canFormat, checked: () => canFormat() && current()?.[4] === `n:${scheme}`, run: para([2, scheme], `Numbering: ${label}`) });
+  }
+  register("para.indent-more", { label: "Increase List Level", shortcut: "Tab", enabled: canFormat, run: () => listLevel("up") });
+  register("para.indent-less", { label: "Decrease List Level", shortcut: "Shift+Tab", enabled: canFormat, run: () => listLevel("down") });
+  for (const v of LINE_SPACINGS) {
+    register(`para.line-spacing.${v}`, {
+      label: v, enabled: canFormat,
+      checked: () => canFormat() && !!current()?.[6] && Number(current()[6]) === Number(v),
+      run: para([4, v], `Line Spacing: ${v}`),
+    });
+  }
+}
+
 /* ── Commands ───────────────────────────────────────────────────────────── */
 
 export function init() {
@@ -252,6 +298,22 @@ export function init() {
   register("font.increase", { label: "Increase Font Size", shortcut: "Ctrl+Shift+>", enabled: canFormat, run: () => apply("text_grow", [true], "Increase Font Size") });
   register("font.decrease", { label: "Decrease Font Size", shortcut: "Ctrl+Shift+<", enabled: canFormat, run: () => apply("text_grow", [false], "Decrease Font Size") });
   register("font.color", { label: "Font Color", enabled: canFormat, run: fontColour });
+  // The Font group's rest (`PAR-20`): each over the selection, or all the text of
+  // each selected shape, one undo step a shape.
+  const bit = (b) => () => !!(text.caretFormatBits() & b);
+  register("font.strike", { label: "Strikethrough", enabled: canFormat, checked: bit(8), run: () => apply("text_toggle", [3], "Strikethrough") });
+  register("font.superscript", { label: "Superscript", shortcut: "Ctrl+Shift+=", enabled: canFormat, checked: bit(16), run: () => apply("text_toggle", [4], "Superscript") });
+  register("font.subscript", { label: "Subscript", shortcut: "Ctrl+=", enabled: canFormat, checked: bit(32), run: () => apply("text_toggle", [5], "Subscript") });
+  register("font.clear", { label: "Clear All Formatting", shortcut: "Ctrl+Space", enabled: canFormat, run: () => setRun(5, "", "Clear All Formatting") });
+  register("font.case", { label: "Change Case", enabled: canFormat, run: () => {} });
+  for (const [mode, label] of [["sentence", "Sentence case."], ["lower", "lowercase"], ["upper", "UPPERCASE"], ["title", "Capitalize Each Word"], ["toggle", "tOGGLE cASE"]]) {
+    register(`font.case.${mode}`, { label, enabled: canFormat, run: () => apply("text_change_case", [mode], "Change Case") });
+  }
+  register("font.spacing", { label: "Character Spacing", enabled: canFormat, run: () => {} });
+  // PowerPoint's presets, in points.
+  for (const [id, label, pts] of [["very-tight", "Very Tight", "-3"], ["tight", "Tight", "-1.5"], ["normal", "Normal", ""], ["loose", "Loose", "3"], ["very-loose", "Very Loose", "6"]]) {
+    register(`font.spacing.${id}`, { label, enabled: canFormat, run: () => setRun(4, pts, `Character Spacing: ${label}`) });
+  }
   register("font.highlight", { label: "Text Highlight Color", enabled: canFormat, run: highlight });
   for (const [id, token, label, key] of [["para.left", "l", "Align Left", "Ctrl+L"], ["para.center", "ctr", "Center", "Ctrl+E"], ["para.right", "r", "Align Right", "Ctrl+R"], ["para.justify", "just", "Justify", "Ctrl+J"]]) {
     register(id, {
@@ -265,6 +327,7 @@ export function init() {
     checked: () => canFormat() && current()?.[3] === "1",
     run: () => apply("text_set_paragraphs", [1, "toggle"], "Bullets", { whole: true }),
   });
+  registerLists();
   document.addEventListener("op-changed", () => { readShown(); });
 }
 

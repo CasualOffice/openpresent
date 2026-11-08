@@ -7,7 +7,7 @@ use casual_slide_model::text::{
     CharacterProperties, Paragraph, TextBody, TextItem, TextRun, UnderlineType,
 };
 
-use super::wire::{Id, SlideEngine, WireAttribute, WireOp, WireTransform};
+use super::wire::{Codec, Id, SlideEngine, WireAttribute, WireOp, WireTransform};
 use super::{ClientId, ClientSession, Commit, Engine, Replica, ServerSession, Side};
 use crate::{Operation, apply};
 
@@ -66,10 +66,33 @@ fn deck() -> SlideParts {
     }
 }
 
-/// A node read from its "XML": here the XML is just a node number, which is all a
-/// test needs to tell nodes apart.
-fn read_node(_xml: &str, id: ObjectId) -> Option<ShapeNode> {
-    Some(ShapeNode::new(id, NodeKind::Shape))
+/// The test's codec: run properties cross as an index into a table every copy in
+/// the test shares, and a node as nothing but its number. The host's codec writes and
+/// reads real XML (`casual-slide-wasm`'s `collab.rs`).
+struct Table;
+
+thread_local! {
+    static RUNS: std::cell::RefCell<Vec<CharacterProperties>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+impl Codec for Table {
+    fn node_xml(&self, _: &ShapeNode) -> Option<String> {
+        Some(String::new())
+    }
+    fn run_xml(&self, p: &CharacterProperties) -> Option<String> {
+        RUNS.with(|r| {
+            let mut r = r.borrow_mut();
+            r.push(p.clone());
+            Some((r.len() - 1).to_string())
+        })
+    }
+    fn read_node(&self, _xml: &str, id: ObjectId) -> Option<ShapeNode> {
+        Some(ShapeNode::new(id, NodeKind::Shape))
+    }
+    fn read_run(&self, xml: &str) -> Option<CharacterProperties> {
+        let i: usize = xml.parse().ok()?;
+        RUNS.with(|r| r.borrow().get(i).cloned())
+    }
 }
 
 struct Copy(SlideParts);
@@ -77,7 +100,7 @@ struct Copy(SlideParts);
 impl Replica<SlideEngine> for Copy {
     type Error = ();
     fn apply_remote(&mut self, op: &WireOp) -> Result<(), ()> {
-        let op = op.operation(&read_node).map_err(|_| ())?;
+        let op = op.operation(&Table).map_err(|_| ())?;
         apply(&mut self.0, op).map(|_| ()).map_err(|_| ())
     }
     fn write_snapshot(&self) -> Result<Vec<u8>, ()> {
@@ -113,7 +136,10 @@ fn seen_as(parts: &SlideParts, formats: bool) -> String {
                         .cloned()
                         .unwrap_or_default();
                     let flags = if formats {
-                        format!("{:?}{:?}{:?}", props.bold, props.italic, props.underline)
+                        format!(
+                            "{:?}{:?}{:?}{:?}",
+                            props.bold, props.italic, props.underline, props.size
+                        )
                     } else {
                         String::new()
                     };
@@ -156,23 +182,14 @@ fn length(parts: &SlideParts, id: ObjectId) -> usize {
         .map_or(0, crate::body_length)
 }
 
-fn takes_after(parts: &SlideParts) -> impl Fn(ObjectId, usize) -> bool + '_ {
-    |id, at| {
-        parts
-            .get(0)
-            .and_then(|p| p.node(id))
-            .and_then(|n| n.text_body.as_deref())
-            .is_some_and(|b| crate::typing_takes_after(b, at))
-    }
-}
-
 /// A random shareable edit of `parts`, in its wire form, against that state.
 fn random_op(rng: &mut Lcg, parts: &SlideParts, fresh: u32, breaks: bool) -> WireOp {
     let object = if rng.below(2) == 0 { A } else { B };
     let len = length(parts, object);
-    let attribute = match rng.below(3) {
+    let attribute = match rng.below(4) {
         0 => WireAttribute::Bold(Some(rng.below(2) == 0)),
         1 => WireAttribute::Italic(Some(true)),
+        2 => WireAttribute::Size(Some(1200 + 100 * rng.below(3) as i32)),
         _ => WireAttribute::Underline(Some("sng".to_owned())),
     };
     let op = match rng.below(9) {
@@ -206,6 +223,8 @@ fn random_op(rng: &mut Lcg, parts: &SlideParts, fresh: u32, breaks: bool) -> Wir
                     WireAttribute::Underline(_) => {
                         crate::Attribute::Underline(Some(UnderlineType::Sng))
                     }
+                    WireAttribute::Size(v) => crate::Attribute::Size(v),
+                    _ => unreachable!(),
                 },
             }
         }
@@ -231,12 +250,15 @@ fn random_op(rng: &mut Lcg, parts: &SlideParts, fresh: u32, breaks: bool) -> Wir
                 index: rng.below(root.children.len() + 1),
                 node: id.into(),
                 xml: String::new(),
+                media: None,
             };
         }
     };
     let mut scratch = parts.clone();
     let inverse = apply(&mut scratch, op.clone()).unwrap();
-    WireOp::of(&op, &inverse, &|_| Some(String::new()), &takes_after(parts)).unwrap()
+    // Typed text is sent as the runs it became, as a shared history sends it.
+    let sent = crate::sent_form(&scratch, op);
+    WireOp::of(&sent, &inverse, &Table).unwrap()
 }
 
 fn applied(parts: &SlideParts, ops: &[&WireOp]) -> SlideParts {
@@ -254,12 +276,10 @@ fn every_pair_of_concurrent_edits_converges_whichever_order_it_is_applied_in() {
     tp1(false, seen);
 }
 
-/// Text typed with a paragraph or line break in it converges as text; its format can
-/// differ between copies in rare concurrent cases (`COL-01`), so only the text is
-/// compared here.
+/// Text typed with a paragraph or line break in it converges, format and all.
 #[test]
-fn concurrent_edits_with_breaks_converge_in_their_text() {
-    tp1(true, text_seen);
+fn concurrent_edits_with_breaks_converge_with_their_formatting() {
+    tp1(true, seen);
 }
 
 fn tp1(breaks: bool, seen: fn(&SlideParts) -> String) {
@@ -346,20 +366,17 @@ fn two_clients_editing_at_once_through_the_server_end_with_the_same_deck() {
     converge(false, text_seen);
 }
 
-/// The same, comparing every character's bold, italic and underline too. One seed in
-/// 60 ends with a character formatted differently on one copy: a format's
-/// `takes_after` edges are judged where it was made and can be stale after three or
-/// more concurrent edits (`COL-01`).
+/// The same, comparing every character's bold, italic, underline and size too: typed
+/// text carries the run properties it took where it was typed (`COL-01`).
 #[test]
-#[ignore = "COL-01: a typed character's format can differ after three concurrent edits"]
 fn two_clients_editing_at_once_end_with_the_same_formatting() {
     converge(false, seen);
 }
 
-/// As above with breaks typed, comparing text (`COL-01`).
+/// As above with breaks typed, formatting compared.
 #[test]
-fn two_clients_typing_breaks_at_once_end_with_the_same_text() {
-    converge(true, text_seen);
+fn two_clients_typing_breaks_at_once_end_with_the_same_formatting() {
+    converge(true, seen);
 }
 
 /// What the server sent a client: operations and the revision they reach, or an
@@ -474,14 +491,14 @@ fn a_wire_operation_survives_json_both_ways() {
                 object: Id { part: 1, node: 4 },
                 at: 3,
                 text: "hé\n".to_owned(),
+                run: "<a:rPr b=\"1\"/>".to_owned(),
+                formats: vec![WireAttribute::Size(Some(2400))],
             },
             WireOp::FormatRange {
                 object: Id { part: 1, node: 4 },
                 start: 0,
                 end: 2,
                 attribute: WireAttribute::Underline(Some("dbl".to_owned())),
-                start_takes_after: true,
-                end_takes_after: false,
             },
         ],
     };
@@ -500,7 +517,7 @@ fn a_value_outside_the_format_is_refused_not_applied() {
         }),
     };
     assert_eq!(
-        bad.operation(&read_node).unwrap_err(),
+        bad.operation(&Table).unwrap_err(),
         super::wire::WireError::BadValue
     );
     let underline = WireOp::FormatRange {
@@ -508,10 +525,15 @@ fn a_value_outside_the_format_is_refused_not_applied() {
         start: 0,
         end: 1,
         attribute: WireAttribute::Underline(Some("<script>".to_owned())),
-        start_takes_after: false,
-        end_takes_after: false,
     };
-    assert!(underline.operation(&read_node).is_err());
+    assert!(underline.operation(&Table).is_err());
+    let size = WireOp::FormatRange {
+        object: A.into(),
+        start: 0,
+        end: 1,
+        attribute: WireAttribute::Size(Some(i32::MAX)),
+    };
+    assert!(size.operation(&Table).is_err());
 }
 
 #[test]
@@ -539,9 +561,170 @@ fn a_shared_history_refuses_what_it_cannot_send_and_journals_what_it_applies() {
         .unwrap();
     let journal = history.take_journal();
     assert_eq!(journal.len(), 1);
-    // Undo gives back a Restore, which this slice cannot send: refused, nothing changed.
+    // Typing is sent as the run it became, with that run's properties.
+    assert!(matches!(
+        &journal[0].0,
+        Operation::InsertRun { at: 0, text, .. } if text == "x"
+    ));
+    // Undo of typing is a delete, which travels: applied and journaled.
     let before = parts.clone();
-    assert_eq!(history.undo(&mut parts), Err(crate::TxnError::NotShared));
-    assert_eq!(parts, before);
-    assert!(history.can_undo());
+    assert!(history.undo(&mut parts).unwrap().is_some());
+    assert_ne!(parts, before);
+    let journal = history.take_journal();
+    assert_eq!(
+        journal[0].0,
+        Operation::DeleteRange {
+            object: A,
+            start: 0,
+            end: 1
+        }
+    );
+    assert_eq!(text_seen(&parts), text_seen(&deck()));
+}
+
+/// One copy of the deck in a shared session, editing through its own history.
+struct Peer {
+    parts: SlideParts,
+    history: crate::History,
+    session: ClientSession<SlideEngine>,
+}
+
+impl Peer {
+    fn new(client: u64) -> Self {
+        let mut history = crate::History::new();
+        history.share(Some(super::wire::shareable));
+        Self {
+            parts: deck(),
+            history,
+            session: ClientSession::new(ClientId(client), 0),
+        }
+    }
+
+    fn drain(&mut self) {
+        for (op, inverse) in self.history.take_journal() {
+            self.session
+                .record(WireOp::of(&op, &inverse, &Table).unwrap());
+        }
+    }
+
+    fn edit(&mut self, op: Operation) {
+        self.history.apply(&mut self.parts, op).unwrap();
+        self.drain();
+    }
+
+    fn undo(&mut self) {
+        self.history.undo(&mut self.parts).unwrap();
+        self.drain();
+    }
+
+    fn submit(&mut self, server: &mut ServerSession<SlideEngine>) -> (Vec<WireOp>, u64) {
+        let s = self.session.flush().unwrap();
+        match server.commit(&s).unwrap() {
+            Commit::Applied { ops, revision } => {
+                self.session.acknowledge(s.seq, revision);
+                (ops, revision)
+            }
+            Commit::Duplicate { .. } => panic!("duplicate"),
+        }
+    }
+
+    fn receive(&mut self, ops: &[WireOp], revision: u64) {
+        let mut copy = Copy(core::mem::take(&mut self.parts));
+        for op in ops {
+            let applied = self.session.receive(&mut copy, op, revision).unwrap();
+            super::rebase_history(&mut self.history, &copy.0, &applied);
+        }
+        self.parts = copy.0;
+    }
+}
+
+fn first_paragraph(parts: &SlideParts) -> String {
+    text_seen(parts)
+        .split('¶')
+        .nth(1)
+        .unwrap()
+        .split('|')
+        .collect::<String>()
+}
+
+/// Ada types, Grace types before Ada's text, then Ada undoes: Ada's typing goes,
+/// Grace's stays, on both copies (`docs/24` §Undo, OpenCalc's docs/69).
+#[test]
+fn undo_of_typing_in_a_shared_session_takes_back_only_my_own_over_others_edits() {
+    let mut server = ServerSession::<SlideEngine>::new();
+    let mut ada = Peer::new(1);
+    let mut grace = Peer::new(2);
+    ada.edit(Operation::InsertText {
+        object: A,
+        at: 6,
+        text: "dear ".to_owned(),
+    });
+    let (ops, rev) = ada.submit(&mut server);
+    grace.receive(&ops, rev);
+    grace.edit(Operation::InsertText {
+        object: A,
+        at: 0,
+        text: "Oh, ".to_owned(),
+    });
+    let (ops, rev) = grace.submit(&mut server);
+    ada.receive(&ops, rev);
+    assert_eq!(first_paragraph(&ada.parts), "Oh, Hello dear world");
+    ada.undo();
+    let (ops, rev) = ada.submit(&mut server);
+    grace.receive(&ops, rev);
+    assert_eq!(first_paragraph(&ada.parts), "Oh, Hello world");
+    assert_eq!(seen(&ada.parts), seen(&grace.parts));
+    // Redo puts it back where it now belongs.
+    ada.history.redo(&mut ada.parts).unwrap();
+    ada.drain();
+    let (ops, rev) = ada.submit(&mut server);
+    grace.receive(&ops, rev);
+    assert_eq!(first_paragraph(&grace.parts), "Oh, Hello dear world");
+    assert_eq!(seen(&ada.parts), seen(&grace.parts));
+}
+
+/// Undo of a delete types the deleted runs back with their own formats, and of a
+/// format puts each character's old value back, on both copies.
+#[test]
+fn undo_of_a_delete_and_a_format_in_a_shared_session_restores_runs_on_both_copies() {
+    let mut server = ServerSession::<SlideEngine>::new();
+    let mut ada = Peer::new(1);
+    let mut grace = Peer::new(2);
+    // "Hello " plain, "world" bold: delete across both, then unbold what is left.
+    ada.edit(Operation::DeleteRange {
+        object: A,
+        start: 3,
+        end: 8,
+    });
+    ada.edit(Operation::FormatRange {
+        object: A,
+        start: 0,
+        end: 6,
+        attribute: crate::Attribute::Bold(Some(false)),
+    });
+    let (ops, rev) = ada.submit(&mut server);
+    grace.receive(&ops, rev);
+    grace.edit(Operation::InsertText {
+        object: B,
+        at: 0,
+        text: "!".to_owned(),
+    });
+    let (ops, rev) = grace.submit(&mut server);
+    ada.receive(&ops, rev);
+    ada.undo();
+    ada.undo();
+    let (ops, rev) = ada.submit(&mut server);
+    grace.receive(&ops, rev);
+    assert_eq!(seen(&ada.parts), seen(&grace.parts));
+    let mut expected = deck();
+    apply(
+        &mut expected,
+        Operation::InsertText {
+            object: B,
+            at: 0,
+            text: "!".to_owned(),
+        },
+    )
+    .unwrap();
+    assert_eq!(seen(&ada.parts), seen(&expected));
 }

@@ -104,7 +104,7 @@ impl Viewer {
     fn set_sections(&mut self, sections: Vec<SectionMark>) -> Result<bool, BridgeError> {
         self.typing = None;
         let changed = self.history.apply(
-            &mut DeckDoc(&mut self.deck, Some(&mut self.sections)),
+            &mut DeckDoc(&mut self.deck, &mut self.review, Some(&mut self.sections)),
             Operation::SetSections { sections },
         )?;
         Ok(changed)

@@ -17,9 +17,9 @@ modelling come first. After Phase 1, work runs as **vertical slices** (owner ins
 | --- | --- | --- |
 | D Design | **Open** | Blocks nothing structurally. Owner decisions remain |
 | 0 Foundation | **Closed** 2026-11-07 | Signed off by the owner. Seeded violations were run locally on macOS, not on GitHub's runners. Fonts measured in `SPK-01` left the repo and return in Phase 2 |
-| 1 Model, import, export | **Open** | See the Phase 1 plan below |
-| 2 Layout and render | **Open** under instruction 43's waiver | Its tiers are the render backlog for slices 1 and 2 |
-| Slices 1 to 13 | 1 and 2 in progress; 4 built (`VS-04`), for the owner to sign | Replace Phases 3 to 10; see §After Phase 1 |
+| 1 Model, import, export | **Closed** 2026-11-08 | Signed off by the owner (instruction 53) on the phase1-exit run at `50ea80d`. What each tier still lacks is in [14](14-EXECUTION-TRACKER.md) §Tier gates |
+| 2 Layout and render | **Open** under instruction 43's waiver | Its tiers are the render backlog for the slices. Gallery agreement with LibreOffice 26.2.6.3 measured on CI at `1ba6443`: 5.4% of pixels differ on mean over 111 slides (94.6% agree); not a PowerPoint measure |
+| Slices 1 to 13 | **None closed**; 1 to 12 built and merged, each open with what is left in its row; 13 not started | Replace Phases 3 to 10; see §After Phase 1, column "Today" |
 
 ### Waivers
 
@@ -52,7 +52,7 @@ modelling come first. After Phase 1, work runs as **vertical slices** (owner ins
   - [x] Fixture corpus has provenance recorded, including real PowerPoint-written decks as input. Evidence: `F-004`, `F-007`, 66 decks.
   - [x] `SPK-01` reported; ADR-004 and ADR-005 settled. Evidence: [64](64-SPK-01-TEXT-COST.md).
   - [x] `SPK-02` runs 5 decks end to end against LibreOffice; Microsoft's validator runs. Evidence: `SPK-02`, `F-006`.
-  - [ ] Owner sign-off.
+  - [x] Owner sign-off, 2026-11-07 (instruction 21).
 
 ## Phase 1 — Model, import, export
 
@@ -251,23 +251,23 @@ It assumes: Phase 1 signed and `DEC-16` to `DEC-20` answered before the start; a
 - **Reuse (instruction 42):** each starts from OpenCalc's working code, copied with provenance, and names what it copies. Building what OpenCalc has needs a reason in its row.
 - **Thin first.** A slice does the common case end to end and reports what it does not do. Depth comes in later passes, each its own row with its own end point.
 
-| # | Slice | User can | End point | Box | Copies from OpenCalc |
-| --- | --- | --- | --- | ---: | --- |
-| 1 | **Web viewer** (in progress) | Open a `.pptx` in the browser and page through its slides, with thumbnails and zoom | Every `fixtures/real` deck opens and draws in a CI browser run; text, shapes and pictures drawn; anything not drawn is reported | 4 | `casual-calc-wasm` bridge, `webapp/` shell (`index.html`, `editor.core.js`, `file.worker.js`, `serve.py`), CSP, fonts |
-| 2 | **Tables, charts, effects in render** | See tables, charts and shadows as the deck has them | `T2E-04`, `T2F-01`, `T2H-01`, `T2C-01` gates met; R1 measured on their decks | 8 | `casual-calc-render` chart drawing, `casual-calc-layout`, `-text` |
-| 3 | **Desktop window** | Open the same deck in a native window by double-click | Tauri bundles built on three OSs in CI; desktop and web draw the same | 2 | `desktop/` Tauri shell, file association, `casual-calc-host` |
-| 4 | **Save and export** | Download the deck unchanged, or as PDF | Unedited save byte-identical; PDF has real text (`T2G-01`); desktop Save works | 3 | `editor.files.js`, `download`, PDF writer and subsetter |
-| 5 | **Edit text** | Click a text box, type, delete, bold, undo, save | Typed text round-trips and opens clean in the SDK validator; only the edited node changes; IME in one browser | 6 | `casual-calc-transaction` (undo), `casual-calc-selection`, `commands.js`, `editor.clipboard.js` |
-| 6 | **Move and resize shapes** | Select, drag, resize, rotate, delete, undo | Op set inverse-tested; transform round-trips; drag budget on the adversarial slide | 4 | `editor.selection.js`, `editor.geometry.js`, transaction |
-| 7 | **Present** | Play the deck full screen with keyboard, and a presenter view | Slide show on web and desktop; notes shown; transitions drawn as a simple fade and the rest reported | 3 | `commands.js` key handling, `editor.core.js` view switching |
-| 8 | **Build slides** | Add, duplicate, reorder and delete slides; insert a shape, text box or picture | Each op inverse-tested and round-trips; autosave and recovery lose nothing (`SAVE-01`) | 5 | `editor.sheets.js` (tab ops pattern), `editor.drafts.js` (autosave), ribbon |
-| 9 | **Collaborate** | Two people edit one deck and see each other | Two browsers in CI converge; resume with no lost edit | 6 | `server/casual-calc-collab-server`, `collab.js`, `editor.presence.js`, `editor.versions.js` |
-| 10 | **Animate** | See entrance, exit and emphasis animations and transitions play | Timeline goldens for the common classes; 60 fps on a named device | 5 | — (new; OpenCalc has no timeline) |
-| 11 | **Edit rich objects** | Edit a table's cells and a chart's data | Edits round-trip; chart data in an embedded OpenCalc pane (`DEC-15`) | 6 | `casual-calc-sdk`, `editor.charts.js`, embed |
-| 12 | **Design** | Change theme, background, slide size; edit a master | Master edit propagates and round-trips | 4 | `ribbon.model.js` galleries |
-| 13 | **Hosts** | Run it under a company's file store and AI tools | WOPI validator passes; SDK and MCP published | 5 | `server/casual-calc-wopi`, `casual-calc-mcp`, `sdk/` |
+| # | Slice | User can | End point | Box | Copies from OpenCalc | Today (at `1ba6443`) |
+| --- | --- | --- | --- | ---: | --- | --- |
+| 1 | **Web viewer** | Open a `.pptx` in the browser and page through its slides, with thumbnails and zoom | Every `fixtures/real` deck opens and draws in a CI browser run; text, shapes and pictures drawn; anything not drawn is reported | 4 | `casual-calc-wasm` bridge, `webapp/` shell (`index.html`, `editor.core.js`, `file.worker.js`, `serve.py`), CSP, fonts | Built, live at the Pages `editor.html` (`VS-01`, `SITE-01`). Left: a CI browser run over every `fixtures/real` deck; engine size (`T2D1-02`) |
+| 2 | **Tables, charts, effects in render** | See tables, charts and shadows as the deck has them | `T2E-04`, `T2F-01`, `T2H-01`, `T2C-01` gates met; R1 measured on their decks | 8 | `casual-calc-render` chart drawing, `casual-calc-layout`, `-text` | In progress (`VS-02`): tables, classic charts, SmartArt and OLE fallbacks, shadow and glow drawn (`SKEL-03`, `FH-03`, `FH-05`); `T2E-04`, `T2F-01`, `T2H-01`, `T2C-01` gates not met; what is left in `SKEL-03`, `SKEL-04`, `FH-04` |
+| 3 | **Desktop window** | Open the same deck in a native window by double-click | Tauri bundles built on three OSs in CI; desktop and web draw the same | 2 | `desktop/` Tauri shell, file association, `casual-calc-host` | Built (`VS-03`); `desktop.yml` bundled on three OSs green at `50ea80d`. Left: `DESK-01`, `DESK-02` |
+| 4 | **Save and export** | Download the deck unchanged, or as PDF | Unedited save byte-identical; PDF has real text (`T2G-01`); desktop Save works | 3 | `editor.files.js`, `download`, PDF writer and subsetter | Done (`VS-04`), for the owner to sign |
+| 5 | **Edit text** | Click a text box, type, delete, bold, undo, save | Typed text round-trips and opens clean in the SDK validator; only the edited node changes; IME in one browser | 6 | `casual-calc-transaction` (undo), `casual-calc-selection`, `commands.js`, `editor.clipboard.js` | Built (`VS-05`, `VS-17`, `VS-19`); left in `VS-15`: CI browser run, IME in one browser |
+| 6 | **Move and resize shapes** | Select, drag, resize, rotate, delete, undo | Op set inverse-tested; transform round-trips; drag budget on the adversarial slide | 4 | `editor.selection.js`, `editor.geometry.js`, transaction | Built (`VS-06`); multi-select from `UX-003`; left in `VS-14`: drag budget, CI browser run |
+| 7 | **Present** | Play the deck full screen with keyboard, and a presenter view | Slide show on web and desktop; notes shown; transitions drawn as a simple fade and the rest reported | 3 | `commands.js` key handling, `editor.core.js` view switching | Built (`VS-07`); left in `VS-16`: run on web and desktop in CI, automatic advance, `showPr` |
+| 8 | **Build slides** | Add, duplicate, reorder and delete slides; insert a shape, text box or picture | Each op inverse-tested and round-trips; autosave and recovery lose nothing (`SAVE-01`) | 5 | `editor.sheets.js` (tab ops pattern), `editor.drafts.js` (autosave), ribbon | Built (`VS-08`); autosave and recovery built (`SAVE-01`, in progress); left: Set Layout, CI browser run, `SAVE-09` |
+| 9 | **Collaborate** | Two people edit one deck and see each other | Two browsers in CI converge; resume with no lost edit | 6 | `server/casual-calc-collab-server`, `collab.js`, `editor.presence.js`, `editor.versions.js` | Built: server and browser (`VS-09`, `COL-04`, ADR-020). Left: resume (`COL-05`), tokens (`COL-03`), more ops on the wire (`COL-07`), `COL-02`, `COL-08`; the CI two-page run is red on `main` (`CI-23`) |
+| 10 | **Animate** | See entrance, exit and emphasis animations and transitions play | Timeline goldens for the common classes; 60 fps on a named device | 5 | — (new; OpenCalc has no timeline) | Built (`VS-10`): six transitions and six effects play. Left: effect options, Duration and Delay, triggers, timeline goldens, 60 fps |
+| 11 | **Edit rich objects** | Edit a table's cells and a chart's data | Edits round-trip; chart data in an embedded OpenCalc pane (`DEC-15`) | 6 | `casual-calc-sdk`, `editor.charts.js`, embed | Built (`VS-11`): tables and four chart types inserted and edited; left in `VS-20`: typing in a cell through the caret engine, merge and split, OpenCalc pane (`DEC-15`) |
+| 12 | **Design** | Change theme, background, slide size; edit a master | Master edit propagates and round-trips | 4 | `ribbon.model.js` galleries | Built (`VS-12`): themes, variants, slide size, background. Left in `DSN-01`: master editing, the slice's gate |
+| 13 | **Hosts** | Run it under a company's file store and AI tools | WOPI validator passes; SDK and MCP published | 5 | `server/casual-calc-wopi`, `casual-calc-mcp`, `sdk/` | Not started (`VS-13`) |
 
-Slices 1 and 2 run now. Slice 3 and 4 start beside them, since each is mostly copied; slices 5 onward start in order after 4, at most three sessions at once (rule 22). **About 61 session-hours** in all, before deepening.
+Slices 1 to 12 were built on 2026-11-08 and 2026-11-09, at most three sessions at once (rule 22); none has met its end point in full, so none is closed, and each row in [14](14-EXECUTION-TRACKER.md) names what is left. Beside them: the PowerPoint for the web shell (`UX-003`), the shapes gallery (`SHAPE-01`), the File tab (`FILE-01`), side panes with comments, notes and the Selection Pane (`UX-011`), the site (`SITE-01`, `SITE-03`) and the parity audit (`FIT-02`, [96](96-POWERPOINT-FIT-GAP.md) §Parity today). **About 61 session-hours** in all, before deepening.
 
 **Deepening passes.** After a slice closes, each pass adds depth to it and has its own row and box: more scripts and RTL for text editing; full Format panes; all transitions, Morph and motion paths; SmartArt and equation editing; ink; media; reading and sorter views; accessibility checker; and so on, from [96](96-POWERPOINT-FIT-GAP.md). Passes are ordered by how many real decks they affect.
 

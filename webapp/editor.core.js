@@ -17,10 +17,13 @@
 // disabled, saying so, and arrives working with its own slice.
 
 import { register, run, all as allCommands, registeredIds } from "./commands.js";
-import { start as startRibbon, queueSync, openBackstage, icon, setContextual } from "./ribbon.js";
-import { TABS, FILE_RAIL, LABELS, modelCommandIds } from "./ribbon.model.js";
+import { start as startRibbon, queueSync, openBackstage, closeBackstage, icon, setContextual } from "./ribbon.js";
+import { TABS, FILE_RAIL, LABELS, TEMPLATES, modelCommandIds } from "./ribbon.model.js";
 import * as menus from "./editor.menus.js";
 import * as panes from "./editor.panes.js";
+import * as comments from "./editor.comments.js";
+import * as selpane from "./editor.selpane.js";
+import * as notes from "./editor.notes.js";
 import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
@@ -33,8 +36,12 @@ import * as objects from "./editor.objects.js";
 import * as picture from "./editor.picture.js";
 import * as home from "./editor.home.js";
 import * as clipboard from "./editor.clipboard.js";
+import * as keys from "./editor.keys.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog, showModal, closeModal } from "./editor.dialogs.js";
 import * as presence from "./editor.presence.js";
+import { registerFileCommands, initFile } from "./editor.file.js";
+import { initDrafts } from "./editor.drafts.js";
+import { initRecent, remember } from "./editor.recent.js";
 import * as views from "./editor.views.js";
 import * as arrange from "./editor.arrange.js";
 import * as find from "./editor.find.js";
@@ -72,8 +79,13 @@ function pump() {
   worker.postMessage({ id: inFlight.id, ...inFlight.msg }, inFlight.transfer || []);
 }
 
+/// The engine's edit counter in its latest answer (`PAR-01`); `NaN` before any.
+let lastEditsNow = Number.NaN;
+export function editsNow() { return lastEditsNow; }
+
 worker.onmessage = (e) => {
   const r = e.data || {};
+  if (r.ok && Number.isFinite(r.editsNow)) lastEditsNow = r.editsNow;
   const job = inFlight;
   inFlight = null;
   if (job && job.id === r.id) {
@@ -164,9 +176,10 @@ export function openDeck(name, bytes) {
 /// File > New, and what the editor starts with (`VS-08`): the built-in blank
 /// presentation, one title slide, ready to edit, as PowerPoint opens.
 let untitled = 0;
-export function newDeck() {
+export function newDeck(template) {
   untitled++;
-  return load(`Presentation${untitled}.pptx`, { op: "blank" }, [], "OpenPresent could not start a new presentation.");
+  const msg = Number.isInteger(template) ? { op: "blank", template } : { op: "blank" };
+  return load(`Presentation${untitled}.pptx`, msg, [], "OpenPresent could not start a new presentation.");
 }
 
 let openingBlank = false;
@@ -231,7 +244,7 @@ const EXPORT_WIDTH_PX = 1920;
 const baseName = () => (state.deck?.name || "Presentation").replace(/\.[^.]+$/, "");
 let busy = false;
 
-async function produce(what, msg, name, type) {
+async function produce(what, msg, name, type, onDone) {
   if (busy || !state.deck) return;
   busy = true;
   changed();
@@ -240,6 +253,7 @@ async function produce(what, msg, name, type) {
     const r = await request(msg, { priority: 5 });
     const written = await download(new Uint8Array(r.bytes || r.png), name, type);
     status(written === null ? `${what} cancelled` : `${what}: ${written}`);
+    if (written !== null) onDone?.();
   } catch (e) {
     status(`${what} failed`);
     errorDialog(`OpenPresent could not finish: ${what.toLowerCase()}.`, e.message);
@@ -251,7 +265,9 @@ async function produce(what, msg, name, type) {
 
 export function saveDeck() {
   const name = state.deck?.name || "Presentation.pptx";
-  return produce("Saving", { op: "save" }, name, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+  // A completed save tells autosave its draft is spent (`SAVE-01`).
+  return produce("Saving", { op: "save" }, name, "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    () => document.dispatchEvent(new CustomEvent("op-saved")));
 }
 
 export function exportPdf() {
@@ -273,11 +289,12 @@ function setTheme(v) {
 function registerCommands() {
   text.registerTextCommands();
   registerDesignCommands();
-  register("file.new", { label: "New", run: newDeck });
+  register("file.new", { label: "New", run: () => newDeck() });
+  // File > New's templates (`PAR-18`): the blank deck in each built-in theme.
+  TEMPLATES.forEach((name, i) => register(`file.new.template.${i}`, { label: `New: ${name}`, run: () => newDeck(i) }));
   register("file.open", { label: "Open", shortcut: "Ctrl+O", run: openFilePicker });
   const canProduce = () => hasDeck() && !busy;
   register("file.save", { label: "Save", shortcut: "Ctrl+S", enabled: canProduce, run: saveDeck });
-  register("file.save-copy", { label: "Save a Copy", enabled: canProduce, run: saveDeck });
   register("file.export-pdf", { label: "Create PDF", enabled: canProduce, run: exportPdf });
   register("file.export-png", { label: "Export Slide as PNG", enabled: canProduce, run: exportPng });
   register("file.render-report", { label: "What this slide leaves out", enabled: hasDeck, run: () => reportDialog(state.current) });
@@ -322,6 +339,8 @@ function registerCommands() {
   register("help.keyboard-shortcuts", { label: "Keyboard Shortcuts", run: shortcutsDialog });
   register("help.about", { label: "About OpenPresent", run: () => aboutDialog(state.engineVersion) });
   register("file.info", { label: "Info", run: () => openBackstage("Info") });
+  // Rename, Save As, Download a Copy, Advanced Properties and Print (`FILE-01`).
+  registerFileCommands();
 
   // The shell's own verbs (`UX-003`, docs/53): the Format Shape pane, the
   // editing mode, and the context menu.
@@ -368,6 +387,8 @@ function bindKeys() {
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
     const mod = e.ctrlKey || e.metaKey;
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && build.onKey(e)) return;
+    // PowerPoint's shortcuts, over the browser's own (`PAR-13`, `editor.keys.js`).
+    if (state.deck && !e.target.closest?.(".rb-pop") && keys.handle(e)) return;
     if (mod && !e.altKey && (e.key === "o" || e.key === "O")) { e.preventDefault(); openFilePicker(); return; }
     if (mod && !e.altKey && (e.key === "s" || e.key === "S")) { e.preventDefault(); run("file.save"); return; }
     if (e.key === "F5" && !mod) {
@@ -441,6 +462,8 @@ async function boot() {
   picture.init();  // Picture Format: Crop, Reset Picture, Picture Styles (`UX-003`)
   home.init();       // the Home tab's Font and Paragraph groups (`UX-003`)
   clipboard.init();  // Cut, Copy, Paste and Duplicate (`UX-003`)
+  comments.init();   // the Comments pane and markers (`UX-011`)
+  selpane.init();    // the Selection Pane (`UX-011`)
   views.init();      // Outline View, Slide Sorter, Notes Page (`UX-006`)
   arrange.init();    // Arrange: order, rotate, flip (`UX-006`)
   find.init();       // Find, Replace, Reset Slide (`UX-006`)
@@ -450,8 +473,17 @@ async function boot() {
   presence.init();
   initDialogs(request);
   slides.init();
+  notes.init();      // the notes pane, editable (`UX-011`)
   text.init();
-  initFiles({ onOpen: openDeck });
+  // A deck opened from this device is kept for File > Open's Recent list (`PAR-19`):
+  // copied first, as opening hands the bytes to the engine.
+  initFiles({ onOpen: async (name, bytes) => {
+    const kept = new Uint8Array(bytes.slice(0));
+    await openDeck(name, bytes);
+    if (state.deck?.name === name) remember(name, kept);
+  } });
+  initRecent(closeBackstage);
+  initFile();
   buildStatusBar();
   bindKeys();
   menus.init();
@@ -468,6 +500,9 @@ async function boot() {
   // arriving (the desktop shell's, or one dropped while the engine started).
   if (!state.deck && !opening) await newDeck();
   presence.joinFromLink();
+  // Autosave and the recovery bar (`SAVE-01`): after the first deck, so a draft from an
+  // earlier session is offered beside it, never applied by itself.
+  initDrafts();
 }
 
 boot();

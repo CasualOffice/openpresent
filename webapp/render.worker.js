@@ -9,7 +9,8 @@
 // `{ op: "shapes", index }`, `{ op: "transform", index, node, x, y, cx, cy, rot }`,
 // `{ op: "delete", index, node }`, `{ op: "undo" }` and `{ op: "redo" }`; each edit
 // answers with `undo: [canUndo, canRedo]`, and undo and redo with the slide changed.
-// Building (`VS-08`): `{ op: "blank" }` opens the built-in new presentation, and
+// Building (`VS-08`): `{ op: "blank" }` opens the built-in new presentation, with
+// `template: n` in built-in theme n (`PAR-18`), and
 // `{ op: "build", fn, args }` runs one slide or insert call; undo and redo also
 // answer the slide count, since they may add or remove slides.
 // Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name.
@@ -27,7 +28,7 @@ import init, {
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   show_plan, show_advance, slide_transition, transition_direction, slide_notes,
   design_themes, design_apply_theme, design_slide_size, design_background,
-  open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
+  open_blank, open_template, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
   preset_names, preset_icon, insert_preset, shape_handles, drag_shape_handle,
   set_shape_fill, set_shape_outline, set_shape_style, slide_palette,
@@ -39,15 +40,26 @@ import init, {
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
   collab_begin, collab_end, collab_flush, collab_acknowledge, collab_unacknowledged,
   collab_receive, collab_replay, collab_map_offset, collab_presence, protocol_version,
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case,
   slide_outline, text_replace_all,
   font_families, font_css_stack, font_face_bytes,
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
+  copy_slides, clipboard_slides, paste_slides,
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
   insert_wordart, wordart_styles, set_shape_link, shape_link,
   slide_sections, section_add, section_rename, section_remove, header_footer,
   arrange_order, arrange_flip, find_text, replace_text_all, replace_text_one, reset_slide,
+  slide_comments, comment_counts, add_comment, reply_comment, resolve_comment, delete_comment,
+  notes_body, text_body_runs, selection_list, rename_shape, set_shape_hidden, move_shape_z,
+  document_info, set_document_property, set_custom_property, remove_custom_property,
+  save_deck_as, edits_applied,
 } from "./pkg/casual_slide_wasm.js";
+
+// The File tab (`FILE-01`, `editor.file.js`): `{ id, op: "file", fn, args }` calls one of
+// these by name and answers `{ value, undo, edits }`; File > Info's properties are edits
+// with an undo step each. `{ op: "save-as", ext, dropMacros }` answers the bytes, and
+// `{ op: "edits" }` the edit counter autosave polls (`SAVE-01`).
+const FILE = { document_info, set_document_property, set_custom_property, remove_custom_property };
 
 // Co-editing (`COL-04`): what `collab.js` asks of the engine.
 const COLLAB = {
@@ -57,6 +69,13 @@ const COLLAB = {
 
 // Design (`VS-12`): `{ id, op: "design", fn, args }` calls one of these by name and
 // answers `{ value, undo, size }`; `{ op: "themes" }` lists the built-in themes.
+// Comments, notes and the Selection Pane (`UX-011`). Document text goes back as JSON
+// strings, which the page sets with `textContent` only.
+const REVIEW = {
+  slide_comments, comment_counts, add_comment, reply_comment, resolve_comment, delete_comment,
+  notes_body, text_body_runs, selection_list, rename_shape, set_shape_hidden, move_shape_z,
+};
+
 const DESIGN = { design_apply_theme, design_slide_size, design_background };
 
 // Text editing (`VS-05`): `{ id, op: "text", fn, args }` calls one of these by name and
@@ -65,7 +84,7 @@ const TEXT = {
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   // The Home tab's Font and Paragraph groups, and Copy of text (`UX-003`).
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich, text_change_case,
   // Outline View, Find and Replace (`UX-006`).
   slide_outline, text_replace_all, find_text, replace_text_all, replace_text_one,
 };
@@ -81,6 +100,7 @@ const BUILD = {
   set_shape_style, slide_palette, edit_break_typing,
   // The shape clipboard and multiple selection (`UX-003`).
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
+  copy_slides, clipboard_slides, paste_slides,
   // Picture Format (`UX-003`).
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
   // Arrange, Reset Slide and WordArt (`UX-006`).
@@ -114,6 +134,17 @@ function failure(e) {
   return "the engine stopped unexpectedly";
 }
 
+// Every successful answer carries the engine's edit counter as it stands
+// (`editsNow`), so the page knows an edit happened the moment it did, without a
+// poll: the leave warning reads it (`PAR-01`). Before a deck is open there is none.
+const post = self.postMessage.bind(self);
+self.postMessage = (m, transfer) => {
+  if (m && m.ok) {
+    try { m.editsNow = edits_applied(); } catch { /* no deck yet */ }
+  }
+  post(m, transfer);
+};
+
 self.onmessage = async (event) => {
   const msg = event.data || {};
   const { id } = msg;
@@ -121,7 +152,8 @@ self.onmessage = async (event) => {
     await ready;
     if (msg.op === "open" || msg.op === "blank") {
       // `blank` is File > New, and the deck the editor starts with (`VS-08`).
-      if (msg.op === "blank") open_blank(); else open(new Uint8Array(msg.bytes));
+      if (msg.op === "blank" && Number.isInteger(msg.template)) open_template(msg.template);
+      else if (msg.op === "blank") open_blank(); else open(new Uint8Array(msg.bytes));
       const size = slide_size();
       self.postMessage({ id, ok: true, count: slide_count(), width: size[0], height: size[1], version: version() });
     } else if (msg.op === "png") {
@@ -150,6 +182,12 @@ self.onmessage = async (event) => {
     } else if (msg.op === "delete") {
       delete_shape(msg.index, msg.node);
       self.postMessage({ id, ok: true, undo: Array.from(undo_state()) });
+    } else if (msg.op === "review") {
+      const fn = Object.hasOwn(REVIEW, msg.fn) ? REVIEW[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      let value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      if (ArrayBuffer.isView(value)) value = Array.from(value);
+      self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()) });
     } else if (msg.op === "undo" || msg.op === "redo") {
       const slide = msg.op === "undo" ? undo() : redo();
       // -2: every slide changed, and perhaps the size with them (`VS-12`).
@@ -174,7 +212,10 @@ self.onmessage = async (event) => {
     } else if (msg.op === "text") {
       const fn = Object.hasOwn(TEXT, msg.fn) ? TEXT[msg.fn] : null;
       if (!fn) throw new Error("unknown request");
-      let value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      const args = Array.isArray(msg.args) ? msg.args.slice() : [];
+      // Rich paste (`PAR-11`): the runs' looks and the paragraphs' lists as typed arrays.
+      if (msg.fn === "text_paste_rich") { args[5] = new Int32Array(args[5] || []); args[6] = new Uint8Array(args[6] || []); }
+      let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()) });
     } else if (msg.op === "plan") {
@@ -202,8 +243,14 @@ self.onmessage = async (event) => {
       if (msg.fn === "insert_picture") args[1] = new Uint8Array(args[1]);
       if (NODE_LISTS.has(msg.fn)) args[1] = new Uint32Array(args[1] || []);
       if (msg.fn === "set_shape_transforms") args[1] = new Float64Array(args[1] || []);
+      // The thumbnail pane's slide clipboard (`PAR-10`).
+      if (msg.fn === "copy_slides") args[0] = new Uint32Array(args[0] || []);
       let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
+      // An engine `i64` (`slide_layout`) arrives as a BigInt, which no page caller
+      // expects and which a `u32` argument refuses: New Slide failed on every deck
+      // with slides (`PAR-16`). Every such value fits a double.
+      if (typeof value === "bigint") value = Number(value);
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
     } else if (msg.op === "undo" || msg.op === "redo") {
       const slide = msg.op === "undo" ? undo() : redo();
@@ -219,6 +266,16 @@ self.onmessage = async (event) => {
       let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
+    } else if (msg.op === "file") {
+      const fn = Object.hasOwn(FILE, msg.fn) ? FILE[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      const value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()), edits: edits_applied() });
+    } else if (msg.op === "save-as") {
+      const bytes = save_deck_as(String(msg.ext || ""), !!msg.dropMacros);
+      self.postMessage({ id, ok: true, bytes: bytes.buffer }, [bytes.buffer]);
+    } else if (msg.op === "edits") {
+      self.postMessage({ id, ok: true, edits: edits_applied() });
     } else if (msg.op === "report") {
       self.postMessage({ id, ok: true, lines: slide_report(msg.index) });
     } else {

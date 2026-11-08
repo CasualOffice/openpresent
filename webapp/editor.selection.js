@@ -22,6 +22,11 @@
 // inside it, and a drag of any selected shape moves them all. A group move, delete,
 // nudge, align or distribute is one engine call and one undo step. Handles show
 // only on a single selection, as PowerPoint's.
+//
+// Smart guides (`PAR-15`): while shapes move, their left, centre and right edges and
+// their top, middle and bottom snap to another shape's, or to the slide's edges and
+// centre lines, when within a few pixels, and a red dashed line shows each match, as
+// PowerPoint's. Alt held during the drag turns snapping off.
 
 import { state, request, status, changed } from "./editor.core.js";
 import { register, run } from "./commands.js";
@@ -40,6 +45,7 @@ const NUDGE_FINE = 12700;             // one point, with Ctrl
 const MIN_EXTENT = 12700;             // the smallest a drag makes a side, one point
 const HANDLES = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
 const BORDER_PX = 6;                  // how far inside its edge a press still grabs a text shape
+const SNAP_PX = 6;                    // how near, in screen pixels, a smart guide pulls
 
 let shapes = [];        // [{ node, x, y, cx, cy, rot (degrees), flags, part?, empty? }]
 let selected = null;    // the primary node: handles, the Format pane and the panes read it
@@ -139,6 +145,86 @@ function paintSoon() {
   if (frameQueued) return;
   frameQueued = true;
   requestAnimationFrame(() => { frameQueued = false; paint(); });
+}
+
+/* ── Smart guides (`PAR-15`) ────────────────────────────────────────────── */
+
+/// The upright box a shape covers, rotation included: `[left, top, right, bottom]`.
+function bounds(s) {
+  if (!s.rot) return [s.x, s.y, s.x + s.cx, s.y + s.cy];
+  const r = (s.rot * Math.PI) / 180;
+  const w = Math.abs(s.cx * Math.cos(r)) + Math.abs(s.cy * Math.sin(r));
+  const h = Math.abs(s.cx * Math.sin(r)) + Math.abs(s.cy * Math.cos(r));
+  const mx = s.x + s.cx / 2, my = s.y + s.cy / 2;
+  return [mx - w / 2, my - h / 2, mx + w / 2, my + h / 2];
+}
+
+/// Snap a move of the shapes `moving` by `[dx, dy]` to the other shapes' and the
+/// slide's edges and centres: the move it becomes, and the guides to draw, each
+/// `{ v: true, at, from, to }` (a vertical line at x `at`) or the horizontal kind.
+export function snapMove(moving, others, [dx, dy], [width, height], tolerance) {
+  if (!moving.length) return { dx, dy, guides: [] };
+  const all = moving.map(bounds);
+  const box = [Math.min(...all.map((b) => b[0])) + dx, Math.min(...all.map((b) => b[1])) + dy,
+    Math.max(...all.map((b) => b[2])) + dx, Math.max(...all.map((b) => b[3])) + dy];
+  // Each target line: its position and the extent along it that a guide spans.
+  const xs = [[0, 0, height], [width / 2, 0, height], [width, 0, height]];
+  const ys = [[0, 0, width], [height / 2, 0, width], [height, 0, width]];
+  for (const o of others) {
+    const [l, t, r, b] = bounds(o);
+    for (const x of [l, (l + r) / 2, r]) xs.push([x, t, b]);
+    for (const y of [t, (t + b) / 2, b]) ys.push([y, l, r]);
+  }
+  const best = (edges, lines) => {
+    let pull = null;
+    for (const e of edges) for (const [at] of lines) {
+      const d = at - e;
+      if (Math.abs(d) <= tolerance && (pull === null || Math.abs(d) < Math.abs(pull))) pull = d;
+    }
+    return pull;
+  };
+  const sx = best([box[0], (box[0] + box[2]) / 2, box[2]], xs);
+  const sy = best([box[1], (box[1] + box[3]) / 2, box[3]], ys);
+  if (sx !== null) { dx += sx; box[0] += sx; box[2] += sx; }
+  if (sy !== null) { dy += sy; box[1] += sy; box[3] += sy; }
+  const guides = [];
+  const near = (a, b) => Math.abs(a - b) < 0.5;
+  if (sx !== null) {
+    for (const e of [box[0], (box[0] + box[2]) / 2, box[2]]) for (const [at, from, to] of xs) {
+      if (near(at, e)) guides.push({ v: true, at, from: Math.min(from, box[1]), to: Math.max(to, box[3]) });
+    }
+  }
+  if (sy !== null) {
+    for (const e of [box[1], (box[1] + box[3]) / 2, box[3]]) for (const [at, from, to] of ys) {
+      if (near(at, e)) guides.push({ v: false, at, from: Math.min(from, box[0]), to: Math.max(to, box[2]) });
+    }
+  }
+  return { dx, dy, guides };
+}
+
+/// A move of `origins` by `[dx, dy]` as the pointer gives it, snapped unless Alt is down.
+function snapped(origins, dx, dy, e) {
+  if (e.altKey) return { dx, dy, guides: [] };
+  const moving = new Set(origins.map((o) => o.node));
+  const rest = shapes.filter((s) => !moving.has(s.node));
+  return snapMove(origins, rest, [dx, dy], [state.deck.width, state.deck.height], SNAP_PX / scale());
+}
+
+function paintGuides(l, guides, k) {
+  for (const g of guides || []) {
+    const d = document.createElement("div");
+    d.className = g.v ? "sel-guide is-v" : "sel-guide is-h";
+    if (g.v) {
+      d.style.left = `${g.at * k}px`;
+      d.style.top = `${g.from * k}px`;
+      d.style.height = `${(g.to - g.from) * k}px`;
+    } else {
+      d.style.top = `${g.at * k}px`;
+      d.style.left = `${g.from * k}px`;
+      d.style.width = `${(g.to - g.from) * k}px`;
+    }
+    l.appendChild(d);
+  }
 }
 
 /* ── The drag's ghost ───────────────────────────────────────────────────── */
@@ -252,6 +338,7 @@ function paintSelection() {
     m.style.height = `${Math.abs(y1 - y0) * k}px`;
     l.appendChild(m);
   }
+  if (drag?.moved && drag.guides) paintGuides(l, drag.guides, k);
   const all = chosen();
   if (all.length > 1) {
     // A multiple selection: an outline round each, no handles, as PowerPoint's.
@@ -433,6 +520,8 @@ function onMove(e) {
     if (!drag.moved && Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) * scale() < 3) return;
     let dx = p[0] - drag.start[0], dy = p[1] - drag.start[1];
     if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
+    const movable = drag.origins.filter((o) => !(o.flags & NO_MOVE));
+    ({ dx, dy, guides: drag.guides } = snapped(movable, dx, dy, e));
     drag.boxes = new Map(drag.origins.filter((o) => !(o.flags & NO_MOVE)).map((o) => [o.node, { ...o, x: o.x + dx, y: o.y + dy }]));
     drag.moved = true;
     paintSoon();
@@ -449,6 +538,7 @@ function onMove(e) {
     if (o.flags & NO_MOVE) return;
     let dx = p[0] - drag.start[0], dy = p[1] - drag.start[1];
     if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
+    ({ dx, dy, guides: drag.guides } = snapped([o], dx, dy, e));
     drag.box = { ...o, x: o.x + dx, y: o.y + dy };
   } else if (drag.kind === "resize") {
     drag.box = resized(o, drag.handle, p, e.shiftKey || !!(o.flags & KEEP_ASPECT));
@@ -541,6 +631,10 @@ export async function deleteSelection() {
     errorDialog("OpenPresent cannot delete this shape yet.", e.message);
   }
 }
+
+/// Undo once, as Undo does, and resolve when the slide is drawn again: Paste Special
+/// takes a paste back this way to paste it another way (`PAR-11`).
+export const undoStep = () => history("undo");
 
 async function history(op) {
   try {

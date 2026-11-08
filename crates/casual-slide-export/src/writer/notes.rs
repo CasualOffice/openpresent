@@ -119,6 +119,12 @@ pub(crate) fn new_slide_xml(conformance: Conformance, layout: &XmlTree) -> Strin
     )
 }
 
+/// The part a new notes slide starts as, exactly as [`super::Op::AddNotes`] writes it
+/// with no text, for a host that edits the notes before they are saved (`UX-011`).
+pub fn new_notes_part(conformance: Conformance) -> Vec<u8> {
+    notes_slide_xml(conformance).into_bytes()
+}
+
 fn notes_slide_xml(conformance: Conformance) -> String {
     format!(
         "{DECL}<p:notes {}><p:cSld><p:spTree>{TREE_HEAD}\

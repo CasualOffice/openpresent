@@ -141,7 +141,7 @@ fn alignment_and_bullets_save_read_back_and_toggle_off() {
     assert!(v.set_paragraphs(object, (0, len), 0, "ctr").unwrap());
     assert!(v.set_paragraphs(object, (1, 1), 1, "toggle").unwrap());
     let state = v.run_state(object, 1).unwrap();
-    assert_eq!(state[2..], ["ctr".to_owned(), "1".to_owned()]);
+    assert_eq!(state[2..4], ["ctr".to_owned(), "1".to_owned()]);
     let saved = v.save().unwrap();
     let again = Viewer::open(saved.clone()).unwrap();
     assert_eq!(again.run_state(object, 1).unwrap()[2..], state[2..]);
@@ -429,4 +429,229 @@ fn a_highlighted_run_draws_its_colour_behind_the_glyphs() {
     assert!(yellow_boxes_behind_text(&v, object) > 0);
     v.undo().unwrap();
     assert_eq!(yellow_boxes_behind_text(&v, object), 0);
+}
+
+#[test]
+fn slides_copied_paste_within_the_deck_as_one_step_and_save() {
+    let mut v = Viewer::blank().unwrap();
+    v.new_slide(1, v.layout_of(0).unwrap()).unwrap();
+    let clip = v.copy_slides(&[0, 1]).unwrap();
+    assert_eq!(clip.len(), 2);
+    let first = v.paste_slides(2, &clip).unwrap();
+    assert_eq!((first, v.slide_count()), (2, 4));
+    assert_eq!(v.shapes(2).unwrap().len(), v.shapes(0).unwrap().len());
+    let saved = v.save().unwrap();
+    assert_eq!(Viewer::open(saved).unwrap().slide_count(), 4);
+    v.undo().unwrap();
+    assert_eq!(v.slide_count(), 2, "one undo takes both back");
+}
+
+#[test]
+fn a_slide_with_a_picture_pastes_into_another_deck_on_its_layout_and_saves() {
+    let mut from = Viewer::open(fixture("area-pic.pptx")).unwrap();
+    let clip = from.copy_slides(&[0]).unwrap();
+    let pictures = |v: &Viewer, i: usize| {
+        v.deck
+            .parts()
+            .slide(i)
+            .and_then(|p| p.shape_tree())
+            .map_or(0, |t| {
+                t.children
+                    .iter()
+                    .filter(|c| c.kind == NodeKind::Picture)
+                    .count()
+            })
+    };
+    let had = pictures(&from, 0);
+    assert!(had > 0, "the fixture has a picture");
+    let mut to = Viewer::blank().unwrap();
+    assert_eq!(to.paste_slides(1, &clip).unwrap(), 1);
+    assert_eq!(to.slide_count(), 2);
+    assert_eq!(pictures(&to, 1), had);
+    let saved = to.save().unwrap();
+    let again = Viewer::open(saved.clone()).unwrap();
+    assert_eq!(again.slide_count(), 2);
+    assert_eq!(pictures(&again, 1), had);
+    let p = PresentationPackage::open(saved, OoxmlLimits::default()).unwrap();
+    assert!(
+        p.part_names().iter().any(|n| n.starts_with("ppt/media/")),
+        "the picture's bytes travel"
+    );
+}
+
+#[test]
+fn formatted_text_from_another_app_pastes_as_one_step_with_its_look_and_lists() {
+    use crate::format::{RichParagraph, RichPiece};
+    let input = fixture("area-text.pptx");
+    let mut v = Viewer::open(input.clone()).unwrap();
+    let (object, len) = text_box(&v);
+    let piece = |text: &str| RichPiece {
+        text: text.to_owned(),
+        ..Default::default()
+    };
+    let pieces = [
+        RichPiece {
+            bold: Some(true),
+            ..piece("Bold ")
+        },
+        RichPiece {
+            color: Some(0xC0_0000),
+            size: Some(2400),
+            italic: Some(true),
+            bold: Some(false),
+            ..piece("red")
+        },
+        // A control character from the clipboard is dropped, not pasted.
+        piece("\nItem\u{7} one\nItem two"),
+    ];
+    let paragraphs = [
+        RichParagraph::default(),
+        RichParagraph { list: 1, level: 0 },
+        RichParagraph { list: 2, level: 1 },
+    ];
+    let caret = v
+        .paste_rich(object, (0, len), &pieces, &paragraphs)
+        .unwrap();
+    assert_eq!(caret, "Bold red\nItem one\nItem two".chars().count());
+    assert_eq!(
+        v.text_slice(object, 0, caret).unwrap(),
+        "Bold red\nItem one\nItem two"
+    );
+    assert_eq!(v.format_state(object, 1).unwrap() & 1, 1, "bold");
+    assert_eq!(
+        v.format_state(object, 7).unwrap() & 3,
+        2,
+        "italic, not bold"
+    );
+    assert_eq!(v.run_state(object, 7).unwrap()[1], "24");
+    assert_eq!(v.run_state(object, 12).unwrap()[3..5], ["1", "c:\u{2022}"]);
+    assert_eq!(
+        v.run_state(object, 20).unwrap()[4..6],
+        ["n:arabicPeriod", "1"]
+    );
+    let saved = v.save().unwrap();
+    let xml = part_xml(&saved, &changed_parts(&input, &saved)[0]);
+    assert!(xml.contains("<a:srgbClr val=\"C00000\"/>"), "{xml}");
+    assert!(xml.contains("b=\"1\""), "bold written");
+    assert!(
+        xml.contains("<a:buAutoNum type=\"arabicPeriod\"/>"),
+        "numbers written"
+    );
+    // Text only: no look at all.
+    v.undo().unwrap();
+    assert_eq!(v.save().unwrap(), input, "one undo takes the paste back");
+    let plain = [RichPiece {
+        bold: None,
+        ..piece("x")
+    }];
+    assert_eq!(v.paste_rich(object, (1, 1), &plain, &[]).unwrap(), 2);
+    assert_eq!(v.text_length(object).unwrap(), len + 1);
+}
+
+#[test]
+fn numbering_list_levels_and_line_spacing_save_read_back_and_undo() {
+    let input = fixture("area-text.pptx");
+    let mut v = Viewer::open(input.clone()).unwrap();
+    let (object, len) = text_box(&v);
+    // Numbering "1)" over the box, then the first paragraph down two levels and up one.
+    assert!(
+        v.set_paragraphs(object, (0, len), 2, "arabicParenR")
+            .unwrap()
+    );
+    assert!(v.set_paragraphs(object, (1, 1), 3, "up").unwrap());
+    assert!(v.set_paragraphs(object, (1, 1), 3, "up").unwrap());
+    assert!(v.set_paragraphs(object, (1, 1), 3, "down").unwrap());
+    assert!(v.set_paragraphs(object, (0, len), 4, "1.5").unwrap());
+    let state = v.run_state(object, 1).unwrap();
+    assert_eq!(
+        state[4..],
+        [
+            "n:arabicParenR".to_owned(),
+            "1".to_owned(),
+            "1.5".to_owned()
+        ]
+    );
+    let saved = v.save().unwrap();
+    let again = Viewer::open(saved.clone()).unwrap();
+    assert_eq!(again.run_state(object, 1).unwrap()[4..], state[4..]);
+    let parts = changed_parts(&input, &saved);
+    let xml = part_xml(&saved, &parts[0]);
+    assert!(
+        xml.contains("<a:buAutoNum type=\"arabicParenR\"/>"),
+        "{xml}"
+    );
+    assert!(xml.contains("lvl=\"1\""), "level written");
+    assert!(
+        xml.contains("<a:spcPct val=\"150000\"/>"),
+        "line spacing written"
+    );
+    // A chosen bullet, then the level back to the left: no `lvl` is left behind.
+    assert!(v.set_paragraphs(object, (1, 1), 1, "star").unwrap());
+    assert_eq!(v.run_state(object, 1).unwrap()[4], "c:v");
+    assert!(v.set_paragraphs(object, (1, 1), 3, "down").unwrap());
+    assert!(!v.set_paragraphs(object, (1, 1), 3, "down").unwrap());
+    assert_eq!(v.run_state(object, 1).unwrap()[5], "0");
+    // Numbering toggled on over bullets gives "1.", and off takes the numbers away.
+    assert!(v.set_paragraphs(object, (1, 1), 2, "toggle").unwrap());
+    assert_eq!(v.run_state(object, 1).unwrap()[4], "n:arabicPeriod");
+    assert!(v.set_paragraphs(object, (0, len), 2, "off").unwrap());
+    assert_eq!(v.run_state(object, 1).unwrap()[4], "");
+    for (what, value) in [(2, "roman"), (3, "sideways"), (4, "0"), (4, "11")] {
+        assert_eq!(
+            v.set_paragraphs(object, (0, 1), what, value)
+                .unwrap_err()
+                .code(),
+            "CS-WSM-0006"
+        );
+    }
+    while v.can_undo_redo().0 {
+        v.undo().unwrap();
+    }
+    assert_eq!(v.save().unwrap(), input);
+}
+
+/// The Font group's rest (`PAR-20`): Strikethrough, Superscript, Subscript, Character
+/// Spacing, Change Case and Clear All Formatting, each one undo step, saved as
+/// PowerPoint writes them and read back.
+#[test]
+fn strikethrough_scripts_spacing_case_and_clear_save_read_back_and_undo() {
+    let input = fixture("area-text.pptx");
+    let mut v = Viewer::open(input.clone()).unwrap();
+    let (object, len) = text_box(&v);
+    let n = len.min(4);
+    let text = v.text_slice(object, 0, n).unwrap();
+    assert!(v.toggle(object, 0, n, Toggle::Strike).unwrap());
+    assert!(v.toggle(object, 0, n, Toggle::Superscript).unwrap());
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0b01_1000);
+    assert!(v.toggle(object, 0, n, Toggle::Subscript).unwrap());
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0b10_1000);
+    assert!(v.set_run(object, (0, n), RunSetting::Spacing, "3").unwrap());
+    assert!(v.change_case(object, (0, n), "upper").unwrap());
+    assert_eq!(
+        v.text_slice(object, 0, n).unwrap(),
+        text.to_uppercase(),
+        "upper case"
+    );
+    let saved = v.save().unwrap();
+    let parts = changed_parts(&input, &saved);
+    let xml = part_xml(&saved, &parts[0]);
+    assert!(xml.contains("strike=\"sngStrike\""), "{xml}");
+    assert!(xml.contains("baseline=\"-25000\""), "{xml}");
+    assert!(xml.contains("spc=\"300\""), "{xml}");
+    let again = Viewer::open(saved).unwrap();
+    assert_eq!(
+        again.format_state(object, 1).unwrap() & 0b11_1000,
+        0b10_1000
+    );
+    assert_eq!(again.text_slice(object, 0, n).unwrap(), text.to_uppercase());
+    // Clear All Formatting takes every one off in one step.
+    assert!(v.set_run(object, (0, n), RunSetting::Clear, "").unwrap());
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0);
+    v.undo().unwrap();
+    assert_eq!(v.format_state(object, 1).unwrap() & 0b11_1000, 0b10_1000);
+    while v.can_undo_redo().0 {
+        v.undo().unwrap();
+    }
+    assert_eq!(v.text_slice(object, 0, n).unwrap(), text);
+    assert_eq!(v.save().unwrap(), input);
 }

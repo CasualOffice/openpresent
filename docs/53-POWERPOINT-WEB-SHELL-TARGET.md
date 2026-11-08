@@ -110,9 +110,10 @@ menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoin
 | --- | --- | --- |
 | Home, New | Blank Presentation, then templates (ours) | [D] |
 | Open | Browse this device | [D] |
-| Info | Properties; what this build leaves out (ours) | [D] |
-| Save a Copy, Download | Save, Save a Copy, Download as PDF, PNG of the slide | [D] |
-| Print | Print, Ctrl+P | [D] |
+| Info | Properties beside the page: Slides and Words, then Title, Tags, Comments, Categories, Subject, Company, Manager edited in place; Related Dates; Related People (Author, Last Modified By). Advanced Properties: Summary, Statistics, Custom. What this build leaves out (ours) | [D] |
+| Save As | Save, Save As (name and type: .pptx, .potx, .ppsx; F12), Download a Copy, Rename | [D] |
+| Export | Download as PDF, PNG of the slide | [D] |
+| Print | Print, Ctrl+P: the browser's print, one slide a page | [D] |
 | Share | Share with people | [D] |
 | About, Options | Theme; ribbon labels | [D] |
 | Back | Arrow at the top of the rail; Esc | [D] |
@@ -131,7 +132,26 @@ menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoin
 | Keyboard | Shift+F10 or the Menu key opens the menu for the focus | [D] desktop |
 | Format Shape pane | Right side, title and ×. **Shape Options** \| **Text Options**. Shape Options' three icons: Fill & Line (Fill: No, Solid, Gradient, Picture, Pattern, Slide background; Color, Transparency. Line: No, Solid, Gradient; Color, Transparency, Width, Dash, Cap, Join), Effects (Shadow, Reflection, Glow, Soft Edges, 3-D Format, 3-D Rotation), Size & Properties (Size: Height, Width, Rotation, Lock aspect ratio; Position: Horizontal, Vertical; Text Box: alignment, direction, autofit, margins, wrap; Alt Text) | [D] docs/50 §18, [R] layout |
 
+## Co-authoring: who is here and where
+
+Read on 2026-11-08 from Microsoft's "Work together on PowerPoint presentations"
+(<https://support.microsoft.com/office/0c30ee3f-8674-4f0e-97be-89cf2892a34d>) and "Share and collaborate in
+PowerPoint" (<https://support.microsoft.com/en-us/office/share-and-collaborate-in-powerpoint-07fcfb59-f410-4e52-9c60-3b069a805ee5>).
+
+| Region | Target | Ev. | Built (`COL-04`) |
+| --- | --- | --- | --- |
+| Header, right end | A badge with each present person's picture or initials; "their thumbnail (image or initials) will appear in the top-right corner of the ribbon" (Windows), "a badge ... for each person who currently has the file open" (web) | [D] | Initials in each person's colour, beside Share |
+| The badges, selected | "Select that badge to see where in the slide deck they currently are" (web); the Share pane also names everyone viewing or editing | [D] | A list: name, colour, slide; a name goes to their slide |
+| Thumbnails | "a label appear at the top right corner of the slide thumbnail with the name of the person currently on that slide" (web); an identity icon on the thumbnail, hovered for the name (Windows) | [D] | Name label in their colour at the thumbnail's top right |
+| The slide | "a border around the affected area" (Windows); "Colored flags show where each person is editing" (Share and collaborate page) | [D] | Outline in their colour round their selection, and a flag with their name on their caret or selection |
+| Joining, leaving | "PowerPoint alerts you when people enter or leave your presentation" (Mac) | [D] Mac only | The badges change; no alert |
+| Cursor name labels as such | Not found on Microsoft's pages: none describe a remote text caret | none | Built as a flag on the caret, ours |
+
+No presence in the status bar: the footer roster this build had first is removed.
+
 ## Keyboard (web table, docs/49 S3)
+
+Bound in `webapp/editor.keys.js` (`PAR-13`): each key runs its command through the registry, ahead of the browser's own; a command not built yet is named in the status bar.
 
 | Keys | Does | Keys | Does |
 | --- | --- | --- | --- |
@@ -140,7 +160,11 @@ menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoin
 | Ctrl+B, I, U | Bold, italic, underline | Ctrl+L, E, R, J | Align left, centre, right, justify |
 | Ctrl+Shift+>, < | Font size up, down | Ctrl+Space | Clear formatting |
 | Ctrl+K | Link | Ctrl+F | Find |
-| Ctrl+[ , ] | Back, forward one layer (web) | Ctrl+G, Ctrl+Shift+G | Group, ungroup |
+| Ctrl+[ , ] | Back, forward one layer (web); in an open text box, font size down, up (desktop) | Ctrl+G, Ctrl+Shift+G | Group, ungroup |
+| Ctrl+H | Replace | Ctrl+P | Print |
+| Ctrl+Shift+V | Paste, keep text only | Ctrl+Alt+V | Paste Special |
+| Tab, Shift+Tab | At a paragraph's start: list level down, up | Alt+Shift+Right, Left | List level down, up |
+| Ctrl+Left, Right | Word before, next (text) | Ctrl+Up, Down; Ctrl+Home, End | Paragraph before, next; start, end of the box |
 | F5, Shift+F5, Alt+F5 | Present from start, current, presenter | Alt+Q | Search |
 | Ctrl+F1 | Show or hide the ribbon | Ctrl+F6 | Next region |
 | Shift+F10 | Context menu | Alt+Period | KeyTips (web) |

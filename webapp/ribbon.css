@@ -312,7 +312,9 @@
 
 /* Right-click menus. */
 .rb-ctx { min-width: 220px; }
-.rb-ctx .rb-pop-item { min-height: 30px; }
+/* Compact rows as in PowerPoint's menus: the label sets the height, not a tall line box. */
+.rb-ctx .rb-pop-item { min-height: 26px; line-height: 1.2; padding: 0 10px; }
+.rb-ctx .rb-pop-sep { margin: 3px 6px; }
 
 /* KeyTips */
 .op-chrome-ribbon .rb-tip {
@@ -468,3 +470,13 @@
   pointer-events: none; white-space: nowrap;
 }
 .op-chrome-ribbon .rb-tip.rb-tip-dim { opacity: 0.25; }
+
+/* File > Open and New: Recent (`PAR-19`). */
+.op-recent-row { display: flex; align-items: center; gap: 4px; padding-right: 8px; }
+.op-recent-row + .op-recent-row { border-top: 1px solid var(--op-border-color); }
+.op-recent-row .rb-page-item { flex: 1; min-width: 0; }
+.op-recent-act { border: 1px solid var(--op-border-color); background: transparent; color: var(--op-text-color); font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+.op-recent-act:hover { background: var(--op-surface-color); }
+.op-recent-empty { color: var(--op-muted-text-color); font-size: 13px; }
+/* File > New: a template tile shows its theme's accents (`PAR-18`). */
+.rb-tile-art .dz-swatches { width: 70%; }

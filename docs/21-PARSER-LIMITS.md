@@ -333,11 +333,24 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_OUTSTANDING` | `1` | Chunks a collaborating client has in flight: stop and wait (`VS-09`, `COL-02`) | None: edits wait for the acknowledgement | Tested: raised to 32, `two_clients_editing_at_once_through_the_server_end_with_the_same_deck` failed |
 | `MAX_PARTICIPANT` | `4095` | Participants a room numbers, each minting node numbers and `cNvPr/@id`s from its own range of 2^20 (`casual-slide-wasm` `collab`, `COL-04`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_TEXT` | `1 << 20` | Characters of one inserted text on the wire (`VS-09`) | CS-COL-0004 | Untested |
-| `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's XML on the wire, which is then read under the reader's own limits (`VS-09`) | CS-COL-0004 | Untested |
+| `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's or run's XML on the wire, which is then read under the reader's own limits (`VS-09`, `COL-01`) | CS-COL-0004 | Untested |
+| `MAX_WIRE_MEDIA` | `32 * 1024 * 1024` | Bytes of one picture carried with an inserted node, so its base64 fits a frame; a larger one is refused while shared before it is applied (`COL-04`) | CS-TXN-0015, CS-COL-0004 | Untested |
+| `MAX_WIRE_MEDIA_TEXT` | `44_739_244` | `MAX_WIRE_MEDIA` as base64 characters (asserted equal at compile time), checked before decoding (`COL-04`) | CS-COL-0004 | Untested |
+| `MAX_WIRE_FORMATS` | `7` | Formats one inserted text may have picked up, one per attribute kind (`COL-01`) | CS-COL-0004 | Untested |
+
+| `MAX_PROPERTY_CHARS` | `32_767` | Characters of one File > Info property a user types (`casual-slide-wasm` `file`, `FILE-01`) | None: the value is cut; characters XML 1.0 cannot hold are dropped | Tested: `values_past_the_bounds_are_cut_and_characters_xml_cannot_hold_are_dropped` |
+| `MAX_CUSTOM_NAME_CHARS` | `255` | Characters of a custom property's name, Office's limit (`FILE-01`) | None: the name is cut | Tested: as `MAX_PROPERTY_CHARS` |
 | `MAX_CLIP_SHAPES` | `1000` | Shapes one Copy, Paste, Duplicate, group move or group delete takes (`UX-003`) | CS-WSM-0006 | Untested |
+| `MAX_COMMENT_CHARS` | `10_000` | Characters of one comment or reply typed in the Comments pane (`UX-011`) | None: the text is cut; control characters but line feeds are dropped; empty text is CS-WSM-0006 | Untested |
+| `MAX_RENAME_CHARS` | `255` | Characters of a name given in the Selection Pane, or of a comment author's name (`UX-011`) | None: the name is cut and control characters dropped | Untested |
 | `MAX_CROP` | `99_000` | Thousandths of a percent Crop may cut from one side, or two opposite sides together, so some of the picture stays (`UX-003`) | CS-WSM-0006 | Tested: `a_crop_cutting_everything_or_a_shape_not_a_picture_is_refused` |
 | `MAX_PAD` | `1_000_000` | Thousandths of a percent a negative crop may pad one side (`UX-003`) | CS-WSM-0006 | Untested |
 | `MAX_FONT_POINTS` | `4000.0` | Points the Font Size box takes, `ST_TextFontSize`'s bound (`UX-003`) | CS-WSM-0006 | `home_tests::a_bad_size_or_colour_is_refused_and_changes_nothing` |
+| `MAX_CLIP_SLIDES` | `1000` | Slides one Copy in the thumbnail pane takes (`PAR-10`) | CS-WSM-0006 | Untested |
+| `MAX_LEVEL` | `8` | The deepest list level Increase List Level and a paste make, `ST_TextIndentLevelType` (`PAR-06`) | none: clamped | `home_tests::numbering_list_levels_and_line_spacing_save_read_back_and_undo` |
+| `MAX_LINE_SPACING` | `9.99` | Lines Line Spacing takes; below `MIN_LINE_SPACING` 0.1 or above, refused (`PAR-06`) | CS-WSM-0006 | `home_tests::numbering_list_levels_and_line_spacing_save_read_back_and_undo` |
+| `MAX_PASTE_CHARS` | `262_144` | Characters one paste from another application inserts (`PAR-11`) | CS-WSM-0006 | Untested |
+| `MAX_PASTE_PIECES` | `8_192` | Runs one paste from another application carries (`PAR-11`) | CS-WSM-0006 | Untested |
 | `MAX_FONT_NAME_CHARS` | `64` | Characters of a name typed in the Font box (`UX-003`) | None: the name is cut; control characters are dropped | Untested |
 | `MAX_LINE_WIDTH` | `20_116_800` | EMU of an outline weight Shape Outline sets, PowerPoint's 1584 points (`SHAPE-01`) | None: a wider one is set to the bound | Untested |
 

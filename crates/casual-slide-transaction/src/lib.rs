@@ -32,12 +32,12 @@
 use casual_slide_model::color::Color;
 use casual_slide_model::drawing::ShapeProperties;
 use casual_slide_model::fill::Fill;
-use casual_slide_model::presentation::TextFont;
+use casual_slide_model::presentation::{Percentage, TextFont};
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{Background, PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
-    Bullet, BulletFont, CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TextAlign,
-    TextBody, TextItem, TextRun, UnderlineType,
+    Bullet, BulletFont, CharacterProperties, LineBreak, Paragraph, ParagraphProperties, StrikeType,
+    TextAlign, TextBody, TextItem, TextPoint, TextRun, TextSpacing, UnderlineType, Written,
 };
 use casual_slide_model::theme::{ColorScheme, FontScheme, ShapeStyle};
 use casual_slide_model::timing::{SlideTiming, Slot};
@@ -46,7 +46,11 @@ use casual_slide_model::transition::SlideTransition;
 pub mod collab;
 mod design;
 pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE, SectionMark};
+mod review;
 pub mod rich;
+pub use review::Review;
+mod shared;
+pub use shared::sent_form;
 
 /// An error applying an operation. Each has a stable code (`docs/20`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,6 +102,8 @@ pub enum TxnError {
     NoChart(String),
     /// A shared session cannot send this edit yet, so it was not applied (`VS-09`).
     NotShared,
+    /// A review operation on a document that holds no comments (`UX-011`).
+    NoReview,
 }
 
 impl TxnError {
@@ -119,6 +125,7 @@ impl TxnError {
             Self::TableShape => "CS-TXN-0013",
             Self::NoChart(_) => "CS-TXN-0014",
             Self::NotShared => "CS-TXN-0015",
+            Self::NoReview => "CS-TXN-0016",
         }
     }
 }
@@ -203,6 +210,7 @@ impl core::fmt::Display for TxnError {
                 "[{}] this edit cannot be shared with other editors yet",
                 self.code()
             ),
+            Self::NoReview => write!(f, "[{}] this document holds no comments", self.code()),
         }
     }
 }
@@ -226,6 +234,15 @@ pub enum Attribute {
     Fill(Option<Fill>),
     /// `rPr/highlight`: Text Highlight Color. `None` removes it.
     Highlight(Option<Color>),
+    /// `rPr/@strike`: Strikethrough (`PAR-20`).
+    Strike(Option<StrikeType>),
+    /// `rPr/@baseline`, thousandths of a percent: Superscript above 0, Subscript below.
+    Baseline(Option<i32>),
+    /// `rPr/@spc`, hundredths of a point: Character Spacing.
+    Spacing(Option<i32>),
+    /// Clear All Formatting: every character property but the run's language, links,
+    /// bookmark and proofing marks removed, so the run inherits again.
+    Clear,
 }
 
 impl Attribute {
@@ -238,6 +255,24 @@ impl Attribute {
             Self::Latin(v) => p.latin.clone_from(v),
             Self::Fill(v) => p.fill.clone_from(v),
             Self::Highlight(v) => p.highlight = v.clone().map(Some),
+            Self::Strike(v) => p.strike = *v,
+            Self::Baseline(v) => p.baseline = v.map(|b| Written::new(Percentage(b))),
+            Self::Spacing(v) => p.spacing = v.map(|s| Written::new(TextPoint(s))),
+            Self::Clear => {
+                *p = CharacterProperties {
+                    lang: p.lang.take(),
+                    alt_lang: p.alt_lang.take(),
+                    dirty: p.dirty,
+                    error: p.error,
+                    no_proof: p.no_proof,
+                    smart_tag_clean: p.smart_tag_clean,
+                    smart_tag_id: p.smart_tag_id,
+                    bookmark: p.bookmark.take(),
+                    hyperlink_click: p.hyperlink_click.take(),
+                    hyperlink_mouse_over: p.hyperlink_mouse_over.take(),
+                    ..CharacterProperties::default()
+                };
+            }
         }
     }
 }
@@ -257,6 +292,13 @@ pub enum ParagraphChange {
         /// `@indent`.
         indent: Option<i32>,
     },
+    /// `pPr/@lvl`, from 0: Increase and Decrease List Level, Tab and Shift+Tab.
+    Level(Option<u8>),
+    /// `pPr/@marL` alone, EMU: where a list level's text starts when the paragraph
+    /// states its own margin.
+    MarginLeft(Option<i32>),
+    /// `pPr/lnSpc`: Line Spacing.
+    LineSpacing(Option<TextSpacing>),
 }
 
 impl ParagraphChange {
@@ -274,6 +316,9 @@ impl ParagraphChange {
                 p.margin_left = *margin_left;
                 p.indent = *indent;
             }
+            Self::Level(v) => p.level = *v,
+            Self::MarginLeft(v) => p.margin_left = *v,
+            Self::LineSpacing(v) => p.line_spacing.clone_from(v),
         }
     }
 }
@@ -340,6 +385,21 @@ pub enum Operation {
         at: usize,
         /// What.
         text: String,
+    },
+    /// Insert `text` at `at` as typed text whose every run and line break has exactly
+    /// `properties`, rather than taking them from a neighbour: typed text as it crosses
+    /// to another editor, which must format it as its sender did (`COL-01`), and the
+    /// undo of a delete in a shared session. A line feed splits the paragraph as in
+    /// [`Operation::InsertText`].
+    InsertRun {
+        /// The shape.
+        object: ObjectId,
+        /// Where, in characters.
+        at: usize,
+        /// What.
+        text: String,
+        /// The run properties it has; `None` writes no `rPr`.
+        properties: Option<Box<CharacterProperties>>,
     },
     /// Delete `[start, end)`. Paragraphs it spans merge into the first, which keeps its
     /// own paragraph properties. Elements this model does not know stay where they were.
@@ -533,6 +593,42 @@ pub enum Operation {
         /// What it becomes.
         chart: Box<casual_slide_model::chart::ChartPart>,
     },
+    /// Review: a slide's modern comments, whole (`UX-011`); `None` means the slide has no
+    /// comment part. Its inverse is the list it replaced.
+    SetComments {
+        /// The slide part.
+        ordinal: u32,
+        /// What its `p188:cmLst` becomes.
+        comments: Option<Box<casual_slide_model::comment::ThreadedCommentList>>,
+    },
+    /// Review: the modern author list, whole (`UX-011`).
+    SetAuthors {
+        /// What `p188:authorLst` becomes; `None`, no authors part.
+        authors: Option<Box<casual_slide_model::comment::AuthorList>>,
+    },
+    /// Deck: which notes slide a slide has (`UX-011`). A new notes slide is
+    /// [`Operation::AddPart`], then this.
+    SetNotes {
+        /// The slide part.
+        ordinal: u32,
+        /// The notes slide's ordinal; `None` unlinks it.
+        notes: Option<u32>,
+    },
+    /// Properties: a node's `cNvPr` values, its name and `@hidden` among them, as the
+    /// Selection Pane sets them (`UX-011`). Its `@id` cannot change here.
+    SetNonVisual {
+        /// The node.
+        node: ObjectId,
+        /// What they become.
+        non_visual: Option<Box<casual_slide_model::shape::NonVisualDrawing>>,
+    },
+    /// File > Info: the document properties, all three parts, whole. Its inverse is the
+    /// properties it replaced, so undo gives back the very model that was read and the
+    /// writer then patches nothing.
+    SetDocumentProperties {
+        /// What they become.
+        properties: Box<casual_slide_model::properties::DocumentProperties>,
+    },
     /// Several operations as one: applied in order, all or nothing, one undo step.
     Batch(Vec<Operation>),
 }
@@ -547,12 +643,16 @@ impl Operation {
             | Self::DeleteNode { node } => Some(*node),
             Self::InsertNode { node, .. } => Some(node.id),
             Self::InsertText { object, .. }
+            | Self::InsertRun { object, .. }
             | Self::DeleteRange { object, .. }
             | Self::FormatRange { object, .. }
             | Self::FormatParagraphs { object, .. }
             | Self::Restore { object, .. } => Some(*object),
-            Self::SetTable { node, .. } => Some(*node),
-            Self::SetChart { .. } => None,
+            Self::SetTable { node, .. } | Self::SetNonVisual { node, .. } => Some(*node),
+            Self::SetChart { .. }
+            | Self::SetAuthors { .. }
+            | Self::SetDocumentProperties { .. } => None,
+            Self::SetComments { .. } | Self::SetNotes { .. } => None,
             Self::SetColorScheme { .. }
             | Self::SetFontScheme { .. }
             | Self::SetSlideSize { .. }
@@ -587,7 +687,9 @@ impl Operation {
             | Self::RemoveEffect { ordinal, .. }
             | Self::MoveEffect { ordinal, .. }
             | Self::SetEffect { ordinal, .. }
-            | Self::SetEffectStart { ordinal, .. } => Some(*ordinal),
+            | Self::SetEffectStart { ordinal, .. }
+            | Self::SetComments { ordinal, .. }
+            | Self::SetNotes { ordinal, .. } => Some(*ordinal),
             Self::Batch(ops) => ops.iter().find_map(Operation::part),
             _ => self.object().map(|o| o.part),
         }
@@ -623,12 +725,13 @@ impl Operation {
             Self::SetLink { .. } => "Link",
             Self::DeleteNode { .. } => "Delete",
             Self::InsertNode { .. } => "Insert",
-            Self::InsertText { .. } => "Typing",
+            Self::InsertText { .. } | Self::InsertRun { .. } => "Typing",
             Self::DeleteRange { .. } => "Delete",
             Self::FormatRange { .. } | Self::FormatParagraphs { .. } => "Format",
             Self::Restore { .. } => "Edit",
             Self::SetTable { .. } => "Table",
             Self::SetChart { .. } => "Chart Data",
+            Self::SetDocumentProperties { .. } => "Properties",
             Self::SetColorScheme { .. } | Self::SetFontScheme { .. } => "Theme",
             Self::SetSlideSize { .. } => "Slide Size",
             Self::SetSections { .. } => "Section",
@@ -644,6 +747,9 @@ impl Operation {
             | Self::SetEffectStart { .. } => "Animation",
             Self::RemoveEffect { .. } => "Remove Animation",
             Self::MoveEffect { .. } => "Reorder Animations",
+            Self::SetComments { .. } | Self::SetAuthors { .. } => "Comment",
+            Self::SetNotes { .. } => "Notes",
+            Self::SetNonVisual { .. } => "Selection Pane",
             Self::Batch(ops) => ops.first().map_or("Edit", Operation::label),
         }
     }
@@ -711,7 +817,7 @@ fn body_mut(parts: &mut SlideParts, object: ObjectId) -> Result<&mut TextBody, T
         .ok_or(TxnError::NoText(object))
 }
 
-fn properties_of(item: &TextItem) -> Option<&CharacterProperties> {
+pub(crate) fn properties_of(item: &TextItem) -> Option<&CharacterProperties> {
     match item {
         TextItem::Run(r) => r.properties.as_deref(),
         TextItem::Break(b) => b.properties.as_deref(),
@@ -849,8 +955,59 @@ fn insert_plain(p: &mut Paragraph, c: usize, text: &str) {
     );
 }
 
-fn insert_break(p: &mut Paragraph, c: usize) {
-    let properties = typing_properties(p, c);
+/// Insert plain text with these run properties, joining a run that has them where
+/// one holds the character before or starts at `c`, else as a run of its own.
+fn insert_plain_as(
+    p: &mut Paragraph,
+    c: usize,
+    text: &str,
+    properties: &Option<Box<CharacterProperties>>,
+) {
+    if text.is_empty() {
+        return;
+    }
+    let mut acc = 0usize;
+    let mut target: Option<(usize, usize)> = None;
+    for (index, item) in p.items.iter().enumerate() {
+        let len = item_length(item);
+        if let TextItem::Run(run) = item
+            && run.properties == *properties
+        {
+            if acc < c && c <= acc.saturating_add(len) {
+                target = Some((index, c - acc));
+                break;
+            }
+            if acc == c && target.is_none() {
+                target = Some((index, 0));
+            }
+        }
+        acc = acc.saturating_add(len);
+        if acc > c {
+            break;
+        }
+    }
+    if let Some((index, at)) = target
+        && let Some(TextItem::Run(run)) = p.items.get_mut(index)
+    {
+        let (left, right) = split_chars(run.text.as_deref().unwrap_or(""), at);
+        run.text = Some(format!("{left}{text}{right}"));
+        return;
+    }
+    let index = split_at(&mut p.items, c);
+    p.items.insert(
+        index,
+        TextItem::Run(TextRun {
+            properties: properties.clone(),
+            text: Some(text.to_owned()),
+        }),
+    );
+}
+
+fn insert_break(p: &mut Paragraph, c: usize, given: Option<&Option<Box<CharacterProperties>>>) {
+    let properties = match given {
+        Some(p) => p.clone(),
+        None => typing_properties(p, c),
+    };
     let index = split_at(&mut p.items, c);
     p.items
         .insert(index, TextItem::Break(LineBreak { properties }));
@@ -883,6 +1040,7 @@ fn apply_insert(
     object: ObjectId,
     at: usize,
     text: &str,
+    given: Option<&Option<Box<CharacterProperties>>>,
 ) -> Result<Applied, TxnError> {
     let (first, c) = locate(body, at)?;
     let Some(before) = body.paragraphs.get(first).cloned() else {
@@ -896,7 +1054,10 @@ fn apply_insert(
     let mut pending = String::new();
     let flush = |body: &mut TextBody, current: usize, c: &mut usize, pending: &mut String| {
         if let Some(p) = body.paragraphs.get_mut(current) {
-            insert_plain(p, *c, pending);
+            match given {
+                Some(properties) => insert_plain_as(p, *c, pending, properties),
+                None => insert_plain(p, *c, pending),
+            }
             *c = c.saturating_add(pending.chars().count());
         }
         pending.clear();
@@ -916,7 +1077,7 @@ fn apply_insert(
             '\u{b}' => {
                 flush(body, current, &mut c, &mut pending);
                 if let Some(p) = body.paragraphs.get_mut(current) {
-                    insert_break(p, c);
+                    insert_break(p, c, given);
                     c = c.saturating_add(1);
                 }
             }
@@ -1164,11 +1325,17 @@ fn parent_of(root: &mut ShapeNode, id: ObjectId) -> Option<(&mut ShapeNode, usiz
     None
 }
 
-fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Applied, TxnError> {
+pub(crate) fn apply_inner<D: Document + ?Sized>(
+    doc: &mut D,
+    op: Operation,
+) -> Result<Applied, TxnError> {
     if let Some(applied) = design::apply_design(doc, &op)? {
         return Ok(applied);
     }
     if let Some(applied) = rich::apply_rich(doc, &op)? {
+        return Ok(applied);
+    }
+    if let Some(applied) = review::apply_review(doc, &op)? {
         return Ok(applied);
     }
     let parts = doc.parts_mut();
@@ -1258,8 +1425,20 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
             Ok((Operation::DeleteNode { node: id }, true))
         }
         Operation::InsertText { object, at, text } => {
-            apply_insert(body_mut(parts, object)?, object, at, &text)
+            apply_insert(body_mut(parts, object)?, object, at, &text, None)
         }
+        Operation::InsertRun {
+            object,
+            at,
+            text,
+            properties,
+        } => apply_insert(
+            body_mut(parts, object)?,
+            object,
+            at,
+            &text,
+            Some(&properties),
+        ),
         Operation::DeleteRange { object, start, end } => {
             apply_delete(body_mut(parts, object)?, object, start, end)
         }
@@ -1286,10 +1465,16 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
         | Operation::SetFontScheme { .. }
         | Operation::SetSlideSize { .. }
         | Operation::SetSections { .. }
-        | Operation::SetBackground { .. } => Err(TxnError::NoDesign),
+        | Operation::SetBackground { .. }
+        | Operation::SetDocumentProperties { .. } => Err(TxnError::NoDesign),
         // Handled by `rich::apply_rich` above.
         Operation::SetTable { node, .. } => Err(TxnError::NoTable(node)),
         Operation::SetChart { part, .. } => Err(TxnError::NoChart(part)),
+        // Handled by `review::apply_review` above.
+        Operation::SetComments { .. }
+        | Operation::SetAuthors { .. }
+        | Operation::SetNotes { .. }
+        | Operation::SetNonVisual { .. } => Err(TxnError::NoReview),
         Operation::AddPart { entry, part } => slides::add_part(parts, *entry, *part),
         Operation::DropPart { ordinal } => slides::drop_part(parts, ordinal),
         Operation::InsertSlide { index, ordinal } => slides::insert_slide(parts, index, ordinal),
@@ -1439,14 +1624,22 @@ impl History {
         op: Operation,
     ) -> Result<bool, TxnError> {
         self.admit(&op)?;
-        let journaled = self.journal.is_some().then(|| op.clone());
-        let (inverse, changed) = apply_inner(doc, op)?;
-        if !changed {
-            return Ok(false);
-        }
-        if let Some(op) = journaled {
-            self.note(op, &inverse);
-        }
+        let inverse = if self.journal.is_some() {
+            // Shared: send what another copy applies the same way, and keep for undo
+            // what takes this back over others' edits (`shared`).
+            let (sent, undo, _, changed) = shared::apply_shared(doc, op)?;
+            if !changed {
+                return Ok(false);
+            }
+            self.note(sent, &undo);
+            undo
+        } else {
+            let (inverse, changed) = apply_inner(doc, op)?;
+            if !changed {
+                return Ok(false);
+            }
+            inverse
+        };
         self.applied = self.applied.saturating_add(1);
         self.pushes = self.pushes.saturating_add(1);
         self.undo.push(inverse);
@@ -1504,6 +1697,30 @@ impl History {
         self.undo.last()
     }
 
+    /// Apply an undo or redo step, journaling it; its inverse, in the shared form when
+    /// a session is on.
+    fn step<D: Document + ?Sized>(
+        &mut self,
+        doc: &mut D,
+        op: Operation,
+    ) -> Result<Operation, TxnError> {
+        if self.journal.is_some() {
+            let (sent, undo, _, _) = shared::apply_shared(doc, op)?;
+            self.note(sent, &undo);
+            Ok(undo)
+        } else {
+            apply(doc, op)
+        }
+    }
+
+    /// Give `f` the undo stack, then the redo stack, each oldest first, to rebase
+    /// over an edit another participant made (`docs/24` §Undo). The top of each is
+    /// the last entry.
+    pub fn rebase_stacks(&mut self, f: &mut dyn FnMut(&mut [Operation])) {
+        f(&mut self.undo);
+        f(&mut self.redo);
+    }
+
     /// Undo the last step; returns what it applied, `None` with nothing to undo.
     pub fn undo<D: Document + ?Sized>(
         &mut self,
@@ -1517,14 +1734,13 @@ impl History {
             return Err(e);
         }
         let applied = op.clone();
-        let inverse = match apply(doc, op) {
+        let inverse = match self.step(doc, op) {
             Ok(i) => i,
             Err(e) => {
                 self.undo.push(applied);
                 return Err(e);
             }
         };
-        self.note(applied.clone(), &inverse);
         self.seal();
         self.applied = self.applied.saturating_add(1);
         self.redo.push(inverse);
@@ -1544,14 +1760,13 @@ impl History {
             return Err(e);
         }
         let applied = op.clone();
-        let inverse = match apply(doc, op) {
+        let inverse = match self.step(doc, op) {
             Ok(i) => i,
             Err(e) => {
                 self.redo.push(applied);
                 return Err(e);
             }
         };
-        self.note(applied.clone(), &inverse);
         self.seal();
         self.applied = self.applied.saturating_add(1);
         self.undo.push(inverse);
@@ -1568,6 +1783,8 @@ pub use animate::{
 
 #[cfg(test)]
 mod animate_tests;
+#[cfg(test)]
+mod review_tests;
 #[cfg(test)]
 mod rich_tests;
 #[cfg(test)]

@@ -35,11 +35,14 @@ mod collab;
 pub use collab::MAX_PARTICIPANT;
 mod clipboard;
 mod edit;
+mod file;
+pub use file::{CustomKind, PROPERTY_KEYS};
 mod format;
 #[cfg(test)]
 mod home_tests;
 mod picture;
 pub use picture::{MAX_CROP, MAX_PAD, PICTURE_STYLES};
+mod review;
 mod rich;
 mod shapes;
 pub use animate::AnimationItem;
@@ -259,6 +262,8 @@ pub struct Viewer {
     /// Each master's theme as opened, and the slide size (`VS-12`).
     original_themes: BTreeMap<u32, casual_slide_model::theme::Theme>,
     original_size: (i64, i64),
+    /// The document properties as opened: what a save patches `docProps` from.
+    original_properties: casual_slide_model::properties::DocumentProperties,
     history: History,
     /// Chart parts of the file whose data was edited (`VS-11`), patched at save.
     edited_charts: std::collections::BTreeSet<String>,
@@ -283,6 +288,11 @@ pub struct Viewer {
     shared: Option<collab::Shared>,
     /// This deck's number in the session, so a paste knows whether it came from it.
     serial: u64,
+    /// The deck's modern comments and authors, edited (`UX-011`), and as opened.
+    review: casual_slide_transaction::Review,
+    original_review: casual_slide_transaction::Review,
+    /// Where each slide's comment part and the author list were found, as opened.
+    review_parts: review::ReviewParts,
 }
 
 impl Viewer {
@@ -290,9 +300,11 @@ impl Viewer {
     /// reader's code; a damaged one opens with a best reading where the reader recovers one (`docs/29`).
     pub fn open(bytes: Vec<u8>) -> Result<Self, BridgeError> {
         let deck = Deck::open(bytes)?;
+        let (original_review, review_parts) = review::read(&deck);
         let original = deck.parts().clone();
         let original_themes = deck.themes().clone();
         let original_size = deck.size();
+        let original_properties = deck.properties().clone();
         let sections = sections::read_sections(deck.source_bytes(), &deck.parts().structure);
         Ok(Self {
             deck,
@@ -300,6 +312,7 @@ impl Viewer {
             original,
             original_themes,
             original_size,
+            original_properties,
             history: History::with_depth(Some(UNDO_DEPTH)),
             edited_charts: std::collections::BTreeSet::new(),
             typing: None,
@@ -312,6 +325,9 @@ impl Viewer {
             minted: 0,
             shared: None,
             serial: clipboard::next_serial(),
+            review: original_review.clone(),
+            original_review,
+            review_parts,
         })
     }
 
@@ -620,9 +636,11 @@ impl Viewer {
     /// Undo the latest edit; the slide it changed, if any.
     pub fn undo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self
-            .history
-            .undo(&mut DeckDoc(&mut self.deck, Some(&mut self.sections)))?;
+        let op = self.history.undo(&mut DeckDoc(
+            &mut self.deck,
+            &mut self.review,
+            Some(&mut self.sections),
+        ))?;
         self.reports.clear();
         Ok(self.slide_of(op))
     }
@@ -630,9 +648,11 @@ impl Viewer {
     /// Redo the latest undone edit; the slide it changed, if any.
     pub fn redo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self
-            .history
-            .redo(&mut DeckDoc(&mut self.deck, Some(&mut self.sections)))?;
+        let op = self.history.redo(&mut DeckDoc(
+            &mut self.deck,
+            &mut self.review,
+            Some(&mut self.sections),
+        ))?;
         self.reports.clear();
         Ok(self.slide_of(op))
     }
@@ -1529,6 +1549,20 @@ pub fn open_blank() -> Result<(), JsError> {
     Ok(())
 }
 
+/// File > New from a template (`PAR-18`): the blank presentation in built-in theme
+/// `theme` (an index of [`design_themes`]), replacing any deck open before.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a theme that is not there; `CS-WSM-0007` if the blank deck could
+/// not be built.
+#[wasm_bindgen]
+pub fn open_template(theme: u32) -> Result<(), JsError> {
+    let viewer = Viewer::template(theme as usize).map_err(js)?;
+    SESSION.with(|s| *s.borrow_mut() = Some(viewer));
+    Ok(())
+}
+
 /// The deck's layouts for the New Slide gallery: `[ordinal, name, ordinal, name, …]`.
 /// A name is document text: the page shows it through `textContent` only.
 ///
@@ -2347,8 +2381,26 @@ pub fn text_run_state(part: u32, node: u32, offset: u32) -> Result<Vec<String>, 
     with_viewer(|v| v.run_state(object(part, node), offset as usize))
 }
 
+/// Change Case over `[start, end)` (`PAR-20`): `mode` `sentence`, `lower`, `upper`,
+/// `title` or `toggle`. One undo step; each run keeps its look.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another mode or a range past the text.
+#[wasm_bindgen]
+pub fn text_change_case(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    mode: &str,
+) -> Result<bool, JsError> {
+    with_viewer(|v| v.change_case(object(part, node), (start as usize, end as usize), mode))
+}
+
 /// Set a Font group value over `[start, end)`: `what` 0 font name, 1 size in points,
-/// 2 font colour, 3 highlight (a colour as [`parse_color`] reads it, or empty to clear).
+/// 2 font colour, 3 highlight (a colour as [`parse_color`] reads it, or empty to clear),
+/// 4 character spacing in points (empty for normal), 5 clear all formatting.
 ///
 /// # Errors
 ///
@@ -2383,8 +2435,10 @@ pub fn text_grow(part: u32, node: u32, start: u32, end: u32, up: bool) -> Result
     with_viewer(|v| v.grow_text(object(part, node), (start as usize, end as usize), up))
 }
 
-/// Paragraph alignment (`what` 0: `l`, `ctr`, `r`, `just`) or Bullets (`what` 1: `on`,
-/// `off`, `toggle`) for the paragraphs `[start, end)` touches.
+/// Paragraph alignment (`what` 0: `l`, `ctr`, `r`, `just`), Bullets (`what` 1: `on`,
+/// `off`, `toggle` or a gallery style), Numbering (`what` 2: `toggle`, `off` or a
+/// scheme), List Level (`what` 3: `up`, `down`) or Line Spacing (`what` 4: lines) for
+/// the paragraphs `[start, end)` touches (`PAR-06`).
 ///
 /// # Errors
 ///
@@ -2668,6 +2722,60 @@ pub fn text_replace_all(part: u32, node: u32, text: String) -> Result<bool, JsEr
     with_viewer(|v| v.replace_text(object(part, node), &text))
 }
 
+/// Paste formatted text from another application over `[start, end)` (`PAR-11`), one
+/// undo step: `texts` the runs, `looks` five numbers a run (bold, italic, underline as
+/// -1 unsaid, 0 or 1; size in hundredths of a point and colour as `0xRRGGBB`, -1
+/// unsaid), `lists` two a pasted paragraph (0 plain, 1 bulleted, 2 numbered; level).
+/// Where the caret lands.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a range past the text, lists not in twos or looks not in fives, or
+/// past the paste bound of 262144 characters; the edit's own code.
+#[wasm_bindgen]
+pub fn text_paste_rich(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    texts: Vec<String>,
+    looks: Vec<i32>,
+    lists: Vec<u8>,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        if looks.len() != texts.len().saturating_mul(5) || !lists.len().is_multiple_of(2) {
+            return Err(BridgeError::BadArgument);
+        }
+        let flag = |n: i32| (n >= 0).then_some(n > 0);
+        let pieces: Vec<format::RichPiece> = texts
+            .into_iter()
+            .zip(looks.chunks_exact(5))
+            .map(|(text, l)| format::RichPiece {
+                text,
+                bold: l.first().copied().and_then(flag),
+                italic: l.get(1).copied().and_then(flag),
+                underline: l.get(2).copied().and_then(flag),
+                size: l.get(3).copied().filter(|&n| n > 0),
+                color: l.get(4).copied().and_then(|n| u32::try_from(n).ok()),
+            })
+            .collect();
+        let paragraphs: Vec<format::RichParagraph> = lists
+            .chunks_exact(2)
+            .map(|p| format::RichParagraph {
+                list: p.first().copied().unwrap_or(0),
+                level: p.get(1).copied().unwrap_or(0),
+            })
+            .collect();
+        v.paste_rich(
+            object(part, node),
+            (start as usize, end as usize),
+            &pieces,
+            &paragraphs,
+        )
+        .map(to_u32)
+    })
+}
+
 /// The plain text of `[start, end)`, for Copy and Cut.
 ///
 /// # Errors
@@ -2709,6 +2817,46 @@ pub fn copy_shapes(index: u32, nodes: Vec<u32>) -> Result<u32, JsError> {
     let n = to_u32(clip.len());
     clipboard::keep(clip);
     Ok(n)
+}
+
+/// Copy slides `indices` to the engine's clipboard for the thumbnail pane (`PAR-10`),
+/// which outlives the deck; how many it holds.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for no slide, too many, or one that is not there.
+#[wasm_bindgen]
+pub fn copy_slides(indices: Vec<u32>) -> Result<u32, JsError> {
+    let indices: Vec<usize> = indices.into_iter().map(|i| i as usize).collect();
+    let clip = with_viewer(|v| v.copy_slides(&indices))?;
+    let n = to_u32(clip.len());
+    clipboard::keep_slides(clip);
+    Ok(n)
+}
+
+/// How many slides the engine's clipboard holds.
+#[wasm_bindgen]
+pub fn clipboard_slides() -> u32 {
+    clipboard::kept_slides().map_or(0, |c| to_u32(c.len()))
+}
+
+/// Paste the engine's slides at place `at`, one undo step: `[first place, how many,
+/// objects left out]`, the last only when they came from another deck.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a place past the end; the edit's own code.
+#[wasm_bindgen]
+pub fn paste_slides(at: u32) -> Result<Vec<u32>, JsError> {
+    let Some(clip) = clipboard::kept_slides() else {
+        return Ok(Vec::new());
+    };
+    with_viewer(|v| {
+        let other = !clip.from(v);
+        let first = v.paste_slides(at as usize, &clip)?;
+        let skipped = if other { clip.skipped() } else { 0 };
+        Ok(vec![to_u32(first), to_u32(clip.len()), to_u32(skipped)])
+    })
 }
 
 /// How many shapes the engine's clipboard holds.

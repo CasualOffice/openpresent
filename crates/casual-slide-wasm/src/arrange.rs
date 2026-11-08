@@ -1,17 +1,12 @@
 //! Home > Arrange and Shape Format > Arrange (`UX-006`): Bring to Front, Bring
 //! Forward, Send Backward, Send to Back, and Flip Horizontal or Vertical, each one undo
 //! step. Order is the shape tree's: a move is a `DeleteNode` and an `InsertNode` of
-//! the same node at its new place; the save pass moves the element in the file
-//! (`Op::MoveShape`) and changes nothing else.
+//! the same node at its new place, which the save's `order_pass` (`review.rs`) puts
+//! in the file, changing nothing else.
 
-use std::collections::BTreeSet;
-
-use casual_slide_export::writer::{Op, SavePlan, SlideRef};
 use casual_slide_model::shape::ObjectId;
-use casual_slide_render::Deck;
 use casual_slide_transaction::{Operation, TxnError};
 
-use crate::build::spid;
 use crate::{BridgeError, Viewer};
 
 /// Where Arrange moves a shape in z-order.
@@ -165,47 +160,5 @@ impl Viewer {
         t.map_or((false, false), |t| {
             (t.flip_h == Some(true), t.flip_v == Some(true))
         })
-    }
-
-    /// The save pass for z-order: each slide whose top-level shapes the model orders
-    /// differently from the file gets them moved, one `Op::MoveShape` a shape, in the
-    /// model's order. A slide with a top-level shape without an id is left alone.
-    pub(crate) fn order_pass(&self, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
-        let file = Deck::open(bytes.clone())?;
-        let model = self.deck.parts();
-        let mut plan = SavePlan::new();
-        let mut any = false;
-        let fparts = file.parts();
-        for (i, &o) in fparts.structure.slides.iter().enumerate() {
-            let (Some(entry), Some(f), Some(m)) =
-                (fparts.structure.entry(o), fparts.get(o), model.slide(i))
-            else {
-                continue;
-            };
-            let (Some(ft), Some(mt)) = (f.shape_tree(), m.shape_tree()) else {
-                continue;
-            };
-            let fo: Option<Vec<u32>> = ft.children.iter().map(spid).collect();
-            let mo: Option<Vec<u32>> = mt.children.iter().map(spid).collect();
-            let (Some(fo), Some(mo)) = (fo, mo) else {
-                continue;
-            };
-            let same_set = fo.iter().collect::<BTreeSet<_>>() == mo.iter().collect::<BTreeSet<_>>();
-            if fo == mo || !same_set {
-                continue;
-            }
-            for (index, &shape_id) in mo.iter().enumerate() {
-                plan = plan.op(Op::MoveShape {
-                    slide: SlideRef::Part(entry.part.clone()),
-                    shape_id,
-                    index,
-                });
-            }
-            any = true;
-        }
-        if !any {
-            return Ok(bytes);
-        }
-        Self::run(&plan, bytes)
     }
 }

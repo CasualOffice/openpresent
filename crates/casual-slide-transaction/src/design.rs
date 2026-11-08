@@ -57,6 +57,18 @@ pub trait Document {
         let _ = part;
         None
     }
+
+    /// The deck's modern comments and authors (`UX-011`), if the host keeps them.
+    fn review_mut(&mut self) -> Option<&mut crate::Review> {
+        None
+    }
+
+    /// The document properties (File > Info), if this document holds them.
+    fn properties_mut(
+        &mut self,
+    ) -> Option<&mut casual_slide_model::properties::DocumentProperties> {
+        None
+    }
 }
 
 impl Document for SlideParts {
@@ -147,6 +159,17 @@ pub(crate) fn apply_design<D: Document + ?Sized>(
             let changed = slot != sections;
             let before = core::mem::replace(slot, sections.clone());
             (Operation::SetSections { sections: before }, changed)
+        }
+        Operation::SetDocumentProperties { properties } => {
+            let slot = doc.properties_mut().ok_or(TxnError::NoDesign)?;
+            let changed = **properties != *slot;
+            let before = core::mem::replace(slot, (**properties).clone());
+            (
+                Operation::SetDocumentProperties {
+                    properties: Box::new(before),
+                },
+                changed,
+            )
         }
         _ => return Ok(None),
     };

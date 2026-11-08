@@ -60,9 +60,33 @@ Items carry object ids so the editor can invalidate and reuse them per object.
 | `-render` tiny-skia | Server thumbnails, PNG, the fidelity gate | Same outlines |
 | `-render` PDF | Export, print | Embedded subset fonts, real text |
 
+**As built (at `8011d28`).** The Canvas2D painter is not built. The editor, thumbnails and the
+slide show draw PNGs made by `-render`'s tiny-skia backend inside `casual-slide-wasm`, in the
+editor's worker (`render_slide_png`, and `render_slide_png_hiding` to leave out a shape being
+edited); caret, selection and handles are drawn over them in SVG. The PDF backend serves Export to
+PDF; File > Print draws each shown slide as a PNG at print width, one a page (`FILE-01`). So the
+first row of the table is the target, and the second row serves the editor's uses today.
+
 A stroke is never drawn thinner than one device pixel, as PowerPoint draws a 0.5 pt theme line
 as a solid pixel at low zoom; a line end is sized in line widths from at least 2 pt, so a thin
 line's arrowhead stays readable (`SHAPE-02`; an estimate, not measured against PowerPoint).
+
+In the PNG backend a solid rectangle fill, and a solid undashed stroke made only of lines across
+and down the page, have their edges moved to whole pixels, at least one pixel wide, and are drawn
+unsmoothed (`FH-06`): a 0.5 pt box outline is one solid row, not two rows at two-thirds cover.
+That is OpenCalc's way with cell fills and gridlines, and what poppler's Splash does to the
+LibreOffice reference by stroke adjustment. Curves, slanted lines, dashes, gradients and pictures
+keep smoothed edges; round corners and ends are adjusted only up to 2 px wide. The PDF backend
+leaves this to the viewer.
+A line's height is the tallest of its runs' faces, each run counting its substituted face and,
+when it names an East Asian font (`ea`, theme references followed) that it does not draw in, that
+font's face too: Times New Roman text with `ea` Calibri is spaced at Carlito's 1.22 em, not
+Liberation Serif's 1.11 (`FH-06`; Inferred from LibreOffice, which spaces it so, and from Office
+opening Latin lines under a tall East Asian theme font; unmeasured on PowerPoint, `PV-01`).
+
+Likewise each glyph of an upright, unskewed run is placed at the nearest whole device pixel, so
+its edges meet the grid the same way wherever its line falls, as Splash places glyphs and GDI a
+baseline; outlines are still unhinted and smoothed, and rotated runs keep exact positions.
 
 Glyph paths rather than `fillText` because `fillText` re-shapes and can disagree with the engine.
 The cost is losing LCD antialiasing and hinting, which matter little at slide scale and not at all

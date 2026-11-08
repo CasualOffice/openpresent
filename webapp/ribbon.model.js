@@ -39,6 +39,10 @@ const SECTION = ["slide.section.add", "slide.section.rename", "slide.section.rem
 const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.distribute-horizontal", "arrange.distribute-vertical", "arrange.rotate-right", "arrange.rotate-left", "arrange.flip-vertical", "arrange.flip-horizontal", "arrange.selection-pane"];
 const ROTATE = ["arrange.rotate-right", "arrange.rotate-left", "arrange.flip-vertical", "arrange.flip-horizontal"];
 const SELECT = ["edit.select-all", "arrange.selection-pane"];
+// The Bullets and Numbering galleries and Line Spacing (`PAR-06`, `editor.home.js`).
+const BULLETS = ["para.bullets", "para.bullets.none", "para.bullets.round", "para.bullets.hollow", "para.bullets.square", "para.bullets.hollow-square", "para.bullets.star", "para.bullets.arrow", "para.bullets.check"];
+const NUMBERING = ["para.numbering", "para.numbering.none", "para.numbering.arabicPeriod", "para.numbering.arabicParenR", "para.numbering.romanUcPeriod", "para.numbering.alphaUcPeriod", "para.numbering.alphaLcParenR", "para.numbering.alphaLcPeriod", "para.numbering.romanLcPeriod"];
+const LINE_SPACING = ["para.line-spacing.1.0", "para.line-spacing.1.5", "para.line-spacing.2.0", "para.line-spacing.2.5", "para.line-spacing.3.0"];
 const PRESENT = ["slideshow.from-beginning", "slideshow.from-current", "slideshow.presenter-view"];
 
 // Our own gallery swatches: plain colour pairs, not Microsoft's theme artwork. The
@@ -64,7 +68,7 @@ export const TABS = [
       R([[I("edit.undo", "arrow_undo", "Undo (Ctrl+Z)")], [I("edit.redo", "arrow_redo", "Redo (Ctrl+Y)")]]),
     ] },
     { label: "Clipboard", fold: 6, icon: "clipboard_paste", launcher: "edit.clipboard", items: [
-      L("edit.paste", "clipboard_paste", "Paste (Ctrl+V)", { menu: ["edit.paste", "edit.paste-text"] }),
+      L("edit.paste", "clipboard_paste", "Paste (Ctrl+V)", { menu: ["edit.paste", "edit.paste-keep-source", "edit.paste-dest-theme", "edit.paste-text"] }),
       R([[S("edit.cut", "cut", "Cut (Ctrl+X)")], [S("edit.copy", "copy", "Copy (Ctrl+C)", { menu: ["edit.copy", "edit.duplicate"] })], [S("home.format-painter", "paint_brush", "Format Painter")]]),
     ] },
     { label: "Slides", fold: 7, icon: "slide_add", items: [
@@ -75,13 +79,14 @@ export const TABS = [
       R([
         [C("font.name", "Font", 110), C("font.size", "Font Size", 48), I("font.increase", "font_increase", "Increase Font Size (Ctrl+Shift+>)"), I("font.decrease", "font_decrease", "Decrease Font Size (Ctrl+Shift+<)"), I("font.clear", "text_clear_formatting", "Clear All Formatting (Ctrl+Space)")],
         [I("font.bold", "text_bold", "Bold (Ctrl+B)"), I("font.italic", "text_italic", "Italic (Ctrl+I)"), I("font.underline", "text_underline", "Underline (Ctrl+U)"), I("font.strike", "text_strikethrough", "Strikethrough"),
-         I("font.subscript", "text_subscript", "Subscript (Ctrl+=)"), I("font.superscript", "text_superscript", "Superscript (Ctrl+Shift++)"), I("font.case", "text_change_case", "Change Case", { menu: ["font.case.sentence", "font.case.lower", "font.case.upper", "font.case.title"] }),
+         I("font.subscript", "text_subscript", "Subscript (Ctrl+=)"), I("font.superscript", "text_superscript", "Superscript (Ctrl+Shift++)"), I("font.case", "text_change_case", "Change Case", { menu: ["font.case.sentence", "font.case.lower", "font.case.upper", "font.case.title", "font.case.toggle"] }),
+         I("font.spacing", "text_font", "Character Spacing", { menu: ["font.spacing.very-tight", "font.spacing.tight", "font.spacing.normal", "font.spacing.loose", "font.spacing.very-loose"] }),
          I("font.highlight", "highlight", "Text Highlight Color"), I("font.color", "text_color", "Font Color")],
       ]),
     ] },
     { label: "Paragraph", fold: 8, icon: "text_align_left", launcher: "para.dialog", items: [
       R([
-        [I("para.bullets", "text_bullet_list_ltr", "Bullets"), I("para.numbering", "text_number_list_ltr", "Numbering", { menu: ["para.numbering"] }), I("para.indent-less", "text_indent_decrease", "Decrease List Level (Shift+Tab)"), I("para.indent-more", "text_indent_increase", "Increase List Level (Tab)"), I("para.line-spacing", "text_line_spacing", "Line Spacing", { menu: ["para.line-spacing"] })],
+        [I("para.bullets", "text_bullet_list_ltr", "Bullets", { menu: BULLETS }), I("para.numbering", "text_number_list_ltr", "Numbering", { menu: NUMBERING }), I("para.indent-less", "text_indent_decrease", "Decrease List Level (Shift+Tab)"), I("para.indent-more", "text_indent_increase", "Increase List Level (Tab)"), I("para.line-spacing", "text_line_spacing", "Line Spacing", { menu: LINE_SPACING })],
         [I("para.left", "text_align_left", "Align Left (Ctrl+L)"), I("para.center", "text_align_center", "Center (Ctrl+E)"), I("para.right", "text_align_right", "Align Right (Ctrl+R)"), I("para.justify", "text_align_justify", "Justify (Ctrl+J)"),
          I("para.columns", "text_column_two", "Columns", { menu: ["para.columns"] }), I("para.direction", "text_direction_rotate_270_right", "Text Direction", { menu: ["para.direction"] }), I("para.align-text", "align_center_vertical", "Align Text", { menu: ["para.align-text"] })],
       ]),
@@ -296,34 +301,43 @@ TABS.push(
 /// The File page, in PowerPoint's order. As OpenCalc's: each page is a list of
 /// sections, and an item names a command, its icon, and one line of what it does.
 const F = (id, icon, label, desc) => ({ id, icon, label, desc });
+/// The built-in themes File > New offers as templates, in the engine's order
+/// (`casual-slide-wasm` `THEMES`); the tiles take their colours from the engine.
+export const TEMPLATES = ["Plain", "Harbour", "Meadow", "Ember", "Slate", "Orchid"];
 export const FILE_RAIL = [
   { id: "new", label: "New", icon: "document_add", sections: [
     { tiles: true, items: [F("file.new", "slide_add", "Blank Presentation", "Start a new presentation with one title slide")] },
+    // Our own templates, one for each built-in theme (`PAR-18`), not Microsoft's.
+    { title: "Templates", tiles: true, items: TEMPLATES.map((name, i) =>
+      F(`file.new.template.${i}`, "slide_add", name, `Start a new presentation in the ${name} theme`)) },
   ] },
   { id: "open", label: "Open", icon: "folder_open", sections: [
     { items: [F("file.open", "folder_open", "Browse", "Open a PowerPoint presentation (.pptx) from this device. It stays in this browser")] },
   ] },
-  { id: "info", label: "Info", icon: "info", sections: [
+  // Info: the properties panel beside these is drawn by `editor.file.js` (`FILE-01`).
+  { id: "info", label: "Info", icon: "info", panel: "info", sections: [
     { items: [
+      F("file.properties", "settings", "Advanced Properties", "Every summary field, and custom properties: names, types and values saved with the presentation"),
       F("file.render-report", "warning", "What this slide leaves out", "Features on the current slide this build does not draw yet, by name and count"),
-      F("file.properties", "info", "Properties", "Title, author and other properties saved with the presentation"),
       F("file.version-history", "history", "Version History", "See and restore earlier versions of this presentation"),
     ] },
   ] },
-  { id: "save", label: "Save a Copy", icon: "save", sections: [
+  { id: "save", label: "Save As", icon: "save", sections: [
     { items: [
-      F("file.save", "save", "Save", "Download this presentation (.pptx). Unedited, it is the file you opened, byte for byte (Ctrl+S)"),
-      F("file.save-copy", "save", "Save a Copy", "Download a copy of this presentation (.pptx)"),
+      F("file.save", "save", "Save", "Download this presentation under its name. Unedited, it is the file you opened, byte for byte (Ctrl+S)"),
+      F("file.save-as", "save", "Save As", "Choose a name and a type: PowerPoint Presentation, Template or Show (F12)"),
+      F("file.save-copy", "arrow_download", "Download a Copy", "Download a copy of this presentation to this device"),
+      F("file.rename", "edit", "Rename", "Give this presentation a new name. Save, Save As and Export use it"),
     ] },
   ] },
-  { id: "export", label: "Export", icon: "arrow_download", sections: [
+  { id: "export", label: "Export", icon: "arrow_export", sections: [
     { items: [
       F("file.export-pdf", "document_pdf", "Download as PDF", "Save every slide as one PDF document, with text you can search and copy"),
       F("file.export-png", "image", "Download as Image", "Save the current slide as a PNG picture, 1920 pixels wide"),
     ] },
   ] },
   { id: "print", label: "Print", icon: "print", sections: [
-    { items: [F("file.print", "print", "Print", "Print the slides (Ctrl+P)")] },
+    { items: [F("file.print", "print", "Print", "Print the slides through this browser, one slide a page (Ctrl+P)")] },
   ] },
   { id: "share", label: "Share", icon: "share", sections: [
     { items: [F("file.share", "people", "Share with people", "Invite others to view or edit this presentation")] },
@@ -373,6 +387,12 @@ export const LABELS = {
   "font.case.lower": "lowercase",
   "font.case.upper": "UPPERCASE",
   "font.case.title": "Capitalize Each Word",
+  "font.case.toggle": "tOGGLE cASE",
+  "font.spacing.very-tight": "Very Tight",
+  "font.spacing.tight": "Tight",
+  "font.spacing.normal": "Normal",
+  "font.spacing.loose": "Loose",
+  "font.spacing.very-loose": "Very Loose",
   "arrange.bring-to-front": "Bring to Front (Ctrl+Shift+])",
   "arrange.bring-forward": "Bring Forward (Ctrl+])",
   "arrange.send-backward": "Send Backward (Ctrl+[)",

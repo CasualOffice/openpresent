@@ -321,3 +321,34 @@ fn an_underlined_title_draws_a_line_under_its_text() {
     let after = longest(&mut v);
     assert_eq!(after, x1 - x0, "a row is dark right across the text");
 }
+
+/// File > New's template gallery (`PAR-18`): each built-in theme makes a new deck that
+/// opens with the theme's colours, nothing to undo and no edits to lose, and saves to
+/// a deck that opens again with them.
+#[test]
+fn each_template_makes_a_new_deck_in_its_theme_with_nothing_to_undo() {
+    assert!(
+        casual_slide_wasm::THEMES.len() >= 6,
+        "at least six templates"
+    );
+    for (i, theme) in casual_slide_wasm::THEMES.iter().enumerate() {
+        let v = Viewer::template(i).unwrap();
+        assert_eq!(v.slide_count(), 1, "{}: one title slide", theme.name);
+        assert_eq!(
+            v.theme_colors(),
+            theme.variants[0].to_vec(),
+            "{}",
+            theme.name
+        );
+        assert_eq!(v.can_undo_redo(), (false, false), "{}", theme.name);
+        assert_eq!(v.edits_applied(), 0, "{}", theme.name);
+        let again = Viewer::open(v.save().unwrap()).unwrap();
+        assert_eq!(
+            again.theme_colors(),
+            theme.variants[0].to_vec(),
+            "{}",
+            theme.name
+        );
+    }
+    assert!(Viewer::template(casual_slide_wasm::THEMES.len()).is_err());
+}

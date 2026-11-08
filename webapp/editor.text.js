@@ -23,6 +23,7 @@ import { state, request, changed, status } from "./editor.core.js";
 import { register, run } from "./commands.js";
 import * as slides from "./editor.slides.js";
 import * as shapes from "./editor.selection.js";
+import * as keys from "./editor.keys.js";
 
 const SVG = "http://www.w3.org/2000/svg";
 const byId = (id) => document.getElementById(id);
@@ -34,7 +35,9 @@ const SETTLE_MS = 400;
 
 let overlay = null;    // <svg> over the slide
 let input = null;      // hidden <textarea>
-let formatBits = 0;    // bit 1 bold, 2 italic, 4 underline
+let formatBits = 0;    // bit 1 bold, 2 italic, 4 underline, 8 strike, 16 superscript, 32 subscript
+/// The pressed state of the Font group's toggles at the caret (`PAR-20`).
+export const caretFormatBits = () => (selection.editing ? formatBits : 0);
 let runState = null;   // [font, size, align, bulleted] at the caret (`UX-003`)
 let composing = false;
 let dragging = false;
@@ -73,9 +76,17 @@ async function call(fn, ...args) {
 }
 
 const obj = () => selection.object;
-const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_run", "text_grow", "text_set_paragraphs"]);
+const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_run", "text_grow", "text_set_paragraphs", "text_paste_rich", "text_change_case"]);
 
 /* ── Drawing the caret and selection ────────────────────────────────────── */
+
+/// The overlay's coordinates are the slide's, in EMU. Set on every draw: a deck of
+/// another size in a frame of the same shape (a 10-inch 16:9 deck after the 13.33-inch
+/// blank one) resizes nothing, so an observer alone left the old size (`UX-013`).
+function fitOverlay() {
+  const box = state.deck && `0 0 ${state.deck.width} ${state.deck.height}`;
+  if (overlay && box && overlay.getAttribute("viewBox") !== box) overlay.setAttribute("viewBox", box);
+}
 
 function clearOverlay() {
   if (overlay) overlay.replaceChildren();
@@ -99,6 +110,7 @@ function draw(g) {
   clearOverlay();
   clearInterval(blink);
   if (!g || !selection.editing) return;
+  fitOverlay();
   const { quads, caret } = g;
   for (let i = 0; i + 8 <= quads.length; i += 8) {
     const poly = document.createElementNS(SVG, "polygon");
@@ -133,7 +145,13 @@ async function paint() {
 
 /// After an edit: redraw the slide, and draw the caret with the new picture. The
 /// thumbnail and the shape list follow once typing pauses.
+let edits = 0;   // edits made through this module
+/// How many edits this module has made: Paste Special redoes a paste only while it is
+/// the last one (`PAR-11`).
+export const editCount = () => edits;
+
 async function afterEdit() {
+  edits++;
   const [part, node] = obj();
   const [g] = await Promise.all([geometry().catch(() => null), slides.redraw({ quiet: true })]);
   draw(g);
@@ -170,6 +188,7 @@ export function stop() {
 /// caret in the open one; `extend` keeps the anchor, as Shift does.
 export function pointerDown(part, node, p, extend) {
   const same = selection.editing && obj()[0] === part && obj()[1] === node;
+  const clicks = countClick(part, node, p);
   // Focus now, inside the press, so the keys that follow are not lost.
   input.focus({ preventScroll: true });
   dragging = true;
@@ -185,8 +204,170 @@ export function pointerDown(part, node, p, extend) {
     } else {
       select(extend ? { focus: at } : { anchor: at, focus: at });
     }
+    // A double click selects the word, a triple click the paragraph (`PAR-12`).
+    if (clicks > 1 && !extend) {
+      const t = await plain();
+      const [a, b] = clicks === 2 ? wordAt(t, at) : paragraphAt(t, at);
+      select({ anchor: a, focus: b });
+      dragging = false;
+    }
     await paint();
   }).finally(() => { opening--; });
+}
+
+/* ── Words and paragraphs (`PAR-12`) ────────────────────────────────────── */
+
+/// How long and how near, in milliseconds and screen pixels, a press counts as the
+/// next click of a double or triple click.
+const MULTI_CLICK_MS = 500;
+const MULTI_CLICK_PX = 4;
+let lastClick = { at: 0, count: 0, key: "", p: [0, 0] };
+
+/// The press's place in a run of clicks on one box: 1, 2 or 3 (and back to 1).
+function countClick(part, node, p) {
+  const now = performance.now();
+  const key = `${part}:${node}`;
+  const k = byId("slide-frame").clientWidth / (state.deck?.width || 1);
+  const near = Math.hypot(p[0] - lastClick.p[0], p[1] - lastClick.p[1]) * k <= MULTI_CLICK_PX;
+  const count = now - lastClick.at <= MULTI_CLICK_MS && key === lastClick.key && near ? (lastClick.count % 3) + 1 : 1;
+  lastClick = { at: now, count, key, p };
+  return count;
+}
+
+/// The open box's text, paragraphs joined by line feeds and line breaks as vertical
+/// tabs, one character an offset. Held in this module only, never put in the page.
+async function plain() {
+  const [part, node] = obj();
+  const length = await call("text_length", part, node);
+  return [...(await call("text_slice", part, node, 0, length))];
+}
+
+const segmenter = typeof Intl !== "undefined" && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: "word" }) : null;
+
+/// The words of `chars` as `[start, end, wordLike]` in character offsets: the
+/// browser's word breaks, which split Chinese and Japanese by dictionary as
+/// PowerPoint does, or runs of letters and digits where there are none.
+function words(chars) {
+  const out = [];
+  if (segmenter) {
+    let at = 0;
+    for (const seg of segmenter.segment(chars.join(""))) {
+      const n = [...seg.segment].length;
+      out.push([at, at + n, !!seg.isWordLike]);
+      at += n;
+    }
+    return out;
+  }
+  const kind = (c) => (/[\p{L}\p{N}_]/u.test(c) ? 1 : /\s/.test(c) ? 0 : 2);
+  for (let i = 0; i < chars.length;) {
+    let j = i + 1;
+    while (j < chars.length && kind(chars[j]) === kind(chars[i]) && kind(chars[i]) !== 2) j++;
+    out.push([i, j, kind(chars[i]) === 1]);
+    i = j;
+  }
+  return out;
+}
+
+const BREAKS = new Set(["\n", "\v"]);
+
+/// What a double click at `at` selects: the word there and the spaces after it, as
+/// PowerPoint's; on a space or a mark, that run alone.
+export function wordAt(chars, at) {
+  const list = words(chars);
+  const i = list.findIndex(([a, b]) => at >= a && at < b);
+  const k = i >= 0 ? i : list.findIndex(([a, b]) => at === b);
+  if (k < 0) return [at, at];
+  let [a, b, word] = list[k];
+  if (BREAKS.has(chars[a])) return [at, at];
+  if (word) while (b < chars.length && /[ \t\u00a0\u3000]/.test(chars[b])) b++;
+  return [a, b];
+}
+
+/// What a triple click at `at` selects: its paragraph, without the break that ends it.
+export function paragraphAt(chars, at) {
+  let a = Math.min(at, chars.length), b = a;
+  while (a > 0 && chars[a - 1] !== "\n") a--;
+  while (b < chars.length && chars[b] !== "\n") b++;
+  return [a, b];
+}
+
+/// Where Ctrl+Left (`-1`) or Ctrl+Right (`1`) takes the caret from `at`: the start of
+/// the word before, or of the next, stopping at each paragraph's ends, as PowerPoint.
+export function wordStep(chars, at, direction) {
+  const stops = new Set([0, chars.length]);
+  for (const [a, , word] of words(chars)) if (word) stops.add(a);
+  chars.forEach((c, i) => { if (c === "\n") { stops.add(i); stops.add(i + 1); } });
+  const sorted = [...stops].sort((x, y) => x - y);
+  if (direction < 0) return sorted.filter((x) => x < at).pop() ?? 0;
+  return sorted.find((x) => x > at) ?? chars.length;
+}
+
+/// Where Ctrl+Up (`-1`) or Ctrl+Down (`1`) takes the caret: the start of this
+/// paragraph or the one before, or the start of the next.
+export function paragraphStep(chars, at, direction) {
+  const [a, b] = paragraphAt(chars, at);
+  if (direction < 0) return at > a ? a : paragraphAt(chars, Math.max(0, a - 1))[0];
+  return b < chars.length ? b + 1 : chars.length;
+}
+
+/// Move by word or paragraph, or to either end of the box; `extend` keeps the anchor.
+function jump(how, extend) {
+  return serial(async () => {
+    if (!selection.editing) return;
+    const chars = await plain();
+    const at = selection.focus;
+    const focus = how === "start" ? 0 : how === "end" ? chars.length
+      : how === "word-left" ? wordStep(chars, at, -1) : how === "word-right" ? wordStep(chars, at, 1)
+      : how === "para-up" ? paragraphStep(chars, at, -1) : paragraphStep(chars, at, 1);
+    await call("edit_break_typing");
+    select(extend ? { focus } : { anchor: focus, focus });
+    await paint();
+  });
+}
+
+/// Tab: a list level down at a paragraph's start or over a selection, else a tab.
+function tab() {
+  return serial(async () => {
+    if (!selection.editing) return;
+    const [start, end] = textRange();
+    let level = start !== end;
+    if (!level) {
+      const chars = await plain();
+      level = start === 0 || chars[start - 1] === "\n";
+    }
+    if (level) await levelNow("up"); else await insertNow("\t", true);
+  });
+}
+
+/// Shift+Tab, and Alt+Shift+Left and Right: a list level up or down, in turn with
+/// the keys before it.
+function level(way) {
+  return serial(() => levelNow(way));
+}
+
+async function levelNow(way) {
+  if (!selection.editing) return;
+  const [part, node] = obj();
+  const [start, end] = textRange();
+  if (await call("text_set_paragraphs", part, node, start, end, 3, way)) await afterEdit();
+  status(way === "up" ? "Increase List Level" : "Decrease List Level");
+}
+
+/// Ctrl+Backspace and Ctrl+Delete: delete to the start of the word, or to the next.
+function removeWord(direction) {
+  return serial(async () => {
+    if (!selection.editing) return;
+    const [part, node] = obj();
+    let [start, end] = textRange();
+    if (start === end) {
+      const chars = await plain();
+      if (direction < 0) start = wordStep(chars, start, -1); else end = wordStep(chars, end, 1);
+      if (start === end) return;
+    }
+    await call("text_delete", part, node, start, end);
+    select({ anchor: start, focus: start });
+    await afterEdit();
+  });
 }
 
 let moveQueued = null;
@@ -255,26 +436,28 @@ function act(action) {
 /* ── Edits ──────────────────────────────────────────────────────────────── */
 
 let queue = Promise.resolve();
+let tail = null;   // the typing job last queued, while nothing has been queued after it
 /// Edits run one after another, each seeing the caret the last one left.
 function serial(fn) {
+  tail = null;
   queue = queue.then(fn).catch((e) => status(`The edit could not be made: ${e.message}`));
   return queue;
 }
 
-let typed = "";
 /// Replace the selection with `text`; `typing` joins keystrokes in one undo step.
-/// Keys typed while an edit is in flight join the next insert, so the stage is
-/// drawn once for them all.
+/// Keys typed while an edit is in flight join the typing queued last, so the stage
+/// is drawn once for them all; a key queued after Enter, Tab or any other edit
+/// starts its own, so nothing typed overtakes what came before it.
 function insert(text, typing = true) {
   if (typing) {
-    const first = !typed;
-    typed += text;
-    if (!first) return queue;
-    return serial(async () => {
-      const t = typed;
-      typed = "";
-      await insertNow(t, true);
+    if (tail && !tail.started) { tail.text += text; return queue; }
+    const job = { text, started: false };
+    serial(async () => {
+      job.started = true;
+      await insertNow(job.text, true);
     });
+    tail = job;
+    return queue;
   }
   return serial(() => insertNow(text, false));
 }
@@ -365,6 +548,41 @@ export function pasteText(text) {
   if (selection.editing && text) act(() => insert(text.replace(/\r\n?/g, "\n"), false));
 }
 
+/// Paste formatted text (`PAR-11`) at the caret, replacing the selection, as one undo
+/// step: `rich` is `{ texts, looks, lists }` as the engine's `text_paste_rich` takes
+/// them. Resolves to whether it pasted.
+export function pasteRich(rich) {
+  if (!selection.editing) return Promise.resolve(false);
+  let done = false;
+  act(() => serial(async () => {
+    if (!selection.editing) return;
+    const [part, node] = obj();
+    const [start, end] = textRange();
+    await call("edit_break_typing");
+    const at = await call("text_paste_rich", part, node, start, end, rich.texts, rich.looks, rich.lists);
+    select({ anchor: at, focus: at });
+    done = true;
+    await afterEdit();
+  }));
+  return queue.then(() => done);
+}
+
+/// Select `[anchor, focus]` in the open box: Paste Special puts back the selection a
+/// paste replaced.
+export function setRange(anchor, focus) {
+  return serial(async () => {
+    if (!selection.editing) return;
+    select({ anchor, focus });
+    await paint();
+  });
+}
+
+/// The open box's selection as `[part, node, start, end]`, or null.
+export function openRange() {
+  if (!selection.editing || !obj()) return null;
+  return [...obj(), ...textRange()];
+}
+
 function history(id) {
   call("edit_break_typing").catch(() => {});
   run(id);
@@ -426,7 +644,9 @@ function onKeyDown(e) {
     if (keyAction(copy, true)) { e.preventDefault(); e.stopPropagation(); act(() => keyAction(copy, false)); }
     return;
   }
-  if (keyAction(e, false)) { e.preventDefault(); e.stopPropagation(); }
+  if (keyAction(e, false)) { e.preventDefault(); e.stopPropagation(); return; }
+  // PowerPoint's other shortcuts, ahead of the browser (`PAR-13`).
+  keys.handle(e);
 }
 
 /// The editing action of key `e`, run unless `probe`; whether the key has one.
@@ -450,10 +670,23 @@ function keyAction(e, probe) {
   else if (mod && e.shiftKey && (e.key === ">" || e.key === ".")) f = () => run("font.increase");
   else if (mod && e.shiftKey && (e.key === "<" || e.key === ",")) f = () => run("font.decrease");
   else if (mod && key === "s") f = () => run("file.save");
+  else if (mod && e.key === "Backspace") f = () => removeWord(-1);
+  else if (mod && e.key === "Delete") f = () => removeWord(1);
+  else if (mod && e.key === "ArrowLeft") f = () => jump("word-left", e.shiftKey);
+  else if (mod && e.key === "ArrowRight") f = () => jump("word-right", e.shiftKey);
+  else if (mod && e.key === "ArrowUp") f = () => jump("para-up", e.shiftKey);
+  else if (mod && e.key === "ArrowDown") f = () => jump("para-down", e.shiftKey);
+  else if (mod && e.key === "Home") f = () => jump("start", e.shiftKey);
+  else if (mod && e.key === "End") f = () => jump("end", e.shiftKey);
   else if (e.key === "Backspace") f = () => remove(-1);
   else if (e.key === "Delete") f = () => remove(1);
   else if (e.key === "Enter") f = () => insert(e.shiftKey ? "\v" : "\n", false);
-  else if (e.key === "Tab" && !(e.ctrlKey || e.metaKey)) f = () => insert("\t");
+  // Tab at a paragraph's start, or over a selection, demotes it a list level, and
+  // Shift+Tab promotes, as PowerPoint (`PAR-06`); elsewhere Tab types a tab.
+  else if (e.key === "Tab" && e.shiftKey && !(e.ctrlKey || e.metaKey)) f = () => level("down");
+  else if (e.key === "Tab" && !(e.ctrlKey || e.metaKey)) f = tab;
+  else if (e.altKey && e.shiftKey && e.key === "ArrowRight") f = () => level("up");
+  else if (e.altKey && e.shiftKey && e.key === "ArrowLeft") f = () => level("down");
   else if (e.key === "ArrowLeft") f = () => move("left", e.shiftKey);
   else if (e.key === "ArrowRight") f = () => move("right", e.shiftKey);
   else if (e.key === "ArrowUp") f = () => move("up", e.shiftKey);
@@ -509,10 +742,8 @@ export function init() {
   input.setAttribute("spellcheck", "false");
   frame.appendChild(input);
 
-  // The overlay's coordinates are the slide's, in EMU.
-  const size = () => { if (state.deck) overlay.setAttribute("viewBox", `0 0 ${state.deck.width} ${state.deck.height}`); };
-  new ResizeObserver(size).observe(frame);
-  new MutationObserver(size).observe(frame, { attributes: true, attributeFilter: ["hidden"] });
+  new ResizeObserver(fitOverlay).observe(frame);
+  new MutationObserver(fitOverlay).observe(frame, { attributes: true, attributeFilter: ["hidden"] });
 
   // Presses on the slide are routed by `editor.selection.js`; one on the grey
   // around it closes the box and clears the selection, as PowerPoint's.

@@ -20,13 +20,31 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
  model, package, geometry: no internal dependencies
 ```
 
+The diagram above is the target. **As built at `1ba6443`**, read from each `Cargo.toml` (normal dependencies only; `-sdk`, `-layout`, `-chart` and `-anim` do not exist yet, so `-wasm` and `-render` carry the interim edges explained below):
+
+```
+ casual-slide-wasm ─▶ render, export, import, transaction, text, style, geometry, ooxml, model
+ render ────────────▶ text, style, geometry, import, ooxml, model
+ text ──────────────▶ style, model
+ transaction ───────▶ model
+ export ────────────▶ import, ooxml, model, package
+ import ────────────▶ ooxml, model, geometry
+ style ─────────────▶ model
+ ooxml ─────────────▶ package
+ model, package, geometry: no internal dependencies
+ server/casual-slide-collab-server ─▶ transaction   (its own workspace)
+ desktop/ (openpresent-desktop): no casual-slide crate (its own workspace)
+```
+
+`-export` depends on `-import` in its normal dependencies: it reuses import's namespaces, limits and part readers (for example `import_chart_part` to re-read a chart it patches). External crates by crate: `-package` `zip`, `flate2`; `-ooxml` `quick-xml`; `-text` `skrifa`, `harfrust`, `unicode-linebreak`, `brotli-decompressor`; `-render` `tiny-skia`, `image`, `skrifa`, `flate2`; `-transaction` `serde`, `serde_json`; `-wasm` `wasm-bindgen`, `serde_json`, `tiny-skia`; the server `axum`, `tokio`, `futures-util`, `base64`, `serde`, `serde_json`; the desktop `tauri`, `tauri-plugin-dialog`, `serde`, `tauri-build`. `tools/check-crate-deps.py`, run by `check-repo.py`, fails any edge from `crates/` to a server or outside `crates/`; the layer direction itself is held by review against this diagram.
+
 `-import` depends on `-geometry` from Tier 1E (`GEO-04`), to check a preset's token and adjust names and to compile custom geometry as it is read. It evaluates nothing at a size. `-geometry` parses no XML and depends on nothing.
 
 `-ooxml` has `-geometry` as a dev-dependency only: `tests/geometry_fixtures.rs` holds the hostile custom-geometry decks (`GEO-04`) to the geometry caps, and nothing ships it. It is no layer dependency, and the diagram above stays true.
 
 `-style` exists from Tier 1D and depends on `-model` alone; its tests read fixtures through `-import` and `-ooxml` as dev-dependencies only, which the DAG allows because nothing ships them. `-layout` is its first product consumer (Phase 2).
 
-**Eleven crates exist today** (2026-11-08): `-package`, `-ooxml`, `-model`, `-style`, `-geometry`, `-import`, `-export`, and `-text`, `-render`, `-transaction` and `-wasm` from Phase 2 and the slices. The rest in the table below are planned and arrive with a first consumer.
+**Eleven crates exist today** (at `1ba6443`): `-package`, `-ooxml`, `-model`, `-style`, `-geometry`, `-import`, `-export`, and `-text`, `-render`, `-transaction` and `-wasm` from Phase 2 and the slices. The rest in the table below are planned and arrive with a first consumer.
 
 **Added in Phase 2.** `-render` (`SKEL-01`, owner instruction 43), started from OpenCalc's `casual-calc-render` with a `PROVENANCE.md`. It holds the display list, the scene that builds one from a slide's resolved shapes, and the tiny-skia PNG backend; its `render-deck` example writes one PNG per slide. Its dependencies are `-model`, `-style`, `-geometry`, and, as an **interim edge** that the diagram does not show, `-import` and `-ooxml`: `Deck` opens a package for drawing, and the scene compiles a custom geometry with import's `compile_custom`. When `-layout` arrives, the scene and the custom-geometry conversion move down into it and `Deck` to `-sdk`, and the edge goes (`SKEL-03`). External: `tiny-skia` 0.11 (BSD-3-Clause) and `image` 0.25 with only `jpeg` (MIT or Apache-2.0, bringing `zune-jpeg` and `moxcms`), per ADR-019. `-render` also depends on `-text`, which lays out text bodies into glyph runs and outlines their glyphs through the `GlyphOutlines` trait. **PDF backend** (`VS-04`): `pdf.rs` and `subset.rs` copied from OpenCalc's `-render` at `b23c67c`, with an `export-pdf` example. For it `-render` takes `skrifa` 0.46 (MIT or Apache-2.0, already in the tree through `-text`) for face metrics and the subsetter, and `flate2` with the `zlib-rs` backend (already in the tree through `-package`) to compress pictures and font programs. No PDF crate is added, as in OpenCalc.
 
@@ -44,7 +62,7 @@ A lower layer never knows about a higher one. Changing a boundary here needs an 
 **Added in Phase 2.**
 - `-text` (Tier 2D, ADR-016), copied from OpenCalc's `casual-calc-text` with its shaper from `casual-calc-render` (`PROVENANCE.md` in the crate). Dependencies: `skrifa`, `brotli-decompressor` (as OpenCalc), `harfrust` (as OpenCalc's `-render`, always on here), `unicode-linebreak` (new: OpenCalc has no line breaker). `all-fonts` is on by default, so every host lays out with the same faces. Its `body.rs` reads a model text body through `-style`'s chain, so `-text` depends on `-model` and `-style` until `-layout` exists; then `body.rs` moves there and `-text` returns to no internal dependencies (`T2D4-02`). Its first consumer is `-render`, which names each run's face by the key `outline.rs` gives and asks it for outlines. Its corpus test reads decks through `-import` and `-ooxml`, as dev-dependencies only.
 
-`server/*` depends on `crates/*`; nothing in `crates/` depends on a server. CI does not check this yet (`CI-01`).
+`server/*` depends on `crates/*`; nothing in `crates/` depends on a server. `tools/check-repo.py`'s crate-dependency gate checks this ("none to a server").
 
 ## Crates
 
@@ -104,7 +122,10 @@ this way (its ADR-006). Trigger to revisit: the same bug fixed by hand in two re
 twice.
 
 **The collaboration server is not free to copy.** At 18.3k lines it imports calc's
-`-transaction`, `-import`, `-export`, `-formula`, `-model` and `-eval`. See
+`-transaction`, `-import`, `-export`, `-formula`, `-model` and `-eval`. So `server/casual-slide-collab-server`
+(`VS-09`) takes only its room, relay and socket code, with the engine seam replaced by
+`casual-slide-transaction::collab` (ADR-020); what was not copied (tokens, resume, the cluster,
+save-back) is `COL-03` and `COL-05`, and its `PROVENANCE.md` names the rest. See
 [24](24-OPERATIONS-AND-COLLABORATION.md) §The server.
 
 ## Dependency policy

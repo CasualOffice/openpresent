@@ -204,6 +204,17 @@ pub(crate) fn embed(node: &ShapeNode) -> Option<&str> {
 
 /// Read a slide part's XML as the reader does.
 pub(crate) fn read_slide(xml: &[u8], part: &str, ordinal: u32) -> Result<SlidePart, BridgeError> {
+    read_slide_kind(xml, part, ordinal, SlideKind::Slide)
+}
+
+/// Read a slide-like part's XML of this kind as the reader does: a new notes slide
+/// (`UX-011`).
+pub(crate) fn read_slide_kind(
+    xml: &[u8],
+    part: &str,
+    ordinal: u32,
+    kind: SlideKind,
+) -> Result<SlidePart, BridgeError> {
     let xml_limits = OoxmlLimits::default();
     let tree = XmlTree::parse(xml, part, &xml_limits).map_err(|e| BridgeError::Build(e.code()))?;
     let import_limits = ImportLimits::default();
@@ -213,7 +224,7 @@ pub(crate) fn read_slide(xml: &[u8], part: &str, ordinal: u32) -> Result<SlidePa
         &tree,
         part,
         &[],
-        SlideKind::Slide,
+        kind,
         ordinal,
         &SlideLimits::default(),
         &import_limits,
@@ -224,7 +235,7 @@ pub(crate) fn read_slide(xml: &[u8], part: &str, ordinal: u32) -> Result<SlidePa
 }
 
 /// Give every node of a part this ordinal.
-fn renumber_part(part: &mut SlidePart, ordinal: u32) {
+pub(crate) fn renumber_part(part: &mut SlidePart, ordinal: u32) {
     part.id = ObjectId::part(ordinal);
     if let Some(root) = part.shape_tree_mut() {
         let mut stack = vec![root];
@@ -403,6 +414,15 @@ impl Viewer {
         Self::open(bytes)
     }
 
+    /// File > New from a template (`PAR-18`): the blank presentation in built-in theme
+    /// `theme`'s colours and fonts, written and opened again, so it starts as a deck
+    /// just opened does, with nothing to undo.
+    pub fn template(theme: usize) -> Result<Self, BridgeError> {
+        let mut deck = Self::blank()?;
+        deck.apply_theme(theme, 0, false)?;
+        Self::open(deck.save()?)
+    }
+
     /// The part ordinal of slide `index`, which names its shapes' [`ObjectId`]s.
     pub fn slide_part(&self, index: usize) -> Result<u32, BridgeError> {
         self.slide_ordinal(index)
@@ -435,7 +455,7 @@ impl Viewer {
         parts.structure.entry(parts.structure.slide(index)?)?.layout
     }
 
-    fn next_ordinal(&self) -> Result<u32, BridgeError> {
+    pub(crate) fn next_ordinal(&self) -> Result<u32, BridgeError> {
         u32::try_from(self.deck.parts().parts.len()).map_err(|_| BridgeError::BadArgument)
     }
 
@@ -446,37 +466,49 @@ impl Viewer {
         part: SlidePart,
         origin: Origin,
     ) -> Result<usize, BridgeError> {
-        let ordinal = entry.id.part;
-        let op = Operation::Batch(vec![
-            Operation::AddPart {
-                entry: Box::new(entry),
-                part: Box::new(part),
-            },
-            Operation::InsertSlide { index: at, ordinal },
-        ]);
-        self.typing = None;
-        self.history.apply(self.deck.parts_mut(), op)?;
-        self.origins.insert(ordinal, origin);
-        self.reports.clear();
+        self.add_slide_parts(vec![(at, entry, part, origin)])?;
         Ok(at)
     }
 
-    /// New Slide: a slide on layout `layout` (an ordinal from [`Viewer::layouts`]) at
-    /// place `at`, with an empty copy of each of the layout's placeholders. One undo step.
-    pub fn new_slide(&mut self, at: usize, layout: u32) -> Result<usize, BridgeError> {
-        let parts = self.deck.parts();
-        if at > parts.structure.slides.len() {
-            return Err(BridgeError::Edit(
-                casual_slide_transaction::TxnError::NoSuchSlide(at),
-            ));
+    /// Add several new slides, each `(place, entry, part, origin)`, as one undo step.
+    pub(crate) fn add_slide_parts(
+        &mut self,
+        slides: Vec<(usize, PartEntry, SlidePart, Origin)>,
+    ) -> Result<(), BridgeError> {
+        let mut ops = Vec::with_capacity(slides.len() * 2);
+        let mut origins = Vec::with_capacity(slides.len());
+        for (at, entry, part, origin) in slides {
+            let ordinal = entry.id.part;
+            ops.push(Operation::AddPart {
+                entry: Box::new(entry),
+                part: Box::new(part),
+            });
+            ops.push(Operation::InsertSlide { index: at, ordinal });
+            origins.push((ordinal, origin));
         }
-        let layout_entry = parts
+        self.typing = None;
+        self.history
+            .apply(self.deck.parts_mut(), Operation::Batch(ops))?;
+        self.origins.extend(origins);
+        self.reports.clear();
+        Ok(())
+    }
+
+    /// A new slide part on layout `layout` at part ordinal `ordinal`, with an empty copy
+    /// of each of the layout's placeholders, and its entry: what New Slide adds.
+    pub(crate) fn layout_slide(
+        &mut self,
+        layout: u32,
+        ordinal: u32,
+    ) -> Result<(PartEntry, SlidePart), BridgeError> {
+        let layout_entry = self
+            .deck
+            .parts()
             .structure
             .entry(layout)
             .filter(|e| e.kind == SlideKind::Layout)
             .ok_or(BridgeError::BadArgument)?
             .clone();
-        let ordinal = self.next_ordinal()?;
         let xml = self
             .deck
             .read_part(&layout_entry.part)
@@ -495,6 +527,20 @@ impl Viewer {
             notes: None,
             theme: None,
         };
+        Ok((entry, part))
+    }
+
+    /// New Slide: a slide on layout `layout` (an ordinal from [`Viewer::layouts`]) at
+    /// place `at`, with an empty copy of each of the layout's placeholders. One undo step.
+    pub fn new_slide(&mut self, at: usize, layout: u32) -> Result<usize, BridgeError> {
+        let parts = self.deck.parts();
+        if at > parts.structure.slides.len() {
+            return Err(BridgeError::Edit(
+                casual_slide_transaction::TxnError::NoSuchSlide(at),
+            ));
+        }
+        let ordinal = self.next_ordinal()?;
+        let (entry, part) = self.layout_slide(layout, ordinal)?;
         self.add_slide_part(at, entry, part, Origin::Layout(layout))
     }
 
@@ -565,12 +611,6 @@ impl Viewer {
         label: Option<&str>,
     ) -> Result<u32, BridgeError> {
         let ordinal = self.slide_ordinal(index)?;
-        if rel.is_some() && self.is_shared() {
-            // A picture's bytes have no way to the other participants yet (`COL-04`).
-            return Err(BridgeError::Edit(
-                casual_slide_transaction::TxnError::NotShared,
-            ));
-        }
         // In a shared session, an id from this participant's own range.
         let mint = self.shared_mint();
         let parts = self.deck.parts();
@@ -648,9 +688,9 @@ impl Viewer {
             return Err(BridgeError::NotAPicture);
         }
         let ordinal = self.slide_ordinal(index)?;
-        self.minted = self.minted.saturating_add(1);
-        let rel = format!("{NEW_REL}{}", self.minted);
-        let key = format!("openpresent-new-media/{}", self.minted);
+        // Shared, its bytes cross with it, within the wire's bound (`COL-04`).
+        self.shared_media_fits(bytes.len())?;
+        let (rel, key) = self.mint_media();
         self.deck.add_media(ordinal, &rel, &key, bytes.clone());
         self.new_media.insert(
             rel.clone(),
@@ -684,7 +724,7 @@ impl Viewer {
         Err(BridgeError::Save("CS-WSM-0009"))
     }
 
-    fn original_count(&self) -> u32 {
+    pub(crate) fn original_count(&self) -> u32 {
         u32::try_from(self.original.parts.len()).unwrap_or(u32::MAX)
     }
 
@@ -693,11 +733,14 @@ impl Viewer {
         let bytes = self.slides_pass(self.deck.source_bytes())?;
         let bytes = self.shapes_pass(bytes)?;
         let bytes = self.order_pass(bytes)?;
+        let bytes = self.notes_pass(bytes)?;
         let (bytes, links) = self.links_pass(bytes)?;
         let bytes = self.patch_pass(bytes, &links)?;
         let bytes = self.sections_pass(bytes)?;
         let bytes = self.chart_pass(bytes)?;
-        self.design_pass(bytes)
+        let bytes = self.design_pass(bytes)?;
+        let bytes = self.review_pass(bytes)?;
+        self.properties_pass(bytes)
     }
 
     /// What Design changed in themes and the slide size (`VS-12`), last, on the file the
@@ -795,7 +838,7 @@ impl Viewer {
     }
 
     /// Each slide of the file paired with the model's, by place.
-    fn pairs<'a>(
+    pub(crate) fn pairs<'a>(
         &'a self,
         file: &'a SlideParts,
     ) -> Result<Vec<(String, &'a SlidePart, &'a SlidePart)>, BridgeError> {
@@ -892,6 +935,8 @@ impl Viewer {
         let file = Deck::open(bytes.clone())?;
         let mut changed: Vec<SlidePart> = Vec::new();
         let mut pairs = self.pairs(file.parts())?;
+        // Notes slides, edited under the slide (`UX-011`).
+        pairs.extend(self.notes_pairs(file.parts()));
         // Layouts and masters, by name: Slide Size scales their shapes too (`VS-12`).
         let model = self.deck.parts();
         for entry in &file.parts().structure.parts {

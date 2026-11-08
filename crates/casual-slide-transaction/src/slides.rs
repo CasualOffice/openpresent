@@ -29,17 +29,23 @@ pub(crate) fn add_part(
     Ok((Operation::DropPart { ordinal: next }, true))
 }
 
-/// Drop the last part. Refused for any other part, for one a slide list names, and for
-/// anything but a slide, so a layout or master a slide uses is never dropped.
+/// Drop the last part. Refused for any other part, for one a slide list or a slide's notes
+/// link names, and for anything but a slide or a notes slide, so a layout or master a slide uses is never dropped.
 pub(crate) fn drop_part(parts: &mut SlideParts, ordinal: u32) -> Result<Applied, TxnError> {
     let last = ordinal_of(parts)
         .and_then(|n| n.checked_sub(1))
         .ok_or(TxnError::BadPart(ordinal))?;
-    let listed = parts.structure.slides.contains(&ordinal);
+    let listed = parts.structure.slides.contains(&ordinal)
+        || parts
+            .structure
+            .parts
+            .iter()
+            .any(|e| e.notes == Some(ordinal));
+    // A notes slide no slide links to is dropped as a slide is (`UX-011`).
     let is_slide = parts
         .structure
         .entry(ordinal)
-        .is_some_and(|e| e.kind == SlideKind::Slide);
+        .is_some_and(|e| matches!(e.kind, SlideKind::Slide | SlideKind::Notes));
     if ordinal != last || listed || !is_slide || parts.structure.parts.len() != parts.parts.len() {
         return Err(TxnError::BadPart(ordinal));
     }

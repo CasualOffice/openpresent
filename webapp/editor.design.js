@@ -259,4 +259,19 @@ export function registerDesignCommands() {
   register("design.slide-size.widescreen", { label: "Widescreen (16:9)", enabled: can, checked: () => !!state.deck && state.deck.width === SIZES.widescreen[0] && state.deck.height === SIZES.widescreen[1], run: () => fitDialog(...SIZES.widescreen, "Widescreen (16:9)") });
   register("design.slide-size.custom", { label: "Custom Slide Size…", enabled: can, run: customSizeDialog });
   register("design.format-background", { label: "Format Background", enabled: can, run: backgroundDialog });
+  // File > New's template tiles (`PAR-18`) show each theme's own colours, from the
+  // engine's catalogue, as PowerPoint's New page previews its templates.
+  document.addEventListener("op-backstage-page", async (e) => {
+    if (e.detail?.id !== "new") return;
+    let list;
+    try { list = await catalogue(); } catch { return; }
+    list.forEach((t, i) => {
+      const tile = document.querySelector(`.rb-tile[data-op-proxy="file.new.template.${i}"] .rb-tile-art`);
+      if (!tile || tile.querySelector(".dz-swatches")) return;
+      const [dk1, lt1, dk2] = t.variants[0];
+      tile.style.backgroundColor = `#${lt1}`;
+      tile.style.color = `#${dk2 || dk1}`;
+      tile.appendChild(swatches(t.variants[0]));
+    });
+  });
 }
