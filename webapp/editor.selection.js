@@ -454,6 +454,9 @@ function select(node) {
 }
 
 export function hasSelection() { return !!shape(); }
+/// The stage's shapes as last read, and the slide they were read for (`COL-04`:
+/// another participant's selection is outlined from them).
+export function allShapes() { return shapesFor === state.current ? shapes : []; }
 /// The selected shape's node, or `null` (`VS-10`'s Animations tab acts on it).
 export function selectedNode() { return shape()?.node ?? null; }
 

@@ -6,8 +6,9 @@
     <!-- Strict, as OpenCalc's editor: no inline script or style, nothing from
          another origin. `wasm-unsafe-eval` compiles the engine and nothing else;
          `blob:` images are the slides the engine draws in this page. The deck is
-         read from a file the user picks and never leaves the browser, so
-         `connect-src` reaches this origin alone (the engine and the icons). -->
+         read from a file the user picks and never leaves the browser unless the
+         user shares it, so `connect-src` reaches this origin alone: the engine,
+         the icons, and the sharing server, which serves this page (`COL-04`). -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; img-src 'self' blob: data:; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'" />
     <meta name="referrer" content="no-referrer" />
     <title>OpenPresent</title>

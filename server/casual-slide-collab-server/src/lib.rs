@@ -20,6 +20,7 @@
 
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -143,25 +144,81 @@ fn stop(reason: &str) -> String {
     })
 }
 
-/// The router: `GET /collab?room=KEY` upgrades to the session; `GET /healthz`.
-pub fn router(limits: Limits) -> Router {
+/// The router: `GET /collab?room=KEY` upgrades to the session; `GET /healthz`; and,
+/// given a folder, the editor's files from it, so the page and its socket share an
+/// origin and the page's `connect-src 'self'` holds (`COL-04`).
+pub fn router(limits: Limits, files: Option<PathBuf>) -> Router {
     let state = Arc::new(Service {
         limits,
         rooms: Mutex::new(Rooms::default()),
     });
-    Router::new()
+    let router = Router::new()
         .route("/collab", get(upgrade))
         .route("/healthz", get(|| async { "ok" }))
-        .with_state(state)
+        .with_state(state);
+    match files {
+        Some(root) => router.fallback(move |uri: axum::http::Uri| {
+            let root = root.clone();
+            async move { static_file(&root, uri.path()).await }
+        }),
+        None => router,
+    }
 }
 
-/// Serve on a bound listener until the process ends.
-pub async fn serve(listener: tokio::net::TcpListener, limits: Limits) -> std::io::Result<()> {
+/// Serve on a bound listener until the process ends; `files`, a folder of the
+/// editor's files to serve beside the session.
+pub async fn serve(
+    listener: tokio::net::TcpListener,
+    limits: Limits,
+    files: Option<PathBuf>,
+) -> std::io::Result<()> {
     axum::serve(
         listener,
-        router(limits).into_make_service_with_connect_info::<SocketAddr>(),
+        router(limits, files).into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
+}
+
+/// One file of the editor's folder. Only plain names in plain folders: no `..`, no
+/// hidden file, nothing outside the folder; a type for what the editor ships.
+async fn static_file(root: &Path, path: &str) -> axum::response::Response {
+    use axum::http::{StatusCode, header};
+    let path = path.trim_start_matches('/');
+    let path = if path.is_empty() { "editor.html" } else { path };
+    let plain = path.split('/').all(|seg| {
+        !seg.is_empty()
+            && !seg.starts_with('.')
+            && seg
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+    });
+    let kind = match path.rsplit('.').next().unwrap_or("") {
+        "html" => "text/html; charset=utf-8",
+        "js" => "text/javascript; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "wasm" => "application/wasm",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "json" => "application/json",
+        "woff2" => "font/woff2",
+        "ttf" => "font/ttf",
+        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        _ => "",
+    };
+    if !plain || kind.is_empty() {
+        return (StatusCode::NOT_FOUND, "not found").into_response();
+    }
+    match tokio::fs::read(root.join(path)).await {
+        Ok(bytes) => (
+            [
+                (header::CONTENT_TYPE, kind),
+                (header::CACHE_CONTROL, "no-cache"),
+            ],
+            bytes,
+        )
+            .into_response(),
+        Err(_) => (StatusCode::NOT_FOUND, "not found").into_response(),
+    }
 }
 
 #[derive(Deserialize)]
@@ -391,4 +448,32 @@ async fn connection(state: Arc<Service>, room_key: String, socket: WebSocket) {
     leave(&state, &room_key, client);
     drop(tx);
     writer.abort();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn only_plain_files_of_the_editors_folder_are_served() {
+        let root = std::env::temp_dir().join(format!("op-collab-files-{}", std::process::id()));
+        std::fs::create_dir_all(root.join("pkg")).unwrap();
+        std::fs::write(root.join("editor.html"), "<!doctype html>").unwrap();
+        std::fs::write(root.join("pkg").join("a.wasm"), [0u8, 97, 115, 109]).unwrap();
+        std::fs::write(root.join(".secret.js"), "x").unwrap();
+        let status = |path: &'static str| {
+            let root = root.clone();
+            async move { static_file(&root, path).await.status().as_u16() }
+        };
+        assert_eq!(status("/").await, 200);
+        assert_eq!(status("/pkg/a.wasm").await, 200);
+        assert_eq!(status("/../Cargo.toml").await, 404);
+        assert_eq!(status("/pkg/../editor.html").await, 404);
+        assert_eq!(status("/.secret.js").await, 404);
+        assert_eq!(status("/editor.exe").await, 404);
+        assert_eq!(status("//etc/passwd").await, 404);
+        let wasm = static_file(&root, "/pkg/a.wasm").await;
+        assert_eq!(wasm.headers()["content-type"], "application/wasm");
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

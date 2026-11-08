@@ -108,8 +108,9 @@ colours. **It holds no model**: the first participant seeds a room with the deck
 a joiner receives them with the log. Its CI job (`collab.yml`) starts it and runs two
 clients over real sockets.
 
-Not done in the slice's box: the browser half (the bridge's shared session, `collab.js`,
-remote carets and selections drawn, Share) is `COL-04`; tokens, resume, the cluster and the
+The browser half (`COL-04`) followed: the bridge's shared session in `casual-slide-wasm`
+`collab.rs`, `webapp/collab.js` and `editor.presence.js`, checked in two Chrome tabs; its CI
+browser run is left. Not done: tokens, resume, the cluster and the
 integrator's save are `COL-03` and `COL-05`; a typed character's format can still differ
 after three concurrent edits (`COL-01`); OpenCalc's chained pipelining diverged in the
 simulation, so a client keeps one chunk in flight (`COL-02`). Undo in a shared session works

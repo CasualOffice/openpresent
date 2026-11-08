@@ -50,6 +50,21 @@ const textRange = () => [Math.min(selection.anchor, selection.focus), Math.max(s
 /// Whether a text box is open, for the shape selection to stand aside.
 export const editing = () => selection.editing;
 
+/// Where the caret is, for presence (`COL-04`): the shape and both ends, or null.
+export function caretState() {
+  if (!selection.editing || !obj()) return null;
+  const [part, node] = obj();
+  return { part, node, anchor: selection.anchor, focus: selection.focus };
+}
+
+/// Move the caret's ends after another participant's edit moved the text under
+/// them (`COL-04`), then draw it again.
+export function remap(anchor, focus) {
+  if (!selection.editing) return;
+  select({ anchor, focus });
+  refresh();
+}
+
 async function call(fn, ...args) {
   const r = await request({ op: "text", fn, args }, { priority: TEXT_PRIORITY });
   if (r.undo && ["text_insert", "text_delete", "text_toggle"].includes(fn)) shapes.noteUndoState(r.undo);

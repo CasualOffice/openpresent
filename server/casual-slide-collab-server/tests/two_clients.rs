@@ -195,6 +195,7 @@ async fn two_clients_see_each_others_edits_and_cursors_and_converge() {
     tokio::spawn(casual_slide_collab_server::serve(
         listener,
         casual_slide_collab_server::Limits::default(),
+        None,
     ));
     let url = format!("ws://127.0.0.1:{port}/collab?room=test-room-0001");
 
@@ -276,6 +277,7 @@ async fn a_malformed_message_is_refused_and_the_connection_stays() {
     tokio::spawn(casual_slide_collab_server::serve(
         listener,
         casual_slide_collab_server::Limits::default(),
+        None,
     ));
     let url = format!("ws://127.0.0.1:{port}/collab?room=test-room-0002");
     let mut ada = join(&url, "Ada").await;

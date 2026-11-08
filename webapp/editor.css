@@ -489,3 +489,16 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .shp-style { padding: 2px; border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer; }
 .shp-style:hover, .shp-style:focus-visible { border-color: var(--op-swatch-hover-color); outline: none; }
 .shp-style-thumb { display: flex; align-items: center; justify-content: center; height: 34px; box-sizing: border-box; border-radius: 2px; font-size: 13px; }
+
+/* Co-editing (`COL-04`): who is here, and others' marks over the slide. */
+.collab-status { display: inline-flex; align-items: center; gap: 4px; margin-left: 12px; font-size: 12px; color: var(--op-muted-text-color); white-space: nowrap; }
+.collab-status[hidden], .bottom-status[hidden] { display: none; }
+.collab-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.collab-names { margin-left: 4px; }
+.presence-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.presence-outline { fill: none; }
+.presence-selection { opacity: .25; }
+.presence-names { position: absolute; inset: 0; pointer-events: none; }
+.presence-name { position: absolute; transform: translateY(-100%); padding: 0 4px; border-radius: 3px 3px 3px 0; font: 11px/16px system-ui, sans-serif; color: #fff; white-space: nowrap; }
+.share-field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.share-field input { font: inherit; padding: 4px 6px; }

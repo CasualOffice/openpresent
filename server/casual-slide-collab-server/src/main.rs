@@ -18,7 +18,10 @@ async fn main() -> std::process::ExitCode {
         }
     };
     eprintln!("casual-slide-collab-server: listening on {bind}");
-    match serve(listener, Limits::default()).await {
+    // `OPENPRESENT_COLLAB_FILES`: a folder of the editor (`webapp/` with its `pkg/`)
+    // to serve beside the session, so a room link opens the editor from here.
+    let files = std::env::var_os("OPENPRESENT_COLLAB_FILES").map(std::path::PathBuf::from);
+    match serve(listener, Limits::default(), files).await {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {
             eprintln!("casual-slide-collab-server: {e}");

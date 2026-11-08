@@ -31,6 +31,7 @@ import * as shapes from "./editor.shapes.js";
 import * as animate from "./editor.animate.js";
 import * as objects from "./editor.objects.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
+import * as presence from "./editor.presence.js";
 
 const byId = (id) => document.getElementById(id);
 
@@ -188,6 +189,22 @@ async function load(name, msg, transfer, failure) {
     openingBlank = false;
     changed();
   }
+}
+
+/// Open the bytes a shared room started from (`COL-04`): the room's own reading,
+/// shown as a new deck. The name stays.
+export async function reopen(bytes) {
+  const r = await request({ op: "open", bytes: bytes.buffer }, { transfer: [bytes.buffer], priority: 10 });
+  state.deck = { name: state.deck?.name || "Shared presentation.pptx", count: r.count, width: r.width, height: r.height };
+  state.current = 0;
+  slides.load();
+  changed();
+}
+
+/// The deck's bytes as they stand, through the one writer.
+export async function deckBytes() {
+  const r = await request({ op: "save" }, { priority: 10 });
+  return new Uint8Array(r.bytes);
 }
 
 /* ── Commands ───────────────────────────────────────────────────────────── */
@@ -392,6 +409,7 @@ async function boot() {
   animate.init();
   objects.init();
   registerCommands();
+  presence.init();
   initDialogs(request);
   slides.init();
   text.init();
@@ -409,7 +427,8 @@ async function boot() {
   status("Ready");
   // As PowerPoint: start on a new blank presentation, unless a file is already
   // arriving (the desktop shell's, or one dropped while the engine started).
-  if (!state.deck && !opening) newDeck();
+  if (!state.deck && !opening) await newDeck();
+  presence.joinFromLink();
 }
 
 boot();

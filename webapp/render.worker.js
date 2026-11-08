@@ -36,7 +36,15 @@ import init, {
   render_slide_png_hiding,
   insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
+  collab_begin, collab_end, collab_flush, collab_acknowledge, collab_unacknowledged,
+  collab_receive, collab_replay, collab_map_offset, collab_presence, protocol_version,
 } from "./pkg/casual_slide_wasm.js";
+
+// Co-editing (`COL-04`): what `collab.js` asks of the engine.
+const COLLAB = {
+  collab_begin, collab_end, collab_flush, collab_acknowledge, collab_unacknowledged,
+  collab_receive, collab_replay, collab_map_offset, collab_presence, protocol_version,
+};
 
 // Design (`VS-12`): `{ id, op: "design", fn, args }` calls one of these by name and
 // answers `{ value, undo, size }`; `{ op: "themes" }` lists the built-in themes.
@@ -162,6 +170,16 @@ self.onmessage = async (event) => {
       const slide = msg.op === "undo" ? undo() : redo();
       // -2: every slide changed, and perhaps the size with them (`VS-12`).
       self.postMessage({ id, ok: true, slide, count: slide_count(), undo: Array.from(undo_state()), size: Array.from(slide_size()) });
+    } else if (msg.op === "collab") {
+      const fn = Object.hasOwn(COLLAB, msg.fn) ? COLLAB[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      const args = Array.isArray(msg.args) ? msg.args.slice() : [];
+      if (msg.fn === "collab_presence") args[1] = new Uint32Array(args[1] || []);
+      if (msg.fn === "collab_begin" || msg.fn === "collab_acknowledge") args[0] = BigInt(args[0]);
+      if (msg.fn === "collab_begin" || msg.fn === "collab_acknowledge" || msg.fn === "collab_receive") args[1] = BigInt(args[1]);
+      let value = fn(...args);
+      if (ArrayBuffer.isView(value)) value = Array.from(value);
+      self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
     } else if (msg.op === "report") {
       self.postMessage({ id, ok: true, lines: slide_report(msg.index) });
     } else {
