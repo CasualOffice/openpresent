@@ -64,12 +64,16 @@
       <button class="report-btn" id="report-btn" type="button" hidden></button>
       <span class="bottom-status"><span class="dot"></span>Local only<span class="bottom-status-more"> · nothing uploaded</span></span>
       <span class="bar-spacer"></span>
-      <button class="bar-btn" id="notes-toggle" type="button" aria-pressed="true" title="Notes">Notes</button>
+      <!-- PowerPoint's right end (docs/53): Notes, Comments, the four view
+           buttons, the zoom slider with its percentage, and Fit. -->
+      <button class="bar-btn bar-text" id="notes-toggle" type="button" aria-pressed="true" title="Notes"><span>Notes</span></button>
+      <button class="bar-btn bar-text" id="comments-toggle" type="button" data-cmd="review.show-comments" title="Comments"><span>Comments</span></button>
       <div class="view-switch" role="group" aria-label="Views" id="view-switch"></div>
       <div class="zoom" role="group" aria-label="Zoom">
         <button class="bar-btn" id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button>
-        <button class="bar-btn zoom-level" id="zoom-level" type="button" title="Zoom">Fit</button>
+        <input class="zoom-slider" id="zoom-slider" type="range" min="10" max="400" step="1" value="100" aria-label="Zoom" title="Zoom" />
         <button class="bar-btn" id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+        <button class="bar-btn zoom-level" id="zoom-level" type="button" title="Zoom level. Click to fit the slide to the window">Fit</button>
         <button class="bar-btn" id="zoom-fit" type="button" title="Fit slide to current window" aria-label="Fit slide to current window"></button>
       </div>
     </footer>

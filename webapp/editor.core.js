@@ -17,8 +17,10 @@
 // disabled, saying so, and arrives working with its own slice.
 
 import { register, run, all as allCommands } from "./commands.js";
-import { start as startRibbon, queueSync, openBackstage, icon } from "./ribbon.js";
-import { TABS, FILE_RAIL, modelCommandIds } from "./ribbon.model.js";
+import { start as startRibbon, queueSync, openBackstage, icon, setContextual } from "./ribbon.js";
+import { TABS, FILE_RAIL, LABELS, modelCommandIds } from "./ribbon.model.js";
+import * as menus from "./editor.menus.js";
+import * as panes from "./editor.panes.js";
 import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
@@ -104,8 +106,10 @@ export function changed() {
   byId("slide-indicator").textContent = d ? `Slide ${state.current + 1} of ${d.count}` : "";
   byId("notes-toggle").setAttribute("aria-pressed", state.notes ? "true" : "false");
   byId("notes-pane").hidden = !state.notes || state.reading;
-  byId("zoom-level").textContent = state.zoom === "fit" ? "Fit" : `${state.zoom}%`;
-  for (const id of ["zoom-in", "zoom-out", "zoom-level", "zoom-fit"]) byId(id).disabled = !d;
+  showZoom();
+  for (const id of ["zoom-in", "zoom-out", "zoom-level", "zoom-fit", "zoom-slider"]) byId(id).disabled = !d;
+  const cm = allCommands().find((x) => x.id === "review.show-comments");
+  byId("comments-toggle").disabled = !cm || !cm.enabled();
   document.documentElement.classList.toggle("op-reading", state.reading);
   document.documentElement.classList.toggle("op-has-deck", !!d);
   for (const b of byId("view-switch").querySelectorAll("button")) {
@@ -114,6 +118,24 @@ export function changed() {
     if (c?.checked) b.setAttribute("aria-pressed", c.checked() ? "true" : "false");
   }
   queueSync();
+}
+
+/// The zoom as PowerPoint shows it: a percentage even when fitted, where 100%
+/// is the slide at its real size on a 96 dpi screen. On the slider and beside it.
+const EMU_PER_PX = 9525;
+function zoomPercent() {
+  const d = state.deck;
+  if (!d) return 100;
+  if (state.zoom !== "fit") return state.zoom;
+  const w = byId("slide-frame").clientWidth;
+  return w ? Math.round((w / (d.width / EMU_PER_PX)) * 100) : 100;
+}
+function showZoom() {
+  const z = zoomPercent();
+  byId("zoom-level").textContent = `${z}%`;
+  const s = byId("zoom-slider");
+  if (document.activeElement !== s) s.value = String(z);
+  s.setAttribute("aria-valuetext", `${z}%${state.zoom === "fit" ? ", fitted to the window" : ""}`);
 }
 
 /* ── Opening ────────────────────────────────────────────────────────────── */
@@ -258,9 +280,15 @@ function registerCommands() {
   register("help.about", { label: "About OpenPresent", run: () => aboutDialog(state.engineVersion) });
   register("file.info", { label: "Info", run: () => openBackstage("Info") });
 
+  // The shell's own verbs (`UX-003`, docs/53): the Format Shape pane, the
+  // editing mode, and the context menu.
+  panes.registerPaneCommands();
+  menus.registerMenuCommands();
+  register("view.mode.editing", { label: "Editing", checked: () => true, run: () => {} });
+
   // Every other command PowerPoint has and this build does not: present, and
   // disabled with the reason, never faked (owner, 2026-11-08).
-  const labels = new Map();
+  const labels = new Map(Object.entries(LABELS));
   const walk = (it) => {
     if (it.kind === "rows") { it.rows.forEach((r) => r.forEach(walk)); return; }
     if (!labels.has(it.id)) labels.set(it.id, it.label.replace(/\s*\(.*\)\s*$/, ""));
@@ -268,9 +296,9 @@ function registerCommands() {
   for (const t of TABS) for (const g of t.groups) g.items.forEach(walk);
   for (const r of FILE_RAIL) for (const s of r.sections || []) for (const it of s.items) if (!labels.has(it.id)) labels.set(it.id, it.label);
   const built = new Set(allCommands().map((c) => c.id));
-  for (const id of [...modelCommandIds(), "edit.undo", "edit.redo", "home.duplicate-slide", "home.reuse-slides"]) {
+  for (const id of [...modelCommandIds(), "edit.undo", "edit.redo", "home.duplicate-slide", "home.reuse-slides", "view.mode.reviewing", "view.mode.viewing"]) {
     if (built.has(id)) continue;
-    const label = labels.get(id) || ({ "edit.undo": "Undo", "edit.redo": "Redo", "home.duplicate-slide": "Duplicate Slide", "home.reuse-slides": "Reuse Slides" })[id] || id;
+    const label = labels.get(id) || ({ "edit.undo": "Undo", "edit.redo": "Redo", "home.duplicate-slide": "Duplicate Slide", "home.reuse-slides": "Reuse Slides", "view.mode.reviewing": "Reviewing", "view.mode.viewing": "Viewing" })[id] || id;
     register(id, { label, enabled: () => false, reason: NOT_YET, run: () => {} });
   }
 }
@@ -330,8 +358,17 @@ function buildStatusBar() {
     b.addEventListener("click", () => { run(id); changed(); });
     views.appendChild(b);
   }
-  byId("zoom-fit").appendChild(icon("zoom_in", 14));
+  byId("zoom-fit").appendChild(icon("zoom_fit", 16));
+  byId("notes-toggle").prepend(icon("document", 14));
   byId("notes-toggle").addEventListener("click", () => run("view.notes"));
+  byId("comments-toggle").prepend(icon("comment", 14));
+  byId("comments-toggle").addEventListener("click", () => run("review.show-comments"));
+  // The zoom slider: drag to any percentage, as PowerPoint's. It applies on
+  // release and on keys, so a drag does not redraw the slide at every step.
+  const slider = byId("zoom-slider");
+  slider.addEventListener("change", () => { slides.setZoom(Number(slider.value)); });
+  slider.addEventListener("input", () => { byId("zoom-level").textContent = `${slider.value}%`; });
+  new ResizeObserver(() => showZoom()).observe(byId("slide-frame"));
 }
 
 /// What the desktop app's bridge calls (`desktop/src/main.rs`, `VS-03`): a file
@@ -354,6 +391,8 @@ async function boot() {
   initFiles({ onOpen: openDeck });
   buildStatusBar();
   bindKeys();
+  menus.init();
+  setContextual((kind) => kind === "shape" && !!state.deck && selection.hasSelection());
   await startRibbon(byId("workspace"));
   changed();
   status("Ready");

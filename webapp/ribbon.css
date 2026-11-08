@@ -95,7 +95,7 @@
 }
 .op-chrome-ribbon .rb-panel {
   display: flex; align-items: stretch; height: 78px; box-sizing: border-box;
-  padding: 3px 36px 3px 8px; overflow: hidden;
+  padding: 3px 28px 3px 4px; overflow: hidden;
 }
 .op-chrome-ribbon .rb-panel[hidden] { display: none; }
 .op-chrome-ribbon .op-ribbon.rb-labels-captions .rb-panel { height: 96px; }
@@ -199,6 +199,120 @@
 .op-chrome-ribbon .op-ribbon.rb-simplified .rb-l .rb-ico { width: 18px; height: 18px; }
 .op-chrome-ribbon .op-ribbon.rb-simplified .rb-folded .rb-ico { width: 18px; height: 18px; }
 
+/* ── PowerPoint's ribbon (UX-003, docs/53) ────────────────────────────────
+ * What makes the band read as PowerPoint's rather than a toolbar: large
+ * buttons labelled under their icon, small ones labelled beside it where
+ * PowerPoint labels them (Cut, Copy, Layout, Shape Fill…), the Font and Size
+ * combos, in-ribbon galleries, the group name under every group, and the
+ * dialog launcher in its corner. */
+.op-chrome-ribbon .rb-l { min-width: 42px; max-width: 72px; gap: 3px; justify-content: flex-start; padding: 6px 3px 2px; }
+.op-chrome-ribbon .rb-l .rb-ico { margin-top: 2px; }
+.op-chrome-ribbon .rb-l .rb-label { white-space: normal; overflow-wrap: break-word; }
+.op-chrome-ribbon .rb-l .rb-caret { margin-top: -2px; }
+.op-chrome-ribbon .rb-btn.rb-text { justify-content: flex-start; gap: 5px; padding: 0 6px 0 4px; }
+.op-chrome-ribbon .rb-btn.rb-text .rb-label { display: block; font-size: 12px; line-height: 14px; white-space: nowrap; text-align: left; }
+.op-chrome-ribbon .op-ribbon.rb-labels-captions .rb-panel { height: 100px; }
+.op-chrome-ribbon .rb-rows { height: 76px; }
+.op-chrome-ribbon .rb-rows[data-rows="2"] { gap: 10px; }
+.op-chrome-ribbon .rb-rows + .rb-rows { margin-left: 2px; }
+.op-chrome-ribbon .rb-row { gap: 1px; }
+.op-chrome-ribbon .rb-cap { height: 18px; font-size: 11px; }
+.op-chrome-ribbon .rb-group { padding: 0 4px; margin: 4px 0 0; }
+
+/* The dialog launcher, bottom right, in the caption row (PowerPoint's ↘). */
+.op-chrome-ribbon .rb-group:has(> .rb-launch) .rb-cap { padding-right: 16px; }
+.op-chrome-ribbon .rb-launch { right: 2px; bottom: 1px; }
+.op-chrome-ribbon .rb-launch:disabled { opacity: .45; cursor: default; }
+.op-chrome-ribbon .rb-launch:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: -2px; }
+
+/* Combos: Font and Font Size. */
+.rb-combo { flex: none; height: 24px; margin-right: 2px; }
+.rb-combo-btn {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 0 4px 0 6px; box-sizing: border-box; border: 1px solid var(--op-control-border-color); border-radius: 4px;
+  background: var(--op-background-color); color: var(--op-text-color); font: inherit; font-size: 12px; cursor: pointer;
+}
+.rb-combo-btn:hover:not(:disabled) { border-color: var(--op-border-hover-color); }
+.rb-combo-btn:disabled { cursor: default; color: var(--op-disabled-color); background: var(--op-surface-color); }
+.rb-combo-btn:disabled .rb-caret { opacity: .5; }
+.rb-combo-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* In-ribbon galleries: Themes, Variants, Transitions, Animations, Shape Styles. */
+.rb-gallery {
+  display: flex; align-items: stretch; height: 70px; margin: 3px 2px 0; box-sizing: border-box;
+  border: 1px solid var(--op-border-color); border-radius: 4px; background: var(--op-background-color);
+}
+.rb-gal-tiles { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2px; padding: 3px; overflow: hidden; max-width: 392px; }
+.rb-gal-tile {
+  flex: none; width: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 2px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: var(--op-text-color);
+  font: inherit; font-size: 11px; cursor: pointer;
+}
+.rb-gal-tile:hover:not(:disabled) { border-color: var(--op-accent-color); }
+.rb-gal-tile:disabled { cursor: default; color: var(--op-muted-text-color); }
+.rb-gal-tile:disabled .rb-ico { opacity: .55; }
+.rb-gal-name { white-space: nowrap; }
+.rb-gal-swatch {
+  position: relative; width: 56px; height: 56px; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--op-border-color); border-radius: 2px; overflow: hidden;
+}
+.rb-gal-aa { font-size: 17px; font-weight: 600; }
+.rb-gal-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; }
+.rb-gal-tile:disabled .rb-gal-swatch { opacity: .7; }
+.rb-gal-more {
+  flex: none; width: 18px; display: flex; align-items: center; justify-content: center; padding: 0;
+  border: 0; border-left: 1px solid var(--op-border-color); background: transparent; color: var(--op-muted-text-color); cursor: pointer;
+}
+.rb-gal-more:hover:not(:disabled) { background: var(--op-surface-color); }
+.rb-gal-more:disabled { cursor: default; opacity: .6; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gallery { height: 32px; margin: 0; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-tile { width: 32px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-tile:nth-child(n+4),
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-name { display: none; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-swatch { width: 26px; height: 24px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-aa { font-size: 11px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-bar { height: 3px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-tiles { padding: 1px 3px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-gal-tile .rb-ico { width: 18px; height: 18px; }
+/* Simplified keeps a few words, as PowerPoint's single line does for New Slide,
+ * Layout or Shapes; the stacks lose theirs. */
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-combo { height: 28px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-panel { height: 44px; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-group { margin: 0; }
+.op-chrome-ribbon .op-ribbon.rb-simplified .rb-btn.rb-text .rb-label { display: none; }
+
+/* A contextual tab (Shape Format): its name in the accent, as PowerPoint's. */
+.op-chrome-ribbon .rb-tab.rb-tab-ctx { color: var(--op-accent-color); font-weight: 600; }
+.op-chrome-ribbon .rb-tab.rb-tab-ctx[hidden] { display: none; }
+.op-chrome-ribbon .rb-tab.rb-tab-ctx::before {
+  content: ""; position: absolute; left: 6px; right: 6px; top: 1px; height: 2px; border-radius: 1px; background: var(--op-accent-color); opacity: .5;
+}
+
+/* The tab row's right end: Comments, Editing, Present, Share. */
+.op-chrome-ribbon .rb-tabs { align-items: center; }
+.op-chrome-ribbon .rb-tablist { align-self: flex-end; flex: 1 1 auto; }
+.rb-tabs-end { display: flex; align-items: center; gap: 6px; margin-left: auto; padding-left: 12px; flex: none; }
+.rb-end-btn, .rb-present-main, .rb-present-drop {
+  height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; box-sizing: border-box;
+  border: 1px solid var(--op-control-border-color); border-radius: 6px; background: var(--op-background-color);
+  color: var(--op-text-color); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.rb-end-btn:hover:not(:disabled), .rb-present-main:hover:not(:disabled), .rb-present-drop:hover { background: var(--op-surface-color); }
+.rb-end-btn:disabled, .rb-present-main:disabled { color: var(--op-disabled-color); cursor: default; }
+.rb-end-btn:focus-visible, .rb-present-main:focus-visible, .rb-present-drop:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+.rb-present { display: inline-flex; }
+.rb-present-main { border-radius: 6px 0 0 6px; border-right: 0; font-weight: 600; }
+.rb-present-drop { border-radius: 0 6px 6px 0; padding: 0 6px; }
+.rb-tabs-end .rb-share { border: 0; }
+.rb-tabs-end .rb-share:hover:not(:disabled) { background: color-mix(in srgb, var(--op-accent-color), #000 35%); }
+.rb-tabs-end .rb-share:disabled { background: var(--rb-accent-fill); color: var(--rb-on-accent); opacity: .55; }
+@media (max-width: 1100px) { .rb-end-label { display: none; } .rb-present-main .rb-end-label { display: inline; } }
+@media (max-width: 760px) { .rb-tabs-end .rb-mode, .rb-tabs-end .rb-end-btn:first-child { display: none; } }
+
+/* Right-click menus. */
+.rb-ctx { min-width: 220px; }
+.rb-ctx .rb-pop-item { min-height: 30px; }
+
 /* KeyTips */
 .op-chrome-ribbon .rb-tip {
   position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
@@ -274,6 +388,17 @@
 .rb-tile:hover .rb-tile-art { border-color: var(--op-accent-color); }
 .rb-tile:focus-visible .rb-tile-art { outline: 2px solid var(--op-accent-color); outline-offset: 2px; }
 .rb-tile-label { font-size: 13px; }
+/* Blank Presentation: a title slide in miniature, our own drawing. */
+.rb-tile-slide { flex-direction: column; gap: 6px; background: #fff; color: #5f6368; }
+.rb-tile-title { font-size: 12px; padding: 2px 8px; border: 1px dashed #c3c9cc; }
+.rb-tile-sub { font-size: 8px; padding: 1px 6px; border: 1px dashed #d5d9dc; }
+/* PowerPoint's File rail is a band of the app's colour with white text; ours
+ * is the accent, deepened, per `DEC-03`. */
+.rb-rail { background: var(--rb-accent-fill); color: var(--rb-on-accent); border-right: 0; }
+.rb-rail .rb-back, .rb-rail .rb-rail-item, .rb-rail .rb-rail-item .rb-ico { color: var(--rb-on-accent); }
+.rb-rail .rb-back:hover, .rb-rail .rb-rail-item:hover { background: rgba(255, 255, 255, .14); }
+.rb-rail .rb-rail-item.is-on { background: rgba(0, 0, 0, .22); }
+.rb-rail .rb-back:focus-visible, .rb-rail .rb-rail-item:focus-visible { outline-color: #fff; }
 
 /* Described choices: icon, name, one line of what it does. */
 .rb-page-list {

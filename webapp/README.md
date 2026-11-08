@@ -34,9 +34,11 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `editor.build.js` | Building a deck (`VS-08`): New Slide (Ctrl+M) on the current slide's layout and New Slide from Layout from the deck's own layouts, Duplicate, Delete (also Delete in the pane) and Hide Slide, reorder by dragging thumbnails, Insert Text Box, Shapes (rectangle, oval, line, arrow) and Pictures (PNG, JPEG). Each is one engine op in the one history. The editor starts on the built-in blank deck, and File > New opens it again |
 | `editor.text.js` | Text editing on the stage (`VS-05`, `VS-17`): one click into a text box, as PowerPoint, caret, typing, Backspace and Delete, selection by drag, Shift+arrows and Ctrl+A, Bold, Italic and Underline (Home ribbon and Ctrl+B/I/U), undo and redo over the one history. The engine lays out and hit-tests; a hidden textarea takes keys and IME; caret and selection are drawn in an SVG in slide EMU. After OpenCalc's in-cell editor |
 | `editor.dialogs.js` | The modal: errors, the per-slide report, shortcuts, about |
+| `editor.menus.js` | Right-click menus for the slide, a thumbnail, a shape and text, from `CONTEXT_MENUS` in the model; Shift+F10 and the Menu key; Ctrl+F6 between regions (`UX-003`, docs/53) |
+| `editor.panes.js` | The Format Shape task pane: Shape Options and Text Options; Fill & Line, Effects, Size & Properties; size and position read from the selection, the rest disabled until editable (`UX-003`) |
 | `render.worker.js` | The engine in a worker: open, draw a slide to PNG, report, save, PDF, edits, and the show's plan and notes |
 | `commands.js` | The command registry |
-| `ribbon.js`, `ribbon.model.js` | The ribbon, File page and Quick Access Toolbar, drawn from the model |
+| `ribbon.js`, `ribbon.model.js` | The ribbon (PowerPoint for the web's tabs, groups and order, docs/53), contextual Shape Format, the tab row's Comments, Editing, Present and Share, File page and Quick Access Toolbar, drawn from the model |
 | `editor.css`, `ribbon.css`, `ribbon.tokens.css` | Tokens (accent `DEC-03`), regions, the ribbon |
 | `icons.fluent.svg` | Fluent UI System Icons sprite |
 | `index.html`, `docs.html`, `deploy.html`, `download.html` | The site: landing, user guide, self-hosting, desktop downloads. Strict CSP, no inline style or script |
@@ -61,8 +63,10 @@ owner, Apache-2.0 (owner instruction 42), with `oc` prefixes renamed `op`:
 - `commands.js`: verbatim but for the prefix and its header note.
 - `ribbon.js`: cut to one page shell. Kept: model-driven controls run through the
   registry, folding by rank, the File page, Options, Ribbon Display Options,
-  search (Alt+Q), Ctrl+F1. Not yet: embedded shells, combos, toolbar popups,
-  KeyTips, the phone bar. Changed: disabled rather than hidden commands; the
+  search (Alt+Q), Ctrl+F1. Added for PowerPoint (`UX-003`): combos, in-ribbon
+  galleries, dialog launchers, contextual tabs, labelled small buttons, folding
+  that reopens what fits, the tab row's end and `contextMenu`. Not yet: embedded
+  shells, toolbar popups, KeyTips, the phone bar. Changed: disabled rather than hidden commands; the
   sprite is parsed with `DOMParser` instead of `innerHTML`.
 - `ribbon.model.js`: OpenCalc's builders and File page model, with PowerPoint's
   tabs and groups (docs/47, docs/49).
@@ -74,9 +78,11 @@ owner, Apache-2.0 (owner instruction 42), with `oc` prefixes renamed `op`:
 - `editor.dialogs.js`: its `.oc-modal`, built with `textContent`.
 - `render.worker.js`: the idea of OpenCalc's `file.worker.js`, the engine off the
   page's thread.
-- `icons.fluent.svg`: OpenCalc's generated sprite, verbatim, from
+- `icons.fluent.svg`: OpenCalc's generated sprite, from
   `@fluentui/svg-icons` 1.1.344 (MIT, Copyright Microsoft Corporation), as its
-  header says.
+  header says, with 88 more for PowerPoint's commands. Rebuilt by OpenCalc's
+  `tools/icons/`, copied to this repository with its licence: `npm ci && npm run
+  build` there, or `FLUENT_ICONS=<unpacked package> node build-sprite.mjs`.
 - `style.css`: OpenCalc's, with every green turned to cyan (the brand values are
   `editor.css`'s), the Inter web font left out so the system face is used, and a
   `.shots` block added for the real renders.

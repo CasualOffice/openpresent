@@ -59,6 +59,7 @@ by saying so.
 | 48 | 2026-11-08 | Fixing CI must be quick: run only the failing tests locally, one by one, to reproduce and confirm a fix; never the full suite on this machine. Time boxes are short: 30 minutes for CI fixes | [CLAUDE.md](../CLAUDE.md) |
 | 49 | 2026-11-08 | Run CI only on `main`'s newest commit: a new push cancels every older run, in every workflow | `.github/workflows` |
 | 50 | 2026-11-08 | The editor opens with a blank presentation and one blank slide, as PowerPoint does | `webapp/`, `VS-08` |
+| 51 | 2026-11-08 | "UX as well as UI, options and the way it works, is not at all similar to PowerPoint's": the web editor must look and behave like PowerPoint for the web, as OpenCalc does for Excel: its tabs, groups and order, button sizes, Simplified toggle, right-click menus, Format Shape pane, zoom slider and keys; the accent stays cyan and no Microsoft logo or artwork | [53](53-POWERPOINT-WEB-SHELL-TARGET.md), `webapp/`, `UX-003` |
 
 ## Boundaries set by the environment
 

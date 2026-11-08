@@ -30,6 +30,7 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [spec/](spec/README.md) | **Every tag, property and enum value (8730 rows)**, generated; parts and web shortcuts, recorded by hand | Live |
 | [49-POWERPOINT-COMMAND-INVENTORY](49-POWERPOINT-COMMAND-INVENTORY.md) | Every PowerPoint command, from Microsoft's control-ID workbook (2024) and public sources. Desktop strong; web thin | Live |
 | [50-POWERPOINT-UX-STUDY](50-POWERPOINT-UX-STUDY.md) | How PowerPoint behaves, and 24 rules for our shell. From public sources; no live session | Live |
+| [53-POWERPOINT-WEB-SHELL-TARGET](53-POWERPOINT-WEB-SHELL-TARGET.md) | The web editor's target, compact: every tab, group and command in PowerPoint's order; File page, status bar, right-click menus, Format Shape pane, keys (`UX-003`) | Live; from documented sources and recall, not measured |
 | [52-COMPETITOR-STUDY](52-COMPETITOR-STUDY.md) | What other editors learned; 17 ranked fidelity problems as fixture candidates | Live |
 | [96-POWERPOINT-FIT-GAP](96-POWERPOINT-FIT-GAP.md) | Every PowerPoint feature (318) with a disposition, phase and reason | Live |
 | [36-EXPORT-AND-SAVE](36-EXPORT-AND-SAVE.md) | The writer: 118 invariants, each with a repair-risk fixture; save-as grid; fallback policy. Core families built (`T1N-01` to `T1N-04`), the rest designed | Draft for owner |
