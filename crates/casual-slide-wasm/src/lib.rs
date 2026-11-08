@@ -56,8 +56,10 @@ mod views;
 pub use arrange::Order;
 mod find;
 pub use find::{Found, MAX_FIND_MATCHES};
+mod hf;
 mod links;
 mod sections;
+pub use hf::{HeaderFooter, MAX_FOOTER_CHARS};
 pub use links::{MAX_LINK_BYTES, link_allowed};
 pub use sections::MAX_SECTION_NAME;
 pub use views::OutlineSlide;
@@ -2552,6 +2554,37 @@ pub fn set_shape_link(index: u32, node: u32, url: String) -> Result<bool, JsErro
 #[wasm_bindgen]
 pub fn shape_link(index: u32, node: u32) -> Result<Option<String>, JsError> {
     with_viewer(|v| Ok(v.shape_link(index as usize, node)))
+}
+
+/// Insert > Header & Footer (`UX-006`) on slide `index`, or on every slide with `all`:
+/// `date` and `footer` as fixed text (empty to take them away), the slide number, and
+/// "Don't show on title slide". One undo step.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn header_footer(
+    index: u32,
+    all: bool,
+    date: String,
+    footer: String,
+    slide_number: bool,
+    not_on_title: bool,
+) -> Result<bool, JsError> {
+    let some = |s: String| (!s.trim().is_empty()).then_some(s);
+    with_viewer(|v| {
+        v.header_footer(
+            index as usize,
+            all,
+            &HeaderFooter {
+                date: some(date),
+                footer: some(footer),
+                slide_number,
+                not_on_title,
+            },
+        )
+    })
 }
 
 /// The deck's sections for the thumbnail pane (`UX-006`): two strings a section, its

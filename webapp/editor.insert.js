@@ -10,6 +10,11 @@
 // Insert > Link (Ctrl+K) on the selected shape (`UX-006`): a web or mail address the
 // shape links to on a click in PowerPoint's show. The address is stored in the file,
 // never fetched or opened here; the engine takes only `http:`, `https:` and `mailto:`.
+//
+// Insert > Header & Footer (`UX-006`): Date and time (fixed text, today's date by
+// default, which the page supplies), Slide number, Footer, and Don't show on title
+// slide; Apply puts them on this slide and Apply to All on every slide, each as a copy
+// of the layout's placeholder, one undo step. Unticked items are taken away.
 
 import { register } from "./commands.js";
 import { state, request } from "./editor.core.js";
@@ -173,7 +178,67 @@ export function onKey(e) {
   return true;
 }
 
+function headerFooterDialog() {
+  showModal("Header and Footer", (body) => {
+    const check = (label, on) => {
+      const row = document.createElement("label");
+      row.className = "fp-row";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.checked = on;
+      row.append(box, document.createTextNode(` ${label}`));
+      body.appendChild(row);
+      return box;
+    };
+    const field = (label, value) => {
+      const row = document.createElement("label");
+      row.className = "fp-row";
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "fp-input";
+      input.maxLength = 255;
+      input.value = value;
+      input.setAttribute("aria-label", label);
+      row.append(document.createTextNode(`${label} `), input);
+      body.appendChild(row);
+      return input;
+    };
+    const dateOn = check("Date and time", false);
+    const date = field("Fixed", new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }));
+    const numberOn = check("Slide number", false);
+    const footerOn = check("Footer", false);
+    const footer = field("Footer text", "");
+    const notTitle = check("Don't show on title slide", false);
+    date.addEventListener("input", () => { dateOn.checked = true; });
+    footer.addEventListener("input", () => { footerOn.checked = !!footer.value.trim(); });
+    const row = document.createElement("div");
+    row.className = "fd-buttons";
+    const go = async (all) => {
+      closeModal();
+      try {
+        const r = await request({ op: "build", fn: "header_footer", args: [state.current, all, dateOn.checked ? date.value : "", footerOn.checked ? footer.value : "", numberOn.checked, notTitle.checked] }, { priority: 9 });
+        if (r.undo) selection.noteUndoState(r.undo);
+        if (all) for (let i = 0; i < state.deck.count; i++) slides.redrawSlide(i);
+        else await slides.redrawSlide(state.current);
+        await selection.refresh();
+      } catch (e) {
+        errorDialog("OpenPresent could not set the header and footer.", e.message);
+      }
+    };
+    for (const [label, all, primary] of [["Apply", false, false], ["Apply to All", true, true]]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = primary ? "op-btn primary" : "op-btn";
+      b.textContent = label;
+      b.addEventListener("click", () => go(all));
+      row.appendChild(b);
+    }
+    body.appendChild(row);
+  });
+}
+
 export function init() {
+  register("insert.header-footer", { label: "Header & Footer", enabled: () => !!state.deck && state.deck.count > 0, run: headerFooterDialog });
   register("insert.link", { label: "Link", shortcut: "Ctrl+K", enabled: oneShape, run: linkDialog });
   register("insert.wordart", { label: "WordArt", enabled: () => !!state.deck && state.deck.count > 0, run: wordartDialog });
   register("insert.symbol", { label: "Symbol", enabled: () => !!state.deck && state.deck.count > 0, run: symbolDialog });

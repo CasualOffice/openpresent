@@ -837,7 +837,19 @@ impl Viewer {
                 let Some(id) = spid(node).filter(|id| !in_file.contains(id)) else {
                     continue;
                 };
+                let placeholder = node.placeholder();
                 let shape = match node.kind {
+                    // A footer placeholder Header & Footer added (`UX-006`).
+                    NodeKind::Shape if placeholder.is_some() => NewShape::Placeholder {
+                        kind: placeholder
+                            .and_then(|p| p.placeholder_type)
+                            .map(|t| {
+                                use casual_slide_model::properties::Lexical;
+                                t.to_lexical()
+                            })
+                            .unwrap_or_default(),
+                        idx: placeholder.and_then(|p| p.idx),
+                    },
                     NodeKind::Shape => NewShape::Shape,
                     NodeKind::Connector => NewShape::Connector,
                     NodeKind::Picture => {

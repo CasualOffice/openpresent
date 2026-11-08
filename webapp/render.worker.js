@@ -45,7 +45,7 @@ import init, {
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
   insert_wordart, wordart_styles, set_shape_link, shape_link,
-  slide_sections, section_add, section_rename, section_remove,
+  slide_sections, section_add, section_rename, section_remove, header_footer,
   arrange_order, arrange_flip, find_text, replace_text_all, replace_text_one, reset_slide,
 } from "./pkg/casual_slide_wasm.js";
 
@@ -87,8 +87,8 @@ const BUILD = {
   arrange_order, arrange_flip, reset_slide, insert_wordart, wordart_styles,
   // Insert > Link on a shape (`UX-006`): stored, never fetched.
   set_shape_link, shape_link,
-  // Home > Section (`UX-006`).
-  slide_sections, section_add, section_rename, section_remove,
+  // Home > Section, Insert > Header & Footer (`UX-006`).
+  slide_sections, section_add, section_rename, section_remove, header_footer,
 };
 
 /// Arguments that cross as typed arrays: the bridge takes `Vec<u32>` and `Vec<f64>`.

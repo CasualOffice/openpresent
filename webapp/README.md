@@ -28,7 +28,7 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `editor.files.js` | File picker, drag and drop; `download`, through which Save and every Export pass (the desktop shell's hook, `window.__openpresentNative.save(bytes, ext, name)`) |
 | `editor.slides.js` | Thumbnails, the stage, zoom, Reading View, the notes pane |
 | `editor.arrange.js` | Arrange (`UX-006`): Bring to Front, Bring Forward, Send Backward, Send to Back, Rotate and Flip |
-| `editor.insert.js` | Insert > Symbol, WordArt and Link on a shape (`UX-006`) |
+| `editor.insert.js` | Insert > Symbol, WordArt, Link on a shape, and Header & Footer (`UX-006`) |
 | `editor.sections.js` | Home > Section and the thumbnail pane's section headers, collapsing (`UX-006`) |
 | `editor.find.js` | Find, Replace and Reset Slide (`UX-006`) |
 | `editor.views.js` | The View tab's Presentation Views (`UX-006`): Outline View, Slide Sorter, Notes Page; Normal, and Reading View with `editor.core.js` |

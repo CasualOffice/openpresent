@@ -319,6 +319,7 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_TRANSITION_MS` | `60_000` | Milliseconds one transition plays, from `p14:dur` (`VS-07`) | None: a longer one plays for a minute | Untested |
 | `MAX_SLIDE_SIZE` | `51_206_400` | EMU of a slide side the Slide Size command may set; `MIN_SLIDE_SIZE`, `914_400`, is the least, `ST_SlideSizeCoordinate`'s range (`casual-slide-transaction`, `VS-12`) | CS-TXN-0011 | Tested: guard loosened, `a_slide_size_outside_the_schema_is_refused_and_changes_nothing` failed |
 | `MAX_DURATION_MS` | `60_000` | Milliseconds an effect or transition is given by the Transitions and Animations tabs (`VS-10`, `casual-slide-transaction`) | None: a longer one is held to a minute | Untested |
+| `MAX_FOOTER_CHARS` | `255` | Characters of Header & Footer's date or footer text (`UX-006`, `casual-slide-wasm` `hf.rs`) | None: the rest is cut | Untested |
 | `MAX_SECTION_NAME` | `255` | Characters of a section name Add or Rename Section takes (`UX-006`, `casual-slide-wasm` `sections.rs`) | `CS-WSM-0006`: a longer one is refused and nothing changes | Untested |
 | `MAX_LINK_BYTES` | `2048` | Bytes of an address Insert > Link stores (`UX-006`, `casual-slide-wasm` `links.rs`) | `CS-WSM-0006`: a longer one is refused and nothing changes | Untested |
 | `MAX_FIND_MATCHES` | `10_000` | Matches one Find returns (`UX-006`, `casual-slide-wasm` `find.rs`) | None: the search stops there, and Replace All replaces those | Untested |

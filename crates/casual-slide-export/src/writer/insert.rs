@@ -54,7 +54,10 @@ impl Draft<'_> {
                     self.media_part(&media.bytes, &media.extension, &media.content_type)?;
                 Some(self.reuse_relationship(&part, "image", &target)?)
             }
-            NewShape::Shape | NewShape::Connector | NewShape::Table { .. } => None,
+            NewShape::Shape
+            | NewShape::Placeholder { .. }
+            | NewShape::Connector
+            | NewShape::Table { .. } => None,
             NewShape::Chart { chart, workbook } => {
                 let chart_part = self.families.mint("ppt/charts", "chart", "xml")?;
                 let book =
@@ -185,7 +188,7 @@ impl Draft<'_> {
                 tree.insert_child(sp_tree, before, root);
                 return Ok(());
             }
-            NewShape::Shape => ("sp", "nvSpPr", "cNvSpPr"),
+            NewShape::Shape | NewShape::Placeholder { .. } => ("sp", "nvSpPr", "cNvSpPr"),
             NewShape::Connector => ("cxnSp", "nvCxnSpPr", "cNvCxnSpPr"),
             NewShape::Picture(_) => ("pic", "nvPicPr", "cNvPicPr"),
         };
@@ -207,7 +210,7 @@ impl Draft<'_> {
             p(kind_local),
             p("nvPr"),
         );
-        let (sp_pr, fill_name) = (p("spPr"), p("blipFill"));
+        let (sp_pr, fill_name, ph_name) = (p("spPr"), p("blipFill"), p("ph"));
         let root = tree.new_element(&names.0);
         let nv = tree.new_element(&names.1);
         let c_nv = tree.new_element(&names.2);
@@ -217,6 +220,20 @@ impl Draft<'_> {
         let app = tree.new_element(&names.4);
         tree.insert_child(nv, None, c_nv);
         tree.insert_child(nv, None, kind);
+        if let NewShape::Placeholder { kind, idx } = shape {
+            if !matches!(kind.as_str(), "dt" | "ftr" | "sldNum" | "hdr") {
+                return Err(bad(
+                    "a placeholder type this writer does not add",
+                    kind.clone(),
+                ));
+            }
+            let ph = tree.new_element(&ph_name);
+            set_attr(tree, ph, "type", kind, &part)?;
+            if let Some(idx) = idx {
+                set_attr(tree, ph, "idx", &idx.to_string(), &part)?;
+            }
+            tree.insert_child(app, None, ph);
+        }
         tree.insert_child(nv, None, app);
         tree.insert_child(root, None, nv);
         if let Some(rel_id) = embed {

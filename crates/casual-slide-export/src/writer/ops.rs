@@ -289,6 +289,14 @@ pub enum Op {
 pub enum NewShape {
     /// `p:sp`: a text box or a preset shape.
     Shape,
+    /// `p:sp` that is a placeholder: `p:ph` with this `@type` and `@idx` (`UX-006`,
+    /// Header & Footer's date, footer and slide number). Its text is the patch's.
+    Placeholder {
+        /// `@type`, as the schema spells it (`dt`, `ftr`, `sldNum`).
+        kind: String,
+        /// `@idx`, matching the layout's placeholder.
+        idx: Option<u32>,
+    },
     /// `p:cxnSp`: a line or an arrow.
     Connector,
     /// `p:pic`, stretched over its box.

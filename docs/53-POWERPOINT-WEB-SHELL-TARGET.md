@@ -81,7 +81,7 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | Insert / Camera, Forms, Add-ins, Media | | Cameo, Forms, Add-ins, Video, Audio | `RIB-05` |
 | Insert / Links | Link (Ctrl+K) on a selected shape: `http`, `https`, `mailto`, stored and never fetched | Link on selected text, Action | `RIB-04` |
 | Insert / Comments | | Comment (the comments session's) | `COL` rows |
-| Insert / Text | Text Box, WordArt (eight styles: fill, outline, text warp) | Header & Footer | `RIB-04` |
+| Insert / Text | Text Box, WordArt (eight styles: fill, outline, text warp), Header & Footer (date, slide number, footer; Apply, Apply to All; not on the title slide) | | |
 | Insert / Symbols | Symbol | Equation | `RIB-05` |
 | Draw / all | | Select, Lasso, Eraser, Pen, Highlighter, Ink to Shape, Ink to Math, Ink Replay | `RIB-06` |
 | Design / all | Themes, Variants, Slide Size (3), Format Background | Designer | `RIB-09` |
@@ -100,7 +100,7 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | Right-click menus | as the ribbon | Layout; Edit Text, Edit Points, Group, Alt Text; Font…, Paragraph…, Numbering; New Comment | as above |
 
 Menu buttons (Arrange, Align, Rotate, Group, Section, Select, Change Case) are drawn live while any command in their
-menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoint and wait with it (`RIB-04`).
+menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoint; the web ribbon names Header & Footer only.
 
 ## File (Backstage)
 
