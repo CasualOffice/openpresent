@@ -25,8 +25,8 @@ use casual_slide_import::slide::{
 };
 use casual_slide_model::presentation::{Point, PositiveSize};
 use casual_slide_model::shape::{
-    AppNonVisual, Connection, Hyperlink, Locks, NodeKind, NonVisualDrawing, Placeholder, ShapeNode,
-    Transform,
+    AppNonVisual, Connection, Hyperlink, HyperlinkColor, Locks, NodeKind, NonVisualDrawing,
+    Placeholder, ShapeNode, Transform,
 };
 use casual_slide_model::slide::{
     DeckStructure, HeaderFooter, MasterTextStyles, SlideKind, SlidePart,
@@ -982,13 +982,6 @@ pub(crate) fn patch_hyperlink(
     b: &Hyperlink,
     a: &Hyperlink,
 ) -> std::result::Result<(), ExportError> {
-    if b.color != a.color {
-        // `ahyp:hlinkClr` is read, and its `extLst` stays as it was.
-        return Err(ExportError::UnsupportedEdit {
-            what: "a hyperlink's colour extension",
-            part: w.part.to_owned(),
-        });
-    }
     if b.rel_id != a.rel_id {
         // An empty `r:id` is an action with no target, and names no relationship.
         if a.rel_id.as_deref() == Some("") {
@@ -1030,7 +1023,78 @@ pub(crate) fn patch_hyperlink(
         };
         crate::drawing::patch(w, el, Some(&holder(b)), &holder(a))?;
     }
-    Ok(())
+    // After `snd`, so a new `extLst` lands last, where the schema puts it.
+    patch_hyperlink_color(w, el, b.color.as_ref(), a.color.as_ref())
+}
+
+/// `ahyp:`, where a hyperlink's `hlinkClr` lives (Office 2019).
+const AHYP: &[&str] = &["http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor"];
+/// The `a:ext` URI that holds `ahyp:hlinkClr`.
+const HYPERLINK_COLOR_URI: &str = "{A12FA001-AC4F-418D-AE19-62706E023703}";
+
+/// Bring `extLst/ext/ahyp:hlinkClr/@val` from `b` to `a`. The reader takes the first
+/// one, so that is the one changed; other entries, and the list's other extensions, stay.
+// spec-audit: x:drawing/2018/hyperlinkcolor:<hlinkClr>
+fn patch_hyperlink_color(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&HyperlinkColor>,
+    a: Option<&HyperlinkColor>,
+) -> std::result::Result<(), ExportError> {
+    if b == a {
+        return Ok(());
+    }
+    let mut found = None;
+    if let Some(list) = el.first_child(w.tree, w.part, ns::DML, "extLst")? {
+        'lists: for ext in list.children(w.tree, w.part)? {
+            if !ext.is(ns::DML, "ext") {
+                continue;
+            }
+            for item in ext.children(w.tree, w.part)? {
+                if item.is(AHYP, "hlinkClr") {
+                    found = Some((list, ext, item));
+                    break 'lists;
+                }
+            }
+        }
+    }
+    let Some(after) = a else {
+        if let Some((list, ext, item)) = found {
+            w.tree.remove_child(ext.id, item.id);
+            w.changes += 1;
+            // The holders go with their last entry; another's entry keeps them.
+            if ext.children(w.tree, w.part)?.is_empty() {
+                w.tree.remove_child(list.id, ext.id);
+                if list.children(w.tree, w.part)?.is_empty() {
+                    w.tree.remove_child(el.id, list.id);
+                }
+            }
+        }
+        return Ok(());
+    };
+    if let Some((_, _, item)) = found {
+        return w.attr(&item, "val", None, Some(after));
+    }
+    let list = match el.first_child(w.tree, w.part, ns::DML, "extLst")? {
+        Some(list) => list,
+        None => {
+            let list = w.new_child(el, ns::DML, "a", "extLst")?;
+            // `extLst` is `CT_Hyperlink`'s last child.
+            w.tree.insert_child(el.id, None, list.id);
+            list
+        }
+    };
+    let ext = w.new_child(&list, ns::DML, "a", "ext")?;
+    w.tree.insert_child(list.id, None, ext.id);
+    w.attr(
+        &ext,
+        "uri",
+        None::<&String>,
+        Some(&HYPERLINK_COLOR_URI.to_owned()),
+    )?;
+    let item = w.new_child(&ext, AHYP, "ahyp", "hlinkClr")?;
+    w.tree.insert_child(ext.id, None, item.id);
+    w.attr(&item, "val", None, Some(after))
 }
 
 // spec-audit: owner=ph
