@@ -7,7 +7,8 @@
 //! `docs/24-OPERATIONS-AND-COLLABORATION.md`: from the Text family, insert text, delete
 //! a range and format a range over one shape's text body (`VS-05`); from the Properties
 //! and Tree families, set a node's transform and delete or insert a node (`VS-06`, moved
-//! here from `casual-slide-wasm`'s `txn.rs`). One op set, one undo stack.
+//! here from `casual-slide-wasm`'s `txn.rs`); from the Deck family, add, list, remove,
+//! move and hide slides (`VS-08`). One op set, one undo stack.
 //!
 //! # Positions
 //!
@@ -26,7 +27,7 @@
 //! Nothing here reads a file; offsets come from the host and are checked, never trusted.
 
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
-use casual_slide_model::slide::SlideParts;
+use casual_slide_model::slide::{PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
     CharacterProperties, LineBreak, Paragraph, TextBody, TextItem, TextRun, UnderlineType,
 };
@@ -51,6 +52,11 @@ pub enum TxnError {
     },
     /// A restore would leave a body with no paragraph, which the schema forbids.
     EmptyBody(ObjectId),
+    /// No slide is at this place in the deck, or a slide cannot go there (`VS-08`).
+    NoSuchSlide(usize),
+    /// A part cannot be added or dropped here: an added part must take the next
+    /// ordinal, and only the last part, listed nowhere, can be dropped (`VS-08`).
+    BadPart(u32),
 }
 
 impl TxnError {
@@ -62,6 +68,8 @@ impl TxnError {
             Self::NoText(_) => "CS-TXN-0003",
             Self::OutOfRange { .. } => "CS-TXN-0004",
             Self::EmptyBody(_) => "CS-TXN-0005",
+            Self::NoSuchSlide(_) => "CS-TXN-0006",
+            Self::BadPart(_) => "CS-TXN-0007",
         }
     }
 }
@@ -101,6 +109,14 @@ impl core::fmt::Display for TxnError {
                 self.code(),
                 id.node,
                 id.part
+            ),
+            Self::NoSuchSlide(index) => {
+                write!(f, "[{}] no slide at place {index}", self.code())
+            }
+            Self::BadPart(ordinal) => write!(
+                f,
+                "[{}] part {ordinal} cannot be added or dropped there",
+                self.code()
             ),
         }
     }
@@ -199,6 +215,48 @@ pub enum Operation {
         /// What goes in their place.
         paragraphs: Vec<Paragraph>,
     },
+    /// Deck: add a slide-like part with the next ordinal, listed nowhere yet. A new or
+    /// duplicated slide is this, then [`Operation::InsertSlide`] (`VS-08`).
+    AddPart {
+        /// Where it is; `entry.id.part` must be the next ordinal.
+        entry: Box<PartEntry>,
+        /// What it holds; its `id` is `entry.id`.
+        part: Box<SlidePart>,
+    },
+    /// Deck: drop the last part, which nothing lists. The inverse of
+    /// [`Operation::AddPart`].
+    DropPart {
+        /// Its ordinal.
+        ordinal: u32,
+    },
+    /// Deck: list part `ordinal` as a slide at `index` of `sldIdLst`.
+    InsertSlide {
+        /// Its place, from 0.
+        index: usize,
+        /// The slide part.
+        ordinal: u32,
+    },
+    /// Deck: take the slide at `index` out of the deck. Its part stays, so undo can
+    /// list it again; a save deletes it from the file.
+    RemoveSlide {
+        /// Its place, from 0.
+        index: usize,
+    },
+    /// Deck: move the slide at `from` to `to`, counted after it is taken out.
+    MoveSlide {
+        /// Where it is.
+        from: usize,
+        /// Where it goes.
+        to: usize,
+    },
+    /// Deck: a slide's `@show`; `Some(false)` hides it in a slide show, `None` removes
+    /// the attribute, so absent stays absent.
+    SetSlideShow {
+        /// The slide part.
+        ordinal: u32,
+        /// What `@show` becomes.
+        show: Option<bool>,
+    },
     /// Several operations as one: applied in order, all or nothing, one undo step.
     Batch(Vec<Operation>),
 }
@@ -214,12 +272,34 @@ impl Operation {
             | Self::FormatRange { object, .. }
             | Self::Restore { object, .. } => Some(*object),
             Self::Batch(ops) => ops.iter().find_map(Operation::object),
+            Self::AddPart { .. }
+            | Self::DropPart { .. }
+            | Self::InsertSlide { .. }
+            | Self::RemoveSlide { .. }
+            | Self::MoveSlide { .. }
+            | Self::SetSlideShow { .. } => None,
         }
     }
 
     /// The part this operation edits, for a host that shows it. The first, for a batch.
     pub fn part(&self) -> Option<u32> {
-        self.object().map(|o| o.part)
+        match self {
+            Self::SetSlideShow { ordinal, .. } | Self::InsertSlide { ordinal, .. } => {
+                Some(*ordinal)
+            }
+            Self::Batch(ops) => ops.iter().find_map(Operation::part),
+            _ => self.object().map(|o| o.part),
+        }
+    }
+
+    /// Whether this changes which slides the deck lists, or their order: a host
+    /// redraws its slide list rather than one slide.
+    pub fn changes_slide_list(&self) -> bool {
+        match self {
+            Self::InsertSlide { .. } | Self::RemoveSlide { .. } | Self::MoveSlide { .. } => true,
+            Self::Batch(ops) => ops.iter().any(Operation::changes_slide_list),
+            _ => false,
+        }
     }
 
     /// A short name for a menu label: "Undo Typing".
@@ -232,6 +312,10 @@ impl Operation {
             Self::DeleteRange { .. } => "Delete",
             Self::FormatRange { .. } => "Format",
             Self::Restore { .. } => "Edit",
+            Self::AddPart { .. } | Self::InsertSlide { .. } => "New Slide",
+            Self::DropPart { .. } | Self::RemoveSlide { .. } => "Delete Slide",
+            Self::MoveSlide { .. } => "Move Slide",
+            Self::SetSlideShow { .. } => "Hide Slide",
             Self::Batch(ops) => ops.first().map_or("Edit", Operation::label),
         }
     }
@@ -752,6 +836,12 @@ fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnErro
             count,
             paragraphs,
         } => apply_restore(body_mut(parts, object)?, object, first, count, paragraphs),
+        Operation::AddPart { entry, part } => slides::add_part(parts, *entry, *part),
+        Operation::DropPart { ordinal } => slides::drop_part(parts, ordinal),
+        Operation::InsertSlide { index, ordinal } => slides::insert_slide(parts, index, ordinal),
+        Operation::RemoveSlide { index } => slides::remove_slide(parts, index),
+        Operation::MoveSlide { from, to } => slides::move_slide(parts, from, to),
+        Operation::SetSlideShow { ordinal, show } => slides::set_show(parts, ordinal, show),
         Operation::Batch(ops) => {
             let mut inverses: Vec<Operation> = Vec::with_capacity(ops.len());
             let mut changed = false;
@@ -925,7 +1015,11 @@ impl History {
     }
 }
 
+mod slides;
+
 #[cfg(test)]
 mod shape_tests;
+#[cfg(test)]
+mod slide_tests;
 #[cfg(test)]
 mod tests;
