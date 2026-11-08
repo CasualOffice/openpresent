@@ -6,6 +6,7 @@
 // worker) as PNG and shown as an `<img>` from a `blob:` URL. No document string
 // reaches the DOM except the deck's file name, through `textContent`.
 
+import * as notes from "./editor.notes.js";
 import { state, request, dropQueued, changed, status } from "./editor.core.js";
 import { reportDialog } from "./editor.dialogs.js";
 import * as selection from "./editor.selection.js";
@@ -303,22 +304,9 @@ export function startShow(from, opts) { return show.start(from, opts); }
 
 /* ── Notes (`VS-07`) ────────────────────────────────────────────────────── */
 
-let notesToken = 0;
-
-/// The notes pane under the stage: the current slide's speaker notes, as text.
-async function drawNotes() {
-  const box = byId("notes-text");
-  const t = ++notesToken;
-  const index = state.current;
-  try {
-    const r = await request({ op: "notes", index }, { priority: 3 });
-    if (t !== notesToken) return;
-    box.textContent = r.notes || "This slide has no speaker notes.";
-    box.classList.toggle("is-empty", !r.notes);
-  } catch {
-    if (t === notesToken) box.textContent = "";
-  }
-}
+/// The notes pane under the stage: the current slide's notes, editable
+/// (`editor.notes.js`, `UX-011`).
+function drawNotes() { notes.draw(); }
 
 /* ── Wiring ─────────────────────────────────────────────────────────────── */
 

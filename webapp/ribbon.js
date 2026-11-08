@@ -16,6 +16,7 @@
 // run is drawn **disabled**, not hidden, so the ribbon shows PowerPoint's whole
 // shape while saying plainly what works today.
 
+import * as signer from "./editor.author.js";
 import { command, run, all as allCommands } from "./commands.js";
 import { TABS, FILE_RAIL, PRESENT_MENU } from "./ribbon.model.js";
 
@@ -636,6 +637,20 @@ function optionsPage() {
   ribbon.appendChild(segmented("Labels", [["none", "Icons only"], ["captions", "Group names"], ["full", "Names and labels"]]
     .map(([v, label]) => ({ label, pick: () => applyLabels(v), on: () => store.get(LABELS_KEY, LABELS_DEFAULT) === v }))));
   wrap.appendChild(ribbon);
+  // The name comments are signed with (`UX-011`), kept in this browser.
+  const you = h("div", "rb-section");
+  you.appendChild(h("h2", "rb-section-title", "Comments"));
+  const row = h("label", "rb-option-row");
+  row.appendChild(h("span", null, "Your name"));
+  const input = h("input", "fp-input");
+  input.type = "text";
+  input.maxLength = 255;
+  input.value = signer.author().name;
+  input.addEventListener("change", () => signer.setName(input.value));
+  input.addEventListener("keydown", (e) => e.stopPropagation());
+  row.appendChild(input);
+  you.appendChild(row);
+  wrap.appendChild(you);
   return wrap;
 }
 
