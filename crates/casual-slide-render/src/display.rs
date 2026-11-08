@@ -164,7 +164,67 @@ pub enum Paint {
         frame: (f64, f64, f64, f64),
         /// Opacity, 0 to 1.
         alpha: f64,
+        /// Repeated rather than stretched: `a:tile`. `frame` is then the box the
+        /// tiles are aligned in.
+        tile: Option<Tile>,
     },
+    /// A preset pattern: an 8 by 8 cell bitmap, `fg` where a bit is set and `bg`
+    /// where it is clear, repeated from the slide's origin. One cell is one pixel at
+    /// 96 DPI, [`PATTERN_CELL`] EMU, as PowerPoint draws it on screen.
+    Pattern {
+        /// Foreground, for set bits.
+        fg: Rgba,
+        /// Background, for clear bits.
+        bg: Rgba,
+        /// Eight rows, top first; the high bit is the leftmost cell.
+        bits: [u8; 8],
+    },
+}
+
+/// One pattern cell, EMU: a pixel at 96 DPI.
+pub const PATTERN_CELL: f64 = 9_525.0;
+
+/// How a tiled picture fill repeats (`a:tile`), in the item's space.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Tile {
+    /// `@tx`, `@ty`: the tiles' offset from their alignment point, EMU.
+    pub offset: (f64, f64),
+    /// `@sx`, `@sy`: the tile's size as a share of the picture's own size.
+    pub scale: (f64, f64),
+    /// `@flip`: every other tile mirrored across x, y.
+    pub flip: (bool, bool),
+    /// `@algn` as shares of the box and of a tile: 0 left or top, 0.5 centre, 1
+    /// right or bottom.
+    pub align: (f64, f64),
+    /// Pixels per inch the picture's own size is read at.
+    pub dpi: f64,
+}
+
+impl Paint {
+    /// One colour standing for this paint where a backend draws only one: a
+    /// gradient's first stop, a pattern's mix of its two colours by how much of the
+    /// cell is set, and `None` for a picture.
+    pub fn representative(&self) -> Option<Rgba> {
+        match self {
+            Paint::Solid(c) => Some(*c),
+            Paint::Linear { stops, .. } | Paint::Radial { stops, .. } => {
+                stops.first().map(|s| s.color)
+            }
+            Paint::Picture { .. } => None,
+            Paint::Pattern { fg, bg, bits } => {
+                let set: u32 = bits.iter().map(|b| b.count_ones()).sum();
+                let w = f64::from(set) / 64.0;
+                let mix =
+                    |x: u8, y: u8| (f64::from(x) * w + f64::from(y) * (1.0 - w)).round() as u8;
+                Some(Rgba {
+                    r: mix(fg.r, bg.r),
+                    g: mix(fg.g, bg.g),
+                    b: mix(fg.b, bg.b),
+                    a: mix(fg.a, bg.a),
+                })
+            }
+        }
+    }
 }
 
 /// How a stroke's segments end.

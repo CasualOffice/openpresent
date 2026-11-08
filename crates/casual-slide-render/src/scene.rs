@@ -31,11 +31,12 @@ use casual_slide_model::slide::{BackgroundFill, SlideParts};
 use casual_slide_model::table::TableStyleList;
 use casual_slide_model::text::{Autofit, TextBody, TextListStyle, TextVertical};
 use casual_slide_model::theme::{ColorScheme, FormatScheme, ShapeStyle, StyleMatrixRef, Theme};
-use casual_slide_style::Chain;
+use casual_slide_style::{Chain, EffectiveTransform};
 use casual_slide_text::{CaretLine, Frame, TextEnv, layout_text_body};
 
 use crate::display::{
     Affine, Cap, DisplayItem, DisplayList, Glyph, Join, Layer, Paint, PathCmd, Rgba, Stop, Stroke,
+    Tile,
 };
 
 /// Turns a relationship id on a part into the media part it names.
@@ -118,6 +119,7 @@ const EMU_PER_POINT: f64 = 12_700.0;
 
 mod chart;
 mod effects;
+mod pattern;
 mod table;
 
 struct Builder<'a> {
@@ -228,6 +230,82 @@ fn placement(x: f64, y: f64, w: f64, h: f64, rot: i32, flip_h: bool, flip_v: boo
     let rotate = Affine::rotate_degrees(f64::from(rot) / 60_000.0);
     let back = Affine::translate(x + w / 2.0, y + h / 2.0);
     back.then_after(&rotate.then_after(&flip.then_after(&to_centre)))
+}
+
+/// A tiled picture fill's repeat, from `a:tile`. Absent attributes take the schema's
+/// defaults: no offset, 100% scale, no flip, top-left alignment.
+fn tile_of(info: &casual_slide_model::fill::TileInfo, dpi: Option<u32>) -> Tile {
+    use casual_slide_model::fill::{RectAlignment as A, TileFlipMode as F};
+    let scale = |p: Option<casual_slide_model::color::Percentage>| {
+        p.map_or(1.0, |p| f64::from(p.0) / 100_000.0)
+    };
+    let (ax, ay) = match info.align.unwrap_or(A::Tl) {
+        A::Tl => (0.0, 0.0),
+        A::T => (0.5, 0.0),
+        A::Tr => (1.0, 0.0),
+        A::L => (0.0, 0.5),
+        A::Ctr => (0.5, 0.5),
+        A::R => (1.0, 0.5),
+        A::Bl => (0.0, 1.0),
+        A::B => (0.5, 1.0),
+        A::Br => (1.0, 1.0),
+    };
+    let flip = match info.flip.unwrap_or(F::None) {
+        F::None => (false, false),
+        F::X => (true, false),
+        F::Y => (false, true),
+        F::Xy => (true, true),
+    };
+    Tile {
+        offset: (
+            info.tx.map_or(0.0, |c| c.0 as f64),
+            info.ty.map_or(0.0, |c| c.0 as f64),
+        ),
+        scale: (scale(info.sx), scale(info.sy)),
+        flip,
+        align: (ax, ay),
+        // A picture's own resolution is not read yet: 96 DPI, as PowerPoint assumes
+        // for a picture that states none.
+        dpi: dpi.filter(|d| *d > 0).map_or(96.0, f64::from),
+    }
+}
+
+/// A shape's box placed within a group's mapping `parent`, as PowerPoint places it:
+/// the box is scaled into slide units first, and only the group's rotation and flips
+/// apply to what is drawn in it. Line widths, line ends, dashes and font sizes are
+/// stated in slide units, so a group's scale never thickens a line or grows text.
+/// Returns the transform from the scaled box's own space and the box's scaled size.
+fn place_in(parent: &Affine, t: &EffectiveTransform) -> (Affine, f64, f64) {
+    let (x, y) = (t.offset.x.0 as f64, t.offset.y.0 as f64);
+    let (w, h) = (t.extent.cx as f64, t.extent.cy as f64);
+    let (rot, flip_h, flip_v) = (t.rotation, t.flip_h, t.flip_v);
+    let sx = parent.a.hypot(parent.b);
+    let sy = parent.c.hypot(parent.d);
+    if !(sx.is_finite() && sy.is_finite() && sx > 0.0 && sy > 0.0) {
+        let t = parent.then_after(&placement(x, y, w, h, rot, flip_h, flip_v));
+        return (t, w, h);
+    }
+    let (w2, h2) = (w * sx, h * sy);
+    let (cx, cy) = parent.apply(x + w / 2.0, y + h / 2.0);
+    // The group's rotation and flips, without its scale.
+    let turn = Affine {
+        a: parent.a / sx,
+        b: parent.b / sx,
+        c: parent.c / sy,
+        d: parent.d / sy,
+        e: 0.0,
+        f: 0.0,
+    };
+    let t = Affine::translate(cx, cy).then_after(&turn.then_after(&placement(
+        -w2 / 2.0,
+        -h2 / 2.0,
+        w2,
+        h2,
+        rot,
+        flip_h,
+        flip_v,
+    )));
+    (t, w2, h2)
 }
 
 fn percent(p: Option<casual_slide_model::color::Percentage>) -> f64 {
@@ -431,31 +509,33 @@ impl<'a> Builder<'a> {
     }
 
     fn pattern(&mut self, p: &PatternFill, ph: Option<&Color>) -> Option<Paint> {
-        self.report.note("pattern fill (drawn as a blend)");
         let fg = p.foreground.as_ref().and_then(|c| self.color(c, ph));
         let bg = p.background.as_ref().and_then(|c| self.color(c, ph));
-        let weight = p.preset.map_or(0.5, |preset| {
-            let token = preset.to_lexical();
-            token
-                .strip_prefix("pct")
-                .and_then(|n| n.parse::<f64>().ok())
-                .map_or(0.5, |n| n / 100.0)
-        });
-        match (fg, bg) {
-            (Some(f), Some(b)) => {
-                let mix = |x: u8, y: u8| {
-                    (f64::from(x) * weight + f64::from(y) * (1.0 - weight)).round() as u8
-                };
-                Some(Paint::Solid(Rgba {
-                    r: mix(f.r, b.r),
-                    g: mix(f.g, b.g),
-                    b: mix(f.b, b.b),
-                    a: mix(f.a, b.a),
-                }))
+        // The schema's defaults when a colour is absent: black on white.
+        let black = Rgba {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 255,
+        };
+        let white = Rgba {
+            r: 255,
+            g: 255,
+            b: 255,
+            a: 255,
+        };
+        let bits = match p.preset {
+            Some(preset) => pattern::bits(preset),
+            None => {
+                self.report.note("pattern fill (no preset, drawn as pct5)");
+                pattern::bits(casual_slide_model::fill::PresetPattern::Pct5)
             }
-            (Some(c), None) | (None, Some(c)) => Some(Paint::Solid(c)),
-            (None, None) => None,
-        }
+        };
+        Some(Paint::Pattern {
+            fg: fg.unwrap_or(black),
+            bg: bg.unwrap_or(white),
+            bits,
+        })
     }
 
     fn picture(&mut self, b: &BlipFill, ordinal: u32, w: f64, h: f64) -> Option<Paint> {
@@ -477,12 +557,13 @@ impl<'a> Builder<'a> {
         // The stretch rectangle, then the crop: the picture's own frame grows by what
         // the crop cuts off, so the kept part lands on the box.
         let mut frame = (0.0, 0.0, w, h);
+        let mut tile = None;
         match b.mode {
             Some(BlipFillMode::Stretch(Some(r))) => {
                 let (l, t, rr, bb) = (percent(r.l), percent(r.t), percent(r.r), percent(r.b));
                 frame = (l * w, t * h, w * (1.0 - l - rr), h * (1.0 - t - bb));
             }
-            Some(BlipFillMode::Tile(_)) => self.report.note("tiled picture fill (drawn stretched)"),
+            Some(BlipFillMode::Tile(info)) => tile = Some(tile_of(&info, b.dpi)),
             _ => {}
         }
         if let Some(src) = b.source_rect {
@@ -504,6 +585,7 @@ impl<'a> Builder<'a> {
             part,
             frame,
             alpha: 1.0,
+            tile,
         })
     }
 
@@ -603,6 +685,7 @@ impl<'a> Builder<'a> {
             part,
             frame: (0.0, 0.0, w, h),
             alpha: 1.0,
+            tile: None,
         };
         self.push(node, layer, transform, rect_path(w, h), Some(paint), None);
     }
@@ -644,16 +727,7 @@ impl<'a> Builder<'a> {
             }
             return;
         };
-        let (w, h) = (t.extent.cx as f64, t.extent.cy as f64);
-        let transform = parent.then_after(&placement(
-            t.offset.x.0 as f64,
-            t.offset.y.0 as f64,
-            w,
-            h,
-            t.rotation,
-            t.flip_h,
-            t.flip_v,
-        ));
+        let (transform, w, h) = place_in(parent, &t);
         let levels = self.levels(node);
         let ordinal = node.id.part;
 
@@ -775,6 +849,62 @@ impl<'a> Builder<'a> {
         self.text_in(node, body, layer, transform, rect, style);
     }
 
+    /// The text's own frame, turned as `bodyPr/@vert` and `@rot` say: `vert` and
+    /// `eaVert` a quarter turn clockwise, `vert270` a quarter turn the other way,
+    /// the lines laid out across the box's height, about its centre. `eaVert` is
+    /// drawn as `vert`, East Asian characters turned with the rest, and the stacked
+    /// kinds (`wordArtVert`, `wordArtVertRtl`, `mongolianVert`) horizontal; each is
+    /// reported.
+    fn turn_text(
+        &mut self,
+        chain: &casual_slide_style::text::TextChain<'_>,
+        body: &TextBody,
+        transform: Affine,
+        rect: TextRect,
+    ) -> (Affine, TextRect) {
+        let vertical = chain
+            .body(body.properties.as_ref(), |b| b.vertical)
+            .map(|r| r.value);
+        let rot = chain
+            .body(body.properties.as_ref(), |b| b.rotation)
+            .map_or(0, |r| r.value);
+        let quarter = match vertical {
+            Some(TextVertical::Vert) => 90.0,
+            Some(TextVertical::EaVert) => {
+                self.report
+                    .note("eaVert text (East Asian characters turned)");
+                90.0
+            }
+            Some(TextVertical::Vert270) => 270.0,
+            Some(TextVertical::Horz) | None => 0.0,
+            Some(_) => {
+                self.report.note("stacked vertical text (drawn horizontal)");
+                0.0
+            }
+        };
+        let degrees = quarter + f64::from(rot) / 60_000.0;
+        if degrees == 0.0 {
+            return (transform, rect);
+        }
+        let (cx, cy) = ((rect.l + rect.r) / 2.0, (rect.t + rect.b) / 2.0);
+        let turned =
+            transform.then_after(&Affine::translate(cx, cy).then_after(
+                &Affine::rotate_degrees(degrees).then_after(&Affine::translate(-cx, -cy)),
+            ));
+        if quarter == 0.0 {
+            return (turned, rect);
+        }
+        // Lines run along the box's height: the frame's sides swap about the centre.
+        let (hw, hh) = ((rect.b - rect.t) / 2.0, (rect.r - rect.l) / 2.0);
+        let swapped = TextRect {
+            l: cx - hw,
+            t: cy - hh,
+            r: cx + hw,
+            b: cy + hh,
+        };
+        (turned, swapped)
+    }
+
     /// Lay out `body` in `rect` of `node`'s space, with `node`'s text chain, and push
     /// its glyph runs.
     fn text_in(
@@ -794,6 +924,7 @@ impl<'a> Builder<'a> {
         let chain = self
             .chain
             .text_chain(node, self.scene.default_text_style, object_defaults);
+        let (transform, rect) = self.turn_text(&chain, body, transform, rect);
         let env = TextEnv {
             colors: self.text_colors(
                 style
@@ -839,13 +970,6 @@ impl<'a> Builder<'a> {
         }
         for _ in &layout.missing_scripts {
             self.report.note("script with no face");
-        }
-        if body.properties.as_ref().is_some_and(|b| {
-            b.rotation.is_some_and(|r| r != 0)
-                || b.vertical.is_some_and(|v| v != TextVertical::Horz)
-        }) {
-            self.report
-                .note("rotated or vertical text (drawn horizontal)");
         }
         for run in layout.runs {
             if run.synthetic_bold {

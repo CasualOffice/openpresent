@@ -10,6 +10,30 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use casual_slide_render::Deck;
+use casual_slide_text::cjk::{Region, SliceDirectory, Style, Variant};
+
+/// Load the CJK slices (`webapp/fonts/cjk`, T2D5-02) holding the deck's characters,
+/// in every region and style, as a host fetches them before drawing. Without the
+/// directory, CJK text is reported as having no face, as before.
+fn load_cjk(deck: &Deck) {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../webapp/fonts/cjk");
+    let Ok(dir) = SliceDirectory::open(root) else {
+        return;
+    };
+    let chars = deck.characters();
+    let mut wanted = Vec::new();
+    for region in Region::ALL {
+        for (style, bold) in [
+            (Style::Sans, false),
+            (Style::Sans, true),
+            (Style::Serif, false),
+        ] {
+            let v = Variant::new(region, style, bold);
+            wanted.extend(chars.iter().map(|c| (v, *c)));
+        }
+    }
+    dir.load(wanted);
+}
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -39,6 +63,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    load_cjk(&deck);
     let outdir = PathBuf::from(outdir);
     if let Err(e) = std::fs::create_dir_all(&outdir) {
         eprintln!("render-deck: cannot create {}: {e}", outdir.display());

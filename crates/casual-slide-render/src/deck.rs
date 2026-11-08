@@ -183,6 +183,54 @@ impl Deck {
         self.size
     }
 
+    /// Every character the deck's text uses, in slides, layouts, masters, tables and
+    /// stored SmartArt drawings: what a host looks up before rendering, to load the
+    /// CJK slices (`casual_slide_text::cjk::SliceDirectory`) that draw them.
+    pub fn characters(&self) -> BTreeSet<char> {
+        use casual_slide_model::text::{TextBody, TextItem};
+        fn body(out: &mut BTreeSet<char>, b: &TextBody) {
+            for p in &b.paragraphs {
+                for item in &p.items {
+                    let text = match item {
+                        TextItem::Run(r) => r.text.as_deref(),
+                        TextItem::Field(f) => f.text.as_deref(),
+                        _ => None,
+                    };
+                    out.extend(text.unwrap_or_default().chars());
+                }
+            }
+        }
+        fn node(out: &mut BTreeSet<char>, n: &ShapeNode) {
+            for n in n.descendants() {
+                if let Some(b) = n.text_body.as_deref() {
+                    body(out, b);
+                }
+                let cells = n
+                    .table
+                    .iter()
+                    .flat_map(|t| t.rows.iter())
+                    .flat_map(|r| &r.cells);
+                for b in cells.filter_map(|c| c.tx_body.as_deref()) {
+                    body(out, b);
+                }
+            }
+        }
+        let mut out = BTreeSet::new();
+        let trees = self
+            .parts
+            .parts
+            .iter()
+            .flatten()
+            .filter_map(|p| p.common.as_ref()?.shape_tree.as_ref());
+        for tree in trees {
+            node(&mut out, tree);
+        }
+        for drawn in self.diagrams.values().flatten() {
+            node(&mut out, drawn);
+        }
+        out
+    }
+
     /// The display list of slide `index`, counted from 0.
     pub fn display_list(&self, index: usize) -> Result<(DisplayList, SceneReport), RenderError> {
         let ordinal = self

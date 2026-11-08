@@ -28,7 +28,6 @@ const JP_SANS: Variant = Variant {
 };
 
 #[test]
-#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn a_loaded_slice_draws_and_measures_its_characters() {
     let dir = dir();
     assert!(dir.load(wanted(JP_SANS, "日本語")) >= 1, "a slice was read");
@@ -44,7 +43,6 @@ fn a_loaded_slice_draws_and_measures_its_characters() {
 }
 
 #[test]
-#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn kana_in_a_latin_cell_draws_its_han_in_the_japanese_face_and_hangul_in_the_korean() {
     let dir = dir();
     let kr = Variant::new(Region::Kr, Style::Sans, false);
@@ -62,7 +60,6 @@ fn kana_in_a_latin_cell_draws_its_han_in_the_japanese_face_and_hangul_in_the_kor
 }
 
 #[test]
-#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn a_character_its_region_lacks_comes_from_the_next_region_in_the_chain() {
     let dir = dir();
     let index = dir.index();
@@ -88,7 +85,6 @@ fn a_character_its_region_lacks_comes_from_the_next_region_in_the_chain() {
 }
 
 #[test]
-#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn an_east_asian_font_draws_its_own_latin_once_its_slice_loads() {
     // Korean serif: no other test in this binary registers it.
     let kr_serif = Variant::new(Region::Kr, Style::Serif, false);
@@ -103,7 +99,6 @@ fn an_east_asian_font_draws_its_own_latin_once_its_slice_loads() {
 }
 
 #[test]
-#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn a_bold_serif_cell_is_drawn_emboldened_because_no_serif_bold_ships() {
     let tc_serif = Variant::new(Region::Tc, Style::Serif, true);
     assert_eq!(tc_serif.weight, 400);
@@ -121,7 +116,6 @@ fn a_bold_serif_cell_is_drawn_emboldened_because_no_serif_bold_ships() {
 /// of three regions, has exactly that advance — so a column autofitted before
 /// its font arrives is not wrong for its CJK text.
 #[test]
-#[ignore = "needs webapp/fonts/cjk, not yet in this repo (T2D5-02)"]
 fn the_nominal_width_is_the_real_width_in_every_shipped_slice() {
     let mut checked = 0usize;
     // Every region and both styles; the bold sans shares its widths with the
@@ -174,3 +168,39 @@ fn nominal_matches(key: &str, style: Style) -> usize {
 }
 
 use skrifa::raw::TableProvider as _;
+
+/// A CJK slice's glyph stays upright at every size a slide uses. Slide sizes are
+/// EMU, so a 44 pt title asks for an em of 558,800; the slices are CFF, whose
+/// 16.16 fixed-point arithmetic overflowed there and drew the title upside down
+/// (FH-01, `z21464709-souzou-ja`).
+#[test]
+fn a_cjk_glyph_is_upright_at_slide_sizes_in_emu() {
+    use crate::{OutlineOp as O, glyph_outline};
+    dir().load(wanted(JP_SANS, "創"));
+    let face = loaded_face(JP_SANS, '創').expect("the JP slice holds it");
+    let id = FontRef::new(face)
+        .unwrap()
+        .charmap()
+        .map('創')
+        .unwrap()
+        .to_u32();
+    for size in [12_700.0f32, 228_600.0, 558_800.0, 1_270_000.0] {
+        let mut ops = Vec::new();
+        assert!(glyph_outline(face, id, size, &mut ops));
+        let ys: Vec<f32> = ops
+            .iter()
+            .flat_map(|op| match *op {
+                O::MoveTo(_, y) | O::LineTo(_, y) => vec![y],
+                O::QuadTo(_, a, _, y) => vec![a, y],
+                O::CubicTo(_, a, _, b, _, y) => vec![a, b, y],
+                O::Close => vec![],
+            })
+            .collect();
+        let top = ys.iter().copied().fold(f32::INFINITY, f32::min);
+        let bottom = ys.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        // y down: an ideograph rises most of an em above the baseline and dips a
+        // little below it.
+        assert!(top < -0.6 * size && top > -1.1 * size, "{size}: top {top}");
+        assert!(bottom < 0.3 * size, "{size}: bottom {bottom}");
+    }
+}

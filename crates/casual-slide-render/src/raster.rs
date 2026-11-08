@@ -14,7 +14,9 @@ use tiny_skia::{
     Stroke as SkStroke, StrokeDash, Transform,
 };
 
-use crate::display::{Affine, Cap, DisplayItem, DisplayList, Join, Paint, PathCmd, Rgba, Stroke};
+use crate::display::{
+    Affine, Cap, DisplayItem, DisplayList, Join, PATTERN_CELL, Paint, PathCmd, Rgba, Stroke, Tile,
+};
 use crate::images::{self, ImageReport, ImageSource};
 use crate::{RenderError, RenderReport};
 
@@ -164,36 +166,65 @@ fn draw(
             // A gradient of no size is its last colour.
             .or_else(|| s.last().map(|l| Shader::SolidColor(color(l.color))))
         }
-        Paint::Picture { part, frame, alpha } => {
+        Paint::Picture {
+            part,
+            frame,
+            alpha,
+            tile,
+        } => {
             let Some(image) = pictures.get(part, report) else {
                 return;
             };
-            let (iw, ih) = (image.width() as f32, image.height() as f32);
-            let (x, y, w, h) = (
-                frame.0 as f32,
-                frame.1 as f32,
-                frame.2 as f32,
-                frame.3 as f32,
-            );
-            let place = Transform::from_row(w / iw, 0.0, 0.0, h / ih, x, y);
-            let shader = Pattern::new(
-                image.as_ref(),
-                SpreadMode::Pad,
-                FilterQuality::Bicubic,
-                alpha.clamp(0.0, 1.0) as f32,
-                place,
-            );
-            let sk = SkPaint {
-                shader,
-                anti_alias: true,
-                force_hq_pipeline: true,
-                ..SkPaint::default()
-            };
-            match stroke {
-                Some(s) => pixmap.stroke_path(path, &sk, s, transform, None),
-                None => pixmap.fill_path(path, &sk, FillRule::Winding, transform, None),
+            let alpha = alpha.clamp(0.0, 1.0) as f32;
+            match tile {
+                None => {
+                    let (iw, ih) = (image.width() as f32, image.height() as f32);
+                    let (x, y, w, h) = (
+                        frame.0 as f32,
+                        frame.1 as f32,
+                        frame.2 as f32,
+                        frame.3 as f32,
+                    );
+                    let place = Transform::from_row(w / iw, 0.0, 0.0, h / ih, x, y);
+                    let shader = Pattern::new(
+                        image.as_ref(),
+                        SpreadMode::Pad,
+                        FilterQuality::Bicubic,
+                        alpha,
+                        place,
+                    );
+                    paint_with(pixmap, path, shader, stroke, transform);
+                }
+                Some(tile) => {
+                    let Some((cell, place)) = tile_cell(image, *frame, tile) else {
+                        return;
+                    };
+                    let shader = Pattern::new(
+                        cell.as_ref(),
+                        SpreadMode::Repeat,
+                        FilterQuality::Bicubic,
+                        alpha,
+                        place,
+                    );
+                    paint_with(pixmap, path, shader, stroke, transform);
+                }
             }
             report.drew();
+            return;
+        }
+        Paint::Pattern { fg, bg, bits } => {
+            let Some(cell) = pattern_cell(*fg, *bg, bits) else {
+                return;
+            };
+            let k = PATTERN_CELL as f32;
+            let shader = Pattern::new(
+                cell.as_ref(),
+                SpreadMode::Repeat,
+                FilterQuality::Nearest,
+                1.0,
+                Transform::from_scale(k, k),
+            );
+            paint_with(pixmap, path, shader, stroke, transform);
             return;
         }
     };
@@ -221,6 +252,97 @@ fn hairline(t: &Transform) -> f32 {
     } else {
         0.0
     }
+}
+
+/// Fill or stroke `path` with a picture shader, smoothing edges.
+fn paint_with(
+    pixmap: &mut Pixmap,
+    path: &tiny_skia::Path,
+    shader: Shader<'_>,
+    stroke: Option<&SkStroke>,
+    transform: Transform,
+) {
+    let sk = SkPaint {
+        shader,
+        anti_alias: true,
+        force_hq_pipeline: true,
+        ..SkPaint::default()
+    };
+    match stroke {
+        Some(s) => pixmap.stroke_path(path, &sk, s, transform, None),
+        None => pixmap.fill_path(path, &sk, FillRule::Winding, transform, None),
+    }
+}
+
+/// A pattern's 8 by 8 cell: `fg` where a bit is set, `bg` where clear.
+fn pattern_cell(fg: Rgba, bg: Rgba, bits: &[u8; 8]) -> Option<Pixmap> {
+    let mut cell = Pixmap::new(8, 8)?;
+    let (fg, bg) = (color(fg).premultiply(), color(bg).premultiply());
+    for (i, px) in cell.pixels_mut().iter_mut().enumerate() {
+        let (row, col) = (i / 8, i % 8);
+        let set = bits.get(row).is_some_and(|b| b & (0x80 >> col) != 0);
+        *px = if set { fg } else { bg }.to_color_u8();
+    }
+    Some(cell)
+}
+
+/// One repeat of a tiled picture, mirrored copies included when `flip` asks, and
+/// where the repeat starts in the item's space: the picture at its own size times
+/// the scale, aligned in `frame` as `align` says, then moved by the offset.
+fn tile_cell(
+    image: &Pixmap,
+    frame: (f64, f64, f64, f64),
+    tile: &Tile,
+) -> Option<(Pixmap, Transform)> {
+    let (iw, ih) = (f64::from(image.width()), f64::from(image.height()));
+    let emu_per_px = EMU_PER_INCH / tile.dpi;
+    let (tw, th) = (
+        iw * emu_per_px * tile.scale.0,
+        ih * emu_per_px * tile.scale.1,
+    );
+    if !(tw.is_finite() && th.is_finite()) || tw.abs() < 1.0 || th.abs() < 1.0 {
+        return None;
+    }
+    let (fx, fy) = (u32::from(tile.flip.0) + 1, u32::from(tile.flip.1) + 1);
+    let mut cell = Pixmap::new(
+        image.width().checked_mul(fx)?,
+        image.height().checked_mul(fy)?,
+    )?;
+    let (w, h) = (image.width() as f32, image.height() as f32);
+    for (mx, my) in [(false, false), (true, false), (false, true), (true, true)] {
+        if (mx && fx == 1) || (my && fy == 1) {
+            continue;
+        }
+        // A mirrored copy: reflected within its own cell, beside the original.
+        let t = Transform::from_row(
+            if mx { -1.0 } else { 1.0 },
+            0.0,
+            0.0,
+            if my { -1.0 } else { 1.0 },
+            if mx { 2.0 * w } else { 0.0 },
+            if my { 2.0 * h } else { 0.0 },
+        );
+        cell.draw_pixmap(
+            0,
+            0,
+            image.as_ref(),
+            &tiny_skia::PixmapPaint::default(),
+            t,
+            None,
+        );
+    }
+    let (x, y, bw, bh) = frame;
+    let x0 = x + tile.align.0 * (bw - tw) + tile.offset.0;
+    let y0 = y + tile.align.1 * (bh - th) + tile.offset.1;
+    let place = Transform::from_row(
+        (tw / iw) as f32,
+        0.0,
+        0.0,
+        (th / ih) as f32,
+        x0 as f32,
+        y0 as f32,
+    );
+    Some((cell, place))
 }
 
 fn sk_stroke(stroke: &Stroke) -> SkStroke {

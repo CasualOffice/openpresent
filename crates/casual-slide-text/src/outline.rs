@@ -14,6 +14,7 @@
 use std::sync::RwLock;
 
 use skrifa::outline::{DrawSettings, OutlinePen};
+use skrifa::raw::TableProvider as _;
 use skrifa::{FontRef, GlyphId, MetadataProvider, instance::LocationRef, prelude::Size};
 
 use crate::faces::FAMILIES;
@@ -108,23 +109,36 @@ pub fn face_by_key(key: &str) -> Option<&'static [u8]> {
     })
 }
 
+/// Writes outline commands y down, scaled from font units by `k`.
 struct Pen<'a> {
     out: &'a mut Vec<OutlineOp>,
+    k: f32,
 }
 
 impl OutlinePen for Pen<'_> {
     fn move_to(&mut self, x: f32, y: f32) {
-        self.out.push(OutlineOp::MoveTo(x, -y));
+        let k = self.k;
+        self.out.push(OutlineOp::MoveTo(x * k, -y * k));
     }
     fn line_to(&mut self, x: f32, y: f32) {
-        self.out.push(OutlineOp::LineTo(x, -y));
+        let k = self.k;
+        self.out.push(OutlineOp::LineTo(x * k, -y * k));
     }
     fn quad_to(&mut self, cx0: f32, cy0: f32, x: f32, y: f32) {
-        self.out.push(OutlineOp::QuadTo(cx0, -cy0, x, -y));
+        let k = self.k;
+        self.out
+            .push(OutlineOp::QuadTo(cx0 * k, -cy0 * k, x * k, -y * k));
     }
     fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
-        self.out
-            .push(OutlineOp::CubicTo(cx0, -cy0, cx1, -cy1, x, -y));
+        let k = self.k;
+        self.out.push(OutlineOp::CubicTo(
+            cx0 * k,
+            -cy0 * k,
+            cx1 * k,
+            -cy1 * k,
+            x * k,
+            -y * k,
+        ));
     }
     fn close(&mut self) {
         self.out.push(OutlineOp::Close);
@@ -145,10 +159,19 @@ pub fn glyph_outline(face: &[u8], id: u32, size: f32, out: &mut Vec<OutlineOp>) 
     let Some(glyph) = font.outline_glyphs().get(GlyphId::new(id)) else {
         return false;
     };
-    let mut pen = Pen { out };
+    // Drawn in font units and scaled here: a slide asks for sizes in EMU, a 44 pt
+    // em being 558,800, and a CFF outline scaled that far overflows skrifa's 16.16
+    // fixed point and comes out upside down (FH-01).
+    let upem = font
+        .head()
+        .map_or(1000.0, |h| f32::from(h.units_per_em().max(16)));
+    let mut pen = Pen {
+        out,
+        k: size / upem,
+    };
     glyph
         .draw(
-            DrawSettings::unhinted(Size::new(size), LocationRef::default()),
+            DrawSettings::unhinted(Size::unscaled(), LocationRef::default()),
             &mut pen,
         )
         .is_ok()
