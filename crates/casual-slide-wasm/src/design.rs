@@ -10,8 +10,13 @@
 use casual_slide_model::color::{Angle, Color, Percentage};
 use casual_slide_model::fill::{Fill, GradientFill, GradientShade, GradientStop};
 use casual_slide_model::presentation::{Coordinate, POSITIVE_COORDINATE_MAX, Point, PositiveSize};
+use casual_slide_model::shape::ShapeNode;
 use casual_slide_model::slide::{
     Background, BackgroundFill, BackgroundProperties, SlideKind, SlideParts,
+};
+use casual_slide_model::text::{
+    BulletSize, CharacterProperties, FONT_SIZE_MIN, ParagraphProperties, TEXT_POINT_MAX, TextBody,
+    TextItem, TextListStyle,
 };
 use casual_slide_model::theme::{ColorScheme, FontScheme, Theme};
 use casual_slide_render::Deck;
@@ -263,6 +268,108 @@ fn clamp_coordinate(v: f64) -> Coordinate {
     Coordinate(v.round().clamp(-max, max) as i64)
 }
 
+/// A font size, hundredths of a point, times `s`: rounded to the hundredth the file
+/// holds and kept within `ST_TextFontSize`.
+fn scale_point(v: i32, s: f64) -> i32 {
+    (f64::from(v) * s)
+        .round()
+        .clamp(f64::from(FONT_SIZE_MIN), f64::from(TEXT_POINT_MAX)) as i32
+}
+
+fn scale_run(p: &mut CharacterProperties, s: f64) {
+    if let Some(v) = p.size.as_mut() {
+        *v = scale_point(*v, s);
+    }
+}
+
+fn scale_paragraph_properties(p: &mut ParagraphProperties, s: f64) {
+    if let Some(r) = p.default_run.as_deref_mut() {
+        scale_run(r, s);
+    }
+    if let Some(BulletSize::Points(v)) = p.bullet_size.as_mut() {
+        *v = scale_point(*v, s);
+    }
+}
+
+fn scale_list_style(l: &mut TextListStyle, s: f64) {
+    for p in l.levels.iter_mut().chain([&mut l.default]).flatten() {
+        scale_paragraph_properties(p, s);
+    }
+}
+
+/// A text body's list style and paragraphs with every stated font size times `s`.
+fn scale_body(body: &mut TextBody, s: f64) {
+    if let Some(l) = body.list_style.as_mut() {
+        scale_list_style(l, s);
+    }
+    for para in &mut body.paragraphs {
+        if let Some(p) = para.properties.as_deref_mut() {
+            scale_paragraph_properties(p, s);
+        }
+        if let Some(r) = para.end_properties.as_deref_mut() {
+            scale_run(r, s);
+        }
+        for item in &mut para.items {
+            let props = match item {
+                TextItem::Run(r) => r.properties.as_deref_mut(),
+                TextItem::Break(b) => b.properties.as_deref_mut(),
+                TextItem::Field(f) => {
+                    if let Some(p) = f.paragraph_properties.as_deref_mut() {
+                        scale_paragraph_properties(p, s);
+                    }
+                    f.properties.as_deref_mut()
+                }
+                TextItem::Math(_) | TextItem::Retained(_) => None,
+            };
+            if let Some(r) = props {
+                scale_run(r, s);
+            }
+        }
+    }
+}
+
+/// The operations that scale the font sizes of every node under `root`, groups
+/// included, by `s`: the list style and the paragraphs of each text body, and each
+/// table whole. Nothing for a node whose sizes do not change.
+fn text_ops(root: &ShapeNode, s: f64, ops: &mut Vec<Operation>) {
+    let mut stack: Vec<&ShapeNode> = root.children.iter().collect();
+    while let Some(node) = stack.pop() {
+        stack.extend(node.children.iter());
+        if let Some(body) = node.text_body.as_deref() {
+            let mut scaled = body.clone();
+            scale_body(&mut scaled, s);
+            if scaled.list_style != body.list_style {
+                ops.push(Operation::SetListStyle {
+                    object: node.id,
+                    list_style: scaled.list_style.map(Box::new),
+                });
+            }
+            if scaled.paragraphs != body.paragraphs && !body.paragraphs.is_empty() {
+                ops.push(Operation::Restore {
+                    object: node.id,
+                    first: 0,
+                    count: body.paragraphs.len(),
+                    paragraphs: scaled.paragraphs,
+                });
+            }
+        }
+        if let Some(table) = node.table.as_deref() {
+            let mut scaled = table.clone();
+            for cell in scaled.rows.iter_mut().flat_map(|r| r.cells.iter_mut()) {
+                if let Some(b) = cell.tx_body.as_deref_mut() {
+                    scale_body(b, s);
+                }
+            }
+            if &scaled != table {
+                ops.push(Operation::SetTable {
+                    node: node.id,
+                    table: Some(Box::new(scaled)),
+                });
+            }
+        }
+    }
+}
+
 fn clamp_size(v: f64) -> i64 {
     v.round().clamp(0.0, POSITIVE_COORDINATE_MAX as f64) as i64
 }
@@ -335,8 +442,11 @@ impl Viewer {
     }
 
     /// Change the slide size to `cx` by `cy` EMU, scaling what every slide, layout and
-    /// master places to fit, centred, as PowerPoint's Ensure Fit or Maximize. One undo
-    /// step. Text sizes are not scaled.
+    /// master places to fit, centred, as PowerPoint's Ensure Fit or Maximize. Font sizes
+    /// are scaled by the same factor everywhere they are stated, as PowerPoint's are
+    /// (`UX-015`): runs, line breaks, fields, paragraph ends, paragraph defaults, bullet
+    /// sizes in points, each shape's and table cell's list style, and each master's
+    /// `txStyles`. One undo step.
     pub fn set_slide_size(&mut self, cx: i64, cy: i64, fit: Fit) -> Result<bool, BridgeError> {
         let (ow, oh) = self.deck.size();
         let mut ops = vec![Operation::SetSlideSize { cx, cy }];
@@ -359,6 +469,26 @@ impl Viewer {
                 let Some(root) = parts.get(entry.id.part).and_then(|p| p.shape_tree()) else {
                     continue;
                 };
+                text_ops(root, s, &mut ops);
+                if entry.kind == SlideKind::Master
+                    && let Some(styles) = parts
+                        .get(entry.id.part)
+                        .and_then(|p| p.text_styles.as_ref())
+                {
+                    let mut scaled = styles.clone();
+                    for l in [&mut scaled.title, &mut scaled.body, &mut scaled.other]
+                        .into_iter()
+                        .flatten()
+                    {
+                        scale_list_style(l, s);
+                    }
+                    if &scaled != styles {
+                        ops.push(Operation::SetTextStyles {
+                            master: entry.id.part,
+                            styles: Some(Box::new(scaled)),
+                        });
+                    }
+                }
                 for node in &root.children {
                     let Some(mut t) = node.transform else {
                         continue;

@@ -148,6 +148,77 @@ fn slide_size_scales_the_content_and_round_trips() {
     assert_eq!(v.save().unwrap(), source);
 }
 
+/// Every stated font size in an XML part, in document order: `@sz` and `buSzPts/@val`,
+/// hundredths of a point.
+fn font_sizes(xml: &str) -> Vec<i64> {
+    let mut out = Vec::new();
+    for (i, _) in xml
+        .match_indices(" sz=\"")
+        .chain(xml.match_indices("<a:buSzPts val=\""))
+    {
+        let rest = &xml[i..];
+        let at = rest.find('"').unwrap() + 1;
+        let end = at + rest[at..].find('"').unwrap();
+        out.push((i, rest[at..end].parse::<i64>().unwrap()));
+    }
+    out.sort_unstable();
+    out.into_iter().map(|(_, v)| v).collect()
+}
+
+/// Ensure Fit scales font sizes with the slide, as PowerPoint does (`UX-015`): on a
+/// Google Slides deck with sizes in runs, paragraph ends, list styles in shapes, layouts
+/// and the master, bullets in points, and the master's `txStyles`, every one is scaled by
+/// the slide's factor, saved so, and undone to the very bytes opened.
+#[test]
+fn ensure_fit_scales_every_stated_font_size_and_undo_restores_them() {
+    let path = format!(
+        "{}/../../fixtures/real/gs-z11091145-curation-en.pptx",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let source = std::fs::read(path).unwrap();
+    let mut v = Viewer::open(source.clone()).unwrap();
+    let (ow, oh) = v.slide_size();
+    // Portrait 5.63 by 10 inches, as the owner chose: the content shrinks to 0.5625.
+    let (cx, cy) = (oh, ow);
+    assert!(v.set_slide_size(cx, cy, Fit::EnsureFit).unwrap());
+    let k = (cx as f64 / ow as f64).min(cy as f64 / oh as f64);
+    assert!(k < 0.6, "{k}");
+    let saved = v.save().unwrap();
+    let mut checked = 0;
+    for name in package(&source).part_names() {
+        let text_part = [
+            "ppt/slides/slide",
+            "ppt/slideLayouts/slideLayout",
+            "ppt/slideMasters/slideMaster",
+        ]
+        .iter()
+        .any(|p| name.starts_with(p) && name.ends_with(".xml"));
+        if !text_part {
+            continue;
+        }
+        let before = font_sizes(&part_text(&source, &name));
+        let after = font_sizes(&part_text(&saved, &name));
+        let want: Vec<i64> = before
+            .iter()
+            .map(|&b| (b as f64 * k).round().max(100.0) as i64)
+            .collect();
+        assert_eq!(after, want, "{name}");
+        checked += before.len();
+    }
+    assert!(checked > 200, "{checked} sizes");
+    let master = part_text(&saved, "ppt/slideMasters/slideMaster1.xml");
+    assert!(master.contains("<p:txStyles>"), "txStyles kept");
+    // One undo step takes it all back.
+    v.undo().unwrap();
+    assert_eq!(v.slide_size(), (ow, oh));
+    assert!(!v.can_undo_redo().0);
+    assert_eq!(v.save().unwrap(), source);
+    // And the saved deck reopens with the scaled sizes.
+    let reopened = Viewer::open(saved.clone()).unwrap();
+    assert_eq!(reopened.slide_size(), (cx, cy));
+    assert_eq!(reopened.save().unwrap(), saved);
+}
+
 #[test]
 fn a_slide_size_outside_the_schema_is_refused() {
     let source = fixture(DECK);

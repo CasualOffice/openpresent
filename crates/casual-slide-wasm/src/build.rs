@@ -962,6 +962,8 @@ impl Viewer {
             // Transitions and animations (`VS-10`): the writer patches only what differs.
             after.transition.clone_from(&m.transition);
             after.timing.clone_from(&m.timing);
+            // A master's text styles, which Slide Size scales (`UX-015`).
+            after.text_styles.clone_from(&m.text_styles);
             // A background set by Format Background (`VS-12`).
             if let (Some(c), Some(k)) = (after.common.as_mut(), m.common.as_ref()) {
                 c.background.clone_from(&k.background);
