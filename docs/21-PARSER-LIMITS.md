@@ -305,6 +305,8 @@ Past one of these the picture, shape or slide is not drawn, and the render repor
 | `MAX_TABLE_CELLS` | `100_000` | Grid cells of one table drawn | Report: table over the cell budget | Untested |
 | `MAX_CHART_POINTS` | `4_096` | Points of one chart series plotted | Points past it are not plotted | Untested |
 | `MAX_CHART_SERIES` | `256` | Series of one chart plotted | Series past it are not plotted | Untested |
+| `MAX_DIAGRAM_DEPTH` | `32` | Groups nested in a SmartArt drawing converted | Deeper groups are not drawn | Untested |
+| `MAX_DIAGRAM_SHAPES` | `10_000` | Shapes of one SmartArt drawing converted | Shapes past it are not drawn | Untested |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
 

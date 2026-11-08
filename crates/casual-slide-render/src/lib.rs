@@ -18,6 +18,7 @@
 //! [`RenderReport::lines`] says so.
 
 pub mod deck;
+mod diagram;
 pub mod display;
 mod images;
 pub mod raster;

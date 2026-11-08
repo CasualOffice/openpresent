@@ -282,3 +282,48 @@ fn classic_charts_draw_from_their_cached_values() {
         "{filled} filled, {stroked} stroked"
     );
 }
+
+/// SmartArt is drawn from the drawing PowerPoint stored for it, not reported.
+#[test]
+fn a_diagram_is_drawn_from_its_stored_drawing() {
+    let deck = open("graphics-diagram-consistent.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.keys().any(|k| k.starts_with("diagram")),
+        "{:?}",
+        scene.features
+    );
+    let drawn = list
+        .items
+        .iter()
+        .filter(|i| {
+            matches!(
+                i,
+                DisplayItem::Path {
+                    layer: Layer::Slide,
+                    ..
+                }
+            )
+        })
+        .count();
+    assert!(drawn > 0, "nothing of the diagram drawn");
+}
+
+/// An OLE object is drawn from the picture stored in its place, never opened.
+#[test]
+fn an_ole_object_is_drawn_from_its_fallback_picture() {
+    let deck = open("area-ole.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.contains_key("graphic frame"),
+        "{:?}",
+        scene.features
+    );
+    assert!(list.items.iter().any(|i| matches!(
+        i,
+        DisplayItem::Path {
+            fill: Some(Paint::Picture { .. }),
+            ..
+        }
+    )));
+}

@@ -26,7 +26,7 @@ use casual_slide_model::line::{
     Line, LineCap, LineDash, LineEnd, LineEndType, LineJoin, PresetLineDash,
 };
 use casual_slide_model::properties::Lexical;
-use casual_slide_model::shape::{NodeKind, ShapeNode, Transform};
+use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{BackgroundFill, SlideParts};
 use casual_slide_model::table::TableStyleList;
 use casual_slide_model::text::{TextBody, TextListStyle, TextVertical};
@@ -90,6 +90,8 @@ pub struct SlideScene<'a> {
     pub table_styles: Option<&'a TableStyleList>,
     /// The deck's chart parts, which a chart frame's relationship names.
     pub charts: Option<&'a casual_slide_import::chart::DeckCharts>,
+    /// Each SmartArt frame's stored drawing, as nodes in the frame's space.
+    pub diagrams: Option<&'a BTreeMap<ObjectId, Vec<ShapeNode>>>,
 }
 
 impl core::fmt::Debug for SlideScene<'_> {
@@ -519,12 +521,75 @@ impl<'a> Builder<'a> {
                 } else if node.chart.is_some() {
                     self.chart(node, layer, parent);
                 } else if node.diagram.is_some() {
-                    self.report.note("diagram");
+                    self.diagram(node, layer, parent, depth);
+                } else if node.retained.is_some() {
+                    self.retained(node, layer, parent);
                 } else {
                     self.report.note("graphic frame");
                 }
             }
             NodeKind::ContentPart => self.report.note("content part"),
+        }
+    }
+
+    /// An OLE object, control or 3D model: never opened (`SEC-C07`), drawn from the
+    /// picture stored in its place.
+    fn retained(&mut self, node: &'a ShapeNode, layer: Layer, parent: &Affine) {
+        let fallback = node
+            .retained
+            .as_deref()
+            .and_then(|r| r.fallback_rel_id.as_deref());
+        let Some(rel) = fallback else {
+            self.report.note("embedded object (no fallback picture)");
+            return;
+        };
+        let Some(part) = self.scene.media.media_part(node.id.part, rel) else {
+            self.report.note("picture (relationship unresolved)");
+            return;
+        };
+        let Some(t) = self.chain.transform(node).map(|t| t.value) else {
+            self.report.note("embedded object (no placement)");
+            return;
+        };
+        let (w, h) = (t.extent.cx as f64, t.extent.cy as f64);
+        let transform = parent.then_after(&placement(
+            t.offset.x.0 as f64,
+            t.offset.y.0 as f64,
+            w,
+            h,
+            t.rotation,
+            t.flip_h,
+            t.flip_v,
+        ));
+        let paint = Paint::Picture {
+            part,
+            frame: (0.0, 0.0, w, h),
+            alpha: 1.0,
+        };
+        self.push(node, layer, transform, rect_path(w, h), Some(paint), None);
+    }
+
+    /// A SmartArt frame, from the drawing PowerPoint stored for it.
+    fn diagram(&mut self, node: &'a ShapeNode, layer: Layer, parent: &Affine, depth: usize) {
+        let Some(nodes) = self.scene.diagrams.and_then(|d| d.get(&node.id)) else {
+            self.report.note("diagram (no stored drawing)");
+            return;
+        };
+        let Some(t) = self.chain.transform(node).map(|t| t.value) else {
+            self.report.note("diagram (no placement)");
+            return;
+        };
+        let mapping = parent.then_after(&placement(
+            t.offset.x.0 as f64,
+            t.offset.y.0 as f64,
+            t.extent.cx as f64,
+            t.extent.cy as f64,
+            t.rotation,
+            t.flip_h,
+            t.flip_v,
+        ));
+        for child in nodes {
+            self.node(child, layer, &mapping, None, depth + 1);
         }
     }
 
