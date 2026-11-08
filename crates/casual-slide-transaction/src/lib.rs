@@ -45,7 +45,7 @@ use casual_slide_model::transition::SlideTransition;
 
 pub mod collab;
 mod design;
-pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE};
+pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE, SectionMark};
 pub mod rich;
 
 /// An error applying an operation. Each has a stable code (`docs/20`).
@@ -300,6 +300,12 @@ pub enum Operation {
         /// Its `p:style`. `None` removes it.
         style: Option<Box<ShapeStyle>>,
     },
+    /// Slides: the deck's sections, whole (`UX-006`, Home > Section). Its inverse is
+    /// the list it replaced.
+    SetSections {
+        /// What the list becomes.
+        sections: Vec<design::SectionMark>,
+    },
     /// Properties: a shape's click hyperlink (`cNvPr/hlinkClick`, `UX-006`, Insert >
     /// Link). `None` removes it. Its inverse is the link it had. Refused on a node
     /// with no `cNvPr`.
@@ -550,6 +556,7 @@ impl Operation {
             Self::SetColorScheme { .. }
             | Self::SetFontScheme { .. }
             | Self::SetSlideSize { .. }
+            | Self::SetSections { .. }
             | Self::SetBackground { .. } => None,
             Self::Batch(ops) => ops.iter().find_map(Operation::object),
             Self::AddPart { .. }
@@ -624,6 +631,7 @@ impl Operation {
             Self::SetChart { .. } => "Chart Data",
             Self::SetColorScheme { .. } | Self::SetFontScheme { .. } => "Theme",
             Self::SetSlideSize { .. } => "Slide Size",
+            Self::SetSections { .. } => "Section",
             Self::SetBackground { .. } => "Background",
             Self::AddPart { .. } | Self::InsertSlide { .. } => "New Slide",
             Self::DropPart { .. } | Self::RemoveSlide { .. } => "Delete Slide",
@@ -1277,6 +1285,7 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
         Operation::SetColorScheme { .. }
         | Operation::SetFontScheme { .. }
         | Operation::SetSlideSize { .. }
+        | Operation::SetSections { .. }
         | Operation::SetBackground { .. } => Err(TxnError::NoDesign),
         // Handled by `rich::apply_rich` above.
         Operation::SetTable { node, .. } => Err(TxnError::NoTable(node)),

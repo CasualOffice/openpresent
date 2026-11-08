@@ -11,6 +11,20 @@ use casual_slide_model::theme::{BaseStyles, Theme};
 use crate::{Applied, Operation, TxnError};
 
 /// The smallest slide side, `ST_SlideSizeCoordinate`'s minimum: one inch.
+/// One section of the deck as Home > Section edits it (`UX-006`): its id (a
+/// brace-wrapped GUID the host supplies), its name (document text), and the part of
+/// the slide it starts at. A section holds the slides from that one to the next
+/// section's.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SectionMark {
+    /// `@id`.
+    pub id: String,
+    /// `@name`.
+    pub name: String,
+    /// The slide part it starts at.
+    pub first: u32,
+}
+
 pub const MIN_SLIDE_SIZE: i64 = 914_400;
 /// The largest slide side, `ST_SlideSizeCoordinate`'s maximum: 56 inches.
 pub const MAX_SLIDE_SIZE: i64 = 51_206_400;
@@ -30,6 +44,11 @@ pub trait Document {
 
     /// The slide size, EMU, width then height.
     fn slide_size_mut(&mut self) -> Option<&mut (i64, i64)> {
+        None
+    }
+
+    /// The deck's sections (`UX-006`), as the thumbnail pane shows them.
+    fn sections_mut(&mut self) -> Option<&mut Vec<SectionMark>> {
         None
     }
 
@@ -122,6 +141,12 @@ pub(crate) fn apply_design<D: Document + ?Sized>(
                 },
                 changed,
             )
+        }
+        Operation::SetSections { sections } => {
+            let slot = doc.sections_mut().ok_or(TxnError::NoDesign)?;
+            let changed = slot != sections;
+            let before = core::mem::replace(slot, sections.clone());
+            (Operation::SetSections { sections: before }, changed)
         }
         _ => return Ok(None),
     };

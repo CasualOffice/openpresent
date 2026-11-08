@@ -70,7 +70,7 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | --- | --- | --- | --- |
 | Home / Undo | Undo, Redo | | |
 | Home / Clipboard | Paste, Cut, Copy, Duplicate | Keep Text Only, Format Painter, Clipboard launcher | `RIB-03` |
-| Home / Slides | New Slide (and its menu), Reset | Layout (on an existing slide), Section and its five, Reuse Slides | `RIB-02` |
+| Home / Slides | New Slide (and its menu), Reset; Section: Add, Rename, Remove, Collapse All, Expand All, and headers in the thumbnail pane that collapse | Layout (on an existing slide), Reuse Slides | `RIB-02` |
 | Home / Font | Font, Size, Grow, Shrink, Bold, Italic, Underline, Highlight, Font Color | Clear, Strikethrough, Subscript, Superscript, Change Case (4), Font… | `RIB-01` |
 | Home / Paragraph | Bullets, the four alignments | Numbering, list levels, Line Spacing, Columns, Text Direction, Align Text, Paragraph… | `RIB-01` |
 | Home / Drawing | Shapes, Quick Styles, Fill, Outline, Format Shape pane; Arrange: Bring to Front, Forward, Send Backward, to Back, Align (6), Distribute (2), Rotate Right, Left, Flip Vertical, Horizontal | Group, Ungroup, Selection Pane, Shape Effects | `RIB-03` |
@@ -97,7 +97,7 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | Shape Format | Shapes, Text Box, Shape Styles, Fill, Outline, Format Text pane, Arrange as Home, Size launcher | Edit Shape, Edit Points, Change Shape, Text Fill, Text Outline, Text Effects, Shape Effects, Alt Text, Group, Selection Pane, Height, Width | `RIB-10` |
 | Picture Format, Table Design, Layout, Chart Design | Reset Picture (2), Picture Styles, Crop, Arrange, Table Styles, rows and columns (6), Edit Text, Edit Data | Alt Text, Height, Width | `RIB-10` |
 | File | New, Open, render report, Save, Save a Copy, PDF, PNG, Share | Properties, Version History, Print (the File session's) | File rows |
-| Right-click menus | as the ribbon | Layout, Add Section; Edit Text, Edit Points, Group, Alt Text; Font…, Paragraph…, Numbering; New Comment | as above |
+| Right-click menus | as the ribbon | Layout; Edit Text, Edit Points, Group, Alt Text; Font…, Paragraph…, Numbering; New Comment | as above |
 
 Menu buttons (Arrange, Align, Rotate, Group, Section, Select, Change Case) are drawn live while any command in their
 menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoint and wait with it (`RIB-04`).

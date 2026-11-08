@@ -695,6 +695,7 @@ impl Viewer {
         let bytes = self.order_pass(bytes)?;
         let (bytes, links) = self.links_pass(bytes)?;
         let bytes = self.patch_pass(bytes, &links)?;
+        let bytes = self.sections_pass(bytes)?;
         let bytes = self.chart_pass(bytes)?;
         self.design_pass(bytes)
     }

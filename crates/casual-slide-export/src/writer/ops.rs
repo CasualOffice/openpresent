@@ -193,6 +193,13 @@ pub enum Op {
         /// The first slide of the new section.
         at: Option<SlideRef>,
     },
+    /// Rename a section (`UX-006`): its `@name`, nothing else.
+    RenameSection {
+        /// The section id.
+        id: String,
+        /// The new name. Document text.
+        name: String,
+    },
     /// Remove a section. Its slides join the one before it, or else the one after it.
     RemoveSection {
         /// The section id.
@@ -485,6 +492,7 @@ impl Draft<'_> {
             Op::EditTheme { master, bytes } => self.edit_theme(master, bytes),
             Op::AddSection { name, id, at } => self.add_section(name, id, at.as_ref()),
             Op::RemoveSection { id } => self.remove_section(id),
+            Op::RenameSection { id, name } => self.rename_section(id, name),
             Op::MoveSlideToSection {
                 slide,
                 section,
@@ -1495,6 +1503,25 @@ impl Draft<'_> {
                 self.note_new_slide_sections()
             }
         }
+    }
+
+    fn rename_section(&mut self, id: &str, name: &str) -> Result<(), WriterError> {
+        let main = self.main.clone();
+        check_text(name, &main)?;
+        let tree = self.tree(&main)?;
+        let root = tree.root();
+        let Some((_, _, list)) = super::view::section_list(tree, root) else {
+            return Err(bad("the deck has no sections", id));
+        };
+        let section = tree
+            .child_elements(list)
+            .into_iter()
+            .find(|&s| {
+                tree.local_name(s) == "section"
+                    && tree.plain_attribute(s, "id").as_deref() == Some(id)
+            })
+            .ok_or_else(|| bad("no such section", id))?;
+        set_attr(tree, section, "name", name, &main)
     }
 
     fn remove_section(&mut self, id: &str) -> Result<(), WriterError> {

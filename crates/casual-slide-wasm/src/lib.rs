@@ -57,7 +57,9 @@ pub use arrange::Order;
 mod find;
 pub use find::{Found, MAX_FIND_MATCHES};
 mod links;
+mod sections;
 pub use links::{MAX_LINK_BYTES, link_allowed};
+pub use sections::MAX_SECTION_NAME;
 pub use views::OutlineSlide;
 
 use casual_slide_transaction::{History, Operation, TxnError};
@@ -270,6 +272,9 @@ pub struct Viewer {
     /// Links added in this session (`UX-006`): the address each relationship id the
     /// model gives them stands for. Stored in the file, never fetched.
     new_links: BTreeMap<String, String>,
+    /// The deck's sections now, and as opened (`UX-006`).
+    sections: Vec<casual_slide_transaction::SectionMark>,
+    original_sections: Vec<casual_slide_transaction::SectionMark>,
     /// Pictures inserted so far, which names the next one.
     minted: u32,
     /// A shared session, while one is on (`COL-04`).
@@ -286,6 +291,7 @@ impl Viewer {
         let original = deck.parts().clone();
         let original_themes = deck.themes().clone();
         let original_size = deck.size();
+        let sections = sections::read_sections(deck.source_bytes(), &deck.parts().structure);
         Ok(Self {
             deck,
             reports: BTreeMap::new(),
@@ -299,6 +305,8 @@ impl Viewer {
             origins: BTreeMap::new(),
             new_media: BTreeMap::new(),
             new_links: BTreeMap::new(),
+            original_sections: sections.clone(),
+            sections,
             minted: 0,
             shared: None,
             serial: clipboard::next_serial(),
@@ -610,7 +618,9 @@ impl Viewer {
     /// Undo the latest edit; the slide it changed, if any.
     pub fn undo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self.history.undo(&mut DeckDoc(&mut self.deck))?;
+        let op = self
+            .history
+            .undo(&mut DeckDoc(&mut self.deck, Some(&mut self.sections)))?;
         self.reports.clear();
         Ok(self.slide_of(op))
     }
@@ -618,7 +628,9 @@ impl Viewer {
     /// Redo the latest undone edit; the slide it changed, if any.
     pub fn redo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self.history.redo(&mut DeckDoc(&mut self.deck))?;
+        let op = self
+            .history
+            .redo(&mut DeckDoc(&mut self.deck, Some(&mut self.sections)))?;
         self.reports.clear();
         Ok(self.slide_of(op))
     }
@@ -2540,6 +2552,58 @@ pub fn set_shape_link(index: u32, node: u32, url: String) -> Result<bool, JsErro
 #[wasm_bindgen]
 pub fn shape_link(index: u32, node: u32) -> Result<Option<String>, JsError> {
     with_viewer(|v| Ok(v.shape_link(index as usize, node)))
+}
+
+/// The deck's sections for the thumbnail pane (`UX-006`): two strings a section, its
+/// name (document text) and the place of its first slide.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn slide_sections() -> Result<Vec<String>, JsError> {
+    with_viewer(|v| {
+        Ok(v.sections()
+            .into_iter()
+            .flat_map(|(s, i)| [s.name, i.to_string()])
+            .collect())
+    })
+}
+
+/// Add Section at slide `index` (`UX-006`), with ids the page makes: `id` for it, and
+/// `default_id` for the "Default Section" a deck with none gets before it.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a bad name or id, or a slide that already starts a section.
+#[wasm_bindgen]
+pub fn section_add(
+    index: u32,
+    name: String,
+    id: String,
+    default_id: String,
+) -> Result<bool, JsError> {
+    with_viewer(|v| v.add_section(index as usize, &name, &id, &default_id))
+}
+
+/// Rename section `at` (`UX-006`).
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for no such section or a bad name.
+#[wasm_bindgen]
+pub fn section_rename(at: u32, name: String) -> Result<bool, JsError> {
+    with_viewer(|v| v.rename_section(at as usize, &name))
+}
+
+/// Remove section `at` (`UX-006`); its slides join the section before it.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for no such section.
+#[wasm_bindgen]
+pub fn section_remove(at: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.remove_section(at as usize))
 }
 
 /// Slide `index` in Outline View (`UX-006`): `[part, title, body]`, a node being -1

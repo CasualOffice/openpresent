@@ -573,3 +573,11 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .sym-grid { display: grid; grid-template-columns: repeat(12, 34px); gap: 2px; margin-top: 6px; }
 .sym-cell { width: 34px; height: 34px; font-size: 18px; border: 1px solid var(--op-control-border-color); border-radius: 2px; background: var(--op-background-color); color: var(--op-text-color); cursor: pointer; }
 .sym-cell:hover, .sym-cell:focus-visible { border-color: var(--op-accent-color); outline: none; }
+/* Sections in the thumbnail pane (`UX-006`, `editor.sections.js`): a header inside
+   the first slide's item, so the pane stays one item a slide. */
+.thumb.has-sec { flex-wrap: wrap; }
+.thumb-sec { flex: 0 0 100%; text-align: left; font: inherit; font-size: 12px; font-weight: 600; color: var(--op-text-color); background: transparent; border: 0; padding: 4px 6px 4px 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumb-sec:hover { color: var(--op-accent-color); }
+.thumb.sec-collapsed > :not(.thumb-sec) { display: none; }
+.thumb.sec-hidden { display: none; }
+.op-view-sorter .thumb.has-sec { flex-direction: column-reverse; }
