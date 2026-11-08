@@ -139,6 +139,23 @@ jobs:
             fi
             rm -rf "$pdfdir"
           done
+      # FH-01: agreement with LibreOffice per slide, per deck and overall, in
+      # gallery/fidelity.json and on the run page. Recorded, never a gate yet: a failure here
+      # says so in the summary and the gallery still builds, showing "no score".
+      - name: Score agreement with LibreOffice
+        run: |
+          set -uo pipefail
+          venv="$RUNNER_TEMP/score-venv"
+          if python3 -m venv "$venv" \
+             && "$venv/bin/pip" install --quiet --only-binary=:all: numpy==2.2.6 pillow==11.3.0 \
+             && "$venv/bin/python" tools/fidelity/score.py gallery \
+                  --lo-version "$(cat "$RUNNER_TEMP/lo-version.txt")" --commit "$GITHUB_SHA" \
+                  --summary "$GITHUB_STEP_SUMMARY"; then
+            :
+          else
+            echo "::warning::the agreement score was not computed"
+            echo "**Agreement with LibreOffice:** not computed in this run; see the step log." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Build the gallery's index.html
         run: python3 tools/gallery/build.py gallery --lo-version "$(cat "$RUNNER_TEMP/lo-version.txt")" --commit "$GITHUB_SHA"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -146,6 +163,12 @@ jobs:
           name: gallery
           path: gallery
           retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fidelity
+          path: gallery/fidelity.json
+          if-no-files-found: warn
+          retention-days: 90
 
   # Publishes from main only, with `pages: write` on this job alone. Pages' source is
   # "GitHub Actions" (set by the owner on 2026-11-08). Runs when the site built, whatever

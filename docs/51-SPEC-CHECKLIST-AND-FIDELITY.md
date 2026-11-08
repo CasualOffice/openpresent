@@ -90,6 +90,18 @@ comparison also checks text positions, per-region differences and structure from
 **Reality check** (`DEC-04`). Until `PV-01`, only F1 to F4 and F7 run, plus Microsoft's validator (`F-006`) and real PowerPoint-written decks as input (`F-007`). Those prove we keep the data and write valid
 files. They cannot prove we match PowerPoint, and no claim saying so may be made from them.
 
+**The gallery's agreement score** (`FH-01`, `tools/fidelity/score.py`, run by `pages.yml` on
+every gallery build). Each of our slide PNGs is compared with LibreOffice's at 96 dpi: the
+share of pixels whose colour is more than delta-E 10 from every pixel of the other image within
+1 px, taken both ways so missing content counts (R1's measure in
+[06](06-ROADMAP-AND-DELIVERY.md)), and SSIM on luma. `fidelity.json` holds it per slide, per
+deck and overall, with how many slides are within R1's 1% and within 5%. It is F7, a second
+opinion: it measures **agreement with LibreOffice**, labelled with LibreOffice's version, and
+says nothing about PowerPoint. Where we differ, either may be wrong. The runner's fonts are not
+the deck's, so font substitution dominates slides with small text, in both renders. A deck
+whose two renders have different slide counts (hidden slides, a failed render) is not scored,
+and says so. It is recorded, not a gate.
+
 ## Corpus
 
 | Set | Source | Purpose |
