@@ -33,12 +33,18 @@ mod animate;
 mod build;
 mod collab;
 pub use collab::MAX_PARTICIPANT;
+mod clipboard;
 mod edit;
+mod format;
+#[cfg(test)]
+mod home_tests;
 mod rich;
 mod shapes;
 pub use animate::AnimationItem;
 pub use build::{Ends, Insert, MAX_PICTURE_BYTES};
+pub use clipboard::{Clip, MAX_CLIP_SHAPES, PASTE_OFFSET};
 pub use edit::{Move, Toggle};
+pub use format::{MAX_FONT_POINTS, MIN_FONT_POINTS, RunSetting, SIZE_LADDER, step_size};
 pub use rich::{DEFAULT_TABLE_STYLE, TableEdit};
 pub use shapes::{MAX_LINE_WIDTH, parse_color, preset_outline, theme_style};
 mod show;
@@ -93,6 +99,11 @@ pub enum BridgeError {
     /// Co-editing refused a message or an arrival; the collaboration code
     /// (`CS-COL-*`, `COL-04`).
     Collab(&'static str),
+    /// A shape Copy cannot carry yet, or Paste cannot put on this slide: a group, a
+    /// table, a chart or another frame; a picture that is not PNG or JPEG; or, onto
+    /// another slide, a shape naming a link or another relationship of its own
+    /// slide (`UX-003`).
+    CannotCopy,
 }
 
 impl BridgeError {
@@ -111,6 +122,7 @@ impl BridgeError {
             Self::Build(code) => code,
             Self::NotAPicture => "CS-WSM-0008",
             Self::Collab(code) => code,
+            Self::CannotCopy => "CS-WSM-0010",
         }
     }
 }
@@ -144,6 +156,11 @@ impl core::fmt::Display for BridgeError {
             Self::NotAPicture => write!(
                 f,
                 "[{}] only PNG and JPEG pictures up to 64 MB can be inserted",
+                self.code()
+            ),
+            Self::CannotCopy => write!(
+                f,
+                "[{}] this shape cannot be copied or pasted here yet",
                 self.code()
             ),
         }
@@ -242,6 +259,8 @@ pub struct Viewer {
     minted: u32,
     /// A shared session, while one is on (`COL-04`).
     shared: Option<collab::Shared>,
+    /// This deck's number in the session, so a paste knows whether it came from it.
+    serial: u64,
 }
 
 impl Viewer {
@@ -266,6 +285,7 @@ impl Viewer {
             new_media: BTreeMap::new(),
             minted: 0,
             shared: None,
+            serial: clipboard::next_serial(),
         })
     }
 
@@ -441,9 +461,23 @@ impl Viewer {
         &mut self,
         index: usize,
         node: u32,
-        (x, y, cx, cy): (i64, i64, i64, i64),
+        b: (i64, i64, i64, i64),
         rotation: i32,
     ) -> Result<(), BridgeError> {
+        let op = self.transform_op(index, node, b, rotation)?;
+        self.history.apply(self.deck.parts_mut(), op)?;
+        self.reports.remove(&index);
+        Ok(())
+    }
+
+    /// The operation that places shape `node` of slide `index` at this box.
+    pub(crate) fn transform_op(
+        &self,
+        index: usize,
+        node: u32,
+        (x, y, cx, cy): (i64, i64, i64, i64),
+        rotation: i32,
+    ) -> Result<Operation, BridgeError> {
         let ordinal = self.slide_ordinal(index)?;
         let id = ObjectId {
             part: ordinal,
@@ -485,15 +519,10 @@ impl Viewer {
                 t.flip_v = Some(true);
             }
         }
-        self.history.apply(
-            self.deck.parts_mut(),
-            Operation::SetTransform {
-                node: id,
-                transform: Some(t),
-            },
-        )?;
-        self.reports.remove(&index);
-        Ok(())
+        Ok(Operation::SetTransform {
+            node: id,
+            transform: Some(t),
+        })
     }
 
     /// Delete shape `node` of slide `index`, as one undo step. Refused, before
@@ -501,6 +530,22 @@ impl Viewer {
     /// one an animation names, or one without an id of its own.
     pub fn delete(&mut self, index: usize, node: u32) -> Result<(), BridgeError> {
         let ordinal = self.slide_ordinal(index)?;
+        self.check_removable(ordinal, node)?;
+        self.history.apply(
+            self.deck.parts_mut(),
+            Operation::DeleteNode {
+                node: ObjectId {
+                    part: ordinal,
+                    node,
+                },
+            },
+        )?;
+        self.reports.remove(&index);
+        Ok(())
+    }
+
+    /// Refuse a shape the writer cannot yet remove from the file, as [`Viewer::delete`] says.
+    pub(crate) fn check_removable(&self, ordinal: u32, node: u32) -> Result<(), BridgeError> {
         let id = ObjectId {
             part: ordinal,
             node,
@@ -525,9 +570,6 @@ impl Viewer {
         if !removable {
             return Err(BridgeError::CannotDelete);
         }
-        self.history
-            .apply(self.deck.parts_mut(), Operation::DeleteNode { node: id })?;
-        self.reports.remove(&index);
         Ok(())
     }
 
@@ -2111,4 +2153,191 @@ pub fn set_chart_data(index: u32, node: u32, data: Vec<String>) -> Result<bool, 
             },
         )
     })
+}
+
+/* ── The Home tab's Font and Paragraph groups, and the clipboard (`UX-003`) ── */
+
+/// What the Font, Size, alignment and Bullets controls show for the character before
+/// `offset`: `[font, size in points, alignment token, "1" if bulleted]`.
+///
+/// # Errors
+///
+/// `CS-WSM-0005` when the shape has no text.
+#[wasm_bindgen]
+pub fn text_run_state(part: u32, node: u32, offset: u32) -> Result<Vec<String>, JsError> {
+    with_viewer(|v| v.run_state(object(part, node), offset as usize))
+}
+
+/// Set a Font group value over `[start, end)`: `what` 0 font name, 1 size in points,
+/// 2 font colour, 3 highlight (a colour as [`parse_color`] reads it, or empty to clear).
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a value it cannot read; the edit's own `CS-TXN` code.
+#[wasm_bindgen]
+pub fn text_set_run(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    what: u32,
+    value: &str,
+) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let what = format::RunSetting::from_code(what).ok_or(BridgeError::BadArgument)?;
+        v.set_run(
+            object(part, node),
+            (start as usize, end as usize),
+            what,
+            value,
+        )
+    })
+}
+
+/// Increase (`up`) or Decrease Font Size over `[start, end)`.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a range past the text; the edit's own `CS-TXN` code.
+#[wasm_bindgen]
+pub fn text_grow(part: u32, node: u32, start: u32, end: u32, up: bool) -> Result<bool, JsError> {
+    with_viewer(|v| v.grow_text(object(part, node), (start as usize, end as usize), up))
+}
+
+/// Paragraph alignment (`what` 0: `l`, `ctr`, `r`, `just`) or Bullets (`what` 1: `on`,
+/// `off`, `toggle`) for the paragraphs `[start, end)` touches.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a value it cannot read; the edit's own `CS-TXN` code.
+#[wasm_bindgen]
+pub fn text_set_paragraphs(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    what: u32,
+    value: &str,
+) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        v.set_paragraphs(
+            object(part, node),
+            (start as usize, end as usize),
+            what,
+            value,
+        )
+    })
+}
+
+/// The plain text of `[start, end)`, for Copy and Cut.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a range past the text.
+#[wasm_bindgen]
+pub fn text_slice(part: u32, node: u32, start: u32, end: u32) -> Result<String, JsError> {
+    with_viewer(|v| v.text_slice(object(part, node), start as usize, end as usize))
+}
+
+/// The Font box's list: OpenCalc's `font_families`, `[{n,f,k}, …]` as JSON.
+#[wasm_bindgen]
+pub fn font_families() -> String {
+    format::font_families_json()
+}
+
+/// The CSS font stack a family is shown with: its bundled face first, as OpenCalc's.
+#[wasm_bindgen]
+pub fn font_css_stack(name: &str) -> String {
+    casual_slide_text::substitution::css_stack(name)
+}
+
+/// The regular face of the bundled family `name` renders as, for the page to register
+/// as a `FontFace` when the Font list first opens, so each name is shown in its face.
+#[wasm_bindgen]
+pub fn font_face_bytes(name: &str) -> Vec<u8> {
+    casual_slide_text::faces::face_bytes_for(Some(name), false, false).to_vec()
+}
+
+/// Copy shapes `nodes` of slide `index` to the engine's clipboard, which outlives the
+/// deck; how many it holds.
+///
+/// # Errors
+///
+/// `CS-WSM-0010` for a shape that cannot be copied yet.
+#[wasm_bindgen]
+pub fn copy_shapes(index: u32, nodes: Vec<u32>) -> Result<u32, JsError> {
+    let clip = with_viewer(|v| v.copy_shapes(index as usize, &nodes))?;
+    let n = to_u32(clip.len());
+    clipboard::keep(clip);
+    Ok(n)
+}
+
+/// How many shapes the engine's clipboard holds.
+#[wasm_bindgen]
+pub fn clipboard_shapes() -> u32 {
+    clipboard::kept().map_or(0, |c| to_u32(c.len()))
+}
+
+/// Paste the engine's clipboard onto slide `index`, one undo step; the new nodes.
+///
+/// # Errors
+///
+/// `CS-WSM-0010` for a shape that cannot be pasted onto this slide.
+#[wasm_bindgen]
+pub fn paste_shapes(index: u32) -> Result<Vec<u32>, JsError> {
+    let Some(clip) = clipboard::kept() else {
+        return Ok(Vec::new());
+    };
+    with_viewer(|v| v.paste_shapes(index as usize, &clip))
+}
+
+/// Duplicate shapes `nodes` of slide `index` beside themselves; the new nodes.
+///
+/// # Errors
+///
+/// `CS-WSM-0010` for a shape that cannot be copied yet.
+#[wasm_bindgen]
+pub fn duplicate_shapes(index: u32, nodes: Vec<u32>) -> Result<Vec<u32>, JsError> {
+    with_viewer(|v| v.duplicate_shapes(index as usize, &nodes))
+}
+
+/// Place several shapes at once, one undo step: `boxes` is `node, x, y, cx, cy, rot`
+/// for each, rotation in 60000ths of a degree.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a list not in sixes; the edit's own code.
+#[wasm_bindgen]
+pub fn set_shape_transforms(index: u32, boxes: Vec<f64>) -> Result<(), JsError> {
+    with_viewer(|v| {
+        if !boxes.len().is_multiple_of(6) {
+            return Err(BridgeError::BadArgument);
+        }
+        let mut out = Vec::with_capacity(boxes.len() / 6);
+        for b in boxes.chunks_exact(6) {
+            let mut one = [0i64; 6];
+            for (slot, &x) in one.iter_mut().zip(b) {
+                if !x.is_finite() {
+                    return Err(BridgeError::BadArgument);
+                }
+                // Finite and rounded; `as` saturates at the ends.
+                #[allow(clippy::cast_possible_truncation)]
+                {
+                    *slot = x.round() as i64;
+                }
+            }
+            out.push(one);
+        }
+        v.set_transforms(index as usize, &out)
+    })
+}
+
+/// Delete several shapes at once, one undo step.
+///
+/// # Errors
+///
+/// `CS-WSM-0004` if any one cannot be deleted yet; nothing changes then.
+#[wasm_bindgen]
+pub fn delete_shapes(index: u32, nodes: Vec<u32>) -> Result<(), JsError> {
+    with_viewer(|v| v.delete_shapes(index as usize, &nodes))
 }

@@ -417,7 +417,36 @@ mod tests {
         a.collab_begin(1, 0).unwrap();
         let before = a.save().unwrap();
         assert!(a.set_hidden(0, true).is_err());
-        assert_eq!(a.save().unwrap(), before);
+        // A font size has no wire form (`COL-06`), nor does a pasted shape.
+        let (part, node) = title(&a);
+        let object = ObjectId { part, node };
+        a.edit(
+            Operation::InsertText {
+                object,
+                at: 0,
+                text: "x".to_owned(),
+            },
+            false,
+        )
+        .unwrap();
+        let _ = a.collab_flush().unwrap();
+        let typed = a.save().unwrap();
+        assert!(
+            a.edit(
+                Operation::FormatRange {
+                    object,
+                    start: 0,
+                    end: 1,
+                    attribute: casual_slide_transaction::Attribute::Size(Some(4000)),
+                },
+                false
+            )
+            .is_err()
+        );
+        assert!(a.duplicate_shapes(0, &[node]).is_err());
+        assert_eq!(a.save().unwrap(), typed);
+        assert!(a.collab_flush().is_ok(), "nothing unsendable was journaled");
+        assert_ne!(typed, before);
     }
 
     #[test]

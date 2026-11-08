@@ -273,6 +273,27 @@ function stylesPicker() {
   });
 }
 
+/// PowerPoint's Medium Style 2 row, by the built-in style ids the ribbon's tiles name.
+const TILE_STYLES = {
+  "Medium Style 2 - Accent 1": "{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}",
+  "Medium Style 2 - Accent 2": "{21E4AEA4-8DFA-4A89-87EB-49C32662AFE8}",
+  "Medium Style 2 - Accent 3": "{F5AB1C69-6EDB-4FF4-983F-18BD219EF322}",
+  "Medium Style 2 - Accent 4": "{00A15C55-8517-42AA-B614-E9B94910E393}",
+  "Medium Style 2 - Accent 5": "{7DF18680-E054-41AD-8BC1-D1AEF772440D}",
+  "Medium Style 2 - Accent 6": "{93296810-A885-4BE3-A3E7-6D5BEEA58F35}",
+};
+
+function pickTableStyle(name) {
+  const id = TILE_STYLES[name];
+  if (!id) return stylesPicker();
+  return guarded("apply the style", async () => {
+    const s = tableSel();
+    if (!s) return;
+    await call("set_table_style", [state.current, s.node, id]);
+    await redraw(s.node);
+  });
+}
+
 /* ── Charts: Edit Data ──────────────────────────────────────────────────── */
 
 /// The data sheet: categories down, series across, as PowerPoint's Edit Data.
@@ -378,7 +399,8 @@ export function init() {
     register(`insert.chart.${label.toLowerCase()}`, { label: `${label} Chart`, enabled: has, run: () => insertChart(kind) });
   }
   register("chart.edit-data", { label: "Edit Data", enabled: chartSelected, run: () => editData() });
-  register("table.styles", { label: "Table Styles", enabled: tableSelected, run: stylesPicker });
+  // A gallery tile applies its style on one click (`UX-003`); More lists the deck's.
+  register("table.styles", { label: "Table Styles", enabled: tableSelected, run: stylesPicker, pick: pickTableStyle });
   register("table.edit-cell", { label: "Edit Cell Text", enabled: tableSelected, run: () => { const s = tableSel(); if (s) editCell(s, activeCell.row, activeCell.col); } });
   register("table.insert-above", { label: "Insert Above", enabled: tableSelected, run: () => tableEdit(0, (c) => c.row) });
   register("table.insert-below", { label: "Insert Below", enabled: tableSelected, run: () => tableEdit(0, (c) => c.row + 1) });

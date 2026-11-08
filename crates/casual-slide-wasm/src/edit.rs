@@ -169,12 +169,12 @@ fn item_props(item: &TextItem) -> Option<&CharacterProperties> {
 /// The run's own properties at a body offset: the character after it, or before it at
 /// the end of a paragraph, or the paragraph's end properties when it is empty.
 /// The properties of the paragraph holding `offset`.
-fn paragraph_at(body: &TextBody, offset: usize) -> Option<&ParagraphProperties> {
+pub(crate) fn paragraph_at(body: &TextBody, offset: usize) -> Option<&ParagraphProperties> {
     let (p, _) = locate(body, offset).ok()?;
     body.paragraphs.get(p)?.properties.as_deref()
 }
 
-fn props_at(body: &TextBody, offset: usize) -> Option<&CharacterProperties> {
+pub(crate) fn props_at(body: &TextBody, offset: usize) -> Option<&CharacterProperties> {
     let (p, c) = locate(body, offset).ok()?;
     let paragraph = body.paragraphs.get(p)?;
     let mut acc = 0usize;

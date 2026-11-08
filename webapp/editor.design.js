@@ -240,7 +240,18 @@ function backgroundDialog() {
 
 export function registerDesignCommands() {
   const can = () => !!state.deck && !busy && !slides.showing();
-  register("design.themes", { label: "Themes", enabled: can, run: themesDialog });
+  // A tile applies its theme on one click, as PowerPoint's gallery; More lists them all (`UX-003`).
+  register("design.themes", {
+    label: "Themes", enabled: can, run: themesDialog,
+    pick: async (name) => {
+      let list;
+      try { list = await catalogue(); } catch (e) { errorDialog("The themes could not be listed.", e.message); return; }
+      const i = list.findIndex((t) => t.name === name);
+      if (i < 0) { themesDialog(); return; }
+      current = i;
+      edit(`Theme: ${name}`, "design_apply_theme", [i, 0, false], true);
+    },
+  });
   register("design.variants", { label: "Variants", enabled: can, run: variantsDialog });
   register("design.slide-size", { label: "Slide Size", enabled: can, run: () => {} });
   register("design.slide-size.standard", { label: "Standard (4:3)", enabled: can, checked: () => !!state.deck && state.deck.width === SIZES.standard[0] && state.deck.height === SIZES.standard[1], run: () => fitDialog(...SIZES.standard, "Standard (4:3)") });

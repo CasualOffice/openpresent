@@ -38,6 +38,9 @@ import init, {
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
   collab_begin, collab_end, collab_flush, collab_acknowledge, collab_unacknowledged,
   collab_receive, collab_replay, collab_map_offset, collab_presence, protocol_version,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice,
+  font_families, font_css_stack, font_face_bytes,
+  copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
 } from "./pkg/casual_slide_wasm.js";
 
 // Co-editing (`COL-04`): what `collab.js` asks of the engine.
@@ -55,6 +58,8 @@ const DESIGN = { design_apply_theme, design_slide_size, design_background };
 const TEXT = {
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
+  // The Home tab's Font and Paragraph groups, and Copy of text (`UX-003`).
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice,
 };
 
 // Building a deck (`VS-08`): `{ id, op: "build", fn, args }` calls one of these by name
@@ -66,7 +71,12 @@ const BUILD = {
   // Shapes (`SHAPE-01`): insert a preset, its yellow handles, Shape Format.
   insert_preset, shape_handles, drag_shape_handle, set_shape_fill, set_shape_outline,
   set_shape_style, slide_palette, edit_break_typing,
+  // The shape clipboard and multiple selection (`UX-003`).
+  copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
 };
+
+/// Arguments that cross as typed arrays: the bridge takes `Vec<u32>` and `Vec<f64>`.
+const NODE_LISTS = new Set(["copy_shapes", "duplicate_shapes", "delete_shapes"]);
 
 // Transitions and animations (`VS-10`): `{ id, op: "animate", fn, args }` calls one of
 // these by name and answers `{ value, undo }`; `{ op: "png-hiding", index, width, nodes }`
@@ -132,6 +142,16 @@ self.onmessage = async (event) => {
       if (!fn) throw new Error("unknown request");
       const value = fn(...(Array.isArray(msg.args) ? msg.args : []));
       self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()), size: Array.from(slide_size()) });
+    } else if (msg.op === "fonts") {
+      // The Font box's list (`UX-003`): OpenCalc's `font_families`, each with the CSS
+      // stack it is shown in, and the bundled faces' bytes for the page to register.
+      const list = JSON.parse(font_families());
+      const faces = {};
+      for (const f of list) {
+        if (!faces[f.f]) faces[f.f] = font_face_bytes(f.f).buffer;
+      }
+      const stacks = list.map((f) => font_css_stack(f.n));
+      self.postMessage({ id, ok: true, list, stacks, faces }, Object.values(faces));
     } else if (msg.op === "themes") {
       self.postMessage({ id, ok: true, themes: design_themes() });
     } else if (msg.op === "text") {
@@ -163,6 +183,8 @@ self.onmessage = async (event) => {
       const args = Array.isArray(msg.args) ? msg.args.slice() : [];
       // A picture's bytes cross as an ArrayBuffer.
       if (msg.fn === "insert_picture") args[1] = new Uint8Array(args[1]);
+      if (NODE_LISTS.has(msg.fn)) args[1] = new Uint32Array(args[1] || []);
+      if (msg.fn === "set_shape_transforms") args[1] = new Float64Array(args[1] || []);
       let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });

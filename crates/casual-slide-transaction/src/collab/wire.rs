@@ -292,8 +292,13 @@ pub fn shareable(op: &Operation) -> bool {
         | Operation::DeleteNode { .. }
         | Operation::InsertNode { .. }
         | Operation::InsertText { .. }
-        | Operation::DeleteRange { .. }
-        | Operation::FormatRange { .. } => true,
+        | Operation::DeleteRange { .. } => true,
+        // Size, font, colour and highlight have no wire form yet (`COL-06`): refused
+        // before they are applied, so a copy never holds an edit it cannot send.
+        Operation::FormatRange { attribute, .. } => matches!(
+            attribute,
+            Attribute::Bold(_) | Attribute::Italic(_) | Attribute::Underline(_)
+        ),
         Operation::Batch(ops) => ops.iter().all(shareable),
         _ => false,
     }
@@ -363,6 +368,12 @@ impl WireOp {
                     Attribute::Underline(v) => {
                         WireAttribute::Underline(v.as_ref().map(Lexical::to_lexical))
                     }
+                    // Size, font, colour and highlight are not on the wire yet, so a shared
+                    // session refuses them, as it does every edit it cannot carry (`VS-09`).
+                    Attribute::Size(_)
+                    | Attribute::Latin(_)
+                    | Attribute::Fill(_)
+                    | Attribute::Highlight(_) => return Err(WireError::NotShared),
                 },
             },
             (Operation::Batch(ops), Operation::Batch(inverses)) => {

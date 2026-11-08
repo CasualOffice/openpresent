@@ -150,7 +150,7 @@ pub(crate) enum Origin {
 }
 
 /// A picture's type, from its first bytes, never from the user's file name.
-fn sniff(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
+pub(crate) fn sniff(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
     if bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
         Some(("png", "image/png"))
     } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
@@ -164,7 +164,7 @@ pub(crate) fn spid(node: &ShapeNode) -> Option<u32> {
     node.non_visual.as_ref()?.spid
 }
 
-fn embed(node: &ShapeNode) -> Option<&str> {
+pub(crate) fn embed(node: &ShapeNode) -> Option<&str> {
     node.properties
         .picture
         .as_ref()?

@@ -16,6 +16,12 @@
 // As PowerPoint: a press inside a shape that holds text puts the caret there
 // (`editor.text.js`); a press on its border, or on a shape without text, selects it
 // and drags it.
+//
+// Several shapes (`UX-003`): Shift-click or Ctrl-click adds or removes one, a drag
+// from an empty part of the slide draws a marquee that selects every shape wholly
+// inside it, and a drag of any selected shape moves them all. A group move, delete,
+// nudge, align or distribute is one engine call and one undo step. Handles show
+// only on a single selection, as PowerPoint's.
 
 import { state, request, status, changed } from "./editor.core.js";
 import { register, run } from "./commands.js";
@@ -36,7 +42,8 @@ const HANDLES = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-
 const BORDER_PX = 6;                  // how far inside its edge a press still grabs a text shape
 
 let shapes = [];        // [{ node, x, y, cx, cy, rot (degrees), flags, part?, empty? }]
-let selected = null;    // node
+let selected = null;    // the primary node: handles, the Format pane and the panes read it
+let others = [];        // the rest of a multiple selection, nodes
 let drag = null;        // { kind, start, box, handle?, moved }
 let undoState = [false, false];
 let shapesToken = 0;
@@ -44,6 +51,12 @@ let shapesFor = null;   // the slide index `shapes` was read for; null until rea
 let pendingPress = null; // a press made before the shapes were read: { p, shift }
 
 const shape = () => shapes.find((s) => s.node === selected) || null;
+/// Every selected shape, the primary last.
+const chosen = () => {
+  const p = shape();
+  const rest = others.map((n) => shapes.find((s) => s.node === n)).filter((s) => s && s !== p);
+  return p ? [...rest, p] : rest;
+};
 const scale = () => byId("slide-frame").clientWidth / state.deck.width;   // px per EMU
 
 /* ── Geometry ───────────────────────────────────────────────────────────── */
@@ -204,7 +217,7 @@ export function onPaint(f) { painters.push(f); }
 
 function paint() {
   paintSelection();
-  const s = drag || text.editing() ? null : shape();
+  const s = drag || text.editing() || others.length ? null : shape();
   for (const f of painters) f(s ? { ...s, index: state.current } : null);
 }
 
@@ -228,6 +241,33 @@ function paintSelection() {
     label.textContent = "Click to add text";
     p.appendChild(label);
     l.appendChild(p);
+  }
+  if (drag?.kind === "marquee" && drag.moved) {
+    const m = document.createElement("div");
+    m.className = "sel-marquee";
+    const [x0, y0] = drag.start, [x1, y1] = drag.at;
+    m.style.left = `${Math.min(x0, x1) * k}px`;
+    m.style.top = `${Math.min(y0, y1) * k}px`;
+    m.style.width = `${Math.abs(x1 - x0) * k}px`;
+    m.style.height = `${Math.abs(y1 - y0) * k}px`;
+    l.appendChild(m);
+  }
+  const all = chosen();
+  if (all.length > 1) {
+    // A multiple selection: an outline round each, no handles, as PowerPoint's.
+    const moved = drag?.kind === "group" && drag.moved ? drag.boxes : null;
+    for (const s of all) {
+      const b = moved?.get(s.node) || s;
+      const box = document.createElement("div");
+      box.className = s.node === selected ? "sel-box is-multi is-primary" : "sel-box is-multi";
+      box.style.left = `${b.x * k}px`;
+      box.style.top = `${b.y * k}px`;
+      box.style.width = `${b.cx * k}px`;
+      box.style.height = `${b.cy * k}px`;
+      box.style.transform = `rotate(${b.rot}deg)`;
+      l.appendChild(box);
+    }
+    return;
   }
   const b = drag?.box || shape();
   if (!b) return;
@@ -273,7 +313,7 @@ function onDown(e) {
   if (!state.deck || state.reading || e.button !== 0) return;
   const p = pointer(e);
   const handle = e.target.dataset?.handle;
-  const s = shape();
+  const s = chosen().length === 1 ? shape() : null;
   e.preventDefault();
   e.currentTarget.setPointerCapture(e.pointerId);
   if (s && handle) {
@@ -290,14 +330,36 @@ function onDown(e) {
     text.hold();
     return;
   }
-  press(p, e.shiftKey);
+  press(p, e.shiftKey, e.shiftKey || e.ctrlKey || e.metaKey);
 }
 
-/// A press at slide point `p` on the shapes as read.
-function press(p, shift) {
+/// A press at slide point `p` on the shapes as read. `add`: Shift or Ctrl was held,
+/// so the press adds the shape to the selection or takes it out (`UX-003`).
+function press(p, shift, add = false) {
   const found = hit(p);
+  if (add && !text.editing()) {
+    text.stop();
+    if (found) toggleInSelection(found.node);
+    else drag = { kind: "marquee", start: p, at: p, add: true };
+    byId("stage").focus({ preventScroll: true });
+    return false;
+  }
+  // A press on a shape of a multiple selection moves them all.
+  if (found && chosen().length > 1 && chosen().some((s) => s.node === found.node)) {
+    text.stop();
+    const all = chosen().map((s) => ({ ...s }));
+    selected = found.node;
+    others = all.map((s) => s.node).filter((n) => n !== found.node);
+    drag = { kind: "group", start: p, origins: all };
+    byId("stage").focus({ preventScroll: true });
+    // On the next frame: painting now would detach the outline this press landed on
+    // before the press reaches the stage, which reads a detached target as off the slide.
+    paintSoon();
+    return false;
+  }
   // A press inside a shape that holds text puts the caret there (`VS-05`).
   if (found && found.part != null && interior(found, p)) {
+    others = [];
     selected = found.node;
     drag = { kind: "text" };
     text.pointerDown(found.part, found.node, p, shift);
@@ -309,7 +371,32 @@ function press(p, shift) {
   select(found ? found.node : null);
   byId("stage").focus({ preventScroll: true });
   if (found) drag = { kind: "move", start: p, origin: found, box: { ...found } };
+  // A press on an empty part of the slide draws a marquee.
+  else drag = { kind: "marquee", start: p, at: p, add: false };
   return false;
+}
+
+/// Shift-click: add the shape to the selection, or take it out.
+function toggleInSelection(node) {
+  const all = chosen().map((s) => s.node);
+  const next = all.includes(node) ? all.filter((n) => n !== node) : [...all, node];
+  selected = next.length ? next[next.length - 1] : null;
+  others = next.slice(0, -1);
+  paintSoon();   // as a group press: the outline pressed stays attached
+  changed();
+}
+
+/// Select every shape wholly inside the marquee from `a` to `b`, as PowerPoint does.
+function marqueeSelect(a, b, add) {
+  const [x0, x1] = [Math.min(a[0], b[0]), Math.max(a[0], b[0])];
+  const [y0, y1] = [Math.min(a[1], b[1]), Math.max(a[1], b[1])];
+  const inside = shapes.filter((s) => s.x >= x0 && s.y >= y0 && s.x + s.cx <= x1 && s.y + s.cy <= y1).map((s) => s.node);
+  const base = add ? chosen().map((s) => s.node) : [];
+  const next = [...base, ...inside.filter((n) => !base.includes(n))];
+  selected = next.length ? next[next.length - 1] : null;
+  others = next.slice(0, -1);
+  paint();
+  changed();
 }
 
 /// Replay a press held while the shapes were read; the keys held with it follow
@@ -336,6 +423,21 @@ function onMove(e) {
   }
   const p = pointer(e);
   if (drag.kind === "text") { text.pointerMove(p); return; }
+  if (drag.kind === "marquee") {
+    drag.at = p;
+    drag.moved = drag.moved || Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) * scale() >= 3;
+    paintSoon();
+    return;
+  }
+  if (drag.kind === "group") {
+    if (!drag.moved && Math.hypot(p[0] - drag.start[0], p[1] - drag.start[1]) * scale() < 3) return;
+    let dx = p[0] - drag.start[0], dy = p[1] - drag.start[1];
+    if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
+    drag.boxes = new Map(drag.origins.filter((o) => !(o.flags & NO_MOVE)).map((o) => [o.node, { ...o, x: o.x + dx, y: o.y + dy }]));
+    drag.moved = true;
+    paintSoon();
+    return;
+  }
   const o = drag.origin;
   if (!drag.moved) {
     // A press that does not move is a click; the ghost starts with the drag.
@@ -364,6 +466,9 @@ function onUp() {
   const d = drag;
   drag = null;
   if (d?.kind === "text") { text.pointerUp(); return; }
+  if (d?.kind === "marquee") { if (d.moved) marqueeSelect(d.start, d.at, d.add); else paint(); return; }
+  // A click on one shape of several, with no drag, selects that one alone, as PowerPoint.
+  if (d?.kind === "group") { if (d.moved) commitMany([...d.boxes.values()]); else select(selected); return; }
   if (!d || !d.moved) { dropGhost(); paint(); return; }
   commit(d.box);
 }
@@ -402,12 +507,32 @@ async function commit(b) {
   slides.redrawSlide(index);
 }
 
-async function deleteSelected() {
+/// Send several boxes as one edit, one undo step (`UX-003`).
+async function commitMany(boxes) {
+  if (!boxes.length) { paint(); return; }
+  const index = state.current;
+  for (const b of boxes) { const s = shapes.find((x) => x.node === b.node); if (s) Object.assign(s, b); }
+  paint();
+  const flat = [];
+  for (const b of boxes) flat.push(b.node, Math.round(b.x), Math.round(b.y), Math.round(b.cx), Math.round(b.cy), Math.round(b.rot * ROT_UNIT));
+  try {
+    const r = await request({ op: "build", fn: "set_shape_transforms", args: [index, flat] }, { priority: 9 });
+    afterEdit(r);
+  } catch (e) {
+    errorDialog("OpenPresent could not move those shapes.", e.message);
+  }
+  slides.redrawSlide(index);
+}
+
+export async function deleteSelection() {
+  const all = chosen();
   const s = shape();
   if (!s) return;
   const index = state.current;
   try {
-    const r = await request({ op: "delete", index, node: s.node }, { priority: 9 });
+    const r = all.length > 1
+      ? await request({ op: "build", fn: "delete_shapes", args: [index, all.map((x) => x.node)] }, { priority: 9 })
+      : await request({ op: "delete", index, node: s.node }, { priority: 9 });
     afterEdit(r);
     select(null);
     slides.redrawSlide(index);
@@ -440,15 +565,66 @@ async function history(op) {
 }
 
 function nudge(dx, dy) {
+  const all = chosen().filter((s) => !(s.flags & NO_MOVE));
+  if (all.length > 1) { commitMany(all.map((s) => ({ ...s, x: s.x + dx, y: s.y + dy }))); return; }
   const s = shape();
   if (!s || (s.flags & NO_MOVE)) return;
   commit({ ...s, x: s.x + dx, y: s.y + dy });
+}
+
+/// Place the primary shape at box `b` (EMU): the Format Shape pane's Size and
+/// Position fields (`UX-003`).
+export function place(b) {
+  const s = shape();
+  if (!s) return;
+  commit({ ...s, ...b });
+}
+
+/// Align (`left`, `center`, `right`, `top`, `middle`, `bottom`) or distribute
+/// (`horizontal`, `vertical`) the selection, as PowerPoint's Arrange > Align: one
+/// shape aligns to the slide, several to the box round them all. Boxes are the
+/// shapes' own, unrotated, as the engine reports them.
+function arrange(how) {
+  const all = chosen().filter((s) => !(s.flags & NO_MOVE));
+  if (!all.length) return;
+  const toSlide = chosen().length === 1;
+  const left = toSlide ? 0 : Math.min(...all.map((s) => s.x));
+  const top = toSlide ? 0 : Math.min(...all.map((s) => s.y));
+  const right = toSlide ? state.deck.width : Math.max(...all.map((s) => s.x + s.cx));
+  const bottom = toSlide ? state.deck.height : Math.max(...all.map((s) => s.y + s.cy));
+  let out;
+  if (how === "horizontal" || how === "vertical") {
+    const h = how === "horizontal";
+    const sorted = [...all].sort((a, b) => (h ? a.x - b.x : a.y - b.y));
+    const span = h ? right - left : bottom - top;
+    const used = sorted.reduce((n, s) => n + (h ? s.cx : s.cy), 0);
+    const gap = sorted.length > 1 ? (span - used) / (sorted.length - 1) : 0;
+    let at = h ? left : top;
+    out = sorted.map((s) => {
+      const b = h ? { ...s, x: at } : { ...s, y: at };
+      at += (h ? s.cx : s.cy) + gap;
+      return b;
+    });
+  } else {
+    out = all.map((s) => ({
+      ...s,
+      x: { left, center: (left + right) / 2 - s.cx / 2, right: right - s.cx }[how] ?? s.x,
+      y: { top, middle: (top + bottom) / 2 - s.cy / 2, bottom: bottom - s.cy }[how] ?? s.y,
+    }));
+  }
+  out = out.filter((b) => {
+    const s = all.find((x) => x.node === b.node);
+    return Math.round(s.x) !== Math.round(b.x) || Math.round(s.y) !== Math.round(b.y);
+  });
+  if (!out.length) { status("Already aligned"); return; }
+  if (out.length === 1 && chosen().length === 1) commit(out[0]); else commitMany(out);
 }
 
 /* ── Selection ──────────────────────────────────────────────────────────── */
 
 function select(node) {
   selected = node;
+  others = [];
   paint();
   changed();
 }
@@ -457,6 +633,12 @@ export function hasSelection() { return !!shape(); }
 /// The stage's shapes as last read, and the slide they were read for (`COL-04`:
 /// another participant's selection is outlined from them).
 export function allShapes() { return shapesFor === state.current ? shapes : []; }
+/// Every selected shape's node, the primary last (`UX-003`).
+export function selectedNodes() { return chosen().map((s) => s.node); }
+/// Every selected shape, the primary last.
+export function selectedShapes() { return chosen().map((s) => ({ ...s })); }
+/// Select these nodes once the stage's shapes are next read: a paste or duplicate.
+export function selectNodes(nodes) { pendingSelect = nodes.length ? [...nodes] : null; }
 /// The selected shape's node, or `null` (`VS-10`'s Animations tab acts on it).
 export function selectedNode() { return shape()?.node ?? null; }
 
@@ -464,7 +646,7 @@ export function selectedNode() { return shape()?.node ?? null; }
 export function selectedShape() { return shape(); }
 
 /// Clear the selection: a press off the slide.
-export function deselect() { if (selected != null) select(null); }
+export function deselect() { if (selected != null || others.length) select(null); }
 
 let pendingSelect = null;
 /// Select `node` once the stage's shapes are next read: a shape just inserted (`VS-08`).
@@ -497,8 +679,14 @@ export async function refresh() {
     if (token !== shapesToken || index !== state.current) return;
     shapes = next;
     shapesFor = index;
-    if (pendingSelect != null) { selected = pendingSelect; pendingSelect = null; }
+    if (pendingSelect != null) {
+      const list = Array.isArray(pendingSelect) ? pendingSelect : [pendingSelect];
+      selected = list[list.length - 1];
+      others = list.slice(0, -1);
+      pendingSelect = null;
+    }
     if (!shape()) selected = null;
+    others = others.filter((n) => n !== selected && next.some((s) => s.node === n));
     paint();
     changed();
     replayPress();
@@ -512,6 +700,7 @@ export async function refresh() {
 /// A new deck, or another slide: nothing is selected.
 export function reset(deckChanged) {
   selected = null;
+  others = [];
   drag = null;
   dropGhost();
   shapes = [];
@@ -529,9 +718,10 @@ export function onKey(e) {
   if (!shape() || e.altKey) return false;
   if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); run("shape.delete"); return true; }
   if (e.key === "Escape") { e.preventDefault(); select(null); return true; }
+  if (mod && !e.shiftKey && (e.key === "d" || e.key === "D")) { e.preventDefault(); run("edit.duplicate"); return true; }
   // A key typed with a text shape selected starts typing in it, as PowerPoint.
   const s = shape();
-  if (s.part != null && e.key.length === 1 && !mod) {
+  if (s.part != null && e.key.length === 1 && !mod && chosen().length === 1) {
     e.preventDefault();
     text.typeInto(s.part, s.node, e.key);
     return true;
@@ -553,7 +743,24 @@ export function init() {
   const has = () => !!state.deck;
   register("edit.undo", { label: "Undo", shortcut: "Ctrl+Z", enabled: () => has() && undoState[0], run: () => history("undo") });
   register("edit.redo", { label: "Redo", shortcut: "Ctrl+Y", enabled: () => has() && undoState[1], run: () => history("redo") });
-  register("shape.delete", { label: "Delete", shortcut: "Delete", enabled: () => has() && !!shape(), run: deleteSelected });
+  register("shape.delete", { label: "Delete", shortcut: "Delete", enabled: () => has() && !!shape(), run: deleteSelection });
+  const any = () => has() && !!shape();
+  for (const [how, label] of [["left", "Align Left"], ["center", "Align Center"], ["right", "Align Right"], ["top", "Align Top"], ["middle", "Align Middle"], ["bottom", "Align Bottom"]]) {
+    register(`arrange.align-${how}`, { label, enabled: any, run: () => arrange(how) });
+  }
+  const several = () => has() && chosen().length > 2;
+  register("arrange.distribute-horizontal", { label: "Distribute Horizontally", enabled: several, run: () => arrange("horizontal") });
+  register("arrange.distribute-vertical", { label: "Distribute Vertically", enabled: several, run: () => arrange("vertical") });
+  register("edit.select-all", {
+    label: "Select All", shortcut: "Ctrl+A",
+    enabled: () => has() && shapes.length > 0 && !text.editing(),
+    run: () => {
+      selected = shapes.length ? shapes[shapes.length - 1].node : null;
+      others = shapes.slice(0, -1).map((s) => s.node);
+      paint();
+      changed();
+    },
+  });
   for (const [id, label, dx, dy] of [
     ["shape.nudge-left", "Nudge Left", -NUDGE, 0], ["shape.nudge-right", "Nudge Right", NUDGE, 0],
     ["shape.nudge-up", "Nudge Up", 0, -NUDGE], ["shape.nudge-down", "Nudge Down", 0, NUDGE],

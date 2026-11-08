@@ -268,6 +268,8 @@ function gallery(spec) {
     for (const b of btns) if (b.disabled !== !live) b.disabled = !live;
     const on = c && c.selected ? c.selected() : null;
     for (const b of btns) if (b.dataset.tile) b.setAttribute("aria-selected", b.dataset.tile === on ? "true" : "false");
+    // A tile its command applies on one click (`pick`, `UX-003`) is named for what it applies.
+    if (c && c.pick) for (const b of btns) if (b.dataset.tile && b.title !== b.dataset.tile) b.title = b.dataset.tile;
     more.title = tip(`More ${spec.label}`, c);
   });
   return g;
