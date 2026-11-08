@@ -17,16 +17,15 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
-use casual_slide_export::writer::{Op, SavePlan, SlideRef};
-use casual_slide_import::slide::SlideLimits;
 use casual_slide_model::presentation::{Coordinate, POSITIVE_COORDINATE_MAX, Point, PositiveSize};
 use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
 use casual_slide_model::slide::{SlidePart, SlideParts};
-use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
 use casual_slide_render::{Deck, PdfMetadata, RenderError};
 use wasm_bindgen::prelude::*;
 
+mod build;
 mod edit;
+pub use build::{Insert, MAX_PICTURE_BYTES};
 pub use edit::{Move, Toggle};
 mod show;
 pub use show::{MAX_NOTES_CHARS, MAX_TRANSITION_MS, ShowSlide, ShowTransition};
@@ -71,6 +70,12 @@ pub enum BridgeError {
     NoText,
     /// A bridge number named no caret move or attribute.
     BadArgument,
+    /// A new slide or shape could not be built: its layout could not be read, or the
+    /// reader refused the part built (`VS-08`); the reader's code, or `CS-WSM-0007`.
+    Build(&'static str),
+    /// Insert > Picture was given bytes that are not a PNG or JPEG picture, or more of
+    /// them than [`MAX_PICTURE_BYTES`] (`VS-08`).
+    NotAPicture,
 }
 
 impl BridgeError {
@@ -86,6 +91,8 @@ impl BridgeError {
             Self::CannotDelete => "CS-WSM-0004",
             Self::NoText => "CS-WSM-0005",
             Self::BadArgument => "CS-WSM-0006",
+            Self::Build(code) => code,
+            Self::NotAPicture => "CS-WSM-0008",
         }
     }
 }
@@ -114,6 +121,12 @@ impl core::fmt::Display for BridgeError {
             ),
             Self::NoText => write!(f, "[{}] that shape has no text to edit", self.code()),
             Self::BadArgument => write!(f, "[{}] an argument named nothing", self.code()),
+            Self::Build(code) => write!(f, "[{code}] the new slide or shape could not be built"),
+            Self::NotAPicture => write!(
+                f,
+                "[{}] only PNG and JPEG pictures up to 64 MB can be inserted",
+                self.code()
+            ),
         }
     }
 }
@@ -179,6 +192,12 @@ pub struct Viewer {
     history: History,
     /// The undo mark of the typing burst in progress, if any.
     typing: Option<u64>,
+    /// Where each part added in this session came from (`VS-08`).
+    origins: BTreeMap<u32, build::Origin>,
+    /// Pictures inserted in this session, by the relationship id the model gives them.
+    new_media: BTreeMap<String, casual_slide_export::writer::MediaBytes>,
+    /// Pictures inserted so far, which names the next one.
+    minted: u32,
 }
 
 impl Viewer {
@@ -193,6 +212,9 @@ impl Viewer {
             original,
             history: History::with_depth(Some(UNDO_DEPTH)),
             typing: None,
+            origins: BTreeMap::new(),
+            new_media: BTreeMap::new(),
+            minted: 0,
         })
     }
 
@@ -250,71 +272,12 @@ impl Viewer {
 
     /// The deck as a file, through the one writer (`SavePlan`). With nothing
     /// edited, the bytes that were opened. Edits reach the file as patches of the
-    /// named nodes only (ADR-013): a changed `xfrm` is patched in place, and a
-    /// removed shape is [`Op::RemoveShape`], and an edited text body is patched run by
-    /// run (`VS-05`); every other byte stays.
+    /// named nodes only (ADR-013): new, duplicated, deleted and moved slides go through
+    /// the writer's slide operations, a removed shape is [`casual_slide_export::writer::Op::RemoveShape`], a new one
+    /// is inserted empty, and then every slide part is patched to its model, run by run
+    /// for text (`VS-05`, `VS-08`); every other byte stays.
     pub fn save(&self) -> Result<Vec<u8>, BridgeError> {
-        let mut package =
-            PresentationPackage::open(self.deck.source_bytes(), OoxmlLimits::default())
-                .map_err(|e| BridgeError::Save(e.code()))?;
-        let current = self.deck.parts();
-        // What the model patch brings each part to: the part as opened, with each
-        // surviving node's transform as it now is. Removed nodes stay here and go
-        // through the writer's own operation, which runs after the patches.
-        let mut patched: Vec<SlidePart> = Vec::new();
-        let mut removals: Vec<(String, u32)> = Vec::new();
-        for (ordinal, before) in self.original.parts.iter().enumerate() {
-            let (Some(before), Ok(ordinal)) = (before, u32::try_from(ordinal)) else {
-                continue;
-            };
-            let Some(now) = current.get(ordinal) else {
-                continue;
-            };
-            if now == before {
-                continue;
-            }
-            let Some(entry) = self.original.structure.entry(ordinal) else {
-                continue;
-            };
-            let mut part = before.clone();
-            if let (Some(root), Some(now_root)) = (part.shape_tree_mut(), now.shape_tree()) {
-                let mut stack: Vec<&mut ShapeNode> = vec![root];
-                while let Some(node) = stack.pop() {
-                    match now_root.find(node.id) {
-                        Some(kept) => {
-                            node.transform = kept.transform;
-                            node.text_body.clone_from(&kept.text_body);
-                            stack.extend(node.children.iter_mut());
-                        }
-                        // The topmost removed node is enough: its subtree goes with it.
-                        None => removals.push((
-                            entry.part.clone(),
-                            node.non_visual
-                                .as_ref()
-                                .and_then(|n| n.spid)
-                                .ok_or(BridgeError::CannotDelete)?,
-                        )),
-                    }
-                }
-            }
-            patched.push(part);
-        }
-        let refs: Vec<&SlidePart> = patched.iter().collect();
-        let limits = SlideLimits::default();
-        let mut plan = SavePlan::new();
-        if !refs.is_empty() {
-            plan = plan.slide_parts(&self.original.structure, &refs, &limits);
-        }
-        for (part, shape_id) in removals {
-            plan = plan.op(Op::RemoveShape {
-                slide: SlideRef::Part(part),
-                shape_id,
-            });
-        }
-        let outcome = plan
-            .save(&mut package)
-            .map_err(|e| BridgeError::Save(e.code()))?;
-        Ok(outcome.bytes)
+        self.save_built()
     }
 
     fn slide_ordinal(&self, index: usize) -> Result<u32, BridgeError> {
@@ -1004,6 +967,7 @@ pub fn edit_break_typing() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
 
     fn fixture(name: &str) -> Vec<u8> {
         let path = format!(
@@ -1238,4 +1202,158 @@ mod tests {
         assert_eq!(v.delete(0, node).unwrap_err().code(), "CS-WSM-0004");
         assert_eq!(v.can_undo_redo(), (false, false));
     }
+}
+
+/* ── Building a deck (`VS-08`) ─────────────────────────────────────────── */
+
+/// File > New: open the built-in blank presentation, one Title Slide, replacing any
+/// deck open before.
+///
+/// # Errors
+///
+/// `CS-WSM-0007` if the blank deck could not be built, which a correct build never does.
+#[wasm_bindgen]
+pub fn open_blank() -> Result<(), JsError> {
+    let viewer = Viewer::blank().map_err(js)?;
+    SESSION.with(|s| *s.borrow_mut() = Some(viewer));
+    Ok(())
+}
+
+/// The deck's layouts for the New Slide gallery: `[ordinal, name, ordinal, name, …]`.
+/// A name is document text: the page shows it through `textContent` only.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn slide_layouts() -> Result<Vec<String>, JsError> {
+    with_viewer(|v| {
+        Ok(v.layouts()
+            .into_iter()
+            .flat_map(|(o, n)| [o.to_string(), n])
+            .collect())
+    })
+}
+
+/// The layout ordinal slide `index` is on, or -1.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn slide_layout(index: u32) -> Result<i64, JsError> {
+    with_viewer(|v| Ok(v.layout_of(index as usize).map_or(-1, i64::from)))
+}
+
+/// New Slide on layout `layout` at place `at`; returns the place.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a layout that is not one; `CS-TXN-0006` for a bad place.
+#[wasm_bindgen]
+pub fn new_slide(at: u32, layout: u32) -> Result<u32, JsError> {
+    with_viewer(|v| v.new_slide(at as usize, layout).map(to_u32))
+}
+
+/// Duplicate slide `index`; returns the copy's place.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn duplicate_slide(index: u32) -> Result<u32, JsError> {
+    with_viewer(|v| v.duplicate_slide(index as usize).map(to_u32))
+}
+
+/// Delete slide `index`.
+///
+/// # Errors
+///
+/// `CS-TXN-0006` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn delete_slide(index: u32) -> Result<(), JsError> {
+    with_viewer(|v| v.delete_slide(index as usize))
+}
+
+/// Move slide `from` to place `to`.
+///
+/// # Errors
+///
+/// `CS-TXN-0006` for a place past the end.
+#[wasm_bindgen]
+pub fn move_slide(from: u32, to: u32) -> Result<(), JsError> {
+    with_viewer(|v| v.move_slide(from as usize, to as usize))
+}
+
+/// Which slides are hidden, one byte each, 1 for hidden.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn hidden_slides() -> Result<Vec<u8>, JsError> {
+    with_viewer(|v| {
+        (0..v.slide_count())
+            .map(|i| v.is_hidden(i).map(u8::from))
+            .collect()
+    })
+}
+
+/// Hide slide `index` in a slide show, or show it again.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn set_slide_hidden(index: u32, hidden: bool) -> Result<(), JsError> {
+    with_viewer(|v| v.set_hidden(index as usize, hidden))
+}
+
+/// Insert a text box (0), rectangle (1), oval (2), line (3) or arrow (4) on slide
+/// `index` at a box in EMU; returns its node.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another kind.
+#[wasm_bindgen]
+pub fn insert_shape(
+    index: u32,
+    kind: u32,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        let kind = Insert::from_u32(kind).ok_or(BridgeError::BadArgument)?;
+        v.insert_shape(
+            index as usize,
+            kind,
+            [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
+}
+
+/// Insert > Picture: PNG or JPEG bytes on slide `index` at a box in EMU; returns its
+/// node.
+///
+/// # Errors
+///
+/// `CS-WSM-0008` for bytes that are not a PNG or JPEG picture.
+#[wasm_bindgen]
+pub fn insert_picture(
+    index: u32,
+    bytes: Vec<u8>,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        v.insert_picture(
+            index as usize,
+            bytes,
+            [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
 }

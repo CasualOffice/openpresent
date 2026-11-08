@@ -208,6 +208,23 @@ pub enum Op {
         /// The new `creationId`, supplied because randomness is never sampled here.
         creation_id: Option<String>,
     },
+    /// Insert a new, empty shape into a slide's shape tree at `index` among its shapes,
+    /// with this `cNvPr/@id` and name: a later patch of the slide part brings it to its
+    /// model, so the one patch path writes everything in it (`VS-08`). A picture names
+    /// its image's bytes, which reuse a media part holding the same bytes. Refused for an
+    /// id the slide already uses.
+    InsertShape {
+        /// Which slide.
+        slide: SlideRef,
+        /// Its place among the shape tree's shapes, in z-order; past the end is last.
+        index: usize,
+        /// What it is.
+        shape: NewShape,
+        /// Its `cNvPr/@id`.
+        shape_id: u32,
+        /// Its `cNvPr/@name`.
+        name: String,
+    },
     /// Change the file's type to this extension's: `pptx`, `ppsx`, `potx`, `pptm`, `ppsm`
     /// or `potm`. One `Override` changes. VBA in a macro-free type needs [`Op::DropVba`].
     Retype {
@@ -234,6 +251,18 @@ pub enum Op {
         /// The bytes.
         bytes: Vec<u8>,
     },
+}
+
+/// What [`Op::InsertShape`] inserts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum NewShape {
+    /// `p:sp`: a text box or a preset shape.
+    Shape,
+    /// `p:cxnSp`: a line or an arrow.
+    Connector,
+    /// `p:pic`, stretched over its box.
+    Picture(MediaBytes),
 }
 
 /// New media, for [`Op::ApplyMediaReplacement`].
@@ -402,6 +431,13 @@ impl Draft<'_> {
                 shape_id,
                 creation_id,
             } => self.copy_shape(slide, *shape_id, creation_id.as_deref()),
+            Op::InsertShape {
+                slide,
+                index,
+                shape,
+                shape_id,
+                name,
+            } => self.insert_shape(slide, *index, shape, *shape_id, name),
             Op::Retype { extension } => self.retype(extension),
             Op::DropVba => self.drop_vba(),
             Op::AttachPart {
@@ -676,7 +712,7 @@ impl Draft<'_> {
 
     /// `INV-SP-03` (Inferred): bytes matching a media part reuse that part. Otherwise a
     /// new part, named by family, never by the user's file (`INV-PN-02`).
-    fn media_part(
+    pub(crate) fn media_part(
         &mut self,
         bytes: &[u8],
         extension: &str,

@@ -544,6 +544,41 @@ impl Package {
     }
 }
 
+/// A new package holding `parts` in the order given, written as [`Package::rewrite`]
+/// writes: deflated, at a fixed time, so the same parts always give the same bytes. For a
+/// deck the host builds from nothing, such as File > New (`VS-08`).
+///
+/// # Errors
+///
+/// [`PackageError::UnsafePath`] for a name that is not a safe part path,
+/// [`PackageError::DuplicatePart`] for two spellings of one part, and
+/// [`PackageError::RewriteFailed`] if the archive cannot be written.
+pub fn build_package(parts: &[(&str, &[u8])]) -> Result<Vec<u8>, PackageError> {
+    let options = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .last_modified_time(DateTime::default())
+        .system(System::Unix);
+    let failed = |_| PackageError::RewriteFailed;
+    let mut seen = HashSet::new();
+    let mut out = ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in parts {
+        if !is_safe_part_path(name) {
+            return Err(PackageError::UnsafePath {
+                path: (*name).to_owned(),
+            });
+        }
+        if !seen.insert(part_entry_key(name)) {
+            return Err(PackageError::DuplicatePart {
+                path: (*name).to_owned(),
+            });
+        }
+        out.start_file(*name, options).map_err(failed)?;
+        out.write_all(bytes)
+            .map_err(|_| PackageError::RewriteFailed)?;
+    }
+    Ok(out.finish().map_err(failed)?.into_inner())
+}
+
 /// Changes to apply when writing a package. Everything not named here is carried
 /// over untouched.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
