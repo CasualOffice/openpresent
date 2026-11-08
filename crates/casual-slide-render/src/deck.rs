@@ -246,6 +246,23 @@ impl Deck {
         &mut self.parts
     }
 
+    /// Each master's theme by the master's part ordinal, as read or as edited since
+    /// (`VS-12`). A master whose theme could not be read has none.
+    pub fn themes(&self) -> &BTreeMap<u32, Theme> {
+        &self.themes
+    }
+
+    /// The theme of the master with this ordinal, to edit (`VS-12`). The next drawing
+    /// uses it; the file is not touched until a save.
+    pub fn theme_mut(&mut self, master: u32) -> Option<&mut Theme> {
+        self.themes.get_mut(&master)
+    }
+
+    /// The slide size, EMU, to edit (`VS-12`). The caller keeps both sides positive.
+    pub fn size_mut(&mut self) -> &mut (i64, i64) {
+        &mut self.size
+    }
+
     /// Read the media a display list draws, once each.
     fn load_media(&mut self, list: &DisplayList) {
         for item in &list.items {
