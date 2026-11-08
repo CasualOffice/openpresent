@@ -22,6 +22,7 @@ import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
+import * as build from "./editor.build.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -281,6 +282,7 @@ function bindKeys() {
     // Undo and redo anywhere; with a shape selected, its keys come first (`VS-06`).
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
     const mod = e.ctrlKey || e.metaKey;
+    if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && build.onKey(e)) return;
     if (mod && !e.altKey && (e.key === "o" || e.key === "O")) { e.preventDefault(); openFilePicker(); return; }
     if (mod && !e.altKey && (e.key === "s" || e.key === "S")) { e.preventDefault(); run("file.save"); return; }
     if (e.key === "F5") { e.preventDefault(); if (state.deck) slides.startShow(e.shiftKey ? state.current : 0); return; }
@@ -334,6 +336,7 @@ async function boot() {
     if (t && t !== "auto") document.documentElement.dataset.theme = t;
   } catch { /* private mode */ }
   selection.init();
+  build.init();
   registerCommands();
   initDialogs(request);
   slides.init();
