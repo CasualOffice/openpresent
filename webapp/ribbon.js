@@ -3,8 +3,11 @@
 //
 // Copied from OpenCalc's `webapp/ribbon.js` at `b23c67c` (webapp/README.md, owner
 // instruction 42) and cut to one page shell: OpenCalc's instances per embedded
-// editor (shadow roots), combos, toolbar popups, KeyTips and the phone command
-// bar are not here yet, and arrive with the features that need them. What is
+// editor (shadow roots), combos, toolbar popups and the phone command bar are
+// not here yet, and arrive with the features that need them. KeyTips are
+// OpenCalc's (Alt shows a letter on File and every tab; the letter opens it),
+// carried one level further as PowerPoint does: a tab's letter shows a badge on
+// each of its buttons, typing one runs it, and Esc steps back (`UX-003`). What is
 // kept is its rule that matters: **this chrome owns its controls**, every button
 // drawn from `ribbon.model.js` and run through the command registry
 // (`commands.js`), and a button's state read from the registry, never mirrored.
@@ -661,6 +664,145 @@ function closeBackstage() {
   el?.querySelector(".rb-file")?.focus();
 }
 
+/* ── KeyTips ────────────────────────────────────────────────────────────── */
+
+/// PowerPoint's own KeyTips for the buttons a user reaches for most, by command
+/// id. Every other button gets one made from its label (`assignKeys`).
+const KNOWN_TIPS = {
+  "edit.paste": "V", "edit.cut": "X", "edit.copy": "C", "home.format-painter": "FP",
+  "home.new-slide": "I", "home.layout": "L", "home.reset": "R", "home.section": "T",
+  "font.name": "FF", "font.size": "FS", "font.increase": "FG", "font.decrease": "FK",
+  "font.clear": "E", "font.bold": "1", "font.italic": "2", "font.underline": "3",
+  "font.strike": "4", "font.color": "FC", "font.highlight": "TC",
+  "para.bullets": "U", "para.numbering": "N", "para.left": "AL", "para.center": "AC",
+  "para.right": "AR", "para.justify": "AJ", "para.indent-less": "AO", "para.indent-more": "AI",
+  "insert.picture": "P", "insert.table": "T", "insert.textbox": "X", "insert.shapes": "SH",
+  "picture.crop": "C", "picture.reset": "Q", "picture.style": "K",
+};
+
+/// A KeyTip for each of `items` (`[id, label]`), unique and prefix-free, so
+/// typing one never stops short at another: PowerPoint's where it has one, else
+/// the label's first letter, its words' initials, then its first letter and each
+/// other in turn, then a number.
+function assignKeys(items, taken = []) {
+  const used = [...taken];
+  const free = (k) => k && !used.some((u) => u.startsWith(k) || k.startsWith(u));
+  const out = new Map();
+  const claim = (id, k) => { used.push(k); out.set(id, k); };
+  for (const [id] of items) if (KNOWN_TIPS[id] && free(KNOWN_TIPS[id])) claim(id, KNOWN_TIPS[id]);
+  let n = 0;
+  for (const [id, label] of items) {
+    if (out.has(id)) continue;
+    const letters = shortLabel(label).toUpperCase().replace(/[^A-Z0-9 ]/g, "");
+    const words = letters.split(/\s+/).filter(Boolean);
+    const first = words[0]?.[0] || "";
+    const cands = [first, words.slice(0, 2).map((w) => w[0]).join("")];
+    for (const c of letters.replace(/\s+/g, "").slice(1)) cands.push(first + c);
+    for (const a of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") cands.push(first + a);
+    let k = cands.find((c) => c.length && free(c));
+    while (!k) { n += 1; if (free(`Y${n}`)) k = `Y${n}`; }
+    claim(id, k);
+  }
+  return out;
+}
+
+/// Alt (released alone) or Alt+Period shows the tabs' KeyTips; a tab's letters
+/// show its buttons'; Esc steps back a level, and a click or another key with a
+/// modifier puts them away.
+function installKeyTips(file, tablist, panels, select) {
+  let mode = null;      // null, "tabs", or the tab id whose buttons show tips
+  let typed = "";
+  let targets = new Map();   // KeyTip → element to click
+  const clear = () => {
+    for (const t of document.querySelectorAll(".op-ribbon .rb-tip")) t.remove();
+    el.classList.remove("rb-keytips");
+    targets = new Map();
+    typed = "";
+  };
+  const badge = (node, key) => {
+    const t = h("span", "rb-tip", key);
+    t.setAttribute("aria-hidden", "true");
+    node.appendChild(t);
+    targets.set(key, node);
+  };
+  const off = () => { mode = null; clear(); };
+  const showTabs = () => {
+    clear();
+    mode = "tabs";
+    el.classList.add("rb-keytips");
+    badge(file, "F");
+    for (const tab of TABS) {
+      const t = tablist.querySelector(`#rb-tab-${tab.id}`);
+      if (t && !t.hidden) badge(t, tab.key);
+    }
+  };
+  const showButtons = (id) => {
+    clear();
+    mode = id;
+    el.classList.add("rb-keytips");
+    const panel = panels.get(id);
+    if (!panel) return;
+    const nodes = [...panel.querySelectorAll(".rb-btn, .rb-combo-btn, .rb-gal-more, .rb-launch")]
+      .filter((b) => !b.hidden && b.getClientRects().length > 0);
+    const items = nodes.map((b, i) => [b.dataset.cmd ? `${b.dataset.cmd}#${i}` : `#${i}`, b.getAttribute("aria-label") || b.title || "Z"]);
+    // A command seen twice (a gallery's More, a launcher) keys by its first.
+    const keyed = assignKeys(items.map(([k, l]) => [k.split("#")[0] || k, l]).filter(([k], i, a) => a.findIndex(([x]) => x === k) === i));
+    nodes.forEach((b, i) => {
+      const id0 = items[i][0].split("#")[0] || items[i][0];
+      const k = keyed.get(id0);
+      if (k && !targets.has(k)) badge(b, k);
+    });
+  };
+  // Shown on the release of a lone Alt, as OpenCalc does, so Alt as a modifier
+  // (Alt+Q, Alt+F5) never raises them or loses its keystroke.
+  let altAlone = false;
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Alt" && altAlone) { altAlone = false; if (mode) off(); else showTabs(); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Alt") { if (!e.repeat) altAlone = true; return; }
+    altAlone = false;
+    // Alt+Period (Option+Period on a Mac, where Alt alone is taken): PowerPoint
+    // for the web's way in. `code`, as Option+Period types "≥".
+    if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "Period") {
+      e.preventDefault(); e.stopPropagation();
+      if (mode) off(); else showTabs();
+      return;
+    }
+    if (!mode) return;
+    if (e.key === "Escape") {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (mode === "tabs") off(); else showTabs();
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) { off(); return; }
+    if (e.key === "Shift") return;
+    const k = e.key.length === 1 ? e.key.toUpperCase() : "";
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (!k) return;
+    const next = typed + k;
+    const hit = targets.get(next);
+    if (hit) {
+      if (mode === "tabs") {
+        if (hit === file) { off(); hit.click(); return; }
+        const tab = TABS.find((t) => `rb-tab-${t.id}` === hit.id);
+        select(tab.id);
+        showButtons(tab.id);
+        return;
+      }
+      off();
+      hit.click();
+      return;
+    }
+    if ([...targets.keys()].some((t) => t.startsWith(next))) {
+      typed = next;
+      for (const [t, node] of targets) node.querySelector(".rb-tip")?.classList.toggle("rb-tip-dim", !t.startsWith(next));
+    }
+  }, true);
+  document.addEventListener("mousedown", () => { if (mode) off(); }, true);
+  window.addEventListener("blur", () => { if (mode) off(); });
+}
+
 /// Show tab `id`, as PowerPoint opens Shape Format on a shape just drawn. Before the
 /// ribbon is built it does nothing.
 export let selectTab = () => {};
@@ -798,6 +940,7 @@ export async function start(anchor) {
     next.focus();
     next.click();
   });
+  installKeyTips(file, tablist, panels, select);
   document.addEventListener("keydown", (e) => {
     if (e.key === "F1" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); applyDisplay(tabsOnly() ? "always" : "tabs"); }
     if (e.key === "Escape") closePop();

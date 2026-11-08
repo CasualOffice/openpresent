@@ -454,3 +454,17 @@
   .op-chrome-ribbon .rb-panel::-webkit-scrollbar { display: none; }
 }
 
+
+/* KeyTips, as OpenCalc's (`ribbon.css` at `b23c67c`): a dark badge under each tab
+ * and button while they are shown (`UX-003`). */
+.op-chrome-ribbon .rb-tab, .op-chrome-ribbon .rb-file,
+.op-chrome-ribbon .rb-btn, .op-chrome-ribbon .rb-combo-btn,
+.op-chrome-ribbon .rb-gal-more, .op-chrome-ribbon .rb-launch { position: relative; }
+.op-chrome-ribbon .rb-tip {
+  position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
+  min-width: 16px; padding: 1px 4px; border-radius: 3px; z-index: 5;
+  background: var(--op-text-color, #222); color: var(--op-background-color, #fff);
+  font-size: 11px; font-weight: 600; line-height: 14px; text-align: center;
+  pointer-events: none; white-space: nowrap;
+}
+.op-chrome-ribbon .rb-tip.rb-tip-dim { opacity: 0.25; }

@@ -330,6 +330,8 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_WIRE_TEXT` | `1 << 20` | Characters of one inserted text on the wire (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's XML on the wire, which is then read under the reader's own limits (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_CLIP_SHAPES` | `1000` | Shapes one Copy, Paste, Duplicate, group move or group delete takes (`UX-003`) | CS-WSM-0006 | Untested |
+| `MAX_CROP` | `99_000` | Thousandths of a percent Crop may cut from one side, or two opposite sides together, so some of the picture stays (`UX-003`) | CS-WSM-0006 | Tested: `a_crop_cutting_everything_or_a_shape_not_a_picture_is_refused` |
+| `MAX_PAD` | `1_000_000` | Thousandths of a percent a negative crop may pad one side (`UX-003`) | CS-WSM-0006 | Untested |
 | `MAX_FONT_POINTS` | `4000.0` | Points the Font Size box takes, `ST_TextFontSize`'s bound (`UX-003`) | CS-WSM-0006 | `home_tests::a_bad_size_or_colour_is_refused_and_changes_nothing` |
 | `MAX_FONT_NAME_CHARS` | `64` | Characters of a name typed in the Font box (`UX-003`) | None: the name is cut; control characters are dropped | Untested |
 | `MAX_LINE_WIDTH` | `20_116_800` | EMU of an outline weight Shape Outline sets, PowerPoint's 1584 points (`SHAPE-01`) | None: a wider one is set to the bound | Untested |

@@ -38,6 +38,8 @@ mod edit;
 mod format;
 #[cfg(test)]
 mod home_tests;
+mod picture;
+pub use picture::{MAX_CROP, MAX_PAD, PICTURE_STYLES};
 mod rich;
 mod shapes;
 pub use animate::AnimationItem;
@@ -1734,6 +1736,66 @@ pub fn set_shape_fill(index: u32, node: u32, spec: &str) -> Result<bool, JsError
 #[wasm_bindgen]
 pub fn set_shape_outline(index: u32, node: u32, what: u32, value: &str) -> Result<bool, JsError> {
     with_viewer(|v| v.set_outline(index as usize, node, what, value))
+}
+
+/// Picture `node`'s crop: left, top, right, bottom, thousandths of a percent.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a node that is not a picture.
+#[wasm_bindgen]
+pub fn picture_crop(index: u32, node: u32) -> Result<Vec<i32>, JsError> {
+    with_viewer(|v| v.picture_crop(index as usize, node).map(|c| c.to_vec()))
+}
+
+/// Crop: picture `node` cropped to `l, t, r, b` and placed at `x, y, cx, cy`, as one
+/// undo step (`UX-003`).
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a crop past the bounds, or a node that is not a picture.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)] // the crop's four sides and the frame's four values, as JS holds them
+pub fn set_picture_crop(
+    index: u32,
+    node: u32,
+    l: i32,
+    t: i32,
+    r: i32,
+    b: i32,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<(), JsError> {
+    with_viewer(|v| {
+        v.set_picture_crop(
+            index as usize,
+            node,
+            [l, t, r, b],
+            (x as i64, y as i64, cx as i64, cy as i64),
+        )
+    })
+}
+
+/// Reset Picture, or with `and_size` Reset Picture & Size.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a node that is not a picture.
+#[wasm_bindgen]
+pub fn reset_picture(index: u32, node: u32, and_size: bool) -> Result<bool, JsError> {
+    with_viewer(|v| v.reset_picture(index as usize, node, and_size))
+}
+
+/// Picture Styles: one of [`PICTURE_STYLES`], by name.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a name the gallery lacks, or a node that is not a picture.
+#[wasm_bindgen]
+pub fn set_picture_style(index: u32, node: u32, name: &str) -> Result<bool, JsError> {
+    with_viewer(|v| v.set_picture_style(index as usize, node, name))
 }
 
 /// Shape Styles: theme style `row`, `column` of the gallery.
