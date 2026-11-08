@@ -39,6 +39,11 @@ pub trait Document {
         None
     }
 
+    /// The deck's modern comments and authors (`UX-011`), if the host keeps them.
+    fn review_mut(&mut self) -> Option<&mut crate::Review> {
+        None
+    }
+
     /// The document properties (File > Info), if this document holds them.
     fn properties_mut(
         &mut self,

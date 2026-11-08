@@ -6,7 +6,7 @@
 // selected shape's effect Appear, Fade or Fly In (None removes it); Add Animation adds
 // any of the six this build writes (Appear, Fade, Fly In; Pulse; Disappear, Fade Out)
 // after the others; Start sets when the chosen effect starts; Move Earlier and Move
-// Later reorder it. The Animation Pane, a task pane like Format Shape, lists the order
+// Later reorder it. The Animation Pane, a pane of the pane host (`UX-011`), lists the order
 // and selects, reorders and deletes.
 //
 // Every verb is a registered command and one engine op with its inverse, so Undo and
@@ -20,7 +20,7 @@ import { showModal, closeModal, errorDialog } from "./editor.dialogs.js";
 import { icon } from "./ribbon.js";
 import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
-import * as panes from "./editor.panes.js";
+import * as host from "./editor.panehost.js";
 
 const byId = (id) => document.getElementById(id);
 const has = () => !!state.deck && state.deck.count > 0;
@@ -173,7 +173,7 @@ function replaceEffect(kind) {
   return guarded("animate the shape", async () => {
     await call("replace_animation", [state.current, node, kind]);
     await edited();
-    if (!panes.isOpen() && kind >= 0) status(`Animation: ${EFFECTS[kind].name}`);
+    if (!host.isOpen("format") && kind >= 0) status(`Animation: ${EFFECTS[kind].name}`);
   });
 }
 
@@ -252,14 +252,8 @@ function smallButton(ic, label, onClick) {
   return b;
 }
 
-function buildPane() {
-  pane = h("aside", "task-pane anim-pane");
-  pane.id = "anim-pane";
-  pane.setAttribute("aria-label", "Animation Pane");
-  pane.hidden = true;
-  const head = h("div", "fp-head");
-  head.appendChild(h("h2", "fp-title", "Animation Pane"));
-  head.appendChild(smallButton("dismiss", "Close the Animation Pane", closePane));
+function buildPane(body) {
+  pane = h("div", "anim-pane");
   const tools = h("div", "ap-tools");
   tools.append(
     smallButton("chevron_up", "Move Earlier", () => moveEffect(chosen, chosen - 1)),
@@ -276,13 +270,15 @@ function buildPane() {
     else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); removeEffect(chosen); }
   });
   const none = h("p", "fp-none");
-  pane.append(head, tools, ol, none);
-  pane.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); closePane(); } });
-  byId("workspace").appendChild(pane);
+  pane.append(tools, ol, none);
+  body.appendChild(pane);
+  read();
 }
 
+host.registerPane("animation", { title: "Animation Pane", build: buildPane, refresh: () => renderPane(), closed: () => { pane = null; } });
+
 function renderPane() {
-  if (!pane || pane.hidden) return;
+  if (!pane) return;
   const ol = pane.querySelector(".ap-list");
   const none = pane.querySelector(".fp-none");
   ol.textContent = "";
@@ -320,22 +316,11 @@ function renderPane() {
   });
 }
 
-function openPane() {
-  if (!pane) buildPane();
-  panes.close();
-  pane.hidden = false;
-  read();
-  changed();
-}
+function openPane() { host.open("animation"); }
 
-function closePane() {
-  if (!pane || pane.hidden) return;
-  pane.hidden = true;
-  changed();
-  byId("stage")?.focus({ preventScroll: true });
-}
+function closePane() { host.close("animation"); }
 
-const paneOpen = () => !!pane && !pane.hidden;
+const paneOpen = () => host.isOpen("animation");
 
 /* ── Commands ───────────────────────────────────────────────────────────── */
 

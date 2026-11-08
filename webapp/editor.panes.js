@@ -1,4 +1,5 @@
-// The task pane on the right: Format Shape, as PowerPoint's (`UX-003`, docs/53).
+// The task pane on the right: Format Shape, as PowerPoint's (`UX-003`, docs/53), one
+// pane of the pane host (`editor.panehost.js`, `UX-011`).
 //
 // PowerPoint opens Format Shape from a group's dialog launcher (Drawing, Shape
 // Styles, Size) or a shape's right-click menu. Two tabs, Shape Options and Text
@@ -20,6 +21,7 @@ import * as selection from "./editor.selection.js";
 import * as slides from "./editor.slides.js";
 import { openPop, palette, colourMenu } from "./editor.shapes.js";
 import { errorDialog } from "./editor.dialogs.js";
+import * as host from "./editor.panehost.js";
 
 const byId = (id) => document.getElementById(id);
 const EMU_PER_INCH = 914400;
@@ -266,7 +268,7 @@ function render() {
 
 /// Fill the read-out fields from the selection; say so when there is none.
 export function refresh() {
-  if (!pane || pane.hidden) return;
+  if (!pane || !isOpen()) return;
   const s = selectedBox();
   pane.querySelector(".fp-none").hidden = !!s;
   pane.querySelector(".fp-body").hidden = !s;
@@ -279,21 +281,9 @@ export function refresh() {
   }
 }
 
-function build() {
-  pane = h("aside", "task-pane");
-  pane.id = "format-pane";
-  pane.setAttribute("aria-label", "Format Shape");
-  pane.hidden = true;
-  const head = h("div", "fp-head");
-  head.appendChild(h("h2", "fp-title", "Format Shape"));
-  const x = h("button", "fp-close");
-  x.type = "button";
-  x.title = "Close";
-  x.setAttribute("aria-label", "Close the Format Shape pane");
-  x.appendChild(icon("dismiss", 16));
-  x.addEventListener("click", close);
-  head.appendChild(x);
-
+/// Format Shape's content, built into the pane host's body each time it opens.
+function build(body) {
+  pane = h("div", "fp-pane");
   const tabs = h("div", "fp-tabs");
   tabs.setAttribute("role", "tablist");
   for (const [id, label] of [["shape", "Shape Options"], ["text", "Text Options"]]) {
@@ -318,29 +308,22 @@ function build() {
     icons.appendChild(b);
   }
   const none = h("p", "fp-none", "Select a shape on the slide to format it.");
-  const body = h("div", "fp-body");
-  pane.append(head, tabs, icons, none, body);
-  pane.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } });
-  byId("workspace").appendChild(pane);
+  const content = h("div", "fp-body");
+  pane.append(tabs, icons, none, content);
+  body.appendChild(pane);
+  render();
 }
+
+host.registerPane("format", { title: "Format Shape", build, refresh: () => refresh(), closed: () => { pane = null; } });
 
 export function open(which = "fill") {
-  if (!pane) build();
   page = which;
-  pane.hidden = false;
-  render();
-  changed();
-  pane.querySelector(".fp-close").focus({ preventScroll: true });
+  host.open("format");
 }
 
-export function close() {
-  if (!pane || pane.hidden) return;
-  pane.hidden = true;
-  changed();
-  byId("stage")?.focus({ preventScroll: true });
-}
+export function close() { host.close("format"); }
 
-export const isOpen = () => !!pane && !pane.hidden;
+export const isOpen = () => host.isOpen("format");
 
 export function registerPaneCommands() {
   const has = () => !!state.deck && selection.hasSelection();

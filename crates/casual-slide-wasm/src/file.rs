@@ -224,7 +224,9 @@ impl Viewer {
         let op = Operation::SetDocumentProperties {
             properties: Box::new(next),
         };
-        Ok(self.history.apply(&mut DeckDoc(&mut self.deck), op)?)
+        Ok(self
+            .history
+            .apply(&mut DeckDoc(&mut self.deck, &mut self.review), op)?)
     }
 
     /// The value File > Info shows for `key`, one of [`PROPERTY_KEYS`]; `None` when the

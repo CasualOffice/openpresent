@@ -38,7 +38,7 @@ mod zipcheck;
 pub use bookkeeping::HostInputs;
 pub use draft::{Disposition, Draft, ReportEntry, WriterOutcome};
 pub use error::WriterError;
-pub use notes::new_slide_part;
+pub use notes::{new_notes_part, new_slide_part};
 pub use ops::{MediaBytes, NewShape, Op, SlideRef, media_replacement_op, new_media_for};
 pub use plan::{SavePlan, WriterLimits, repair_deck};
 pub use preflight::{Preflight, Violation};

@@ -26,6 +26,8 @@ returns its inverse.
 
 **Built for rich objects** (`casual-slide-transaction` `rich.rs`, slice 11, `VS-11`): `SetTable` sets a graphic frame's table whole and `SetChart` a chart part's model whole, each returning the value it replaced as its inverse; charts are reached through `Document::chart_mut`. Typing in a cell, Insert and Delete Row and Column, and a Table Design style are each one `SetTable` of a table built by `rich`'s pure functions (refused on merged cells, `CS-TXN-0013`). Insert Table and Insert Chart are `InsertNode` of a frame read from a template. Whole-value sets: under OT a concurrent edit of the same table or chart conflicts as one property; finer cell ops are a later pass.
 
+**Built for review** (`casual-slide-transaction` `review.rs`, `UX-011`): `SetComments` sets a slide's modern comment list whole and `SetAuthors` the author list, reached through `Document::review_mut`; `SetNotes` links a slide to a notes slide added by `AddPart` (one batch, one undo step; `DropPart` now takes back an unlinked notes slide); `SetNonVisual` sets a shape's `cNvPr` values, its name and `@hidden`, keeping its `@id`. Z-order is `DeleteNode` then `InsertNode`. Each returns the value it replaced. None is sent in a shared session yet (`CS-TXN-0015`). The bridge saves comments by patching or attaching a `modernComment` part, notes through `Op::AddNotes` then the slide patch, and z-order by moving the shapes' elements in `spTree`.
+
 `InsertRun` (`COL-01`) inserts text whose every run and line break has the given run
 properties rather than a neighbour's: typed text as it crosses to another editor, and the
 undo of a delete in a shared session.

@@ -42,6 +42,8 @@ import init, {
   font_families, font_css_stack, font_face_bytes,
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
+  slide_comments, comment_counts, add_comment, reply_comment, resolve_comment, delete_comment,
+  notes_body, text_body_runs, selection_list, rename_shape, set_shape_hidden, move_shape_z,
   document_info, set_document_property, set_custom_property, remove_custom_property,
   save_deck_as, edits_applied,
 } from "./pkg/casual_slide_wasm.js";
@@ -60,6 +62,13 @@ const COLLAB = {
 
 // Design (`VS-12`): `{ id, op: "design", fn, args }` calls one of these by name and
 // answers `{ value, undo, size }`; `{ op: "themes" }` lists the built-in themes.
+// Comments, notes and the Selection Pane (`UX-011`). Document text goes back as JSON
+// strings, which the page sets with `textContent` only.
+const REVIEW = {
+  slide_comments, comment_counts, add_comment, reply_comment, resolve_comment, delete_comment,
+  notes_body, text_body_runs, selection_list, rename_shape, set_shape_hidden, move_shape_z,
+};
+
 const DESIGN = { design_apply_theme, design_slide_size, design_background };
 
 // Text editing (`VS-05`): `{ id, op: "text", fn, args }` calls one of these by name and
@@ -144,6 +153,12 @@ self.onmessage = async (event) => {
     } else if (msg.op === "delete") {
       delete_shape(msg.index, msg.node);
       self.postMessage({ id, ok: true, undo: Array.from(undo_state()) });
+    } else if (msg.op === "review") {
+      const fn = Object.hasOwn(REVIEW, msg.fn) ? REVIEW[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      let value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      if (ArrayBuffer.isView(value)) value = Array.from(value);
+      self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()) });
     } else if (msg.op === "undo" || msg.op === "redo") {
       const slide = msg.op === "undo" ? undo() : redo();
       // -2: every slide changed, and perhaps the size with them (`VS-12`).

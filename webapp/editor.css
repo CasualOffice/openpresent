@@ -542,6 +542,71 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .pic-crop-hz { width: 18px; height: 6px; margin: -3px 0 0 -9px; cursor: ns-resize; }
 .pic-crop-vt { width: 6px; height: 18px; margin: -9px 0 0 -3px; cursor: ew-resize; }
 
+/* ── The pane host (`UX-011`) ───────────────────────────────────────────── */
+/* One pane at the right, as OpenCalc's `.side-panel`: a resize grip on its left edge. */
+.pane-host { position: relative; min-width: 240px; max-width: 560px; }
+.pane-grip { position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 2; }
+.pane-grip:hover, .pane-grip:focus-visible { background: var(--op-accent-soft); outline: none; }
+.pane-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.fp-pane, .anim-pane, .cm-pane, .sp-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.anim-pane .ap-list { flex: 1; }
+
+/* Comments. */
+.cm-top { padding: 4px 12px 8px; border-bottom: 1px solid var(--op-border-color); display: flex; flex-direction: column; gap: 6px; }
+.cm-new { align-self: flex-start; }
+.cm-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.cm-thread { border: 1px solid var(--op-border-color); border-radius: 8px; padding: 8px 10px; background: var(--op-background-color); cursor: default; }
+.cm-thread.is-active { border-color: var(--op-accent-color); box-shadow: 0 0 0 1px var(--op-accent-color); }
+.cm-thread.is-resolved { opacity: .75; }
+.cm-thread:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+.cm-entry + .cm-entry { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--op-border-color); }
+.cm-head { display: flex; align-items: center; gap: 8px; }
+.cm-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #fff; background: var(--op-accent-fill-color); }
+.cm-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cm-name { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-when { font-size: 11px; color: var(--op-muted-text-color); }
+.cm-text { margin: 4px 0 0 36px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cm-mention { color: var(--op-accent-color); font-weight: 600; }
+.cm-on, .cm-resolved { font-size: 11px; color: var(--op-muted-text-color); margin-bottom: 4px; }
+.cm-resolved { color: #2e7d32; font-weight: 600; }
+.cm-tools { display: flex; gap: 6px; margin: 8px 0 0 36px; flex-wrap: wrap; }
+.cm-tools .op-btn, .cm-new { display: inline-flex; align-items: center; gap: 4px; }
+.cm-icon { border: 0; background: transparent; color: var(--op-muted-text-color); width: 24px; height: 24px; border-radius: 4px; display: grid; place-items: center; cursor: pointer; }
+.cm-icon:hover { background: var(--op-surface-color); color: var(--op-text-color); }
+.cm-compose { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.cm-thread .cm-compose { margin-left: 36px; }
+.cm-input { width: 100%; box-sizing: border-box; resize: vertical; min-height: 34px; padding: 6px 8px; font: inherit; font-size: 13px; border: 1px solid var(--op-control-border-color); border-radius: 6px; background: var(--op-background-color); color: var(--op-text-color); }
+.cm-input:focus { outline: none; border-color: var(--op-accent-color); }
+.cm-actions { display: flex; gap: 6px; align-items: center; }
+.cm-actions .fp-input { flex: 1; }
+.cm-hint { margin: 0 0 6px; font-size: 12px; color: var(--op-muted-text-color); line-height: 1.4; }
+.cm-markers { position: absolute; inset: 0; pointer-events: none; }
+.cm-marker { position: absolute; pointer-events: auto; width: 26px; height: 24px; margin: -12px 0 0 -4px; border-radius: 6px 6px 6px 0; border: 1px solid var(--op-accent-color); background: #fff; color: var(--op-accent-color); display: grid; place-items: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.cm-marker.is-active { background: var(--op-accent-fill-color); color: #fff; }
+.cm-marker.is-resolved { opacity: .6; }
+
+/* The Selection Pane. */
+.sp-tools { display: flex; gap: 6px; padding: 4px 12px 8px; border-bottom: 1px solid var(--op-border-color); }
+.sp-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none; }
+.sp-item { display: flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 6px 0 14px; cursor: pointer; border-top: 2px solid transparent; border-bottom: 2px solid transparent; }
+.sp-item:hover { background: var(--op-surface-color); }
+.sp-item[aria-selected="true"] { background: var(--op-accent-soft); }
+.sp-item:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: -2px; }
+.sp-item.is-hidden .sp-name { color: var(--op-muted-text-color); font-style: italic; }
+.sp-item.is-dragging { opacity: .5; }
+.sp-item.drop-before { border-top-color: var(--op-accent-color); }
+.sp-item.drop-after { border-bottom-color: var(--op-accent-color); }
+.sp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.sp-rename { flex: 1; }
+
+/* The notes, editable (`UX-011`). */
+.notes-edit { min-height: 100%; outline: none; cursor: text; }
+.notes-edit.is-empty:not(:focus)::before { content: attr(data-placeholder); color: var(--op-faint-text-color); }
+.notes-edit.is-empty:not(:focus) .np-para { display: none; }
+.np-b { font-weight: 700; }
+.np-i { font-style: italic; }
+.np-u { text-decoration: underline; }
+
 /* The File tab (`FILE-01`). The name in the title bar reads as text until hovered;
  * clicked, an input with the label's own type and box takes its place (OpenCalc's
  * `button.doc-name` and `.doc-rename`, `UX-CHR-10`). */

@@ -21,6 +21,9 @@ import { start as startRibbon, queueSync, openBackstage, icon, setContextual } f
 import { TABS, FILE_RAIL, LABELS, modelCommandIds } from "./ribbon.model.js";
 import * as menus from "./editor.menus.js";
 import * as panes from "./editor.panes.js";
+import * as comments from "./editor.comments.js";
+import * as selpane from "./editor.selpane.js";
+import * as notes from "./editor.notes.js";
 import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
@@ -423,10 +426,13 @@ async function boot() {
   picture.init();  // Picture Format: Crop, Reset Picture, Picture Styles (`UX-003`)
   home.init();       // the Home tab's Font and Paragraph groups (`UX-003`)
   clipboard.init();  // Cut, Copy, Paste and Duplicate (`UX-003`)
+  comments.init();   // the Comments pane and markers (`UX-011`)
+  selpane.init();    // the Selection Pane (`UX-011`)
   registerCommands();
   presence.init();
   initDialogs(request);
   slides.init();
+  notes.init();      // the notes pane, editable (`UX-011`)
   text.init();
   initFiles({ onOpen: openDeck });
   initFile();

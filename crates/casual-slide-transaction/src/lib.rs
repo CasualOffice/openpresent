@@ -46,7 +46,9 @@ use casual_slide_model::transition::SlideTransition;
 pub mod collab;
 mod design;
 pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE};
+mod review;
 pub mod rich;
+pub use review::Review;
 mod shared;
 pub use shared::sent_form;
 
@@ -100,6 +102,8 @@ pub enum TxnError {
     NoChart(String),
     /// A shared session cannot send this edit yet, so it was not applied (`VS-09`).
     NotShared,
+    /// A review operation on a document that holds no comments (`UX-011`).
+    NoReview,
 }
 
 impl TxnError {
@@ -121,6 +125,7 @@ impl TxnError {
             Self::TableShape => "CS-TXN-0013",
             Self::NoChart(_) => "CS-TXN-0014",
             Self::NotShared => "CS-TXN-0015",
+            Self::NoReview => "CS-TXN-0016",
         }
     }
 }
@@ -205,6 +210,7 @@ impl core::fmt::Display for TxnError {
                 "[{}] this edit cannot be shared with other editors yet",
                 self.code()
             ),
+            Self::NoReview => write!(f, "[{}] this document holds no comments", self.code()),
         }
     }
 }
@@ -525,6 +531,35 @@ pub enum Operation {
         /// What it becomes.
         chart: Box<casual_slide_model::chart::ChartPart>,
     },
+    /// Review: a slide's modern comments, whole (`UX-011`); `None` means the slide has no
+    /// comment part. Its inverse is the list it replaced.
+    SetComments {
+        /// The slide part.
+        ordinal: u32,
+        /// What its `p188:cmLst` becomes.
+        comments: Option<Box<casual_slide_model::comment::ThreadedCommentList>>,
+    },
+    /// Review: the modern author list, whole (`UX-011`).
+    SetAuthors {
+        /// What `p188:authorLst` becomes; `None`, no authors part.
+        authors: Option<Box<casual_slide_model::comment::AuthorList>>,
+    },
+    /// Deck: which notes slide a slide has (`UX-011`). A new notes slide is
+    /// [`Operation::AddPart`], then this.
+    SetNotes {
+        /// The slide part.
+        ordinal: u32,
+        /// The notes slide's ordinal; `None` unlinks it.
+        notes: Option<u32>,
+    },
+    /// Properties: a node's `cNvPr` values, its name and `@hidden` among them, as the
+    /// Selection Pane sets them (`UX-011`). Its `@id` cannot change here.
+    SetNonVisual {
+        /// The node.
+        node: ObjectId,
+        /// What they become.
+        non_visual: Option<Box<casual_slide_model::shape::NonVisualDrawing>>,
+    },
     /// File > Info: the document properties, all three parts, whole. Its inverse is the
     /// properties it replaced, so undo gives back the very model that was read and the
     /// writer then patches nothing.
@@ -550,8 +585,11 @@ impl Operation {
             | Self::FormatRange { object, .. }
             | Self::FormatParagraphs { object, .. }
             | Self::Restore { object, .. } => Some(*object),
-            Self::SetTable { node, .. } => Some(*node),
-            Self::SetChart { .. } | Self::SetDocumentProperties { .. } => None,
+            Self::SetTable { node, .. } | Self::SetNonVisual { node, .. } => Some(*node),
+            Self::SetChart { .. }
+            | Self::SetAuthors { .. }
+            | Self::SetDocumentProperties { .. } => None,
+            Self::SetComments { .. } | Self::SetNotes { .. } => None,
             Self::SetColorScheme { .. }
             | Self::SetFontScheme { .. }
             | Self::SetSlideSize { .. }
@@ -583,7 +621,9 @@ impl Operation {
             | Self::AddEffect { ordinal, .. }
             | Self::RemoveEffect { ordinal, .. }
             | Self::MoveEffect { ordinal, .. }
-            | Self::SetEffectStart { ordinal, .. } => Some(*ordinal),
+            | Self::SetEffectStart { ordinal, .. }
+            | Self::SetComments { ordinal, .. }
+            | Self::SetNotes { ordinal, .. } => Some(*ordinal),
             Self::Batch(ops) => ops.iter().find_map(Operation::part),
             _ => self.object().map(|o| o.part),
         }
@@ -638,6 +678,9 @@ impl Operation {
             }
             Self::RemoveEffect { .. } => "Remove Animation",
             Self::MoveEffect { .. } => "Reorder Animations",
+            Self::SetComments { .. } | Self::SetAuthors { .. } => "Comment",
+            Self::SetNotes { .. } => "Notes",
+            Self::SetNonVisual { .. } => "Selection Pane",
             Self::Batch(ops) => ops.first().map_or("Edit", Operation::label),
         }
     }
@@ -1223,6 +1266,9 @@ pub(crate) fn apply_inner<D: Document + ?Sized>(
     if let Some(applied) = rich::apply_rich(doc, &op)? {
         return Ok(applied);
     }
+    if let Some(applied) = review::apply_review(doc, &op)? {
+        return Ok(applied);
+    }
     let parts = doc.parts_mut();
     match op {
         Operation::SetTransform { node, transform } => {
@@ -1334,6 +1380,11 @@ pub(crate) fn apply_inner<D: Document + ?Sized>(
         // Handled by `rich::apply_rich` above.
         Operation::SetTable { node, .. } => Err(TxnError::NoTable(node)),
         Operation::SetChart { part, .. } => Err(TxnError::NoChart(part)),
+        // Handled by `review::apply_review` above.
+        Operation::SetComments { .. }
+        | Operation::SetAuthors { .. }
+        | Operation::SetNotes { .. }
+        | Operation::SetNonVisual { .. } => Err(TxnError::NoReview),
         Operation::AddPart { entry, part } => slides::add_part(parts, *entry, *part),
         Operation::DropPart { ordinal } => slides::drop_part(parts, ordinal),
         Operation::InsertSlide { index, ordinal } => slides::insert_slide(parts, index, ordinal),
@@ -1635,6 +1686,8 @@ pub use animate::{EffectKind, EffectStart, NewEffect, TransitionKind};
 
 #[cfg(test)]
 mod animate_tests;
+#[cfg(test)]
+mod review_tests;
 #[cfg(test)]
 mod rich_tests;
 #[cfg(test)]

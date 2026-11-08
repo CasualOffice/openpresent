@@ -170,7 +170,10 @@ pub enum BackgroundChoice {
 }
 
 /// The deck as `casual-slide-transaction` edits it: parts, each master's theme, the size.
-pub(crate) struct DeckDoc<'a>(pub(crate) &'a mut Deck);
+pub(crate) struct DeckDoc<'a>(
+    pub(crate) &'a mut Deck,
+    pub(crate) &'a mut casual_slide_transaction::Review,
+);
 
 impl Document for DeckDoc<'_> {
     fn parts_mut(&mut self) -> &mut SlideParts {
@@ -184,6 +187,9 @@ impl Document for DeckDoc<'_> {
     }
     fn chart_mut(&mut self, part: &str) -> Option<&mut casual_slide_model::chart::ChartPart> {
         self.0.chart_mut(part)
+    }
+    fn review_mut(&mut self) -> Option<&mut casual_slide_transaction::Review> {
+        Some(self.1)
     }
     fn properties_mut(
         &mut self,
@@ -273,7 +279,7 @@ impl Viewer {
         self.typing = None;
         let changed = self
             .history
-            .apply(&mut DeckDoc(&mut self.deck), op)
+            .apply(&mut DeckDoc(&mut self.deck, &mut self.review), op)
             .map_err(BridgeError::Edit)?;
         if changed {
             self.reports.clear();

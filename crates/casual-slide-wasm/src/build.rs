@@ -176,6 +176,17 @@ pub(crate) fn embed(node: &ShapeNode) -> Option<&str> {
 
 /// Read a slide part's XML as the reader does.
 pub(crate) fn read_slide(xml: &[u8], part: &str, ordinal: u32) -> Result<SlidePart, BridgeError> {
+    read_slide_kind(xml, part, ordinal, SlideKind::Slide)
+}
+
+/// Read a slide-like part's XML of this kind as the reader does: a new notes slide
+/// (`UX-011`).
+pub(crate) fn read_slide_kind(
+    xml: &[u8],
+    part: &str,
+    ordinal: u32,
+    kind: SlideKind,
+) -> Result<SlidePart, BridgeError> {
     let xml_limits = OoxmlLimits::default();
     let tree = XmlTree::parse(xml, part, &xml_limits).map_err(|e| BridgeError::Build(e.code()))?;
     let import_limits = ImportLimits::default();
@@ -185,7 +196,7 @@ pub(crate) fn read_slide(xml: &[u8], part: &str, ordinal: u32) -> Result<SlidePa
         &tree,
         part,
         &[],
-        SlideKind::Slide,
+        kind,
         ordinal,
         &SlideLimits::default(),
         &import_limits,
@@ -633,7 +644,7 @@ impl Viewer {
         Err(BridgeError::Save("CS-WSM-0009"))
     }
 
-    fn original_count(&self) -> u32 {
+    pub(crate) fn original_count(&self) -> u32 {
         u32::try_from(self.original.parts.len()).unwrap_or(u32::MAX)
     }
 
@@ -641,9 +652,12 @@ impl Viewer {
     pub(crate) fn save_built(&self) -> Result<Vec<u8>, BridgeError> {
         let bytes = self.slides_pass(self.deck.source_bytes())?;
         let bytes = self.shapes_pass(bytes)?;
+        let bytes = self.order_pass(bytes)?;
+        let bytes = self.notes_pass(bytes)?;
         let bytes = self.patch_pass(bytes)?;
         let bytes = self.chart_pass(bytes)?;
         let bytes = self.design_pass(bytes)?;
+        let bytes = self.review_pass(bytes)?;
         self.properties_pass(bytes)
     }
 
@@ -669,7 +683,7 @@ impl Viewer {
             .bytes)
     }
 
-    fn run(plan: &SavePlan<'_>, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
+    pub(crate) fn run(plan: &SavePlan<'_>, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
         let mut package = PresentationPackage::open(bytes, OoxmlLimits::default())
             .map_err(|e| BridgeError::Save(e.code()))?;
         Ok(plan
@@ -742,7 +756,7 @@ impl Viewer {
     }
 
     /// Each slide of the file paired with the model's, by place.
-    fn pairs<'a>(
+    pub(crate) fn pairs<'a>(
         &'a self,
         file: &'a SlideParts,
     ) -> Result<Vec<(String, &'a SlidePart, &'a SlidePart)>, BridgeError> {
@@ -823,6 +837,8 @@ impl Viewer {
         let file = Deck::open(bytes.clone())?;
         let mut changed: Vec<SlidePart> = Vec::new();
         let mut pairs = self.pairs(file.parts())?;
+        // Notes slides, edited under the slide (`UX-011`).
+        pairs.extend(self.notes_pairs(file.parts()));
         // Layouts and masters, by name: Slide Size scales their shapes too (`VS-12`).
         let model = self.deck.parts();
         for entry in &file.parts().structure.parts {
