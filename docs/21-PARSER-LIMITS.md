@@ -328,6 +328,9 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_OUTSTANDING` | `1` | Chunks a collaborating client has in flight: stop and wait (`VS-09`, `COL-02`) | None: edits wait for the acknowledgement | Tested: raised to 32, `two_clients_editing_at_once_through_the_server_end_with_the_same_deck` failed |
 | `MAX_WIRE_TEXT` | `1 << 20` | Characters of one inserted text on the wire (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's XML on the wire, which is then read under the reader's own limits (`VS-09`) | CS-COL-0004 | Untested |
+| `MAX_CLIP_SHAPES` | `1000` | Shapes one Copy, Paste, Duplicate, group move or group delete takes (`UX-003`) | CS-WSM-0006 | Untested |
+| `MAX_FONT_POINTS` | `4000.0` | Points the Font Size box takes, `ST_TextFontSize`'s bound (`UX-003`) | CS-WSM-0006 | `home_tests::a_bad_size_or_colour_is_refused_and_changes_nothing` |
+| `MAX_FONT_NAME_CHARS` | `64` | Characters of a name typed in the Font box (`UX-003`) | None: the name is cut; control characters are dropped | Untested |
 | `MAX_LINE_WIDTH` | `20_116_800` | EMU of an outline weight Shape Outline sets, PowerPoint's 1584 points (`SHAPE-01`) | None: a wider one is set to the bound | Untested |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)

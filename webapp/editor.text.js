@@ -35,6 +35,7 @@ const SETTLE_MS = 400;
 let overlay = null;    // <svg> over the slide
 let input = null;      // hidden <textarea>
 let formatBits = 0;    // bit 1 bold, 2 italic, 4 underline
+let runState = null;   // [font, size, align, bulleted] at the caret (`UX-003`)
 let composing = false;
 let dragging = false;
 let blink = 0;
@@ -52,11 +53,12 @@ export const editing = () => selection.editing;
 
 async function call(fn, ...args) {
   const r = await request({ op: "text", fn, args }, { priority: TEXT_PRIORITY });
-  if (r.undo && ["text_insert", "text_delete", "text_toggle"].includes(fn)) shapes.noteUndoState(r.undo);
+  if (r.undo && EDITS.has(fn)) shapes.noteUndoState(r.undo);
   return r.value;
 }
 
 const obj = () => selection.object;
+const EDITS = new Set(["text_insert", "text_delete", "text_toggle", "text_set_run", "text_grow", "text_set_paragraphs"]);
 
 /* ── Drawing the caret and selection ────────────────────────────────────── */
 
@@ -73,6 +75,7 @@ async function geometry() {
   const quads = start !== end ? await call("text_selection", index, part, node, start, end) : [];
   const caret = await call("text_caret", index, part, node, selection.focus);
   formatBits = await call("text_format_state", part, node, selection.focus);
+  runState = await call("text_run_state", part, node, selection.focus).catch(() => null);
   return { quads, caret };
 }
 
@@ -306,6 +309,47 @@ function toggle(which) {
   });
 }
 
+/* ── The Home tab's Font and Paragraph groups, and the clipboard (`UX-003`) ── */
+
+/// What the Font and Size boxes, alignment and Bullets show at the caret, or null.
+export const caretRunState = () => (selection.editing ? runState : null);
+
+/// Run one formatting call over the open box's selection, `fn(part, node, start,
+/// end)` returning whether it changed anything, and redraw. `whole`: the caret alone
+/// also counts (alignment and bullets act on its paragraph).
+export function formatSelection(fn, whole = false) {
+  if (selection.editing) input.focus({ preventScroll: true });
+  return serial(async () => {
+    if (!selection.editing) return;
+    const [part, node] = obj();
+    const [start, end] = textRange();
+    if (start === end && !whole) { status("Select text to format it."); return; }
+    if (await fn(part, node, start, end)) await afterEdit();
+  });
+}
+
+/// The selected text, for Copy; empty when nothing is selected.
+export async function selectedText() {
+  // After the keys before it: Ctrl+A then Ctrl+C copies what Ctrl+A selected.
+  await queue.catch(() => {});
+  if (!selection.editing) return "";
+  const [start, end] = textRange();
+  if (start === end) return "";
+  const [part, node] = obj();
+  return (await call("text_slice", part, node, start, end)).replace(/\v/g, "\n");
+}
+
+/// Delete the selection, for Cut.
+export function cutSelection() {
+  const [start, end] = textRange();
+  if (start !== end) remove(-1);
+}
+
+/// Paste plain text at the caret, replacing the selection.
+export function pasteText(text) {
+  if (selection.editing && text) act(() => insert(text.replace(/\r\n?/g, "\n"), false));
+}
+
 function history(id) {
   call("edit_break_typing").catch(() => {});
   run(id);
@@ -381,6 +425,15 @@ function keyAction(e, probe) {
   else if (mod && key === "z" && !e.shiftKey) f = () => history("edit.undo");
   else if (mod && (key === "y" || (key === "z" && e.shiftKey))) f = () => history("edit.redo");
   else if (mod && key === "a") f = selectAll;
+  // The hidden input holds no selection, so the browser fires no copy or cut of its own.
+  else if (mod && key === "c" && !e.shiftKey) f = () => run("edit.copy");
+  else if (mod && key === "x" && !e.shiftKey) f = () => run("edit.cut");
+  else if (mod && key === "e") f = () => run("para.center");
+  else if (mod && key === "l") f = () => run("para.left");
+  else if (mod && key === "r") f = () => run("para.right");
+  else if (mod && key === "j") f = () => run("para.justify");
+  else if (mod && e.shiftKey && (e.key === ">" || e.key === ".")) f = () => run("font.increase");
+  else if (mod && e.shiftKey && (e.key === "<" || e.key === ",")) f = () => run("font.decrease");
   else if (mod && key === "s") f = () => run("file.save");
   else if (e.key === "Backspace") f = () => remove(-1);
   else if (e.key === "Delete") f = () => remove(1);
@@ -449,7 +502,7 @@ export function init() {
   // Presses on the slide are routed by `editor.selection.js`; one on the grey
   // around it closes the box and clears the selection, as PowerPoint's.
   byId("stage").addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || e.target.closest("#slide-frame")) return;
+    if (e.button !== 0 || !e.target.isConnected || e.target.closest("#slide-frame")) return;
     stop();
     shapes.deselect();
   });

@@ -5,19 +5,25 @@
 // Options; Shape Options has three pages, Fill & Line, Effects and Size &
 // Properties, each a stack of sections that open and close.
 //
-// This build cannot yet change a fill, a line or an effect from here, so those
-// controls are present and disabled, saying so, never faked (owner instruction
-// 46). Size and position are read from the selection on the stage and shown;
-// typing them in arrives with the edit that commits them.
+// Size and position are read from the selection and edited here (`UX-003`): a
+// value typed in and committed with Enter or by leaving the box moves or sizes the
+// shape, one undo step, as a drag does. Fill and Line set No fill or a solid colour,
+// No line or a solid line of a colour and a width, through the same engine calls as
+// Shape Fill and Shape Outline. What this build cannot change yet (gradients,
+// pictures, patterns, effects, dashes from here) stays present and disabled, saying
+// so, never faked (owner instruction 46).
 
-import { state, changed } from "./editor.core.js";
+import { state, changed, request, status } from "./editor.core.js";
 import { register } from "./commands.js";
 import { icon } from "./ribbon.js";
 import * as selection from "./editor.selection.js";
+import * as slides from "./editor.slides.js";
+import { openPop, palette, colourMenu } from "./editor.shapes.js";
+import { errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
 const EMU_PER_INCH = 914400;
-const NOT_YET = "Not available yet: this build changes shapes by dragging on the slide";
+const NOT_YET = "Not available yet in this build";
 
 let pane = null;
 let page = "fill";        // fill | effects | size | text
@@ -30,21 +36,37 @@ function h(tag, cls, text) {
   return e;
 }
 
-/// The selected shape's box, in EMU, as the stage draws it: `{ x, y, cx, cy, rot }`,
-/// or `null`. Read from the outline `editor.selection.js` paints, so this pane
-/// needs nothing from that module but the fact that something is selected.
+/// The selected shape's box, in EMU: `{ node, x, y, cx, cy, rot, flags }`, or `null`.
 function selectedBox() {
   if (!state.deck || !selection.hasSelection()) return null;
-  const box = document.querySelector("#sel-layer .sel-box");
-  const frame = byId("slide-frame");
-  if (!box || !frame || !frame.clientWidth) return null;
-  const k = frame.clientWidth / state.deck.width;       // px per EMU
-  const px = (v) => parseFloat(v) || 0;
-  const rot = /rotate\(([-\d.]+)deg\)/.exec(box.style.transform);
-  return { x: px(box.style.left) / k, y: px(box.style.top) / k, cx: px(box.style.width) / k, cy: px(box.style.height) / k, rot: rot ? parseFloat(rot[1]) : 0 };
+  return selection.selectedShape();
 }
 
 const inches = (emu) => `${(emu / EMU_PER_INCH).toFixed(2)}"`;
+
+/// A length typed as PowerPoint takes it: inches by default, or with `"`, `in`,
+/// `cm`, `mm` or `pt`. EMU, or null.
+function parseLength(text) {
+  const m = /^\s*(-?\d+(?:\.\d+)?)\s*("|in|cm|mm|pt)?\s*$/i.exec(text);
+  if (!m) return null;
+  const v = parseFloat(m[1]);
+  const per = { '"': EMU_PER_INCH, in: EMU_PER_INCH, cm: 360000, mm: 36000, pt: 12700 }[(m[2] || '"').toLowerCase()];
+  return Math.round(v * per);
+}
+
+/// One Fill or Line edit of the selected shape, then the slide drawn again.
+async function look(label, fn, args) {
+  const s = selectedBox();
+  if (!s) return;
+  const index = state.current;
+  try {
+    const r = await request({ op: "build", fn, args: [index, s.node, ...args] }, { priority: 9 });
+    selection.noteUndoState(r.undo);
+    if (r.value) { await slides.redrawSlide(index); status(label); } else status(`${label}: nothing changed`);
+  } catch (e) {
+    errorDialog(`OpenPresent could not change that shape: ${label.toLowerCase()}.`, e.message);
+  }
+}
 
 /* ── Building blocks ────────────────────────────────────────────────────── */
 
@@ -66,22 +88,43 @@ function section(title, open, body) {
   return s;
 }
 
-function radios(box, name, options) {
+/// Radio buttons; `live` maps an option to what choosing it does, and the rest are
+/// present and disabled.
+function radios(box, name, options, live = {}) {
   for (const o of options) {
-    const l = h("label", "fp-radio is-off");
+    const run = live[o];
+    const l = h("label", run ? "fp-radio" : "fp-radio is-off");
     const r = h("input");
     r.type = "radio";
     r.name = name;
-    r.disabled = true;
-    l.title = NOT_YET;
+    r.disabled = !run;
+    if (run) r.addEventListener("change", () => { if (r.checked) run(); });
+    else l.title = NOT_YET;
     l.append(r, h("span", null, o));
     box.appendChild(l);
   }
 }
 
-/// A labelled field. With `read`, it shows a value from the selection; without,
-/// it is a disabled control of the kind PowerPoint shows there.
-function field(box, label, kind = "text", read = null) {
+/// A colour button that opens PowerPoint's colour menu and gives the pick to `onPick`.
+function colourField(box, label, noneLabel, onPick) {
+  const row = h("div", "fp-row");
+  row.appendChild(h("span", "fp-label", label));
+  const b = h("button", "fp-color");
+  b.type = "button";
+  b.setAttribute("aria-label", label);
+  b.append(h("span", "fp-swatch"), icon("chevron_down", 10));
+  b.addEventListener("click", async () => {
+    const colours = await palette();
+    openPop(b, "shp-menu", (p) => colourMenu(p, colours, noneLabel, onPick));
+  });
+  row.appendChild(b);
+  box.appendChild(row);
+}
+
+/// A labelled field. With `read`, it shows a value from the selection, and with
+/// `write` too it takes a typed one, committed on Enter or on leaving the box;
+/// without either, it is a disabled control of the kind PowerPoint shows there.
+function field(box, label, kind = "text", read = null, write = null) {
   const row = h("label", "fp-row");
   row.appendChild(h("span", "fp-label", label));
   let input;
@@ -96,9 +139,20 @@ function field(box, label, kind = "text", read = null) {
     input = h("input", "fp-input");
     input.type = "text";
   }
-  if (read) {
+  if (read && write) {
+    const commit = () => {
+      const s = selectedBox();
+      if (!s || input.value === read(s)) return;
+      if (write(input.value, s) === false) { input.value = read(s); status(`${label}: enter a number, as 1.5" or 4 cm`); }
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); commit(); }
+      else if (e.key === "Escape") { const s = selectedBox(); if (s) input.value = read(s); }
+    });
+    input.addEventListener("change", commit);
+    fields.push({ input, read });
+  } else if (read) {
     input.readOnly = true;
-    input.title = "Drag the shape's handles on the slide to change it";
     fields.push({ input, read });
   } else {
     input.disabled = true;
@@ -115,15 +169,29 @@ const PAGES = {
   fill: (body) => {
     body.append(
       section("Fill", true, (b) => {
-        radios(b, "fp-fill", ["No fill", "Solid fill", "Gradient fill", "Picture or texture fill", "Pattern fill", "Slide background fill"]);
-        field(b, "Color", "color");
+        radios(b, "fp-fill", ["No fill", "Solid fill", "Gradient fill", "Picture or texture fill", "Pattern fill", "Slide background fill"], {
+          "No fill": () => look("No Fill", "set_shape_fill", ["none"]),
+          "Solid fill": () => look("Solid Fill", "set_shape_fill", ["scheme accent1"]),
+        });
+        colourField(b, "Color", "No Fill", (spec) => look("Shape Fill", "set_shape_fill", [spec]));
         field(b, "Transparency");
       }),
       section("Line", true, (b) => {
-        radios(b, "fp-line", ["No line", "Solid line", "Gradient line"]);
-        field(b, "Color", "color");
+        radios(b, "fp-line", ["No line", "Solid line", "Gradient line"], {
+          "No line": () => look("No Line", "set_shape_outline", [0, "none"]),
+          "Solid line": () => look("Solid Line", "set_shape_outline", [0, "scheme accent1"]),
+        });
+        colourField(b, "Color", "No Outline", (spec) => look("Shape Outline", "set_shape_outline", [0, spec]));
         field(b, "Transparency");
-        field(b, "Width");
+        const width = h("div");
+        field(width, "Width", "text", () => "", (v) => {
+          const emu = parseLength(/^\s*[\d.]+\s*$/.test(v) ? `${v} pt` : v);
+          if (emu == null || emu <= 0 || emu > 20116800) return false;
+          look("Outline Weight", "set_shape_outline", [1, String(emu)]);
+          return true;
+        });
+        width.querySelector("input")?.setAttribute("placeholder", "pt");
+        b.append(...width.childNodes);
         field(b, "Dash type");
         field(b, "Cap type");
         field(b, "Join type");
@@ -138,14 +206,34 @@ const PAGES = {
   size: (body) => {
     body.append(
       section("Size", true, (b) => {
-        field(b, "Height", "text", (s) => inches(s.cy));
-        field(b, "Width", "text", (s) => inches(s.cx));
-        field(b, "Rotation", "text", (s) => `${Math.round(((s.rot % 360) + 360) % 360)}°`);
+        const size = (key) => (v, s) => {
+          const emu = parseLength(v);
+          if (emu == null || emu < 0 || emu > 51206400) return false;
+          if (s.flags & 8) { status("This shape's size is locked"); return true; }
+          selection.place({ [key]: emu });
+          return true;
+        };
+        field(b, "Height", "text", (s) => inches(s.cy), size("cy"));
+        field(b, "Width", "text", (s) => inches(s.cx), size("cx"));
+        field(b, "Rotation", "text", (s) => `${Math.round(((s.rot % 360) + 360) % 360)}°`, (v, s) => {
+          const deg = parseFloat(String(v).replace("°", ""));
+          if (!Number.isFinite(deg)) return false;
+          if (s.flags & 16) { status("This shape's rotation is locked"); return true; }
+          selection.place({ rot: ((deg % 360) + 360) % 360 });
+          return true;
+        });
         field(b, "Lock aspect ratio", "check");
       }),
       section("Position", true, (b) => {
-        field(b, "Horizontal position", "text", (s) => inches(s.x));
-        field(b, "Vertical position", "text", (s) => inches(s.y));
+        const pos = (key) => (v, s) => {
+          const emu = parseLength(v);
+          if (emu == null || Math.abs(emu) > 51206400) return false;
+          if (s.flags & 4) { status("This shape's position is locked"); return true; }
+          selection.place({ [key]: emu });
+          return true;
+        };
+        field(b, "Horizontal position", "text", (s) => inches(s.x), pos("x"));
+        field(b, "Vertical position", "text", (s) => inches(s.y), pos("y"));
         field(b, "From", "text", () => "Top Left Corner");
       }),
       section("Text Box", false, (b) => {
@@ -184,6 +272,8 @@ export function refresh() {
   pane.querySelector(".fp-body").hidden = !s;
   if (!s) return;
   for (const f of fields) {
+    // A value being typed is not overwritten under the cursor.
+    if (document.activeElement === f.input) continue;
     const v = f.read(s);
     if (f.input.value !== v) f.input.value = v;
   }

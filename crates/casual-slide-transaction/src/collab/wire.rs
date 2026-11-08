@@ -363,6 +363,12 @@ impl WireOp {
                     Attribute::Underline(v) => {
                         WireAttribute::Underline(v.as_ref().map(Lexical::to_lexical))
                     }
+                    // Size, font, colour and highlight are not on the wire yet, so a shared
+                    // session refuses them, as it does every edit it cannot carry (`VS-09`).
+                    Attribute::Size(_)
+                    | Attribute::Latin(_)
+                    | Attribute::Fill(_)
+                    | Attribute::Highlight(_) => return Err(WireError::NotShared),
                 },
             },
             (Operation::Batch(ops), Operation::Batch(inverses)) => {

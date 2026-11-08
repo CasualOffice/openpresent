@@ -30,6 +30,8 @@ import * as build from "./editor.build.js";
 import * as shapes from "./editor.shapes.js";
 import * as animate from "./editor.animate.js";
 import * as objects from "./editor.objects.js";
+import * as home from "./editor.home.js";
+import * as clipboard from "./editor.clipboard.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -315,7 +317,10 @@ function typing(t) {
 
 function bindKeys() {
   document.addEventListener("keydown", (e) => {
-    if (typing(e.target) || slides.showing()) return;
+    // The text box's hidden input keeps focus a moment after the box closes; its keys
+    // are the stage's then (`UX-003`).
+    const idleInput = e.target?.classList?.contains("text-input") && !text.editing();
+    if ((typing(e.target) && !idleInput) || slides.showing()) return;
     if (!byId("op-modal").hidden || document.documentElement.classList.contains("op-backstage-open")) return;
     // Undo and redo anywhere; with a shape selected, its keys come first (`VS-06`).
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
@@ -391,6 +396,8 @@ async function boot() {
   shapes.init();   // Insert > Shapes, adjust handles, Shape Format (`SHAPE-01`)
   animate.init();
   objects.init();
+  home.init();       // the Home tab's Font and Paragraph groups (`UX-003`)
+  clipboard.init();  // Cut, Copy, Paste and Duplicate (`UX-003`)
   registerCommands();
   initDialogs(request);
   slides.init();

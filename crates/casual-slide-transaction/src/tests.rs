@@ -292,3 +292,179 @@ fn an_edit_that_changes_nothing_leaves_no_undo_and_keeps_redo() {
     assert!(history.can_redo());
     assert!(!history.can_undo());
 }
+
+// `UX-003`: the Home tab's Font and Paragraph groups.
+
+fn props_of(parts: &SlideParts, p: usize, i: usize) -> Option<CharacterProperties> {
+    match body(parts).paragraphs[p].items.get(i)? {
+        TextItem::Run(r) => r.properties.as_deref().cloned(),
+        _ => None,
+    }
+}
+
+#[test]
+fn size_font_colour_and_highlight_format_only_their_range_and_undo_exactly() {
+    use casual_slide_model::color::Color;
+    use casual_slide_model::fill::Fill;
+    let font = TextFont {
+        typeface: "Georgia".to_owned(),
+        panose: None,
+        pitch_family: None,
+        charset: None,
+    };
+    let red = Color::srgb(0xFF, 0, 0);
+    for attribute in [
+        Attribute::Size(Some(3200)),
+        Attribute::Latin(Some(Box::new(font.clone()))),
+        Attribute::Fill(Some(Fill::Solid(Some(red.clone())))),
+        Attribute::Highlight(Some(red.clone())),
+    ] {
+        let mut parts = sample();
+        let before = parts.clone();
+        let mut history = History::new();
+        // "Hello |wor|ld": the run splits and only the middle takes the attribute.
+        let changed = history
+            .apply(
+                &mut parts,
+                Operation::FormatRange {
+                    object: SHAPE,
+                    start: 6,
+                    end: 9,
+                    attribute: attribute.clone(),
+                },
+            )
+            .unwrap();
+        assert!(changed, "{attribute:?}");
+        assert_eq!(text(&parts), "Hello world\nSecond");
+        let mid = props_of(&parts, 0, 1).unwrap();
+        let mut want = CharacterProperties {
+            bold: Some(true),
+            ..Default::default()
+        };
+        attribute.set(&mut want);
+        assert_eq!(mid, want, "{attribute:?}");
+        // Outside the range nothing changed.
+        assert_eq!(props_of(&parts, 0, 0), None);
+        assert_eq!(props_of(&parts, 0, 2).unwrap().size, None);
+        history.undo(&mut parts).unwrap();
+        assert_eq!(parts, before, "{attribute:?}");
+    }
+}
+
+#[test]
+fn clearing_an_attribute_removes_it_and_highlight_none_removes_the_element() {
+    let mut parts = sample();
+    let mut history = History::new();
+    let fmt = |a| Operation::FormatRange {
+        object: SHAPE,
+        start: 0,
+        end: 5,
+        attribute: a,
+    };
+    history
+        .apply(&mut parts, fmt(Attribute::Size(Some(2400))))
+        .unwrap();
+    history
+        .apply(&mut parts, fmt(Attribute::Highlight(None)))
+        .unwrap();
+    let p = props_of(&parts, 0, 0).unwrap();
+    assert_eq!((p.size, p.highlight), (Some(2400), None));
+    history
+        .apply(&mut parts, fmt(Attribute::Size(None)))
+        .unwrap();
+    assert_eq!(props_of(&parts, 0, 0).unwrap().size, None);
+}
+
+#[test]
+fn paragraph_alignment_and_bullets_set_only_the_paragraphs_named_and_undo() {
+    let mut parts = sample();
+    let before = parts.clone();
+    let mut history = History::new();
+    let change = |c| Operation::FormatParagraphs {
+        object: SHAPE,
+        first: 1,
+        count: 1,
+        change: c,
+    };
+    assert!(
+        history
+            .apply(
+                &mut parts,
+                change(ParagraphChange::Align(Some(TextAlign::Center)))
+            )
+            .unwrap()
+    );
+    assert!(
+        history
+            .apply(
+                &mut parts,
+                change(ParagraphChange::Bullet(
+                    Some(Bullet::Char(Some("•".to_owned()))),
+                    None
+                ))
+            )
+            .unwrap()
+    );
+    assert!(
+        history
+            .apply(
+                &mut parts,
+                change(ParagraphChange::Indent {
+                    margin_left: Some(285_750),
+                    indent: Some(-285_750),
+                })
+            )
+            .unwrap()
+    );
+    let p1 = body(&parts).paragraphs[1].properties.as_deref().unwrap();
+    assert_eq!(p1.align, Some(TextAlign::Center));
+    assert_eq!(p1.bullet, Some(Bullet::Char(Some("•".to_owned()))));
+    assert_eq!((p1.margin_left, p1.indent), (Some(285_750), Some(-285_750)));
+    assert!(body(&parts).paragraphs[0].properties.is_none());
+    assert_eq!(text(&parts), "Hello world\nSecond");
+    for _ in 0..3 {
+        history.undo(&mut parts).unwrap();
+    }
+    assert_eq!(parts, before);
+}
+
+#[test]
+fn clearing_an_absent_paragraph_property_changes_nothing_and_writes_no_ppr() {
+    let mut parts = sample();
+    let before = parts.clone();
+    let mut history = History::new();
+    let changed = history
+        .apply(
+            &mut parts,
+            Operation::FormatParagraphs {
+                object: SHAPE,
+                first: 0,
+                count: 2,
+                change: ParagraphChange::Align(None),
+            },
+        )
+        .unwrap();
+    assert!(!changed);
+    assert_eq!(parts, before);
+    assert!(!history.can_undo());
+}
+
+#[test]
+fn a_paragraph_range_past_the_body_is_refused_before_anything_changes() {
+    let mut parts = sample();
+    let before = parts.clone();
+    for (first, count) in [(1, 2), (2, 1), (0, 0), (usize::MAX, 2)] {
+        let e = apply(
+            &mut parts,
+            Operation::FormatParagraphs {
+                object: SHAPE,
+                first,
+                count,
+                change: ParagraphChange::Align(Some(TextAlign::Right)),
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(e, TxnError::OutOfRange { .. }));
+        assert_eq!(parts, before);
+    }
+}
