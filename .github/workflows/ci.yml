@@ -7,8 +7,11 @@ on:
   pull_request:
 
 # A superseded PR run is thrown away; a run on main is the record, so it never is.
+# On main the group is per commit, as OpenCalc's ci.yml: `cancel-in-progress: false`
+# protects a running run but not a queued one, which GitHub drops when a third
+# push joins the group (CI-15).
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
