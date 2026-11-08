@@ -220,7 +220,9 @@ mod tests {
             "y down: the letter is above the baseline"
         );
         assert!(
-            (top(&large) - 2.0 * top(&small)).abs() < 0.01,
+            // Each outline is rounded to 26.6 fixed point, a 1/64 step; doubling the small
+            // one doubles its rounding, so two steps bound the difference.
+            (top(&large) - 2.0 * top(&small)).abs() <= 2.0 / 64.0,
             "linear within two 26.6 roundings"
         );
     }
