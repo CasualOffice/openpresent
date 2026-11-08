@@ -48,6 +48,8 @@ const THEMES = [["Plain", "#e8ecf0", "#3a6ea5"], ["Harbour", "#dde7f0", "#1f6fb2
 const TABLE_STYLES = [["Medium Style 2 - Accent 1", "#dbe5f1", "#4472c4"], ["Medium Style 2 - Accent 2", "#fbe4d5", "#ed7d31"], ["Medium Style 2 - Accent 3", "#ededed", "#a5a5a5"], ["Medium Style 2 - Accent 4", "#fff2cc", "#ffc000"], ["Medium Style 2 - Accent 5", "#deebf6", "#5b9bd5"], ["Medium Style 2 - Accent 6", "#e2efd9", "#70ad47"]];
 const TRANSITIONS = [["None", "dismiss"], ["Morph", "shape_union"], ["Fade", "slide_transition"], ["Push", "arrow_next"], ["Wipe", "arrow_previous"], ["Split", "layout_row_two_split_top"], ["Reveal", "eye"], ["Cut", "cut"]];
 const ANIMATIONS = [["None", "dismiss"], ["Appear", "sparkle"], ["Fade", "text_effects_sparkle"], ["Fly In", "arrow_next"], ["Float In", "arrow_maximize"], ["Split", "layout_row_two_split_top"], ["Wipe", "arrow_previous"], ["Zoom", "zoom_in"]];
+// Picture Styles: our own swatches for the four the engine has (`picture.rs`).
+const PICTURE_STYLES = [["Simple Frame, White", "#ffffff", "#c8c8c8"], ["Simple Frame, Black", "#ffffff", "#000000"], ["Drop Shadow Rectangle", "#e6e6e6", "#7a7a7a"], ["Thick Matte, Black", "#f2f2f2", "#000000"]];
 const SHAPE_STYLES = [["Colored Outline", "#ffffff", "#156082"], ["Colored Fill", "#156082", "#156082"], ["Light 1 Fill", "#dbe9f4", "#156082"], ["Intense Effect", "#0e4a63", "#0e4a63"]];
 
 export const TABS = [
@@ -262,6 +264,27 @@ TABS.push(
   { id: "chart-design", label: "Chart Design", key: "JC", contextual: "chart", groups: [
     { label: "Data", fold: 2, icon: "data_bar_vertical", items: [L("chart.edit-data", "data_bar_vertical", "Edit Data")] },
   ] },
+  // While a picture is selected (`UX-003`): PowerPoint's Picture Format, its Adjust,
+  // Picture Styles, Accessibility, Arrange and Size groups in its order. The style
+  // tiles are our own simple versions, by PowerPoint's names.
+  { id: "picture-format", label: "Picture Format", key: "JP", contextual: "picture", groups: [
+    { label: "Adjust", fold: 3, icon: "arrow_reset", items: [
+      R([[S("picture.reset", "arrow_reset", "Reset Picture", { menu: ["picture.reset", "picture.reset-size"] })]]),
+    ] },
+    { label: "Picture Styles", fold: 4, icon: "image", launcher: "format.shape-pane", items: [
+      G("picture.styles", "Picture Styles", PICTURE_STYLES),
+    ] },
+    { label: "Accessibility", fold: 1, icon: "image_alt_text", items: [L("shape.alt-text", "image_alt_text", "Alt Text")] },
+    { label: "Arrange", fold: 2, icon: "position_to_front", items: [
+      L("arrange.bring-forward", "position_forward", "Bring Forward (Ctrl+])", { menu: ["arrange.bring-forward", "arrange.bring-to-front"] }),
+      L("arrange.send-backward", "position_backward", "Send Backward (Ctrl+[)", { menu: ["arrange.send-backward", "arrange.send-to-back"] }),
+      R([[S("arrange.align", "align_left", "Align", { menu: ARRANGE.slice(6, 12) })], [S("arrange.rotate", "arrow_rotate_clockwise", "Rotate", { menu: ["arrange.rotate-right", "arrange.flip-horizontal"] })]]),
+    ] },
+    { label: "Size", fold: 5, icon: "slide_size", launcher: "format.size-pane", items: [
+      L("picture.crop", "select_object", "Crop"),
+      R([[S("shape.height", "table_resize_row", "Height")], [S("shape.width", "table_resize_column", "Width")]]),
+    ] },
+  ] },
 );
 
 /// The File page, in PowerPoint's order. As OpenCalc's: each page is a list of
@@ -370,6 +393,8 @@ export const LABELS = {
   "format.size-pane": "Size and Position…",
   "home.reset": "Reset Slide",
   "home.new-slide-layout": "Layout",
+  "picture.reset": "Reset Picture",
+  "picture.reset-size": "Reset Picture & Size",
 };
 
 /// The Present button's drop, at the right of the tab row.

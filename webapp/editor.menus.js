@@ -7,8 +7,8 @@
 // key open the menu for what has focus; Ctrl+F6 moves between the window's
 // regions, as the web product does.
 //
-// A right-click on a shape that is not selected shows the slide's menu: the
-// selection is `editor.selection.js`'s, and this module only reads it.
+// A right-click on a shape that is not selected selects it first, as PowerPoint
+// does, then shows the shape's menu (`selection.selectForMenu`).
 
 import { state } from "./editor.core.js";
 import { contextMenu } from "./ribbon.js";
@@ -30,6 +30,7 @@ function stageMenu() {
 function onStage(e) {
   if (!state.deck || state.reading || !e.target.closest?.("#slide-frame, .stage")) return;
   e.preventDefault();
+  selection.selectForMenu(e);
   contextMenu(e.clientX, e.clientY, stageMenu());
 }
 

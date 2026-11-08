@@ -41,6 +41,7 @@ import init, {
   text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice,
   font_families, font_css_stack, font_face_bytes,
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
+  picture_crop, set_picture_crop, reset_picture, set_picture_style,
 } from "./pkg/casual_slide_wasm.js";
 
 // Co-editing (`COL-04`): what `collab.js` asks of the engine.
@@ -73,6 +74,8 @@ const BUILD = {
   set_shape_style, slide_palette, edit_break_typing,
   // The shape clipboard and multiple selection (`UX-003`).
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
+  // Picture Format (`UX-003`).
+  picture_crop, set_picture_crop, reset_picture, set_picture_style,
 };
 
 /// Arguments that cross as typed arrays: the bridge takes `Vec<u32>` and `Vec<f64>`.

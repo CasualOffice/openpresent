@@ -690,7 +690,6 @@ function assignKeys(items, taken = []) {
   const out = new Map();
   const claim = (id, k) => { used.push(k); out.set(id, k); };
   for (const [id] of items) if (KNOWN_TIPS[id] && free(KNOWN_TIPS[id])) claim(id, KNOWN_TIPS[id]);
-  let n = 0;
   for (const [id, label] of items) {
     if (out.has(id)) continue;
     const letters = shortLabel(label).toUpperCase().replace(/[^A-Z0-9 ]/g, "");
@@ -699,9 +698,11 @@ function assignKeys(items, taken = []) {
     const cands = [first, words.slice(0, 2).map((w) => w[0]).join("")];
     for (const c of letters.replace(/\s+/g, "").slice(1)) cands.push(first + c);
     for (const a of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") cands.push(first + a);
-    let k = cands.find((c) => c.length && free(c));
-    while (!k) { n += 1; if (free(`Y${n}`)) k = `Y${n}`; }
-    claim(id, k);
+    // Every two-letter pair as a last resort: a bounded list, so a full set of
+    // keys leaves a button without a tip rather than looping.
+    for (const a of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") for (const b of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") cands.push(a + b);
+    const k = cands.find((c) => c.length && free(c));
+    if (k) claim(id, k);
   }
   return out;
 }

@@ -518,3 +518,16 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .presence-name { position: absolute; transform: translateY(-100%); padding: 0 4px; border-radius: 3px 3px 3px 0; font: 11px/16px system-ui, sans-serif; color: #fff; white-space: nowrap; }
 .share-field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
 .share-field input { font: inherit; padding: 4px 6px; }
+
+/* Picture Format's crop handles (`UX-003`): black bars on the sides and corners, as
+ * PowerPoint draws them, over a dashed frame. */
+.pic-crop-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.op-reading .pic-crop-layer { display: none; }
+.pic-crop-frame { position: absolute; box-sizing: border-box; border: 1px dashed var(--op-icon-color); }
+.pic-crop-h {
+  position: absolute; box-sizing: border-box; background: #000; border: 1px solid #fff;
+  pointer-events: auto; touch-action: none;
+}
+.pic-crop-corner { width: 12px; height: 12px; margin: -6px 0 0 -6px; cursor: crosshair; }
+.pic-crop-hz { width: 18px; height: 6px; margin: -3px 0 0 -9px; cursor: ns-resize; }
+.pic-crop-vt { width: 6px; height: 18px; margin: -9px 0 0 -3px; cursor: ew-resize; }

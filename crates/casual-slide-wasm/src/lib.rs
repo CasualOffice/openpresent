@@ -225,6 +225,8 @@ impl ShapeBox {
     pub const TABLE: u32 = 256;
     /// A graphic frame holding a chart (`VS-11`).
     pub const CHART: u32 = 512;
+    /// A picture: Picture Format shows while one is selected (`UX-003`).
+    pub const PICTURE: u32 = 1024;
 }
 
 /// A Design edit for the save plan.
@@ -442,7 +444,11 @@ impl Viewer {
                 | bit(Some(shape.kind == NodeKind::Group), ShapeBox::GROUP)
                 | bit(Some(shape.placeholder().is_some()), ShapeBox::PLACEHOLDER)
                 | bit(Some(shape.table.is_some()), ShapeBox::TABLE)
-                | bit(Some(shape.chart.is_some()), ShapeBox::CHART);
+                | bit(Some(shape.chart.is_some()), ShapeBox::CHART)
+                | bit(
+                    Some(shape.kind == NodeKind::Picture && shape.properties.picture.is_some()),
+                    ShapeBox::PICTURE,
+                );
             out.push(ShapeBox {
                 node: shape.id.node,
                 x: t.offset.x.0,
