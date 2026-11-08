@@ -38,6 +38,7 @@ import * as presence from "./editor.presence.js";
 import * as views from "./editor.views.js";
 import * as arrange from "./editor.arrange.js";
 import * as find from "./editor.find.js";
+import * as insert from "./editor.insert.js";
 
 const byId = (id) => document.getElementById(id);
 
@@ -427,6 +428,7 @@ async function boot() {
   views.init();      // Outline View, Slide Sorter, Notes Page (`UX-006`)
   arrange.init();    // Arrange: order, rotate, flip (`UX-006`)
   find.init();       // Find, Replace, Reset Slide (`UX-006`)
+  insert.init();     // Insert > Symbol (`UX-006`)
   registerCommands();
   presence.init();
   initDialogs(request);

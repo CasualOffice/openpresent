@@ -28,6 +28,7 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `editor.files.js` | File picker, drag and drop; `download`, through which Save and every Export pass (the desktop shell's hook, `window.__openpresentNative.save(bytes, ext, name)`) |
 | `editor.slides.js` | Thumbnails, the stage, zoom, Reading View, the notes pane |
 | `editor.arrange.js` | Arrange (`UX-006`): Bring to Front, Bring Forward, Send Backward, Send to Back, Rotate and Flip |
+| `editor.insert.js` | Insert > Symbol (`UX-006`) |
 | `editor.find.js` | Find, Replace and Reset Slide (`UX-006`) |
 | `editor.views.js` | The View tab's Presentation Views (`UX-006`): Outline View, Slide Sorter, Notes Page; Normal, and Reading View with `editor.core.js` |
 | `editor.show.js` | The slide show (`VS-07`): From Beginning, From Current Slide and Presenter View; PowerPoint's keys, number then Enter, black and white screens, hidden slides skipped; fade, push, wipe, split, cover, uncover, zoom, reveal and cut played as themselves and other transitions as a fade, reported; Advance Slide After and On Mouse Click (`UX-006`); a slide's animations click by click (`VS-10`) |
