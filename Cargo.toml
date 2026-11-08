@@ -12,6 +12,7 @@ members = [
     "crates/casual-slide-style",
     "crates/casual-slide-render",
     "crates/casual-slide-text",
+    "crates/casual-slide-transaction",
     "crates/casual-slide-wasm",
 ]
 

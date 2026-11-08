@@ -1,0 +1,15 @@
+[package]
+name = "casual-slide-transaction"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+# Started from OpenCalc's `casual-calc-transaction`: see PROVENANCE.md.
+
+[dependencies]
+casual-slide-model = { path = "../casual-slide-model" }
+
+[lints]
+workspace = true
