@@ -487,7 +487,7 @@ pub fn design_themes() -> Vec<String> {
 ///
 /// # Errors
 ///
-/// `CS-WSM-0006` for a theme or variant that is not there; `CS-TXN-0006` when no
+/// `CS-WSM-0006` for a theme or variant that is not there; `CS-TXN-0010` when no
 /// master has a theme to change.
 #[wasm_bindgen]
 pub fn design_apply_theme(theme: u32, variant: u32, colors_only: bool) -> Result<bool, JsError> {
@@ -499,7 +499,7 @@ pub fn design_apply_theme(theme: u32, variant: u32, colors_only: bool) -> Result
 ///
 /// # Errors
 ///
-/// `CS-TXN-0007` for a size outside 914400 to 51206400 EMU; `CS-WSM-0006` for a bad `fit`.
+/// `CS-TXN-0011` for a size outside 914400 to 51206400 EMU; `CS-WSM-0006` for a bad `fit`.
 #[wasm_bindgen]
 pub fn design_slide_size(cx: f64, cy: f64, fit: u32) -> Result<bool, JsError> {
     with_viewer(|v| {

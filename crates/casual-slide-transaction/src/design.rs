@@ -17,7 +17,7 @@ pub const MAX_SLIDE_SIZE: i64 = 51_206_400;
 
 /// What operations edit: the slide-like parts and, for design operations, each master's
 /// theme and the slide size. [`SlideParts`] alone is a document with neither, so text and
-/// shape operations need nothing more, and a design operation on it is `CS-TXN-0006`.
+/// shape operations need nothing more, and a design operation on it is `CS-TXN-0010`.
 pub trait Document {
     /// The slide-like parts.
     fn parts_mut(&mut self) -> &mut SlideParts;

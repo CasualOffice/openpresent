@@ -152,6 +152,15 @@ body {
 .thumb[aria-selected="true"] .thumb-frame { border-color: var(--op-accent-color); box-shadow: 0 0 0 2px var(--op-accent-color); }
 .thumb[aria-selected="true"] .thumb-num { color: var(--op-accent-color); font-weight: 600; }
 .thumbs:focus-visible .thumb[aria-selected="true"] .thumb-frame { box-shadow: 0 0 0 2px var(--op-accent-color), 0 0 0 5px var(--op-accent-ring); }
+/* Building (`VS-08`): a hidden slide's number struck through and its picture dimmed,
+   as PowerPoint's; the gap a dragged slide will drop into; the layout picker. */
+.thumb.is-hidden .thumb-num { text-decoration: line-through; }
+.thumb.is-hidden .thumb-frame img.is-drawn { opacity: .45; }
+.thumbs.is-dragging { cursor: grabbing; }
+.thumb.drop-before { box-shadow: inset 0 3px 0 var(--op-accent-color); }
+.thumb.drop-after { box-shadow: inset 0 -3px 0 var(--op-accent-color); }
+.op-layouts { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; }
+.op-layout { min-height: 56px; white-space: normal; }
 
 .stage-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .stage {

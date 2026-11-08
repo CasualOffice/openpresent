@@ -87,6 +87,8 @@ function buildThumbs() {
     list.appendChild(li);
     observer.observe(li);
   }
+  // `editor.build.js` marks hidden slides on each rebuilt pane (`VS-08`).
+  document.dispatchEvent(new CustomEvent("op-slides-built"));
 }
 
 function markThumb() {
@@ -113,7 +115,7 @@ function stageCssWidth() {
 }
 
 async function drawStage() {
-  if (!state.deck) return;
+  if (!state.deck || !state.deck.count) return;
   const token = ++stageToken;
   const index = state.current;
   const css = stageCssWidth();
@@ -254,6 +256,35 @@ export function load() {
   drawNotes();
   byId("stage").focus({ preventScroll: true });
 }
+
+/// The slide list changed (`VS-08`: a slide added, deleted or moved, or an undo of
+/// one): rebuild the pane for `count` slides and show slide `index`. A deck may be
+/// left with no slide, as PowerPoint's: the stage is then empty.
+export function reloadList(count, index) {
+  if (!state.deck) return;
+  generation++;
+  dropQueued((m) => m.op === "png" || m.op === "report");
+  for (const u of thumbUrls.splice(0)) URL.revokeObjectURL(u);
+  state.deck.count = count;
+  state.current = Math.max(0, Math.min(count - 1, index));
+  selection.reset(false);
+  text.reset();
+  buildThumbs();
+  if (!count) {
+    if (stageUrl) { URL.revokeObjectURL(stageUrl); stageUrl = null; }
+    byId("slide-img").removeAttribute("src");
+    byId("slide-frame").hidden = true;
+    byId("report-btn").hidden = true;
+    changed();
+    return;
+  }
+  byId("slide-frame").hidden = false;
+  markThumb();
+  changed();
+  drawStage();
+}
+
+/* ── Slide show ─────────────────────────────────────────────────────────── */
 
 /* ── Slide show (`editor.show.js`, `VS-07`) ───────────────────────────── */
 

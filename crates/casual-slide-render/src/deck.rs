@@ -263,6 +263,37 @@ impl Deck {
         &mut self.size
     }
 
+    /// A part's bytes, as the file holds them, for a host building a new part from one
+    /// (`VS-08`). `None` for a part the file does not have or that cannot be read.
+    pub fn read_part(&mut self, name: &str) -> Option<Vec<u8>> {
+        self.package.read_xml_part(name).ok()
+    }
+
+    /// The file's conformance class, which a new part's namespaces follow.
+    pub fn conformance(&self) -> casual_slide_ooxml::Conformance {
+        self.package.conformance()
+    }
+
+    /// Give part `ordinal` the relationships part `from` has, so a copy of a slide
+    /// draws the pictures its original does before it is saved (`VS-08`).
+    pub fn share_relationships(&mut self, from: u32, ordinal: u32) {
+        let map = self.rels.0.get(&from).cloned().unwrap_or_default();
+        self.rels.0.insert(ordinal, map);
+    }
+
+    /// Draw relationship `rel_id` of part `ordinal` as these image bytes: a picture
+    /// inserted since the deck was opened, which no part of the file holds yet (`VS-08`).
+    /// `key` names the media within this session and never reaches the file.
+    pub fn add_media(&mut self, ordinal: u32, rel_id: &str, key: &str, bytes: Vec<u8>) {
+        self.rels
+            .0
+            .entry(ordinal)
+            .or_default()
+            .insert(rel_id.to_owned(), key.to_owned());
+        self.unreadable_media.remove(key);
+        self.media.insert(key.to_owned(), bytes);
+    }
+
     /// Read the media a display list draws, once each.
     fn load_media(&mut self, list: &DisplayList) {
         for item in &list.items {

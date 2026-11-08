@@ -159,7 +159,7 @@ fn a_slide_size_outside_the_schema_is_refused_and_changes_nothing() {
     let mut d = start.clone();
     for (cx, cy) in [(914_399, 6_858_000), (9_144_000, 51_206_401), (-1, 0)] {
         let err = apply(&mut d, Operation::SetSlideSize { cx, cy }).unwrap_err();
-        assert_eq!(err.code(), "CS-TXN-0007");
+        assert_eq!(err.code(), "CS-TXN-0011");
     }
     assert_eq!(d, start);
 }
@@ -175,7 +175,7 @@ fn a_design_op_on_parts_alone_or_an_unread_theme_is_refused() {
         },
     )
     .unwrap_err();
-    assert_eq!(err.code(), "CS-TXN-0006");
+    assert_eq!(err.code(), "CS-TXN-0010");
     let mut d = doc();
     let err = apply(
         &mut d,
@@ -185,7 +185,7 @@ fn a_design_op_on_parts_alone_or_an_unread_theme_is_refused() {
         },
     )
     .unwrap_err();
-    assert_eq!(err.code(), "CS-TXN-0006");
+    assert_eq!(err.code(), "CS-TXN-0010");
     // A failing member takes back the batch's earlier ones.
     let start = doc();
     let mut d = start.clone();

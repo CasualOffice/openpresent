@@ -944,6 +944,84 @@ fn a_stated_choice_replaces_what_the_model_could_not_see_of_it() {
     assert!(!text.contains("<a:fill/>"), "{text}");
 }
 
+/// A row inserted in the middle, a row deleted, a column inserted and one deleted
+/// (`VS-11`): each reopens as asked, every other row keeps its bytes, and F4 passes.
+#[test]
+fn rows_and_columns_are_added_and_removed_in_place() {
+    let source = read_fixture(EVERY);
+    let slide = "ppt/slides/slide1.xml";
+    let text = |b: &[u8]| String::from_utf8(parts(b)[slide].clone()).unwrap();
+    let before = text(&source);
+    let rows_before = before.matches("<a:tr ").count();
+    assert!(rows_before >= 2);
+
+    // A copy of the first row, its text changed, between the two.
+    let added = edit_slide(&source, |s| {
+        let t = table_mut(s, "Every Property");
+        let mut row = t.rows[0].clone();
+        set_first_run(&mut row.cells[0], "Inserted");
+        t.rows.insert(1, row);
+    })
+    .unwrap();
+    let after = text(&added);
+    assert_eq!(after.matches("<a:tr ").count(), rows_before + 1);
+    assert!(after.contains("Inserted"));
+    // The rows the edit did not touch keep their ids; the copy has none of its own.
+    for kept in ["a16:rowId", "a16:colId"] {
+        assert_eq!(
+            after.matches(kept).count(),
+            before.matches(kept).count(),
+            "{kept}"
+        );
+    }
+    f4_validates(&added);
+
+    // Delete the last row: the others are byte for byte as they were.
+    let removed = edit_slide(&source, |s| {
+        table_mut(s, "Every Property").rows.pop();
+    })
+    .unwrap();
+    let after = text(&removed);
+    assert_eq!(after.matches("<a:tr ").count(), rows_before - 1);
+    // The first table's rows but its last are kept as they were.
+    let first_tr = before.find("<a:tr ").unwrap();
+    let last_tr = first_tr + 1 + before[first_tr + 1..].find("<a:tr ").unwrap();
+    assert!(after.contains(&before[first_tr..last_tr]));
+    assert!(after.contains(&format!("{}</a:tbl>", &before[first_tr..last_tr])));
+    f4_validates(&removed);
+
+    // A column at the end, then the first column gone.
+    let widened = edit_slide(&source, |s| {
+        let t = table_mut(s, "Every Property");
+        let grid = &mut t.tbl_grid.as_mut().unwrap().grid_col;
+        grid.push(grid[0].clone());
+        for row in &mut t.rows {
+            let mut cell = TableCell::default();
+            cell.tx_body = row.cells[0].tx_body.clone();
+            row.cells.push(cell);
+        }
+    })
+    .unwrap();
+    assert_eq!(
+        text(&widened).matches("<a:gridCol ").count(),
+        before.matches("<a:gridCol ").count() + 1
+    );
+    f4_validates(&widened);
+    let narrowed = edit_slide(&source, |s| {
+        let t = table_mut(s, "Every Property");
+        t.tbl_grid.as_mut().unwrap().grid_col.pop();
+        for row in &mut t.rows {
+            row.cells.pop();
+        }
+    })
+    .unwrap();
+    assert_eq!(
+        text(&narrowed).matches("<a:gridCol ").count(),
+        before.matches("<a:gridCol ").count() - 1
+    );
+    f4_validates(&narrowed);
+}
+
 /// Each is refused with nothing saved, and says why.
 #[test]
 fn what_this_tier_does_not_write_is_refused_with_nothing_saved() {
@@ -951,29 +1029,7 @@ fn what_this_tier_does_not_write_is_refused_with_nothing_saved() {
     let code = |edit: fn(&mut Table)| {
         edit_slide(&source, |slide| edit(table_mut(slide, "Every Property"))).unwrap_err()
     };
-    assert_eq!(
-        code(|t| {
-            t.rows.pop();
-        }),
-        "CS-EXP-0009"
-    );
-    assert_eq!(code(|t| t.rows.push(Default::default())), "CS-EXP-0009");
-    assert_eq!(
-        code(|t| {
-            t.rows[0].cells.pop();
-        }),
-        "CS-EXP-0009"
-    );
-    assert_eq!(
-        code(|t| t.rows[0].cells.push(Default::default())),
-        "CS-EXP-0009"
-    );
-    assert_eq!(
-        code(|t| {
-            t.tbl_grid.as_mut().unwrap().grid_col.pop();
-        }),
-        "CS-EXP-0009"
-    );
+    // Rows, cells and columns may come and go (`VS-11`); the grid itself may not.
     assert_eq!(code(|t| t.tbl_grid = None), "CS-EXP-0009");
     // A span past the grid: the reader would not believe it.
     assert_eq!(

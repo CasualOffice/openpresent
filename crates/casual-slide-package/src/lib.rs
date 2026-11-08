@@ -19,7 +19,7 @@ mod salvage;
 
 pub use error::PackageError;
 pub use limits::PackageLimits;
-pub use package::{Cancel, EntryInfo, Package, PartEdits};
+pub use package::{Cancel, EntryInfo, Package, PartEdits, build_package};
 pub use part_name::{part_entry_key, part_name_key, part_names_equivalent};
 pub use path::is_safe_part_path;
 pub use salvage::{

@@ -153,7 +153,7 @@ fn a_slide_size_outside_the_schema_is_refused() {
     let source = fixture(DECK);
     let mut v = Viewer::open(source.clone()).unwrap();
     let err = v.set_slide_size(100, 6_858_000, Fit::Maximize).unwrap_err();
-    assert_eq!(err.code(), "CS-TXN-0007");
+    assert_eq!(err.code(), "CS-TXN-0011");
     assert_eq!(v.save().unwrap(), source);
 }
 

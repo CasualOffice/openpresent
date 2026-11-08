@@ -18,8 +18,8 @@ permissions:
 # sound at that commit, and cancelling would discard it. The commit is in the group
 # name, so a queued run is not displaced by a newer one either.
 concurrency:
-  group: post-merge-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: post-merge-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   gates:

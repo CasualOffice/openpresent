@@ -24,6 +24,7 @@ import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
 import { registerDesignCommands } from "./editor.design.js";
+import * as build from "./editor.build.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -121,13 +122,29 @@ let opening = false;
 
 /// Open a deck from its bytes. A deck the engine refuses leaves the one open
 /// before in place, as the engine itself does.
-export async function openDeck(name, bytes) {
-  if (opening) return;
+export function openDeck(name, bytes) {
+  return load(name, { op: "open", bytes }, [bytes], `OpenPresent can't read ${name}. It was read in this browser only, and nothing was uploaded.`);
+}
+
+/// File > New, and what the editor starts with (`VS-08`): the built-in blank
+/// presentation, one title slide, ready to edit, as PowerPoint opens.
+let untitled = 0;
+export function newDeck() {
+  untitled++;
+  return load(`Presentation${untitled}.pptx`, { op: "blank" }, [], "OpenPresent could not start a new presentation.");
+}
+
+let openingBlank = false;
+
+async function load(name, msg, transfer, failure) {
+  // A file opened while the starting blank deck loads goes ahead: it lands after it.
+  if (opening && !(openingBlank && msg.op === "open")) return;
   opening = true;
+  openingBlank = msg.op === "blank";
   status(`Opening ${name}…`);
   byId("doc-state").textContent = "Opening…";
   try {
-    const r = await request({ op: "open", bytes }, { transfer: [bytes], priority: 10 });
+    const r = await request(msg, { transfer, priority: 10 });
     state.deck = { name, count: r.count, width: r.width, height: r.height };
     state.engineVersion = r.version;
     state.current = 0;
@@ -139,9 +156,10 @@ export async function openDeck(name, bytes) {
   } catch (e) {
     byId("doc-state").textContent = "";
     status(state.deck ? `${state.deck.count} slides` : "Ready");
-    errorDialog(`OpenPresent can't read ${name}. It was read in this browser only, and nothing was uploaded.`, e.message);
+    errorDialog(failure, e.message);
   } finally {
     opening = false;
+    openingBlank = false;
     changed();
   }
 }
@@ -204,6 +222,7 @@ function setTheme(v) {
 function registerCommands() {
   text.registerTextCommands();
   registerDesignCommands();
+  register("file.new", { label: "New", run: newDeck });
   register("file.open", { label: "Open", shortcut: "Ctrl+O", run: openFilePicker });
   const canProduce = () => hasDeck() && !busy;
   register("file.save", { label: "Save", shortcut: "Ctrl+S", enabled: canProduce, run: saveDeck });
@@ -269,6 +288,7 @@ function bindKeys() {
     // Undo and redo anywhere; with a shape selected, its keys come first (`VS-06`).
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
     const mod = e.ctrlKey || e.metaKey;
+    if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && build.onKey(e)) return;
     if (mod && !e.altKey && (e.key === "o" || e.key === "O")) { e.preventDefault(); openFilePicker(); return; }
     if (mod && !e.altKey && (e.key === "s" || e.key === "S")) { e.preventDefault(); run("file.save"); return; }
     if (e.key === "F5" && !mod) {
@@ -316,7 +336,7 @@ function buildStatusBar() {
 
 /// What the desktop app's bridge calls (`desktop/src/main.rs`, `VS-03`): a file
 /// the operating system handed over opens through the same `openDeck`.
-globalThis.openpresentEditor = { openDeck, runCommand: run };
+globalThis.openpresentEditor = { openDeck, newDeck, runCommand: run };
 
 /* ── Boot ───────────────────────────────────────────────────────────────── */
 
@@ -326,6 +346,7 @@ async function boot() {
     if (t && t !== "auto") document.documentElement.dataset.theme = t;
   } catch { /* private mode */ }
   selection.init();
+  build.init();
   registerCommands();
   initDialogs(request);
   slides.init();
@@ -336,6 +357,9 @@ async function boot() {
   await startRibbon(byId("workspace"));
   changed();
   status("Ready");
+  // As PowerPoint: start on a new blank presentation, unless a file is already
+  // arriving (the desktop shell's, or one dropped while the engine started).
+  if (!state.deck && !opening) newDeck();
 }
 
 boot();

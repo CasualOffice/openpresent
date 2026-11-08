@@ -23,7 +23,7 @@ const L = (id, icon, label, o = {}) => ({ kind: "large", id, icon, label, ...o }
 const S = (id, icon, label, o = {}) => ({ kind: "small", id, icon, label, ...o });
 const R = (rows) => ({ kind: "rows", rows });
 
-const NEW_SLIDE = ["home.new-slide", "home.duplicate-slide", "home.reuse-slides"];
+const NEW_SLIDE = ["home.new-slide", "home.new-slide-layout", "home.duplicate-slide", "home.delete-slide", "home.reuse-slides"];
 const SLIDE_SIZE = ["design.slide-size.standard", "design.slide-size.widescreen", "design.slide-size.custom"];
 const ZOOM = ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", "view.zoom.150", "view.zoom.200"];
 
@@ -161,6 +161,9 @@ export const TABS = [
 /// sections, and an item names a command, its icon, and one line of what it does.
 const I = (id, icon, label, desc) => ({ id, icon, label, desc });
 export const FILE_RAIL = [
+  { id: "new", label: "New", icon: "document_add", sections: [
+    { items: [I("file.new", "document_add", "Blank Presentation", "Start a new presentation with one title slide")] },
+  ] },
   { id: "open", label: "Open", icon: "folder_open", sections: [
     { items: [I("file.open", "folder_open", "Browse", "Open a PowerPoint presentation (.pptx) from this device. It stays in this browser")] },
   ] },

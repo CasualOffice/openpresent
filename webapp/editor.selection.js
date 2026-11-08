@@ -251,8 +251,16 @@ async function history(op) {
   try {
     const r = await request({ op }, { priority: 9 });
     afterEdit(r);
-    if (r.slide === -2) slides.redrawAll(r.size);   // a theme, the size, several slides (`VS-12`)
-    else if (r.slide >= 0) {
+    // A theme, the slide size or several backgrounds (`VS-12`): every slide is drawn again.
+    if (r.slide === -2 && r.count === state.deck.count) { slides.redrawAll(r.size); return; }
+    // A slide added, deleted, moved or hidden comes back too (`VS-08`): the pane is
+    // read again whenever the count changed or no single slide was named.
+    if (typeof r.count === "number" && (r.count !== state.deck.count || r.slide < 0)) {
+      slides.reloadList(r.count, r.slide >= 0 ? r.slide : state.current);
+      return;
+    }
+    document.dispatchEvent(new CustomEvent("op-slides-built"));   // a hide undone
+    if (r.slide >= 0) {
       if (r.slide !== state.current) slides.go(r.slide);
       slides.redrawSlide(r.slide);
     }
@@ -277,6 +285,10 @@ function select(node) {
 
 export function hasSelection() { return !!shape(); }
 
+let pendingSelect = null;
+/// Select `node` once the stage's shapes are next read: a shape just inserted (`VS-08`).
+export function selectNode(node) { pendingSelect = node; }
+
 /// The slide on the stage changed or was redrawn: read its shapes again,
 /// keeping the selection when the shape is still there.
 export async function refresh() {
@@ -291,6 +303,7 @@ export async function refresh() {
       const [node, x, y, cx, cy, rot, flags] = r.shapes.slice(i, i + 7);
       shapes.push({ node, x, y, cx, cy, rot: rot / ROT_UNIT, flags });
     }
+    if (pendingSelect != null) { selected = pendingSelect; pendingSelect = null; }
     if (!shape()) selected = null;
     paint();
     changed();
