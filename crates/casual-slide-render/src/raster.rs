@@ -364,6 +364,166 @@ fn sk_stroke(stroke: &Stroke) -> SkStroke {
     }
 }
 
+/// Pixel-boundary rounding as poppler's Splash does it (`splashRound`): halves go up.
+fn snap(v: f32) -> f32 {
+    (v + 0.5).floor()
+}
+
+/// A device-space span `[a, b]` with both ends on whole pixels, at least one wide.
+fn snap_span(a: f32, b: f32) -> (f32, f32) {
+    let (lo, hi) = (snap(a.min(b)), snap(a.max(b)));
+    if hi > lo { (lo, hi) } else { (lo, lo + 1.0) }
+}
+
+/// The straight segments of `path` in device space, by subpath, with whether each
+/// subpath is closed; `None` unless every segment is a line running across or down
+/// the page, the only shapes whose edges can sit on whole pixels.
+fn rectilinear(path: &tiny_skia::Path, t: Transform) -> Option<Vec<(Vec<Point>, bool)>> {
+    use tiny_skia::PathSegment;
+    const EPS: f32 = 1e-3;
+    let device = path.clone().transform(t)?;
+    let mut subpaths: Vec<(Vec<Point>, bool)> = Vec::new();
+    for segment in device.segments() {
+        match segment {
+            PathSegment::MoveTo(p) => subpaths.push((vec![p], false)),
+            PathSegment::LineTo(p) => {
+                let points = &mut subpaths.last_mut()?.0;
+                let last = *points.last()?;
+                if (p.x - last.x).abs() > EPS && (p.y - last.y).abs() > EPS {
+                    return None;
+                }
+                points.push(p);
+            }
+            PathSegment::Close => {
+                // The closing line back to the start, a segment like any other.
+                let (points, closed) = subpaths.last_mut()?;
+                let (first, last) = (*points.first()?, *points.last()?);
+                if (first.x - last.x).abs() > EPS && (first.y - last.y).abs() > EPS {
+                    return None;
+                }
+                if first != last {
+                    points.push(first);
+                }
+                *closed = true;
+            }
+            PathSegment::QuadTo(..) | PathSegment::CubicTo(..) => return None,
+        }
+    }
+    (!subpaths.is_empty()).then_some(subpaths)
+}
+
+/// A solid rectangle fill with its edges moved to whole pixels, in device space: what
+/// poppler's Splash does to a filled rectangle under stroke adjustment, and what
+/// OpenCalc's grid does by drawing cell fills unsmoothed. Only a path of one closed
+/// subpath of four corners is a rectangle; anything else keeps its smoothed edges.
+fn snapped_fill(path: &tiny_skia::Path, t: Transform) -> Option<tiny_skia::Path> {
+    let subpaths = rectilinear(path, t)?;
+    let [(points, _)] = subpaths.as_slice() else {
+        return None;
+    };
+    let mut corners: Vec<Point> = Vec::with_capacity(5);
+    for p in points {
+        if corners
+            .last()
+            .is_none_or(|q| (q.x - p.x).abs() + (q.y - p.y).abs() > 1e-3)
+        {
+            corners.push(*p);
+        }
+    }
+    if corners.len() == 5
+        && corners
+            .first()
+            .zip(corners.last())
+            .is_some_and(|(a, b)| a == b)
+    {
+        corners.pop();
+    }
+    if corners.len() != 4 {
+        return None;
+    }
+    let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+    for p in &corners {
+        (x0, y0, x1, y1) = (x0.min(p.x), y0.min(p.y), x1.max(p.x), y1.max(p.y));
+    }
+    let (x0, x1) = snap_span(x0, x1);
+    let (y0, y1) = snap_span(y0, y1);
+    Some(PathBuilder::from_rect(tiny_skia::Rect::from_ltrb(
+        x0, y0, x1, y1,
+    )?))
+}
+
+/// A solid, undashed stroke along straight lines across and down the page, as whole
+/// pixel rectangles in device space: each segment's band across its width is moved
+/// to whole pixels and kept at least one wide, as poppler's Splash adjusts strokes
+/// and OpenCalc draws gridlines, so a thin line is one solid row rather than two
+/// rows at partial coverage. Corners and squared ends reach half the width past the
+/// point, as a mitred or squared corner does; round corners and ends are adjusted
+/// only for lines up to two pixels wide, where the square is within a pixel of them.
+fn snapped_stroke(path: &tiny_skia::Path, t: Transform, s: &SkStroke) -> Option<tiny_skia::Path> {
+    if s.dash.is_some() {
+        return None;
+    }
+    let scale = 1.0 / hairline(&t).max(f32::MIN_POSITIVE);
+    let w = s.width * scale;
+    if !w.is_finite() || w <= 0.0 {
+        return None;
+    }
+    let rounded = s.line_join == LineJoin::Round || s.line_cap == LineCap::Round;
+    if rounded && w > 2.0 {
+        return None;
+    }
+    let half = w / 2.0;
+    let cap = if s.line_cap == LineCap::Butt {
+        0.0
+    } else {
+        half
+    };
+    let mut pb = PathBuilder::new();
+    for (points, closed) in rectilinear(path, t)? {
+        let n = points.len().saturating_sub(1);
+        for (i, pair) in points.windows(2).enumerate() {
+            let [a, b] = pair else { continue };
+            // A join, not an end, where another segment meets this one.
+            let start_ext = if closed || i > 0 { half } else { cap };
+            let end_ext = if closed || i + 1 < n { half } else { cap };
+            let rect = if (a.y - b.y).abs() <= 1e-3 {
+                let (lo_ext, hi_ext) = if a.x <= b.x {
+                    (start_ext, end_ext)
+                } else {
+                    (end_ext, start_ext)
+                };
+                let (x0, x1) = snap_span(a.x.min(b.x) - lo_ext, a.x.max(b.x) + hi_ext);
+                let (y0, y1) = snap_span(a.y - half, a.y + half);
+                tiny_skia::Rect::from_ltrb(x0, y0, x1, y1)
+            } else {
+                let (lo_ext, hi_ext) = if a.y <= b.y {
+                    (start_ext, end_ext)
+                } else {
+                    (end_ext, start_ext)
+                };
+                let (y0, y1) = snap_span(a.y.min(b.y) - lo_ext, a.y.max(b.y) + hi_ext);
+                let (x0, x1) = snap_span(a.x - half, a.x + half);
+                tiny_skia::Rect::from_ltrb(x0, y0, x1, y1)
+            };
+            if let Some(r) = rect {
+                pb.push_rect(r);
+            }
+        }
+    }
+    pb.finish()
+}
+
+/// Fill `path`, already in device space on whole pixels, with a solid colour and no
+/// smoothing.
+fn fill_snapped(pixmap: &mut Pixmap, path: &tiny_skia::Path, c: Rgba) {
+    let sk = SkPaint {
+        shader: Shader::SolidColor(color(c)),
+        anti_alias: false,
+        ..SkPaint::default()
+    };
+    pixmap.fill_path(path, &sk, FillRule::Winding, Transform::identity(), None);
+}
+
 /// Execute a display list at `dpi` onto a pixmap, drawing the pictures `images`
 /// supplies and the glyphs `glyphs` outlines.
 pub fn render_pixmap(
@@ -395,7 +555,11 @@ pub fn render_pixmap(
                     continue;
                 };
                 let t = sk_transform(&scale.then_after(transform));
-                if let Some(fill) = fill {
+                if let Some(Paint::Solid(c)) = fill
+                    && let Some(snapped) = snapped_fill(&p, t)
+                {
+                    fill_snapped(&mut pixmap, &snapped, *c);
+                } else if let Some(fill) = fill {
                     draw(
                         &mut pixmap,
                         &p,
@@ -409,6 +573,12 @@ pub fn render_pixmap(
                 if let Some(stroke) = stroke {
                     let mut s = sk_stroke(stroke);
                     s.width = s.width.max(hairline(&t));
+                    if let Paint::Solid(c) = stroke.paint
+                        && let Some(snapped) = snapped_stroke(&p, t, &s)
+                    {
+                        fill_snapped(&mut pixmap, &snapped, c);
+                        continue;
+                    }
                     draw(
                         &mut pixmap,
                         &p,
@@ -452,6 +622,7 @@ pub fn render_pixmap(
                     report.glyph_runs_undrawn = report.glyph_runs_undrawn.saturating_add(1);
                     continue;
                 };
+                let full = scale.then_after(transform);
                 let mut cmds = Vec::new();
                 for g in run {
                     let mut one = Vec::new();
@@ -459,10 +630,11 @@ pub fn render_pixmap(
                         report.glyphs_undrawn = report.glyphs_undrawn.saturating_add(1);
                         continue;
                     }
-                    cmds.extend(one.into_iter().map(|c| offset(c, g.x, g.y)));
+                    let (x, y) = pixel_origin(&full, g.x, g.y);
+                    cmds.extend(one.into_iter().map(|c| offset(c, x, y)));
                 }
                 if let Some(p) = build_path(&cmds) {
-                    let t = sk_transform(&scale.then_after(transform));
+                    let t = sk_transform(&full);
                     draw(
                         &mut pixmap,
                         &p,
@@ -477,6 +649,26 @@ pub fn render_pixmap(
         }
     }
     Ok((pixmap, report))
+}
+
+/// A glyph origin, in the item's space, moved to the nearest whole device pixel when
+/// the run is drawn upright and unskewed, so each glyph's edges fall on the pixel grid
+/// the same way wherever the line lands: what poppler's Splash does to LibreOffice's
+/// reference (it places every glyph taller than four pixels at a whole pixel) and GDI
+/// to a line's baseline. Measured, not assumed: against run 42512837899 the gallery's
+/// mean difference falls 0.11 points, and rounding beats flooring by 0.02. A rotated
+/// or skewed run keeps its exact positions.
+fn pixel_origin(t: &Affine, x: f64, y: f64) -> (f64, f64) {
+    if t.b != 0.0 || t.c != 0.0 || t.a <= 0.0 || t.d <= 0.0 {
+        return (x, y);
+    }
+    let nx = ((t.a * x + t.e).round() - t.e) / t.a;
+    let ny = ((t.d * y + t.f).round() - t.f) / t.d;
+    if nx.is_finite() && ny.is_finite() {
+        (nx, ny)
+    } else {
+        (x, y)
+    }
 }
 
 /// A [`DisplayItem::Blurred`]'s look, in the item's units.
@@ -775,6 +967,113 @@ mod tests {
         .unwrap();
         assert_eq!(rgb(&p, 125, 25), (255, 0, 0));
         assert_eq!(report.glyphs_undrawn, 1);
+    }
+
+    /// A box outlined 0.5 pt wide whose edges fall between pixels: at 96 dpi its top
+    /// edge runs from 71.67 to 72.33 px. Without adjustment it smears over two rows
+    /// at two-thirds coverage; adjusted, as poppler's Splash and OpenCalc's grid draw
+    /// it, it is one solid row.
+    fn hairline_box() -> DisplayItem {
+        let (x, y, w, h) = (274_320.0, 685_800.0, 1_584_960.0, 950_976.0);
+        DisplayItem::Path {
+            object: None,
+            layer: Layer::Slide,
+            transform: Affine::IDENTITY,
+            path: vec![
+                PathCmd::MoveTo(x, y),
+                PathCmd::LineTo(x + w, y),
+                PathCmd::LineTo(x + w, y + h),
+                PathCmd::LineTo(x, y + h),
+                PathCmd::Close,
+            ],
+            fill: None,
+            stroke: Some(Stroke {
+                paint: Paint::Solid(RED),
+                width: 6350.0,
+                dash: Vec::new(),
+                cap: Cap::Butt,
+                join: Join::Miter(8.0),
+            }),
+        }
+    }
+
+    #[test]
+    fn a_thin_axis_aligned_line_is_one_solid_pixel_not_a_smear_over_two() {
+        let list = DisplayList {
+            width: EMU_PER_INCH * 3.0,
+            height: EMU_PER_INCH * 2.0,
+            items: vec![hairline_box()],
+        };
+        let (p, _) = render_pixmap(&list, 96.0, &NoImages, None).unwrap();
+        // Top edge at 72.0 px: row 72 solid, 71 and 73 untouched.
+        assert_eq!(rgb(&p, 100, 72), (255, 0, 0));
+        assert_eq!(rgb(&p, 100, 71), (255, 255, 255));
+        assert_eq!(rgb(&p, 100, 73), (255, 255, 255));
+        // Left edge from 28.47 to 29.13 px rounds to column 28; right edge from
+        // 194.87 to 195.53 rounds to column 195.
+        assert_eq!(rgb(&p, 28, 120), (255, 0, 0));
+        assert_eq!(rgb(&p, 29, 120), (255, 255, 255));
+        assert_eq!(rgb(&p, 195, 120), (255, 0, 0));
+        assert_eq!(rgb(&p, 194, 120), (255, 255, 255));
+    }
+
+    #[test]
+    fn a_filled_box_has_its_edges_on_whole_pixels() {
+        // From 10.4 to 20.6 px across: columns 10 to 20 solid, 9 and 21 untouched.
+        let px = EMU_PER_INCH / 96.0;
+        let item = DisplayItem::Path {
+            object: None,
+            layer: Layer::Slide,
+            transform: Affine::IDENTITY,
+            path: vec![
+                PathCmd::MoveTo(10.4 * px, 10.4 * px),
+                PathCmd::LineTo(20.6 * px, 10.4 * px),
+                PathCmd::LineTo(20.6 * px, 20.6 * px),
+                PathCmd::LineTo(10.4 * px, 20.6 * px),
+                PathCmd::Close,
+            ],
+            fill: Some(Paint::Solid(RED)),
+            stroke: None,
+        };
+        let (p, _) = render_pixmap(&two_by_one_inch(vec![item]), 96.0, &NoImages, None).unwrap();
+        assert_eq!(rgb(&p, 10, 15), (255, 0, 0));
+        assert_eq!(rgb(&p, 20, 15), (255, 0, 0));
+        assert_eq!(rgb(&p, 9, 15), (255, 255, 255));
+        assert_eq!(rgb(&p, 21, 15), (255, 255, 255));
+        assert_eq!(rgb(&p, 15, 10), (255, 0, 0));
+        assert_eq!(rgb(&p, 15, 21), (255, 255, 255));
+    }
+
+    #[test]
+    fn an_upright_glyph_lands_on_a_whole_pixel() {
+        // A glyph 5 px square whose origin falls at (10.4, 20.4) px is drawn from
+        // (10, 20): its corner pixel solid, not 36% covered.
+        let px = EMU_PER_INCH / 96.0;
+        let run = DisplayItem::GlyphRun {
+            object: None,
+            layer: Layer::Slide,
+            transform: Affine::IDENTITY,
+            face: "Any".to_owned(),
+            size: 5.0 * px,
+            glyphs: vec![Glyph {
+                id: 1,
+                x: 10.4 * px,
+                y: 20.4 * px,
+            }],
+            fill: Paint::Solid(RED),
+            text: String::new(),
+        };
+        let (p, _) = render_pixmap(
+            &two_by_one_inch(vec![run]),
+            96.0,
+            &NoImages,
+            Some(&OneSquareGlyph),
+        )
+        .unwrap();
+        assert_eq!(rgb(&p, 10, 15), (255, 0, 0));
+        assert_eq!(rgb(&p, 14, 19), (255, 0, 0));
+        assert_eq!(rgb(&p, 15, 17), (255, 255, 255));
+        assert_eq!(rgb(&p, 12, 20), (255, 255, 255));
     }
 
     #[test]

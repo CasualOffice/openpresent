@@ -593,6 +593,7 @@ impl<'a> Builder<'a> {
             },
             underline: None,
             highlight: None,
+            east_asian_family: None,
         };
         let body = BodyLayout {
             wrap: false,
