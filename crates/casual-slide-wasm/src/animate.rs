@@ -9,10 +9,29 @@
 
 use casual_slide_model::shape::ObjectId;
 use casual_slide_model::timing::TimeNodePresetClass;
-use casual_slide_transaction::animate::{EffectEntry, build_transition, effects};
-use casual_slide_transaction::{EffectKind, EffectStart, NewEffect, Operation, TransitionKind};
+use casual_slide_transaction::animate::{
+    EffectEntry, build_transition_with, effects, tab_view, with_advance,
+};
+use casual_slide_transaction::{
+    EffectKind, EffectStart, NewEffect, Operation, TransitionKind, TransitionOption,
+};
 
 use crate::{BridgeError, Viewer};
+
+/// A slide's transition as the Transitions tab shows it (`UX-004`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TransitionChoice {
+    /// Which of the tab's choices; `None` for an effect it does not offer.
+    pub kind: Option<TransitionKind>,
+    /// Its Effect Options choice, where it has one.
+    pub option: Option<TransitionOption>,
+    /// How long it runs, in milliseconds.
+    pub duration_ms: u32,
+    /// Advance Slide On Mouse Click (`@advClick`, on unless stated off).
+    pub on_click: bool,
+    /// Advance Slide After, in milliseconds (`@advTm`).
+    pub after_ms: Option<u32>,
+}
 
 /// One effect as the Animation Pane and the show need it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,35 +62,43 @@ impl Viewer {
         Ok(changed)
     }
 
-    /// The transition into slide `index` as the Transitions tab shows it: which of its
-    /// choices (`None` for an effect it does not offer) and the duration in ms.
-    pub fn transition_choice(
-        &self,
-        index: usize,
-    ) -> Result<(Option<TransitionKind>, u32), BridgeError> {
+    /// The transition into slide `index` as the Transitions tab shows it.
+    pub fn transition_choice(&self, index: usize) -> Result<TransitionChoice, BridgeError> {
         let ordinal = self.ordinal_at(index)?;
         let t = self
             .deck
             .parts()
             .get(ordinal)
             .and_then(|p| p.transition.as_ref())
-            .and_then(|s| s.resolved());
+            .and_then(tab_view);
         let Some(t) = t else {
-            return Ok((Some(TransitionKind::None), 0));
+            return Ok(TransitionChoice {
+                kind: Some(TransitionKind::None),
+                option: None,
+                duration_ms: 0,
+                on_click: true,
+                after_ms: None,
+            });
         };
-        let kind = TransitionKind::of(t);
         let ms = self
             .show_slide(index)?
             .transition
             .map_or(0, |s| s.duration_ms);
-        Ok((kind, ms))
+        Ok(TransitionChoice {
+            kind: TransitionKind::of(t),
+            option: TransitionKind::option_of(t),
+            duration_ms: ms,
+            on_click: t.adv_click != Some(false),
+            after_ms: t.adv_tm,
+        })
     }
 
-    /// Give slide `index` a transition: one undo step.
+    /// Give slide `index` a transition with an Effect Options choice: one undo step.
     pub fn set_transition(
         &mut self,
         index: usize,
         kind: TransitionKind,
+        option: Option<TransitionOption>,
         duration_ms: u32,
     ) -> Result<bool, BridgeError> {
         let ordinal = self.ordinal_at(index)?;
@@ -80,7 +107,28 @@ impl Viewer {
             .parts()
             .get(ordinal)
             .and_then(|p| p.transition.clone());
-        let transition = build_transition(kind, duration_ms, existing.as_ref());
+        let transition = build_transition_with(kind, option, duration_ms, existing.as_ref());
+        self.motion(Operation::SetTransition {
+            ordinal,
+            transition,
+        })
+    }
+
+    /// The Timing group's Advance Slide on slide `index` (`UX-004`): on a click, and
+    /// after `after_ms` where given. One undo step.
+    pub fn set_transition_advance(
+        &mut self,
+        index: usize,
+        on_click: bool,
+        after_ms: Option<u32>,
+    ) -> Result<bool, BridgeError> {
+        let ordinal = self.ordinal_at(index)?;
+        let existing = self
+            .deck
+            .parts()
+            .get(ordinal)
+            .and_then(|p| p.transition.clone());
+        let transition = with_advance(existing.as_ref(), on_click, after_ms);
         self.motion(Operation::SetTransition {
             ordinal,
             transition,

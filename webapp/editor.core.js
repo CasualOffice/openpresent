@@ -16,7 +16,7 @@
 // Every other PowerPoint command the ribbon names is registered
 // disabled, saying so, and arrives working with its own slice.
 
-import { register, run, all as allCommands } from "./commands.js";
+import { register, run, all as allCommands, registeredIds } from "./commands.js";
 import { start as startRibbon, queueSync, openBackstage, icon, setContextual } from "./ribbon.js";
 import { TABS, FILE_RAIL, LABELS, modelCommandIds } from "./ribbon.model.js";
 import * as menus from "./editor.menus.js";
@@ -319,7 +319,9 @@ function registerCommands() {
   };
   for (const t of TABS) for (const g of t.groups) g.items.forEach(walk);
   for (const r of FILE_RAIL) for (const s of r.sections || []) for (const it of s.items) if (!labels.has(it.id)) labels.set(it.id, it.label);
-  const built = new Set(allCommands().map((c) => c.id));
+  // Every registered id, hidden ones too: a verb hidden for now (an Effect Options
+  // choice the slide's effect lacks) is still built.
+  const built = new Set([...registeredIds(), ...allCommands().map((c) => c.id)]);
   for (const id of [...modelCommandIds(), "edit.undo", "edit.redo", "home.duplicate-slide", "home.reuse-slides", "view.mode.reviewing", "view.mode.viewing"]) {
     if (built.has(id)) continue;
     const label = labels.get(id) || ({ "edit.undo": "Undo", "edit.redo": "Redo", "home.duplicate-slide": "Duplicate Slide", "home.reuse-slides": "Reuse Slides", "view.mode.reviewing": "Reviewing", "view.mode.viewing": "Viewing" })[id] || id;

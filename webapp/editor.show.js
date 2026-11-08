@@ -8,9 +8,12 @@
 // or `.` blacks the screen and W or `,` whites it; Esc or `-` ends. Hidden slides
 // (`@show="0"`) are skipped, as PowerPoint skips them, unless jumped to by number.
 //
-// Transitions (`VS-10`): fade, push, wipe and split play as themselves over the
-// transition's own duration, and a cut changes at once. Any other effect is played
-// as a fade, and when the show ends the status bar names which (`VS-07`).
+// Transitions (`VS-10`, `UX-004`): fade, push, wipe, split, cover, uncover, zoom and
+// reveal play as themselves in the direction the file states, over the transition's
+// own duration, and a cut changes at once. Any other effect is played as a fade, and
+// when the show ends the status bar names which (`VS-07`). Advance Slide After moves
+// on by itself once the time has passed, playing the slide's clicks first; with
+// On Mouse Click off, a click on the slide does not advance it (keys still do).
 //
 // Animations (`VS-10`): a slide's main sequence plays click by click. A shape whose
 // first effect is an entrance starts hidden; each click plays its effects, step by
@@ -63,7 +66,11 @@ async function loadPlan() {
     const r = await request({ op: "plan" }, { priority: 9 });
     for (let i = 0; i < count; i++) {
       const flags = r.plan[i * 2] | 0;
-      plan[i] = { hidden: !!(flags & 1), transition: !!(flags & 2), asIs: !!(flags & 4), ms: r.plan[i * 2 + 1] | 0, effect: r.effects?.[i] || "", dir: r.directions?.[i] || "" };
+      const after = r.advance ? r.advance[i * 2 + 1] | 0 : 0;
+      plan[i] = {
+        hidden: !!(flags & 1), transition: !!(flags & 2), asIs: !!(flags & 4), ms: r.plan[i * 2 + 1] | 0, effect: r.effects?.[i] || "", dir: r.directions?.[i] || "",
+        onClick: r.advance ? r.advance[i * 2] !== 0 : true, after: after > 0 ? after - 1 : null,
+      };
     }
   } catch (e) {
     // Without the plan the show still runs: every slide, no transitions.
@@ -160,14 +167,26 @@ async function draw(fade) {
     };
     const motion = p.asIs ? transitionFrames(p.effect, p.dir) : null;
     if (motion) {
-      // Push, wipe and split: the new slide moves in, or is uncovered, over the old.
+      // The new slide moves in, or is uncovered, over the old; for uncover the old
+      // slide is drawn on top and moves away.
       over.style.transitionDuration = "0ms";
       over.classList.add("is-in");
-      const opts = { duration: p.ms, easing: "ease-in-out" };
+      const opts = { duration: p.ms, easing: "ease-in-out", fill: "forwards" };
+      if (motion.baseOnTop) base.style.zIndex = "2";
       const a = over.animate(motion.over, opts);
       const b = motion.base ? base.animate(motion.base, opts) : null;
-      a.finished.then(() => { b?.cancel(); done(); }, () => {});
-      setTimeout(() => { b?.cancel(); done(); }, p.ms + 200);
+      const finish = () => {
+        if (b) base.style.visibility = "hidden";
+        a.cancel();
+        b?.cancel();
+        base.style.zIndex = "";
+        done();
+        if (b) base.decode().catch(() => {}).then(() => { base.style.visibility = ""; });
+      };
+      let finished = false;
+      const once = () => { if (!finished) { finished = true; finish(); } };
+      a.finished.then(once, () => {});
+      setTimeout(once, p.ms + 200);
     } else {
       // A fade, or the fade a stand-in plays: the new slide fades in over the old.
       over.style.transitionDuration = `${p.ms}ms`;
@@ -180,13 +199,59 @@ async function draw(fade) {
     setBase(url, alt);
     autoStart();
   }
+  arm(p.ms);
   updatePresenter();
 }
 
-/// Keyframes for push, wipe and split by the direction the file states; `null`
-/// for anything else, which plays the fade.
-function transitionFrames(effect, dir) {
+/// Advance Slide After (`UX-004`): once the slide's time has passed, play its next
+/// click, or move on when none is left. `lead` is the transition's own time.
+function arm(lead = 0) {
+  clearTimeout(show.timer);
+  const p = show.plan[show.index];
+  if (!p || p.after == null) return;
+  const index = show.index;
+  show.timer = setTimeout(() => {
+    if (!show || show.index !== index || show.blank) return;
+    if (show.playing) { arm(); return; }
+    if (show.anim && show.anim.at < show.anim.clicks.length) { playClick().then(() => { if (show && show.index === index) arm(); }); return; }
+    next();
+  }, lead + p.after);
+}
+
+/// Where a slide comes from for a direction token: `l` moves left, so it starts at
+/// the right; corners combine two.
+const FROM = { l: [100, 0], r: [-100, 0], u: [0, 100], d: [0, -100], lu: [100, 100], ru: [-100, 100], ld: [100, -100], rd: [-100, -100] };
+
+/// Keyframes for the effects played as themselves, by the direction the file
+/// states; `null` for anything else, which plays the fade. Also the editor's
+/// Preview (`UX-004`).
+export function transitionFrames(effect, dir) {
   const d = (dir || "").split(" ");
+  if (effect === "fade" && d[0] === "black") {
+    return { over: [{ opacity: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 1 }], base: [{ opacity: 1 }, { opacity: 0, offset: 0.5 }, { opacity: 0 }] };
+  }
+  if (effect === "cover") {
+    const [x, y] = FROM[d[0]] || FROM.l;
+    return { over: [{ transform: `translate(${x}%, ${y}%)` }, { transform: "translate(0, 0)" }] };
+  }
+  if (effect === "pull") {
+    const [x, y] = FROM[d[0]] || FROM.l;
+    return { over: [{ opacity: 1 }, { opacity: 1 }], base: [{ transform: "translate(0, 0)" }, { transform: `translate(${-x}%, ${-y}%)` }], baseOnTop: true };
+  }
+  if (effect === "zoom") {
+    const from = d[0] === "in" ? 0.3 : 1.6;
+    return { over: [{ opacity: 0, transform: `scale(${from})` }, { opacity: 1, transform: "scale(1)" }] };
+  }
+  if (effect === "reveal") {
+    const x = d[0] === "r" ? -12 : 12;
+    if (d[1] === "black") {
+      return {
+        over: [{ opacity: 0, transform: `translate(${x}%, 0)` }, { opacity: 0, transform: `translate(${x}%, 0)`, offset: 0.5 }, { opacity: 1, transform: "translate(0, 0)" }],
+        base: [{ opacity: 1 }, { opacity: 0, offset: 0.5 }, { opacity: 0 }],
+      };
+    }
+    return { over: [{ opacity: 0, transform: `translate(${x}%, 0)` }, { opacity: 1, transform: "translate(0, 0)" }], base: [{ opacity: 1 }, { opacity: 0 }] };
+  }
   if (effect === "push") {
     const [x, y] = { l: [100, 0], r: [-100, 0], u: [0, 100], d: [0, -100] }[d[0]] || [100, 0];
     return {
@@ -429,6 +494,7 @@ export function end() {
   const last = Math.min(show.index, show.plan.length - 1);
   const standIns = [...show.standIns].sort();
   const urls = [show.baseUrl, show.overUrl];
+  clearTimeout(show.timer);
   show = null;
   token++;
   const box = byId("show");
@@ -475,6 +541,9 @@ export function key(e) {
 function click(forward) {
   if (!show || !show.plan.length) return;
   if (show.blank) { setBlank(null); return; }
+  // On Mouse Click off (`@advClick="0"`): a click does not move the slide on.
+  const p = show.plan[show.index];
+  if (forward && p && p.onClick === false && !(show.anim && show.anim.at < show.anim.clicks.length)) return;
   if (forward) next(); else previous();
 }
 

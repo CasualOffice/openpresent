@@ -37,8 +37,10 @@ use casual_slide_model::timing::{
     TimeNodeRestart, TimeNodeType, TimePoint, TimeTarget, TimeValue, TriggerEvent,
 };
 use casual_slide_model::transition::{
-    InOutDirection, OptionalBlackTransition, OrientationDirection, SideDirection,
-    SideDirectionTransition, SlideTransition, SplitTransition, TransitionEffect, TransitionSpeed,
+    CornerDirection, EightDirection, EightDirectionTransition, InOutDirection, InOutTransition,
+    LeftRightDirection, OptionalBlackTransition, OrientationDirection, RevealTransition,
+    SideDirection, SideDirectionTransition, SlideTransition, SplitTransition, TransitionEffect,
+    TransitionSpeed,
 };
 
 use super::{Applied, Operation, TxnError};
@@ -47,7 +49,7 @@ use super::{Applied, Operation, TxnError};
 /// minute, PowerPoint's own limit for a transition.
 pub const MAX_DURATION_MS: u32 = 60_000;
 
-/// The transitions the Transitions tab offers (`VS-10`).
+/// The transitions the Transitions tab offers (`VS-10`, `UX-004`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransitionKind {
     /// None: the slide changes at once, with no `p:transition` effect.
@@ -56,38 +58,190 @@ pub enum TransitionKind {
     Cut,
     /// `p:fade`.
     Fade,
-    /// `p:push`, from the right.
+    /// `p:push`.
     Push,
-    /// `p:wipe`, from the right.
+    /// `p:wipe`.
     Wipe,
-    /// `p:split`, horizontal, out.
+    /// `p:split`.
     Split,
+    /// `p:cover`.
+    Cover,
+    /// `p:pull`, "Uncover" in PowerPoint's gallery.
+    Uncover,
+    /// `p:zoom`.
+    Zoom,
+    /// `p14:reveal`, with `p:fade` as the fallback for a reader without `p14`.
+    Reveal,
 }
 
-impl TransitionKind {
-    /// From the bridge's number: 0 none, 1 cut, 2 fade, 3 push, 4 wipe, 5 split.
+/// An Effect Options choice for a transition (`UX-004`): a direction, or how a fade
+/// passes. Which apply depends on the kind ([`TransitionKind::options`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransitionOption {
+    /// Smoothly: no `@thruBlk`.
+    Smooth,
+    /// Through Black: `@thruBlk="1"`.
+    ThroughBlack,
+    /// `dir="l"`: the new slide moves left, "From Right".
+    Left,
+    /// `dir="u"`: "From Bottom".
+    Up,
+    /// `dir="r"`: "From Left".
+    Right,
+    /// `dir="d"`: "From Top".
+    Down,
+    /// `dir="lu"`: "From Bottom-Right".
+    LeftUp,
+    /// `dir="ru"`: "From Bottom-Left".
+    RightUp,
+    /// `dir="ld"`: "From Top-Right".
+    LeftDown,
+    /// `dir="rd"`: "From Top-Left".
+    RightDown,
+    /// Split `orient="horz" dir="out"`.
+    HorizontalOut,
+    /// Split `orient="horz" dir="in"`.
+    HorizontalIn,
+    /// Split `orient="vert" dir="out"`.
+    VerticalOut,
+    /// Split `orient="vert" dir="in"`.
+    VerticalIn,
+    /// Zoom `dir="in"`.
+    In,
+    /// Zoom `dir="out"`.
+    Out,
+    /// Reveal through black, `dir="l"`.
+    ThroughBlackLeft,
+    /// Reveal through black, `dir="r"`.
+    ThroughBlackRight,
+}
+
+impl TransitionOption {
+    const ALL: [Self; 18] = [
+        Self::Smooth,
+        Self::ThroughBlack,
+        Self::Left,
+        Self::Up,
+        Self::Right,
+        Self::Down,
+        Self::LeftUp,
+        Self::RightUp,
+        Self::LeftDown,
+        Self::RightDown,
+        Self::HorizontalOut,
+        Self::HorizontalIn,
+        Self::VerticalOut,
+        Self::VerticalIn,
+        Self::In,
+        Self::Out,
+        Self::ThroughBlackLeft,
+        Self::ThroughBlackRight,
+    ];
+
+    /// From the bridge's number, the position in the list above, from 0.
     pub fn from_code(code: u32) -> Option<Self> {
-        Some(match code {
-            0 => Self::None,
-            1 => Self::Cut,
-            2 => Self::Fade,
-            3 => Self::Push,
-            4 => Self::Wipe,
-            5 => Self::Split,
-            _ => return None,
-        })
+        Self::ALL.get(usize::try_from(code).ok()?).copied()
     }
 
     /// The bridge's number.
     pub fn code(self) -> u32 {
-        match self {
-            Self::None => 0,
-            Self::Cut => 1,
-            Self::Fade => 2,
-            Self::Push => 3,
-            Self::Wipe => 4,
-            Self::Split => 5,
+        Self::ALL
+            .iter()
+            .position(|&o| o == self)
+            .and_then(|p| u32::try_from(p).ok())
+            .unwrap_or(0)
+    }
+
+    fn side(self) -> Option<SideDirection> {
+        Some(match self {
+            Self::Left => SideDirection::Left,
+            Self::Up => SideDirection::Up,
+            Self::Right => SideDirection::Right,
+            Self::Down => SideDirection::Down,
+            _ => return None,
+        })
+    }
+
+    fn eight(self) -> Option<EightDirection> {
+        if let Some(s) = self.side() {
+            return Some(EightDirection::Side(s));
         }
+        Some(EightDirection::Corner(match self {
+            Self::LeftUp => CornerDirection::LeftUp,
+            Self::RightUp => CornerDirection::RightUp,
+            Self::LeftDown => CornerDirection::LeftDown,
+            Self::RightDown => CornerDirection::RightDown,
+            _ => return None,
+        }))
+    }
+
+    fn of_side(d: Option<SideDirection>) -> Self {
+        match d.unwrap_or(SideDirection::Left) {
+            SideDirection::Left => Self::Left,
+            SideDirection::Up => Self::Up,
+            SideDirection::Right => Self::Right,
+            SideDirection::Down => Self::Down,
+        }
+    }
+
+    fn of_eight(d: Option<EightDirection>) -> Self {
+        match d {
+            None => Self::Left,
+            Some(EightDirection::Side(s)) => Self::of_side(Some(s)),
+            Some(EightDirection::Corner(c)) => match c {
+                CornerDirection::LeftUp => Self::LeftUp,
+                CornerDirection::RightUp => Self::RightUp,
+                CornerDirection::LeftDown => Self::LeftDown,
+                CornerDirection::RightDown => Self::RightDown,
+            },
+        }
+    }
+}
+
+const SIDES: &[TransitionOption] = &[
+    TransitionOption::Left,
+    TransitionOption::Up,
+    TransitionOption::Right,
+    TransitionOption::Down,
+];
+const EIGHT: &[TransitionOption] = &[
+    TransitionOption::Left,
+    TransitionOption::Up,
+    TransitionOption::Right,
+    TransitionOption::Down,
+    TransitionOption::LeftUp,
+    TransitionOption::RightUp,
+    TransitionOption::LeftDown,
+    TransitionOption::RightDown,
+];
+
+impl TransitionKind {
+    const ALL: [Self; 10] = [
+        Self::None,
+        Self::Cut,
+        Self::Fade,
+        Self::Push,
+        Self::Wipe,
+        Self::Split,
+        Self::Cover,
+        Self::Uncover,
+        Self::Zoom,
+        Self::Reveal,
+    ];
+
+    /// From the bridge's number: 0 none, 1 cut, 2 fade, 3 push, 4 wipe, 5 split,
+    /// 6 cover, 7 uncover, 8 zoom, 9 reveal.
+    pub fn from_code(code: u32) -> Option<Self> {
+        Self::ALL.get(usize::try_from(code).ok()?).copied()
+    }
+
+    /// The bridge's number.
+    pub fn code(self) -> u32 {
+        Self::ALL
+            .iter()
+            .position(|&k| k == self)
+            .and_then(|p| u32::try_from(p).ok())
+            .unwrap_or(0)
     }
 
     /// PowerPoint's default duration for it, in milliseconds.
@@ -95,8 +249,28 @@ impl TransitionKind {
         match self {
             Self::None | Self::Cut => 0,
             Self::Fade => 700,
-            Self::Push | Self::Wipe => 1000,
+            Self::Push | Self::Wipe | Self::Cover | Self::Uncover | Self::Reveal => 1000,
             Self::Split => 1500,
+            Self::Zoom => 500,
+        }
+    }
+
+    /// The Effect Options it offers, the first being what it gets when chosen.
+    pub fn options(self) -> &'static [TransitionOption] {
+        use TransitionOption as O;
+        match self {
+            Self::None => &[],
+            Self::Cut | Self::Fade => &[O::Smooth, O::ThroughBlack],
+            Self::Push | Self::Wipe => SIDES,
+            Self::Split => &[
+                O::HorizontalOut,
+                O::HorizontalIn,
+                O::VerticalOut,
+                O::VerticalIn,
+            ],
+            Self::Cover | Self::Uncover => EIGHT,
+            Self::Zoom => &[O::In, O::Out],
+            Self::Reveal => &[O::Left, O::Right, O::ThroughBlackLeft, O::ThroughBlackRight],
         }
     }
 
@@ -110,25 +284,114 @@ impl TransitionKind {
             Some(TransitionEffect::Push(_)) => Self::Push,
             Some(TransitionEffect::Wipe(_)) => Self::Wipe,
             Some(TransitionEffect::Split(_)) => Self::Split,
+            Some(TransitionEffect::Cover(_)) => Self::Cover,
+            Some(TransitionEffect::Pull(_)) => Self::Uncover,
+            Some(TransitionEffect::Zoom(_)) => Self::Zoom,
+            Some(TransitionEffect::Reveal(_)) => Self::Reveal,
             Some(_) => return None,
         })
     }
 
-    fn effect(self) -> Option<TransitionEffect> {
+    /// The Effect Options choice a transition states, with the schema's defaults
+    /// where it states none; `None` for an effect without options here.
+    pub fn option_of(t: &SlideTransition) -> Option<TransitionOption> {
+        use TransitionOption as O;
+        let black = |b: Option<bool>| {
+            if b == Some(true) {
+                O::ThroughBlack
+            } else {
+                O::Smooth
+            }
+        };
+        Some(match t.effect.as_ref()? {
+            TransitionEffect::Cut(b) | TransitionEffect::Fade(b) => black(b.thru_blk),
+            TransitionEffect::Push(s) | TransitionEffect::Wipe(s) => O::of_side(s.dir),
+            TransitionEffect::Split(s) => match (
+                s.orient.unwrap_or(OrientationDirection::Horizontal),
+                s.dir.unwrap_or(InOutDirection::Out),
+            ) {
+                (OrientationDirection::Horizontal, InOutDirection::Out) => O::HorizontalOut,
+                (OrientationDirection::Horizontal, InOutDirection::In) => O::HorizontalIn,
+                (OrientationDirection::Vertical, InOutDirection::Out) => O::VerticalOut,
+                (OrientationDirection::Vertical, InOutDirection::In) => O::VerticalIn,
+            },
+            TransitionEffect::Cover(e) | TransitionEffect::Pull(e) => O::of_eight(e.dir),
+            TransitionEffect::Zoom(z) => match z.dir.unwrap_or(InOutDirection::Out) {
+                InOutDirection::In => O::In,
+                InOutDirection::Out => O::Out,
+            },
+            TransitionEffect::Reveal(r) => {
+                let right = r.dir == Some(LeftRightDirection::Right);
+                match (r.thru_blk == Some(true), right) {
+                    (false, false) => O::Left,
+                    (false, true) => O::Right,
+                    (true, false) => O::ThroughBlackLeft,
+                    (true, true) => O::ThroughBlackRight,
+                }
+            }
+            _ => return None,
+        })
+    }
+
+    /// The effect, with `option` where this kind offers it, else its first.
+    fn effect(self, option: Option<TransitionOption>) -> Option<TransitionEffect> {
+        use TransitionOption as O;
+        let options = self.options();
+        let o = option
+            .filter(|o| options.contains(o))
+            .or_else(|| options.first().copied());
+        let black = (o == Some(O::ThroughBlack)).then_some(true);
         Some(match self {
             Self::None => return None,
-            Self::Cut => TransitionEffect::Cut(OptionalBlackTransition::default()),
-            Self::Fade => TransitionEffect::Fade(OptionalBlackTransition::default()),
+            Self::Cut => TransitionEffect::Cut(OptionalBlackTransition { thru_blk: black }),
+            Self::Fade => TransitionEffect::Fade(OptionalBlackTransition { thru_blk: black }),
             Self::Push => TransitionEffect::Push(SideDirectionTransition {
-                dir: Some(SideDirection::Left),
+                dir: o.and_then(O::side),
             }),
             Self::Wipe => TransitionEffect::Wipe(SideDirectionTransition {
-                dir: Some(SideDirection::Left),
+                dir: o.and_then(O::side),
             }),
-            Self::Split => TransitionEffect::Split(SplitTransition {
-                orient: Some(OrientationDirection::Horizontal),
-                dir: Some(InOutDirection::Out),
+            Self::Split => {
+                let (orient, dir) = match o {
+                    Some(O::HorizontalIn) => (OrientationDirection::Horizontal, InOutDirection::In),
+                    Some(O::VerticalOut) => (OrientationDirection::Vertical, InOutDirection::Out),
+                    Some(O::VerticalIn) => (OrientationDirection::Vertical, InOutDirection::In),
+                    _ => (OrientationDirection::Horizontal, InOutDirection::Out),
+                };
+                TransitionEffect::Split(SplitTransition {
+                    orient: Some(orient),
+                    dir: Some(dir),
+                })
+            }
+            Self::Cover => TransitionEffect::Cover(EightDirectionTransition {
+                dir: o.and_then(O::eight),
             }),
+            Self::Uncover => TransitionEffect::Pull(EightDirectionTransition {
+                dir: o.and_then(O::eight),
+            }),
+            Self::Zoom => TransitionEffect::Zoom(InOutTransition {
+                dir: Some(if o == Some(O::Out) {
+                    InOutDirection::Out
+                } else {
+                    InOutDirection::In
+                }),
+            }),
+            Self::Reveal => {
+                let (black, right) = match o {
+                    Some(O::Right) => (false, true),
+                    Some(O::ThroughBlackLeft) => (true, false),
+                    Some(O::ThroughBlackRight) => (true, true),
+                    _ => (false, false),
+                };
+                TransitionEffect::Reveal(RevealTransition {
+                    thru_blk: black.then_some(true),
+                    dir: Some(if right {
+                        LeftRightDirection::Right
+                    } else {
+                        LeftRightDirection::Left
+                    }),
+                })
+            }
         })
     }
 }
@@ -153,14 +416,26 @@ pub fn build_transition(
     duration_ms: u32,
     existing: Option<&Slot<SlideTransition>>,
 ) -> Option<Slot<SlideTransition>> {
-    let kept = existing.and_then(Slot::resolved);
+    build_transition_with(kind, None, duration_ms, existing)
+}
+
+/// [`build_transition`] with an Effect Options choice (`UX-004`); one the kind does
+/// not offer gives its first. Reveal, a `p14` effect, is the choice branch's alone,
+/// with a fade of the same duration as the fallback, as PowerPoint writes it.
+pub fn build_transition_with(
+    kind: TransitionKind,
+    option: Option<TransitionOption>,
+    duration_ms: u32,
+    existing: Option<&Slot<SlideTransition>>,
+) -> Option<Slot<SlideTransition>> {
+    let kept = existing.and_then(tab_view);
     let base = SlideTransition {
         adv_click: kept.and_then(|t| t.adv_click),
         adv_tm: kept.and_then(|t| t.adv_tm),
         snd_ac: kept.and_then(|t| t.snd_ac.clone()),
         ..SlideTransition::default()
     };
-    let Some(effect) = kind.effect() else {
+    let Some(effect) = kind.effect(option) else {
         return (base != SlideTransition::default()).then(|| Slot::Plain(Box::new(base)));
     };
     let ms = duration_ms.min(MAX_DURATION_MS);
@@ -170,13 +445,19 @@ pub fn build_transition(
             ..base
         })));
     }
+    let fallback_effect = if kind == TransitionKind::Reveal {
+        TransitionEffect::Fade(OptionalBlackTransition::default())
+    } else {
+        effect.clone()
+    };
     let fallback = SlideTransition {
         spd: Some(speed_for(ms)),
-        effect: Some(effect),
+        effect: Some(fallback_effect),
         ..base
     };
     let choice = SlideTransition {
         p14_dur: Some(ms.to_string()),
+        effect: Some(effect),
         ..fallback.clone()
     };
     Some(Slot::Alternate(casual_slide_model::timing::Alternates {
@@ -195,6 +476,72 @@ pub fn build_transition(
         // As the reader resolves it: `p14` is not a namespace it understands.
         selected: Some(1),
     }))
+}
+
+/// The transition as the Transitions tab reads it: the branch requiring `p14` where
+/// the slot has one (it holds `p14:dur` and the 2010 effects PowerPoint plays), else
+/// what resolves.
+pub fn tab_view(slot: &Slot<SlideTransition>) -> Option<&SlideTransition> {
+    if let Slot::Alternate(a) = slot
+        && let Some(t) = a
+            .branches
+            .iter()
+            .find(|b| b.requires.as_deref() == Some("p14"))
+            .and_then(|b| b.value.as_deref())
+    {
+        return Some(t);
+    }
+    slot.resolved()
+}
+
+/// The longest Advance Slide After, in milliseconds: held to a day.
+pub const MAX_ADVANCE_MS: u32 = 86_400_000;
+
+/// The Timing group's Advance Slide (`UX-004`): `on_click` (`@advClick`, written only
+/// when off, as PowerPoint writes it) and `after_ms` (`@advTm`, `None` for no timer),
+/// set on every branch of `existing` so the choice and the fallback agree. A
+/// transition left with nothing to say is removed.
+pub fn with_advance(
+    existing: Option<&Slot<SlideTransition>>,
+    on_click: bool,
+    after_ms: Option<u32>,
+) -> Option<Slot<SlideTransition>> {
+    let after_ms = after_ms.map(|ms| ms.min(MAX_ADVANCE_MS));
+    let set = |t: &mut SlideTransition| {
+        t.adv_click = match (on_click, t.adv_click) {
+            (true, Some(true)) => Some(true),
+            (true, _) => None,
+            (false, _) => Some(false),
+        };
+        t.adv_tm = after_ms;
+    };
+    let slot = match existing {
+        // One that could not be read stays as it was: nothing is lost to a timer.
+        Some(Slot::Unread) => return Some(Slot::Unread),
+        None => {
+            let mut t = SlideTransition::default();
+            set(&mut t);
+            Slot::Plain(Box::new(t))
+        }
+        Some(Slot::Plain(t)) => {
+            let mut t = t.clone();
+            set(&mut t);
+            Slot::Plain(t)
+        }
+        Some(Slot::Alternate(a)) => {
+            let mut a = a.clone();
+            for b in &mut a.branches {
+                if let Some(t) = b.value.as_deref_mut() {
+                    set(t);
+                }
+            }
+            Slot::Alternate(a)
+        }
+    };
+    match &slot {
+        Slot::Plain(t) if **t == SlideTransition::default() => None,
+        _ => Some(slot),
+    }
 }
 
 /// The effects the Animations tab offers (`VS-10`), with PowerPoint's preset ids.

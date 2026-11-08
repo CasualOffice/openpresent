@@ -25,13 +25,13 @@ import init, {
   slide_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
-  show_plan, slide_transition, transition_direction, slide_notes,
+  show_plan, show_advance, slide_transition, transition_direction, slide_notes,
   design_themes, design_apply_theme, design_slide_size, design_background,
   open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
   preset_names, preset_icon, insert_preset, shape_handles, drag_shape_handle,
   set_shape_fill, set_shape_outline, set_shape_style, slide_palette,
-  transition_choice, set_slide_transition, transition_to_all, slide_animations, shape_name,
+  transition_choice, set_slide_transition, set_transition_advance, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
   render_slide_png_hiding,
   insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
@@ -85,7 +85,7 @@ const NODE_LISTS = new Set(["copy_shapes", "duplicate_shapes", "delete_shapes"])
 // these by name and answers `{ value, undo }`; `{ op: "png-hiding", index, width, nodes }`
 // draws a slide with those shapes hidden, for the show's animation steps.
 const ANIMATE = {
-  transition_choice, set_slide_transition, transition_to_all, slide_animations, shape_name,
+  transition_choice, set_slide_transition, set_transition_advance, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
   insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
@@ -171,7 +171,7 @@ self.onmessage = async (event) => {
       for (let i = 0; i * 2 < plan.length; i++) {
         if (plan[i * 2] & 2) { effects[i] = slide_transition(i); directions[i] = transition_direction(i); }
       }
-      self.postMessage({ id, ok: true, plan, effects, directions });
+      self.postMessage({ id, ok: true, plan, effects, directions, advance: Array.from(show_advance()) });
     } else if (msg.op === "notes") {
       self.postMessage({ id, ok: true, notes: slide_notes(msg.index) });
     } else if (msg.op === "icons") {

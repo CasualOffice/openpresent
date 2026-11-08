@@ -1830,8 +1830,11 @@ fn bad<T>(v: Option<T>) -> Result<T, BridgeError> {
     v.ok_or(BridgeError::BadArgument)
 }
 
-/// The transition into slide `index` for the Transitions tab: `[kind, ms]`, kind as
-/// [`casual_slide_transaction::TransitionKind::from_code`] numbers it, 99 for an effect the tab does not offer.
+/// The transition into slide `index` for the Transitions tab: `[kind, ms, option,
+/// on_click, after]`. `kind` as [`casual_slide_transaction::TransitionKind::from_code`]
+/// numbers it, 99 for an effect the tab does not offer; `option` as
+/// [`casual_slide_transaction::TransitionOption::from_code`], 99 for none; `on_click`
+/// 1 or 0; `after` the Advance Slide After time in milliseconds plus one, 0 for none.
 ///
 /// # Errors
 ///
@@ -1839,22 +1842,67 @@ fn bad<T>(v: Option<T>) -> Result<T, BridgeError> {
 #[wasm_bindgen]
 pub fn transition_choice(index: u32) -> Result<Vec<u32>, JsError> {
     with_viewer(|v| {
-        let (kind, ms) = v.transition_choice(index as usize)?;
-        Ok(vec![kind.map_or(99, |k| k.code()), ms])
+        let c = v.transition_choice(index as usize)?;
+        Ok(vec![
+            c.kind.map_or(99, |k| k.code()),
+            c.duration_ms,
+            c.option.map_or(99, |o| o.code()),
+            u32::from(c.on_click),
+            c.after_ms.map_or(0, |ms| ms.saturating_add(1)),
+        ])
     })
 }
 
-/// Give slide `index` a transition (0 none, 1 cut, 2 fade, 3 push, 4 wipe, 5 split)
-/// lasting `ms` milliseconds.
+/// Give slide `index` a transition (0 none, 1 cut, 2 fade, 3 push, 4 wipe, 5 split,
+/// 6 cover, 7 uncover, 8 zoom, 9 reveal) with Effect Options choice `option` (99, or
+/// one the kind does not offer, for its default), lasting `ms` milliseconds.
 ///
 /// # Errors
 ///
 /// `CS-WSM-0006` for another kind.
 #[wasm_bindgen]
-pub fn set_slide_transition(index: u32, kind: u32, ms: u32) -> Result<bool, JsError> {
+pub fn set_slide_transition(index: u32, kind: u32, option: u32, ms: u32) -> Result<bool, JsError> {
     with_viewer(|v| {
         let kind = bad(casual_slide_transaction::TransitionKind::from_code(kind))?;
-        v.set_transition(index as usize, kind, ms)
+        let option = casual_slide_transaction::TransitionOption::from_code(option);
+        v.set_transition(index as usize, kind, option, ms)
+    })
+}
+
+/// Advance Slide on slide `index` (`UX-004`): `on_click`, and after `after_ms`
+/// milliseconds, `u32::MAX` for no timer.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn set_transition_advance(index: u32, on_click: bool, after_ms: u32) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        v.set_transition_advance(
+            index as usize,
+            on_click,
+            (after_ms != u32::MAX).then_some(after_ms),
+        )
+    })
+}
+
+/// How each slide advances in a slide show (`UX-004`), two numbers a slide in order:
+/// 1 when a click advances it (else 0), then Advance Slide After in milliseconds plus
+/// one, 0 for none.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` when no deck is open.
+#[wasm_bindgen]
+pub fn show_advance() -> Result<Vec<u32>, JsError> {
+    with_viewer(|v| {
+        let mut out = Vec::with_capacity(v.slide_count().saturating_mul(2));
+        for i in 0..v.slide_count() {
+            let s = v.show_slide(i)?;
+            out.push(u32::from(s.advance_on_click));
+            out.push(s.advance_after_ms.map_or(0, |ms| ms.saturating_add(1)));
+        }
+        Ok(out)
     })
 }
 

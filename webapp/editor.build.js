@@ -80,7 +80,8 @@ function newSlide() {
     let layout = all[0].ordinal;
     if (state.deck.count) {
       const current = (await request({ op: "build", fn: "slide_layout", args: [state.current] }, { priority: 9 })).value;
-      if (current >= 0) layout = current;
+      // An `i64` from the bridge arrives as a BigInt.
+      if (current >= 0) layout = Number(current);
       const name = all.find((l) => l.ordinal === layout)?.name;
       const content = all.find((l) => l.name === "Title and Content");
       if (name === "Title Slide" && content) layout = content.ordinal;

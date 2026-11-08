@@ -414,3 +414,82 @@ fn a_transition_with_a_duration_is_written_as_powerpoint_writes_it() {
         Some(Slot::Plain(_))
     ));
 }
+
+#[test]
+fn every_transition_kind_and_effect_option_reads_back_as_written() {
+    use super::animate::{TransitionOption, build_transition_with, tab_view};
+    for code in 0..10 {
+        let kind = TransitionKind::from_code(code).unwrap();
+        assert_eq!(kind.code(), code);
+        for &option in kind.options() {
+            let Some(t) = build_transition_with(kind, Some(option), 800, None) else {
+                panic!("{kind:?} wrote nothing")
+            };
+            let read = tab_view(&t).unwrap();
+            assert_eq!(TransitionKind::of(read), Some(kind), "{kind:?}");
+            assert_eq!(
+                TransitionKind::option_of(read),
+                Some(option),
+                "{kind:?} {option:?}"
+            );
+            assert_eq!(TransitionOption::from_code(option.code()), Some(option));
+        }
+    }
+    assert_eq!(TransitionKind::from_code(10), None);
+}
+
+#[test]
+fn reveal_is_written_in_the_p14_branch_with_a_fade_fallback() {
+    use super::animate::{TransitionOption, build_transition_with};
+    use casual_slide_model::transition::TransitionEffect;
+    let t = build_transition_with(
+        TransitionKind::Reveal,
+        Some(TransitionOption::ThroughBlackRight),
+        1000,
+        None,
+    )
+    .unwrap();
+    let Slot::Alternate(a) = &t else {
+        panic!("reveal needs p14")
+    };
+    let choice = a.branches[0].value.as_ref().unwrap();
+    assert!(matches!(choice.effect, Some(TransitionEffect::Reveal(_))));
+    let fallback = a.branches[1].value.as_ref().unwrap();
+    assert!(matches!(fallback.effect, Some(TransitionEffect::Fade(_))));
+}
+
+#[test]
+fn advance_after_and_on_click_are_set_on_every_branch_and_kept_by_a_new_effect() {
+    use super::animate::{build_transition_with, tab_view, with_advance};
+    let fade = build_transition(TransitionKind::Fade, 700, None);
+    let timed = with_advance(fade.as_ref(), false, Some(3000)).unwrap();
+    let Slot::Alternate(a) = &timed else {
+        panic!("still the two branches")
+    };
+    for b in &a.branches {
+        let v = b.value.as_ref().unwrap();
+        assert_eq!(v.adv_click, Some(false));
+        assert_eq!(v.adv_tm, Some(3000));
+    }
+    // Choosing another effect keeps the timing.
+    let pushed = build_transition_with(TransitionKind::Push, None, 1000, Some(&timed)).unwrap();
+    assert_eq!(tab_view(&pushed).unwrap().adv_tm, Some(3000));
+    // Back to the defaults on a slide with no effect leaves no transition.
+    let bare = with_advance(None, false, Some(2000));
+    assert!(bare.is_some());
+    assert_eq!(with_advance(bare.as_ref(), true, None), None);
+    // One undoable op.
+    let mut parts = deck();
+    let start = parts.clone();
+    let inverse = apply(
+        &mut parts,
+        Operation::SetTransition {
+            ordinal: SLIDE,
+            transition: Some(timed),
+        },
+    )
+    .unwrap();
+    assert_ne!(parts, start);
+    apply(&mut parts, inverse).unwrap();
+    assert_eq!(parts, start);
+}

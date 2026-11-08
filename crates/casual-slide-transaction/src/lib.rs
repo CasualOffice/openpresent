@@ -1504,7 +1504,7 @@ impl History {
 pub mod animate;
 mod slides;
 
-pub use animate::{EffectKind, EffectStart, NewEffect, TransitionKind};
+pub use animate::{EffectKind, EffectStart, NewEffect, TransitionKind, TransitionOption};
 
 #[cfg(test)]
 mod animate_tests;

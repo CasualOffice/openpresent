@@ -10,6 +10,8 @@ use casual_slide_model::shape::PlaceholderType;
 use casual_slide_model::text::{TextBody, TextItem};
 use casual_slide_model::transition::{SlideTransition, TransitionEffect, TransitionSpeed};
 
+use casual_slide_transaction::animate::{MAX_ADVANCE_MS, tab_view};
+
 use crate::{BridgeError, Viewer};
 
 /// The longest transition played, in milliseconds: PowerPoint's own limit of a
@@ -28,6 +30,10 @@ pub struct ShowSlide {
     pub hidden: bool,
     /// The transition into this slide, if it has one.
     pub transition: Option<ShowTransition>,
+    /// Advance Slide After (`@advTm`), in milliseconds, where set (`UX-004`).
+    pub advance_after_ms: Option<u32>,
+    /// Advance Slide On Mouse Click (`@advClick`): on unless stated off.
+    pub advance_on_click: bool,
 }
 
 /// A slide's transition, as this build plays it.
@@ -62,6 +68,8 @@ impl Viewer {
             return Ok(ShowSlide {
                 hidden: false,
                 transition: None,
+                advance_after_ms: None,
+                advance_on_click: true,
             });
         };
         let transition = part.transition.as_ref().map(|slot| {
@@ -72,6 +80,13 @@ impl Viewer {
                     played_as_is: false,
                     direction: String::new(),
                 };
+            }
+            // A 2010 effect this build plays (Reveal) is the `p14` branch's; play it
+            // as PowerPoint does rather than its fallback (`UX-004`).
+            if let Some(view) = tab_view(slot)
+                && view.effect.as_ref().is_some_and(plays_as_is)
+            {
+                return transition_of(Some(view));
             }
             let mut shown = transition_of(slot.resolved());
             // PowerPoint 2010 and later read `p14:dur` from the branch requiring
@@ -97,9 +112,12 @@ impl Viewer {
             }
             shown
         });
+        let view = part.transition.as_ref().and_then(tab_view);
         Ok(ShowSlide {
             hidden: part.show == Some(false),
             transition,
+            advance_after_ms: view.and_then(|t| t.adv_tm).map(|ms| ms.min(MAX_ADVANCE_MS)),
+            advance_on_click: view.is_none_or(|t| t.adv_click != Some(false)),
         })
     }
 
@@ -195,25 +213,48 @@ fn transition_of(t: Option<&SlideTransition>) -> ShowTransition {
     ShowTransition {
         effect: if name.is_empty() { "none" } else { name },
         duration_ms,
-        played_as_is: instant
-            || matches!(
-                effect,
-                Some(
-                    TransitionEffect::Fade(_)
-                        | TransitionEffect::Push(_)
-                        | TransitionEffect::Wipe(_)
-                        | TransitionEffect::Split(_)
-                )
-            ),
+        played_as_is: instant || effect.is_some_and(plays_as_is),
         direction: effect.map_or(String::new(), direction_of),
     }
 }
 
-/// The direction of push, wipe and split, with the schema's defaults.
+/// The effects the show plays as themselves (`VS-10`, `UX-004`).
+fn plays_as_is(e: &TransitionEffect) -> bool {
+    matches!(
+        e,
+        TransitionEffect::Fade(_)
+            | TransitionEffect::Push(_)
+            | TransitionEffect::Wipe(_)
+            | TransitionEffect::Split(_)
+            | TransitionEffect::Cover(_)
+            | TransitionEffect::Pull(_)
+            | TransitionEffect::Zoom(_)
+            | TransitionEffect::Reveal(_)
+    )
+}
+
+/// The direction of the effects with one, with the schema's defaults; a fade or a
+/// reveal through black adds `black`.
 fn direction_of(e: &TransitionEffect) -> String {
     use casual_slide_model::properties::Lexical;
-    use casual_slide_model::transition::{InOutDirection, OrientationDirection, SideDirection};
+    use casual_slide_model::transition::{
+        EightDirection, InOutDirection, LeftRightDirection, OrientationDirection, SideDirection,
+    };
     match e {
+        TransitionEffect::Fade(t) if t.thru_blk == Some(true) => "black".to_owned(),
+        TransitionEffect::Cover(t) | TransitionEffect::Pull(t) => t
+            .dir
+            .unwrap_or(EightDirection::Side(SideDirection::Left))
+            .to_lexical(),
+        TransitionEffect::Zoom(t) => t.dir.unwrap_or(InOutDirection::Out).to_lexical(),
+        TransitionEffect::Reveal(t) => {
+            let d = t.dir.unwrap_or(LeftRightDirection::Left).to_lexical();
+            if t.thru_blk == Some(true) {
+                format!("{d} black")
+            } else {
+                d
+            }
+        }
         TransitionEffect::Push(t) | TransitionEffect::Wipe(t) => {
             t.dir.unwrap_or(SideDirection::Left).to_lexical()
         }

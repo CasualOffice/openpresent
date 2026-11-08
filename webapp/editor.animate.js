@@ -1,8 +1,10 @@
 // The Transitions and Animations tabs, and the Animation Pane (`VS-10`).
 //
-// Transitions: the gallery gives the current slide None, Fade, Push, Wipe, Split or
-// Cut at PowerPoint's default duration; Duration changes it; Apply To All gives every
-// slide this slide's transition. Animations: the Animation Styles gallery makes the
+// Transitions (`VS-10`, `UX-004`): the gallery gives the current slide None, Fade,
+// Push, Wipe, Split, Reveal, Cut, Uncover, Cover or Zoom at PowerPoint's default
+// duration; Effect Options picks its direction (or Smoothly, Through Black); Duration
+// changes it; On Mouse Click and After set how the slide advances; Apply To All gives
+// every slide this slide's transition; Preview plays it on the slide. Animations: the Animation Styles gallery makes the
 // selected shape's effect Appear, Fade or Fly In (None removes it); Add Animation adds
 // any of the six this build writes (Appear, Fade, Fly In; Pulse; Disappear, Fade Out)
 // after the others; Start sets when the chosen effect starts; Move Earlier and Move
@@ -11,8 +13,7 @@
 //
 // Every verb is a registered command and one engine op with its inverse, so Undo and
 // Redo are the shared `edit.undo`/`edit.redo`. Shape names are document text and reach
-// the DOM through `textContent` only. Gallery tiles this build cannot write yet (Morph,
-// Reveal, Float In…) say so in the status bar and change nothing.
+// the DOM through `textContent` only. The galleries show only what this build writes.
 
 import { register } from "./commands.js";
 import { state, request, changed, status } from "./editor.core.js";
@@ -21,15 +22,22 @@ import { icon } from "./ribbon.js";
 import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
 import * as panes from "./editor.panes.js";
+import * as show from "./editor.show.js";
 
 const byId = (id) => document.getElementById(id);
 const has = () => !!state.deck && state.deck.count > 0;
 const hasShape = () => has() && selection.selectedNode() != null;
 
-/// Transition kinds, by the engine's numbers.
-const TRANSITIONS = { None: 0, Cut: 1, Fade: 2, Push: 3, Wipe: 4, Split: 5 };
+/// Transition kinds, by the engine's numbers (`TransitionKind::from_code`).
+const TRANSITIONS = { None: 0, Cut: 1, Fade: 2, Push: 3, Wipe: 4, Split: 5, Cover: 6, Uncover: 7, Zoom: 8, Reveal: 9 };
 const TRANSITION_NAMES = Object.fromEntries(Object.entries(TRANSITIONS).map(([k, v]) => [v, k]));
-const TRANSITION_MS = { 0: 0, 1: 0, 2: 700, 3: 1000, 4: 1000, 5: 1500 };
+const TRANSITION_MS = { 0: 0, 1: 0, 2: 700, 3: 1000, 4: 1000, 5: 1500, 6: 1000, 7: 1000, 8: 500, 9: 1000 };
+/// Effect Options, by the engine's numbers (`TransitionOption::from_code`), in
+/// PowerPoint's words; and which each kind offers, its default first, as the engine's
+/// `TransitionKind::options`.
+export const TRANSITION_OPTIONS = ["Smoothly", "Through Black", "From Right", "From Bottom", "From Left", "From Top", "From Bottom-Right", "From Bottom-Left", "From Top-Right", "From Top-Left", "Horizontal Out", "Horizontal In", "Vertical Out", "Vertical In", "In", "Out", "Through Black From Right", "Through Black From Left"];
+const SIDES = [2, 3, 4, 5];
+const KIND_OPTIONS = { 0: [], 1: [0, 1], 2: [0, 1], 3: SIDES, 4: SIDES, 5: [10, 11, 12, 13], 6: [2, 3, 4, 5, 6, 7, 8, 9], 7: [2, 3, 4, 5, 6, 7, 8, 9], 8: [14, 15], 9: [2, 4, 16, 17] };
 
 /// Effects, by the engine's numbers, with their class.
 export const EFFECTS = [
@@ -43,7 +51,7 @@ export const EFFECTS = [
 const STARTS = ["On Click", "With Previous", "After Previous"];
 const CLASS_NAMES = ["Other", "Entrance", "Emphasis", "Exit"];
 
-let transition = { kind: 0, ms: 0 };   // the current slide's, as read
+let transition = { kind: 0, ms: 0, option: -1, onClick: true, after: null };   // the current slide's, as read
 let list = [];                          // the current slide's effects
 let names = new Map();                  // node → shape name
 let chosen = -1;                        // the pane's selected effect
@@ -72,7 +80,7 @@ export async function read() {
   readFor = index;
   try {
     const t = await call("transition_choice", [index]);
-    transition = { kind: t[0], ms: t[1] };
+    transition = { kind: t[0], ms: t[1], option: t[2] === 99 ? -1 : t[2], onClick: t[3] !== 0, after: t[4] > 0 ? t[4] - 1 : null };
     readError = "";
     const v = await call("slide_animations", [index]);
     const next = [];
@@ -100,17 +108,106 @@ async function edited(redraw = true) {
 
 /* ── Transitions ────────────────────────────────────────────────────────── */
 
-function setTransition(kind, ms = TRANSITION_MS[kind]) {
+function setTransition(kind, ms = TRANSITION_MS[kind], option = 99) {
   return guarded("set the transition", async () => {
-    await call("set_slide_transition", [state.current, kind, ms]);
+    await call("set_slide_transition", [state.current, kind, option, ms]);
     await edited(false);
-    status(kind ? `Transition: ${TRANSITION_NAMES[kind]}` : "No transition");
+    const opt = transition.option >= 0 && (KIND_OPTIONS[kind] || []).length > 1 ? `, ${TRANSITION_OPTIONS[transition.option]}` : "";
+    status(kind ? `Transition: ${TRANSITION_NAMES[kind]}${opt}` : "No transition");
   });
 }
 
 function pickTransition(name) {
-  if (!(name in TRANSITIONS)) { status(`${name} is not available yet; this build writes None, Cut, Fade, Push, Wipe and Split`); return; }
+  if (!(name in TRANSITIONS)) return;
   setTransition(TRANSITIONS[name]);
+}
+
+/// Effect Options: the same effect in another direction, at the same duration.
+function setOption(code) {
+  if (!(KIND_OPTIONS[transition.kind] || []).includes(code)) return;
+  return setTransition(transition.kind, transition.ms || TRANSITION_MS[transition.kind], code);
+}
+
+function setAdvance(onClick, after) {
+  return guarded("set how the slide advances", async () => {
+    await call("set_transition_advance", [state.current, onClick, after == null ? 0xffffffff : after]);
+    await edited(false);
+  });
+}
+
+/// Advance Slide After: a time in seconds, or none.
+function afterDialog() {
+  showModal("Advance Slide", (body) => {
+    const on = document.createElement("label");
+    on.className = "fp-row";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = transition.after != null;
+    on.append(box, document.createTextNode(" After"));
+    const label = document.createElement("label");
+    label.className = "fp-row";
+    label.appendChild(document.createTextNode("Seconds"));
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.max = "86399";
+    input.step = "0.25";
+    input.className = "fp-input";
+    input.value = ((transition.after ?? 0) / 1000).toFixed(2);
+    input.addEventListener("input", () => { box.checked = true; });
+    label.appendChild(input);
+    const ok = document.createElement("button");
+    ok.type = "button";
+    ok.className = "op-btn primary";
+    ok.textContent = "OK";
+    const go = () => {
+      const sec = Number(input.value);
+      if (box.checked && !(sec >= 0 && sec < 86400)) { input.focus(); return; }
+      closeModal();
+      setAdvance(transition.onClick, box.checked ? Math.round(sec * 1000) : null);
+    };
+    ok.addEventListener("click", go);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    body.append(on, label, ok);
+  });
+}
+
+/// Preview: the transition into this slide, played on the slide in the editor
+/// from the slide before it (from black on the first), as the show plays it.
+async function previewTransition() {
+  const index = state.current;
+  const frame = byId("slide-frame");
+  const now = byId("slide-img");
+  if (!now?.src || frame.querySelector(".tr-preview")) return;
+  let plan;
+  try { plan = await request({ op: "plan" }, { priority: 9 }); } catch (e) { errorDialog("OpenPresent could not preview the transition.", e.message); return; }
+  const flags = plan.plan[index * 2] | 0, ms = plan.plan[index * 2 + 1] | 0;
+  if (!(flags & 2) || ms <= 0) { status("This slide has no transition to preview"); return; }
+  const effect = plan.effects?.[index] || "", dir = plan.directions?.[index] || "";
+  let before = null;
+  if (index > 0) {
+    try {
+      const r = await request({ op: "png", index: index - 1, width: Math.max(1, Math.round(frame.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) }, { priority: 8 });
+      before = URL.createObjectURL(new Blob([r.png], { type: "image/png" }));
+    } catch { before = null; }
+  }
+  if (state.current !== index) { if (before) URL.revokeObjectURL(before); return; }
+  const layer = h("div", "tr-preview");
+  const base = h("img", "tr-preview-img");
+  base.alt = "";
+  if (before) base.src = before; else base.hidden = true;
+  const over = h("img", "tr-preview-img");
+  over.alt = "";
+  over.src = now.src;
+  layer.append(base, over);
+  frame.appendChild(layer);
+  const frames = (flags & 4) ? show.transitionFrames(effect, dir) : null;
+  const opts = { duration: ms, easing: "ease-in-out", fill: "forwards" };
+  if (frames?.baseOnTop) base.style.zIndex = "2";
+  const a = over.animate(frames ? frames.over : [{ opacity: 0 }, { opacity: 1 }], opts);
+  if (frames?.base && before) base.animate(frames.base, opts);
+  const finish = () => { layer.remove(); if (before) URL.revokeObjectURL(before); };
+  a.finished.then(finish, finish);
 }
 
 function chooser(title, items, pick) {
@@ -341,6 +438,27 @@ const paneOpen = () => !!pane && !pane.hidden;
 
 export function init() {
   register("transitions.gallery", { label: "Transitions", enabled: has, pick: pickTransition, selected: () => TRANSITION_NAMES[transition.kind] ?? "", run: transitionGallery });
+  const offers = () => KIND_OPTIONS[transition.kind] || [];
+  TRANSITION_OPTIONS.forEach((label, code) => {
+    register(`transitions.option.${code}`, {
+      label, enabled: () => has() && offers().includes(code), hidden: () => !offers().includes(code),
+      checked: () => transition.option === code, run: () => setOption(code),
+    });
+  });
+  register("transitions.effect-options", {
+    label: "Effect Options", enabled: () => has() && offers().length > 1,
+    run: () => chooser("Effect Options", offers().map((c) => [TRANSITION_OPTIONS[c], c]), (c) => setOption(c)),
+  });
+  register("transitions.preview", { label: "Preview", enabled: () => has() && transition.kind > 1, run: previewTransition });
+  register("transitions.on-click", {
+    label: "On Mouse Click", enabled: has, checked: () => transition.onClick,
+    run: () => setAdvance(!transition.onClick, transition.after),
+  });
+  register("transitions.after", {
+    label: "After", enabled: has, checked: () => transition.after != null,
+    value: () => (transition.after != null ? `${(transition.after / 1000).toFixed(2)}` : ""),
+    run: afterDialog,
+  });
   register("transitions.timing", {
     label: "Duration", enabled: () => has() && transition.kind > 1,
     value: () => (transition.kind > 1 ? `${(transition.ms / 1000).toFixed(2)}` : ""),

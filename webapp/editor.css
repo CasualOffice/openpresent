@@ -531,3 +531,7 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .pic-crop-corner { width: 12px; height: 12px; margin: -6px 0 0 -6px; cursor: crosshair; }
 .pic-crop-hz { width: 18px; height: 6px; margin: -3px 0 0 -9px; cursor: ns-resize; }
 .pic-crop-vt { width: 6px; height: 18px; margin: -9px 0 0 -3px; cursor: ew-resize; }
+
+/* Transitions > Preview (`UX-004`): the transition played over the slide in the editor. */
+.tr-preview { position: absolute; inset: 0; overflow: hidden; background: #000; z-index: 5; pointer-events: none; }
+.tr-preview-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

@@ -46,7 +46,10 @@ const PRESENT = ["slideshow.from-beginning", "slideshow.from-current", "slidesho
 const THEMES = [["Plain", "#e8ecf0", "#3a6ea5"], ["Harbour", "#dde7f0", "#1f6fb2"], ["Meadow", "#eef3e6", "#5b8c3a"], ["Ember", "#f7ece8", "#c0392b"], ["Slate", "#e5e9f0", "#5e81ac"], ["Orchid", "#f2eaf6", "#8e44ad"]];
 // PowerPoint's Medium Style 2 row, by its style ids (`editor.objects.js`).
 const TABLE_STYLES = [["Medium Style 2 - Accent 1", "#dbe5f1", "#4472c4"], ["Medium Style 2 - Accent 2", "#fbe4d5", "#ed7d31"], ["Medium Style 2 - Accent 3", "#ededed", "#a5a5a5"], ["Medium Style 2 - Accent 4", "#fff2cc", "#ffc000"], ["Medium Style 2 - Accent 5", "#deebf6", "#5b9bd5"], ["Medium Style 2 - Accent 6", "#e2efd9", "#70ad47"]];
-const TRANSITIONS = [["None", "dismiss"], ["Morph", "shape_union"], ["Fade", "slide_transition"], ["Push", "arrow_next"], ["Wipe", "arrow_previous"], ["Split", "layout_row_two_split_top"], ["Reveal", "eye"], ["Cut", "cut"]];
+const TRANSITIONS = [["None", "dismiss"], ["Fade", "slide_transition"], ["Push", "arrow_next"], ["Wipe", "arrow_previous"], ["Split", "layout_row_two_split_top"], ["Reveal", "eye"], ["Cut", "cut"], ["Uncover", "arrow_export"], ["Cover", "arrow_import"], ["Zoom", "zoom_in"]];
+// Effect Options for a transition (`UX-004`): every choice, each shown only while
+// the slide's effect offers it (`editor.animate.js`).
+const TRANSITION_OPTIONS = Array.from({ length: 18 }, (_, i) => `transitions.option.${i}`);
 const ANIMATIONS = [["None", "dismiss"], ["Appear", "sparkle"], ["Fade", "text_effects_sparkle"], ["Fly In", "arrow_next"], ["Float In", "arrow_maximize"], ["Split", "layout_row_two_split_top"], ["Wipe", "arrow_previous"], ["Zoom", "zoom_in"]];
 // Picture Styles: our own swatches for the four the engine has (`picture.rs`).
 const PICTURE_STYLES = [["Simple Frame, White", "#ffffff", "#c8c8c8"], ["Simple Frame, Black", "#ffffff", "#000000"], ["Drop Shadow Rectangle", "#e6e6e6", "#7a7a7a"], ["Thick Matte, Black", "#f2f2f2", "#000000"]];
@@ -143,7 +146,7 @@ export const TABS = [
     { label: "Preview", fold: 3, icon: "play", items: [L("transitions.preview", "play", "Preview")] },
     { label: "Transition to This Slide", fold: 2, icon: "slide_transition", items: [
       G("transitions.gallery", "Transitions", TRANSITIONS),
-      L("transitions.effect-options", "settings", "Effect Options", { menu: ["transitions.effect-options"] }),
+      L("transitions.effect-options", "settings", "Effect Options", { menu: TRANSITION_OPTIONS }),
     ] },
     { label: "Timing", fold: 1, icon: "timer", items: [
       R([[S("transitions.timing", "timer", "Duration")], [S("transitions.apply-to-all", "slide_multiple", "Apply To All")]]),

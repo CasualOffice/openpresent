@@ -5,7 +5,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use casual_slide_transaction::{EffectKind, EffectStart, TransitionKind};
+use casual_slide_transaction::{EffectKind, EffectStart, TransitionKind, TransitionOption};
 use casual_slide_wasm::{Insert, Viewer};
 
 const BOX: [i64; 4] = [914_400, 914_400, 2_743_200, 914_400];
@@ -27,6 +27,12 @@ fn base() -> (Vec<u8>, u32, u32) {
     (v.save().unwrap(), text, rect)
 }
 
+/// The tab's kind and duration for slide `index`.
+fn choice(v: &Viewer, index: usize) -> (Option<TransitionKind>, u32) {
+    let c = v.transition_choice(index).unwrap();
+    (c.kind, c.duration_ms)
+}
+
 fn kinds(v: &Viewer, index: usize) -> Vec<(Option<EffectKind>, EffectStart)> {
     v.animations(index)
         .unwrap()
@@ -37,9 +43,25 @@ fn kinds(v: &Viewer, index: usize) -> Vec<(Option<EffectKind>, EffectStart)> {
 
 /// Every edit the two tabs make, on a deck built and saved first.
 fn animate(v: &mut Viewer, text: u32, rect: u32) {
-    v.set_transition(0, TransitionKind::Push, 1200).unwrap();
-    v.set_transition(1, TransitionKind::Split, 1500).unwrap();
-    v.set_transition(1, TransitionKind::Wipe, 800).unwrap();
+    v.set_transition(0, TransitionKind::Push, None, 1200)
+        .unwrap();
+    v.set_transition(
+        0,
+        TransitionKind::Reveal,
+        Some(TransitionOption::ThroughBlackRight),
+        1200,
+    )
+    .unwrap();
+    v.set_transition(1, TransitionKind::Split, None, 1500)
+        .unwrap();
+    v.set_transition(
+        1,
+        TransitionKind::Cover,
+        Some(TransitionOption::RightDown),
+        800,
+    )
+    .unwrap();
+    v.set_transition_advance(1, false, Some(3000)).unwrap();
     v.add_animation(0, text, EffectKind::Fade, EffectStart::OnClick)
         .unwrap();
     v.add_animation(0, rect, EffectKind::FlyIn, EffectStart::WithPrevious)
@@ -75,13 +97,23 @@ fn each_edit_saves_opens_again_as_it_was_and_undoes_to_the_opened_bytes() {
     let saved = v.save().unwrap();
     let again = Viewer::open(saved.clone()).unwrap();
     assert_eq!(kinds(&again, 0), expected);
+    assert_eq!(choice(&again, 0), (Some(TransitionKind::Reveal), 1200));
+    let one = again.transition_choice(1).unwrap();
     assert_eq!(
-        again.transition_choice(0).unwrap(),
-        (Some(TransitionKind::Push), 1200)
-    );
-    assert_eq!(
-        again.transition_choice(1).unwrap(),
-        (Some(TransitionKind::Wipe), 800)
+        (
+            one.kind,
+            one.option,
+            one.duration_ms,
+            one.on_click,
+            one.after_ms
+        ),
+        (
+            Some(TransitionKind::Cover),
+            Some(TransitionOption::RightDown),
+            800,
+            false,
+            Some(3000)
+        )
     );
     assert_eq!(again.save().unwrap(), saved, "not a fixed point");
     while v.can_undo_redo().0 {
@@ -94,36 +126,61 @@ fn each_edit_saves_opens_again_as_it_was_and_undoes_to_the_opened_bytes() {
 fn apply_to_all_gives_every_slide_the_transition_in_one_undo_step() {
     let (source, _, _) = base();
     let mut v = Viewer::open(source).unwrap();
-    v.set_transition(1, TransitionKind::Fade, 700).unwrap();
+    v.set_transition(1, TransitionKind::Fade, None, 700)
+        .unwrap();
     v.transition_to_all(1).unwrap();
     for i in 0..v.slide_count() {
-        assert_eq!(
-            v.transition_choice(i).unwrap(),
-            (Some(TransitionKind::Fade), 700)
-        );
+        assert_eq!(choice(&v, i), (Some(TransitionKind::Fade), 700));
     }
     v.undo().unwrap();
-    assert_eq!(
-        v.transition_choice(0).unwrap(),
-        (Some(TransitionKind::None), 0)
-    );
+    assert_eq!(choice(&v, 0), (Some(TransitionKind::None), 0));
 }
 
 #[test]
 fn the_show_plays_the_new_transitions_as_themselves() {
     let (source, _, _) = base();
     let mut v = Viewer::open(source).unwrap();
-    v.set_transition(0, TransitionKind::Split, 1500).unwrap();
-    let t = v.show_slide(0).unwrap().transition.unwrap();
-    assert_eq!(
+    for (kind, option, effect, direction) in [
+        (TransitionKind::Split, None, "split", "horz out"),
         (
-            t.effect,
-            t.duration_ms,
-            t.played_as_is,
-            t.direction.as_str()
+            TransitionKind::Cover,
+            Some(TransitionOption::LeftUp),
+            "cover",
+            "lu",
         ),
-        ("split", 1500, true, "horz out")
-    );
+        (
+            TransitionKind::Uncover,
+            Some(TransitionOption::Down),
+            "pull",
+            "d",
+        ),
+        (
+            TransitionKind::Zoom,
+            Some(TransitionOption::Out),
+            "zoom",
+            "out",
+        ),
+        (
+            TransitionKind::Reveal,
+            Some(TransitionOption::Right),
+            "reveal",
+            "r",
+        ),
+    ] {
+        v.set_transition(0, kind, option, 1500).unwrap();
+        let t = v.show_slide(0).unwrap().transition.unwrap();
+        assert_eq!(
+            (
+                t.effect,
+                t.duration_ms,
+                t.played_as_is,
+                t.direction.as_str()
+            ),
+            (effect, 1500, true, direction)
+        );
+    }
+    v.set_transition_advance(0, true, Some(2500)).unwrap();
+    assert_eq!(v.show_slide(0).unwrap().advance_after_ms, Some(2500));
 }
 
 #[test]
