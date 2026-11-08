@@ -190,6 +190,6 @@ fn fill_outline_and_style_save_and_undo() {
         v.undo().unwrap();
     }
     assert_eq!(v.save().unwrap(), opened);
-    assert_eq!(v.theme_colors(0).unwrap().len(), 10);
-    assert!(v.theme_colors(0).unwrap().iter().all(|c| c.len() == 6));
+    assert_eq!(v.palette(0).unwrap().len(), 10);
+    assert!(v.palette(0).unwrap().iter().all(|c| c.len() == 6));
 }

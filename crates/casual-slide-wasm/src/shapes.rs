@@ -609,7 +609,7 @@ impl Viewer {
     /// The ten colours of slide `index`'s theme as the colour pickers show them, as
     /// `RRGGBB`: Background 1, Text 1, Background 2, Text 2, Accent 1 to 6, through
     /// the slide's colour map. One the theme lacks is empty.
-    pub fn theme_colors(&self, index: usize) -> Result<Vec<String>, BridgeError> {
+    pub fn palette(&self, index: usize) -> Result<Vec<String>, BridgeError> {
         let ordinal = self.slide_ordinal(index)?;
         let theme = self.deck.theme_of_slide(index);
         let chain = casual_slide_style::Chain::of(self.deck.parts(), ordinal);

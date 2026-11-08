@@ -2,14 +2,19 @@
 // delete, select, Bold, Italic and Underline, undo and redo.
 //
 // The engine keeps the text and lays it out; this module keeps only where the
-// caret is and draws it. Shapes are selected by `editor.selection.js` (`VS-06`);
-// a double click on a shape's text, or a click while a text box is open, places
-// the caret here, and the shape's outline steps aside while it is. A click becomes a hit test in
-// the engine, the caret and the selection come back as slide coordinates and are
-// drawn in an SVG over the slide picture, and keystrokes go to a hidden textarea
-// so the browser's own input methods work. Every edit is one engine call, applied
-// to the deck's model through `casual-slide-transaction`, so it can be undone.
+// caret is and draws it. As PowerPoint, one click inside a shape that holds text
+// puts the caret there; `editor.selection.js` (`VS-06`) routes the press, since it
+// knows the shapes, and a press on a border selects and drags the shape instead.
+// A click becomes a hit test in the engine, the caret and the selection come back
+// as slide coordinates and are drawn in an SVG over the slide picture, and
+// keystrokes go to a hidden textarea so the browser's own input methods work.
+// Every edit is one engine call, applied to the deck's model through
+// `casual-slide-transaction`, so it can be undone.
 // No document string reaches the DOM: the textarea is emptied after each input.
+//
+// Fluid typing: keys typed while the engine is busy are joined into one insert,
+// the stage is redrawn once per insert and the caret drawn with the new picture,
+// and the thumbnail and the shape list wait until typing pauses.
 //
 // Shaped after OpenCalc's in-cell editor (`webapp/editor.edit.js` at `b23c67c`):
 // a hidden input owns focus and IME, and the canvas only draws.
@@ -24,6 +29,8 @@ const byId = (id) => document.getElementById(id);
 
 /// Text calls run in order, ahead of thumbnails, behind nothing but opening.
 const TEXT_PRIORITY = 8;
+/// How long typing pauses before the thumbnail and the shape list are read again.
+const SETTLE_MS = 400;
 
 let overlay = null;    // <svg> over the slide
 let input = null;      // hidden <textarea>
@@ -31,6 +38,7 @@ let formatBits = 0;    // bit 1 bold, 2 italic, 4 underline
 let composing = false;
 let dragging = false;
 let blink = 0;
+let settleTimer = 0;
 
 /// The open text box: the shape as `[part, node]` and the caret's anchor and focus,
 /// character offsets in its body (`docs/24`). No document text.
@@ -50,108 +58,151 @@ async function call(fn, ...args) {
 
 const obj = () => selection.object;
 
-/* ── Coordinates ────────────────────────────────────────────────────────── */
-
-/// A client point to slide EMU.
-function toSlide(clientX, clientY) {
-  const r = byId("slide-frame").getBoundingClientRect();
-  return [((clientX - r.left) / r.width) * state.deck.width, ((clientY - r.top) / r.height) * state.deck.height];
-}
-
 /* ── Drawing the caret and selection ────────────────────────────────────── */
 
 function clearOverlay() {
   if (overlay) overlay.replaceChildren();
 }
 
-async function paint() {
-  clearOverlay();
-  clearInterval(blink);
-  if (!selection.editing || !obj() || !state.deck) return;
+/// Where the caret and the selection are, from the engine: numbers only.
+async function geometry() {
+  if (!selection.editing || !obj() || !state.deck) return null;
   const [part, node] = obj();
   const index = state.current;
   const [start, end] = textRange();
+  const quads = start !== end ? await call("text_selection", index, part, node, start, end) : [];
+  const caret = await call("text_caret", index, part, node, selection.focus);
+  formatBits = await call("text_format_state", part, node, selection.focus);
+  return { quads, caret };
+}
+
+/// Draw what `geometry` found: the selection, then a blinking caret.
+function draw(g) {
+  clearOverlay();
+  clearInterval(blink);
+  if (!g || !selection.editing) return;
+  const { quads, caret } = g;
+  for (let i = 0; i + 8 <= quads.length; i += 8) {
+    const poly = document.createElementNS(SVG, "polygon");
+    poly.setAttribute("points", quads.slice(i, i + 8).join(" "));
+    poly.setAttribute("class", "text-sel");
+    overlay.appendChild(poly);
+  }
+  const [x1, y1, x2, y2] = caret;
+  const line = document.createElementNS(SVG, "line");
+  for (const [k, v] of [["x1", x1], ["y1", y1], ["x2", x2], ["y2", y2]]) line.setAttribute(k, String(v));
+  line.setAttribute("class", "text-caret");
+  line.setAttribute("vector-effect", "non-scaling-stroke");
+  overlay.appendChild(line);
+  // The textarea follows the caret, so an IME's window opens beside it.
+  const r = byId("slide-frame").getBoundingClientRect();
+  input.style.left = `${(x1 / state.deck.width) * r.width}px`;
+  input.style.top = `${(y1 / state.deck.height) * r.height}px`;
+  let on = true;
+  blink = setInterval(() => { on = !on; line.style.visibility = on ? "visible" : "hidden"; }, 530);
+  // A ribbon button took focus: the keys come back to the text.
+  if (document.activeElement !== input) input.focus({ preventScroll: true });
+}
+
+async function paint() {
   try {
-    if (start !== end) {
-      const quads = await call("text_selection", index, part, node, start, end);
-      for (let i = 0; i + 8 <= quads.length; i += 8) {
-        const poly = document.createElementNS(SVG, "polygon");
-        poly.setAttribute("points", quads.slice(i, i + 8).join(" "));
-        poly.setAttribute("class", "text-sel");
-        overlay.appendChild(poly);
-      }
-    }
-    const [x1, y1, x2, y2] = await call("text_caret", index, part, node, selection.focus);
-    const line = document.createElementNS(SVG, "line");
-    for (const [k, v] of [["x1", x1], ["y1", y1], ["x2", x2], ["y2", y2]]) line.setAttribute(k, String(v));
-    line.setAttribute("class", "text-caret");
-    line.setAttribute("vector-effect", "non-scaling-stroke");
-    overlay.appendChild(line);
-    // The textarea follows the caret, so an IME's window opens beside it.
-    const r = byId("slide-frame").getBoundingClientRect();
-    input.style.left = `${(x1 / state.deck.width) * r.width}px`;
-    input.style.top = `${(y1 / state.deck.height) * r.height}px`;
-    let on = true;
-    blink = setInterval(() => { on = !on; line.style.visibility = on ? "visible" : "hidden"; }, 530);
-    formatBits = await call("text_format_state", part, node, selection.focus);
+    draw(await geometry());
   } catch (e) {
     status(`The caret could not be placed: ${e.message}`);
   }
   changed();
 }
 
-/// After an edit: redraw the slide and its thumbnail, then the caret.
+/// After an edit: redraw the slide, and draw the caret with the new picture. The
+/// thumbnail and the shape list follow once typing pauses.
 async function afterEdit() {
-  await slides.redraw();
-  slides.refreshThumb(state.current);
-  await paint();
+  const [part, node] = obj();
+  const [g] = await Promise.all([geometry().catch(() => null), slides.redraw({ quiet: true })]);
+  draw(g);
+  changed();
+  const length = await call("text_length", part, node).catch(() => 1);
+  shapes.noteEmpty(node, length === 0);
+  clearTimeout(settleTimer);
+  const index = state.current;
+  settleTimer = setTimeout(() => {
+    slides.refreshThumb(index);
+    if (index === state.current) shapes.refresh();
+  }, SETTLE_MS);
 }
 
 /* ── Entering and leaving a text box ────────────────────────────────────── */
 
-function stopEditing() {
+/// Close the open text box, if any. The shape stays selected, as PowerPoint's.
+let opens = 0;   // moves on with each open and close, so a late open is dropped
+
+export function stop() {
+  opens++;
   if (!selection.editing) return;
   clearSelection();
   call("edit_break_typing").catch(() => {});
   clearOverlay();
   clearInterval(blink);
   input.blur();
+  shapes.repaint();
   changed();
 }
 
-/// A click while a text box is open moves the caret, or closes the box when it
-/// lands outside any; a double click (`opening`) opens the box under it.
-async function onPointerDown(e, opening = false) {
-  if (!state.deck || state.reading || e.button !== 0) return;
-  if (!e.target.closest("#slide-frame")) { stopEditing(); return; }
-  if (!selection.editing && !opening) return;
-  const [x, y] = toSlide(e.clientX, e.clientY);
-  const index = state.current;
-  if (e.shiftKey && selection.editing) {
-    const [part, node] = obj();
-    select({ focus: await call("text_offset_near", index, part, node, x, y) });
-    paint();
-    return;
-  }
-  let hit;
-  try { hit = await call("text_hit", index, x, y); } catch { hit = []; }
-  if (!hit.length) { stopEditing(); return; }
-  e.preventDefault();
-  const object = [hit[0], hit[1]];
-  await call("edit_break_typing");
-  shapes.reset(false);
-  select({ object, editing: true, anchor: hit[2], focus: hit[2] });
+/// A press inside text shape `[part, node]` at slide point `p`, routed here by the
+/// shape selection: open the box with the caret under the pointer, or move the
+/// caret in the open one; `extend` keeps the anchor, as Shift does.
+export function pointerDown(part, node, p, extend) {
+  const same = selection.editing && obj()[0] === part && obj()[1] === node;
+  // Focus now, inside the press, so the keys that follow are not lost.
   input.focus({ preventScroll: true });
-  dragging = !opening;
-  paint();
+  dragging = true;
+  const ticket = ++opens;
+  serial(async () => {
+    const at = await call("text_offset_near", state.current, part, node, p[0], p[1]);
+    if (ticket !== opens) return;
+    if (!same) {
+      await call("edit_break_typing");
+      select({ object: [part, node], editing: true, anchor: at, focus: at });
+      shapes.repaint();
+    } else {
+      select(extend ? { focus: at } : { anchor: at, focus: at });
+    }
+    await paint();
+  });
 }
 
-async function onPointerMove(e) {
-  if (!dragging || !selection.editing || !(e.buttons & 1)) return;
-  const [x, y] = toSlide(e.clientX, e.clientY);
-  const [part, node] = obj();
-  const focus = await call("text_offset_near", state.current, part, node, x, y);
-  if (focus !== selection.focus) { select({ focus }); paint(); }
+let moveQueued = null;
+/// The pointer moved with the button down in a text box: extend the selection.
+export function pointerMove(p) {
+  if (!dragging || !selection.editing) return;
+  // Only the latest point matters; the engine is asked once per answer.
+  const pending = moveQueued;
+  moveQueued = p;
+  if (pending) return;
+  serial(async () => {
+    const q = moveQueued;
+    moveQueued = null;
+    if (!q || !selection.editing) return;
+    const [part, node] = obj();
+    const focus = await call("text_offset_near", state.current, part, node, q[0], q[1]);
+    if (focus !== selection.focus) { select({ focus }); await paint(); }
+  });
+}
+
+export function pointerUp() { dragging = false; }
+
+/// A key typed while a text shape is selected but not open: open it at the end
+/// of its text and type the key there, as PowerPoint does.
+export function typeInto(part, node, key) {
+  input.focus({ preventScroll: true });
+  const ticket = ++opens;
+  serial(async () => {
+    const length = await call("text_length", part, node);
+    if (ticket !== opens) return;
+    await call("edit_break_typing");
+    select({ object: [part, node], editing: true, anchor: length, focus: length });
+    shapes.repaint();
+  });
+  insert(key);
 }
 
 /* ── Edits ──────────────────────────────────────────────────────────────── */
@@ -163,24 +214,39 @@ function serial(fn) {
   return queue;
 }
 
+let typed = "";
 /// Replace the selection with `text`; `typing` joins keystrokes in one undo step.
+/// Keys typed while an edit is in flight join the next insert, so the stage is
+/// drawn once for them all.
 function insert(text, typing = true) {
-  return serial(async () => {
-    if (!selection.editing) return;
-    const [part, node] = obj();
-    let [start, end] = textRange();
-    if (start !== end) {
-      await call("text_delete", part, node, start, end);
-      typing = false;
-    }
-    await call("text_insert", part, node, start, text, typing);
-    // The caret moves past what was inserted; dropped control characters are
-    // found by the length, which is the engine's.
-    const length = await call("text_length", part, node);
-    const at = Math.min(length, start + [...text].length);
-    select({ anchor: at, focus: at });
-    await afterEdit();
-  });
+  if (typing) {
+    const first = !typed;
+    typed += text;
+    if (!first) return queue;
+    return serial(async () => {
+      const t = typed;
+      typed = "";
+      await insertNow(t, true);
+    });
+  }
+  return serial(() => insertNow(text, false));
+}
+
+async function insertNow(text, typing) {
+  if (!selection.editing || !text) return;
+  const [part, node] = obj();
+  let [start, end] = textRange();
+  if (start !== end) {
+    await call("text_delete", part, node, start, end);
+    typing = false;
+  }
+  await call("text_insert", part, node, start, text, typing);
+  // The caret moves past what was inserted; dropped control characters are
+  // found by the length, which is the engine's.
+  const length = await call("text_length", part, node);
+  const at = Math.min(length, start + [...text].length);
+  select({ anchor: at, focus: at });
+  await afterEdit();
 }
 
 function remove(direction) {
@@ -200,6 +266,8 @@ function remove(direction) {
 }
 
 function toggle(which) {
+  // From the ribbon, the button took focus: the next key is the text's again.
+  if (selection.editing) input.focus({ preventScroll: true });
   return serial(async () => {
     if (!selection.editing) return;
     const [part, node] = obj();
@@ -225,7 +293,7 @@ export function refresh() {
       select({ anchor: Math.min(selection.anchor, length), focus: Math.min(selection.focus, length) });
       await paint();
     } catch {
-      stopEditing();
+      stop();
     }
   });
 }
@@ -284,7 +352,7 @@ function onKeyDown(e) {
   else if (e.key === "ArrowDown") move("down", e.shiftKey);
   else if (e.key === "Home") move("home", e.shiftKey);
   else if (e.key === "End") move("end", e.shiftKey);
-  else if (e.key === "Escape") stopEditing();
+  else if (e.key === "Escape") { stop(); byId("stage").focus({ preventScroll: true }); }
   else handled = false;
   if (handled) { e.preventDefault(); e.stopPropagation(); }
 }
@@ -338,10 +406,13 @@ export function init() {
   new ResizeObserver(size).observe(frame);
   new MutationObserver(size).observe(frame, { attributes: true, attributeFilter: ["hidden"] });
 
-  // Capture, so an open box sees its clicks before the shape selection does.
-  byId("stage").addEventListener("pointerdown", (e) => onPointerDown(e), true);
-  byId("stage").addEventListener("dblclick", (e) => onPointerDown(e, true));
-  window.addEventListener("pointermove", onPointerMove);
+  // Presses on the slide are routed by `editor.selection.js`; one on the grey
+  // around it closes the box and clears the selection, as PowerPoint's.
+  byId("stage").addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest("#slide-frame")) return;
+    stop();
+    shapes.deselect();
+  });
   window.addEventListener("pointerup", () => { dragging = false; });
   input.addEventListener("keydown", onKeyDown);
   input.addEventListener("input", onInput);

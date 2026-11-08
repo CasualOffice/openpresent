@@ -17,11 +17,17 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
+use casual_slide_export::writer::Op;
 use casual_slide_model::presentation::{Coordinate, POSITIVE_COORDINATE_MAX, Point, PositiveSize};
 use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
 use casual_slide_model::slide::{SlidePart, SlideParts};
+use casual_slide_ooxml::{PresentationPackage, XmlTree};
 use casual_slide_render::{Deck, PdfMetadata, RenderError};
 use wasm_bindgen::prelude::*;
+
+mod design;
+use design::DeckDoc;
+pub use design::{BackgroundChoice, BuiltinTheme, Fit, THEMES};
 
 mod build;
 mod edit;
@@ -184,6 +190,14 @@ impl ShapeBox {
     pub const GROUP: u32 = 64;
 }
 
+/// A Design edit for the save plan.
+enum DesignEdit {
+    /// A file-level operation: a theme's new bytes.
+    Op(Op),
+    /// A part's new bytes: the presentation part with its new `sldSz`.
+    Replace(String, Vec<u8>),
+}
+
 /// One opened deck, what each slide's last drawing left out, and its edits.
 #[derive(Debug)]
 pub struct Viewer {
@@ -191,9 +205,15 @@ pub struct Viewer {
     reports: BTreeMap<usize, Vec<String>>,
     /// The parts as opened: what a save patches from.
     original: SlideParts,
+    /// Each master's theme as opened, and the slide size (`VS-12`).
+    original_themes: BTreeMap<u32, casual_slide_model::theme::Theme>,
+    original_size: (i64, i64),
     history: History,
     /// The undo mark of the typing burst in progress, if any.
     typing: Option<u64>,
+    /// The last undo or redo changed more than one slide: a theme, the slide size, or
+    /// several backgrounds (`VS-12`).
+    wide: bool,
     /// Where each part added in this session came from (`VS-08`).
     origins: BTreeMap<u32, build::Origin>,
     /// Pictures inserted in this session, by the relationship id the model gives them.
@@ -208,12 +228,17 @@ impl Viewer {
     pub fn open(bytes: Vec<u8>) -> Result<Self, BridgeError> {
         let deck = Deck::open(bytes)?;
         let original = deck.parts().clone();
+        let original_themes = deck.themes().clone();
+        let original_size = deck.size();
         Ok(Self {
             deck,
             reports: BTreeMap::new(),
             original,
+            original_themes,
+            original_size,
             history: History::with_depth(Some(UNDO_DEPTH)),
             typing: None,
+            wide: false,
             origins: BTreeMap::new(),
             new_media: BTreeMap::new(),
             minted: 0,
@@ -280,6 +305,56 @@ impl Viewer {
     /// for text (`VS-05`, `VS-08`); every other byte stays.
     pub fn save(&self) -> Result<Vec<u8>, BridgeError> {
         self.save_built()
+    }
+
+    /// What Design changed (`VS-12`), as the writer takes it: each master's theme part
+    /// patched node by node from the part as opened, and `sldSz`.
+    fn design_edits(
+        &self,
+        package: &mut PresentationPackage,
+    ) -> Result<Vec<DesignEdit>, BridgeError> {
+        let save = |code: &'static str| BridgeError::Save(code);
+        let limits = *package.limits();
+        let mut out = Vec::new();
+        for (master, now) in self.deck.themes() {
+            let Some(before) = self.original_themes.get(master) else {
+                continue;
+            };
+            if before == now {
+                continue;
+            }
+            let (Some(b), Some(a)) = (before.elements.as_ref(), now.elements.as_ref()) else {
+                continue;
+            };
+            let Some(entry) = self.original.structure.entry(*master) else {
+                continue;
+            };
+            let Some(name) = entry.theme.as_deref() else {
+                continue;
+            };
+            let bytes = package.read_xml_part(name).map_err(|e| save(e.code()))?;
+            let mut tree = XmlTree::parse(&bytes, name, &limits).map_err(|e| save(e.code()))?;
+            if casual_slide_export::design::patch_theme_schemes(&mut tree, b, a)
+                .map_err(|e| save(e.code()))?
+            {
+                out.push(DesignEdit::Op(Op::EditTheme {
+                    master: entry.part.clone(),
+                    bytes: tree.to_bytes(),
+                }));
+            }
+        }
+        let (cx, cy) = self.deck.size();
+        if (cx, cy) != self.original_size {
+            let name = package.main_part().to_owned();
+            let bytes = package.read_xml_part(&name).map_err(|e| save(e.code()))?;
+            let mut tree = XmlTree::parse(&bytes, &name, &limits).map_err(|e| save(e.code()))?;
+            if casual_slide_export::design::set_slide_size(&mut tree, cx, cy)
+                .map_err(|e| save(e.code()))?
+            {
+                out.push(DesignEdit::Replace(name, tree.to_bytes()));
+            }
+        }
+        Ok(out)
     }
 
     fn slide_ordinal(&self, index: usize) -> Result<u32, BridgeError> {
@@ -430,7 +505,10 @@ impl Viewer {
     }
 
     /// The slide an operation edited, if it is a slide.
-    fn slide_of(&self, op: Option<Operation>) -> Option<usize> {
+    fn slide_of(&mut self, op: Option<Operation>) -> Option<usize> {
+        self.wide = op
+            .as_ref()
+            .is_some_and(|op| design::redraws_all(op, &self.deck.parts().structure));
         let part = op?.part()?;
         self.deck
             .parts()
@@ -443,7 +521,7 @@ impl Viewer {
     /// Undo the latest edit; the slide it changed, if any.
     pub fn undo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self.history.undo(self.deck.parts_mut())?;
+        let op = self.history.undo(&mut DeckDoc(&mut self.deck))?;
         self.reports.clear();
         Ok(self.slide_of(op))
     }
@@ -451,9 +529,15 @@ impl Viewer {
     /// Redo the latest undone edit; the slide it changed, if any.
     pub fn redo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self.history.redo(self.deck.parts_mut())?;
+        let op = self.history.redo(&mut DeckDoc(&mut self.deck))?;
         self.reports.clear();
         Ok(self.slide_of(op))
+    }
+
+    /// Whether the last undo or redo changed more than one slide, so a host redraws them
+    /// all (`VS-12`).
+    pub fn undid_wide(&self) -> bool {
+        self.wide
     }
 
     /// Whether there is an edit to undo, and one to redo.
@@ -495,6 +579,14 @@ fn with_viewer<T>(f: impl FnOnce(&mut Viewer) -> Result<T, BridgeError>) -> Resu
         Some(v) => f(v).map_err(js),
         None => Err(js(BridgeError::NoDeck)),
     })
+}
+
+/// What an undo or redo changed: the slide, -1 for nothing shown, -2 for every slide.
+fn changed_code(v: &Viewer, slide: Option<usize>) -> i32 {
+    if v.undid_wide() {
+        return -2;
+    }
+    slide.map_or(-1, |i| i32::try_from(i).unwrap_or(-1))
 }
 
 /// The engine's version.
@@ -665,7 +757,10 @@ pub fn delete_shape(index: u32, node: u32) -> Result<(), JsError> {
 /// `CS-WSM-0001` with no deck.
 #[wasm_bindgen]
 pub fn undo() -> Result<i32, JsError> {
-    with_viewer(|v| Ok(v.undo()?.map_or(-1, |i| i32::try_from(i).unwrap_or(-1))))
+    with_viewer(|v| {
+        let slide = v.undo()?;
+        Ok(changed_code(v, slide))
+    })
 }
 
 /// Redo the latest undone edit. Returns the slide it changed, or -1.
@@ -675,7 +770,10 @@ pub fn undo() -> Result<i32, JsError> {
 /// `CS-WSM-0001` with no deck.
 #[wasm_bindgen]
 pub fn redo() -> Result<i32, JsError> {
-    with_viewer(|v| Ok(v.redo()?.map_or(-1, |i| i32::try_from(i).unwrap_or(-1))))
+    with_viewer(|v| {
+        let slide = v.redo()?;
+        Ok(changed_code(v, slide))
+    })
 }
 
 /// `[can undo, can redo]`, each 0 or 1.
@@ -1467,6 +1565,6 @@ pub fn set_shape_style(index: u32, node: u32, row: u32, column: u32) -> Result<b
 ///
 /// `CS-RND-*` for a slide that is not there.
 #[wasm_bindgen]
-pub fn theme_colors(index: u32) -> Result<Vec<String>, JsError> {
-    with_viewer(|v| v.theme_colors(index as usize))
+pub fn slide_palette(index: u32) -> Result<Vec<String>, JsError> {
+    with_viewer(|v| v.palette(index as usize))
 }
