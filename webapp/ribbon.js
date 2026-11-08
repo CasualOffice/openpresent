@@ -14,13 +14,15 @@
 // shape while saying plainly what works today.
 
 import { command, run, all as allCommands } from "./commands.js";
-import { TABS, FILE_RAIL } from "./ribbon.model.js";
+import { TABS, FILE_RAIL, PRESENT_MENU } from "./ribbon.model.js";
 
 const LAYOUT_KEY = "op.ribbon.layout";
 const DISPLAY_KEY = "op.ribbon.display";
-const LABELS_KEY = "op.ribbon.labels";
-// As OpenCalc (its owner, 2026-10-14): group names on, button labels off.
-const LABELS_DEFAULT = "captions";
+// A new key: the old one held OpenCalc's default, captions only, for everyone.
+const LABELS_KEY = "op.ribbon.labels.v2";
+// PowerPoint's classic ribbon names its groups and labels its buttons (docs/53),
+// so both are on; OpenCalc's owner chose captions only for Excel (2026-10-14).
+const LABELS_DEFAULT = "full";
 
 const store = {
   get(k, d) { try { return localStorage.getItem(k) || d; } catch { return d; } },
@@ -149,7 +151,8 @@ function button(spec, size) {
   b.title = spec.label;
   b.setAttribute("aria-label", shortLabel(spec.label));
   b.appendChild(icon(spec.icon, size === "l" ? 24 : 16));
-  if (size === "l") b.appendChild(h("span", "rb-label", shortLabel(spec.label)));
+  if (size === "l" || spec.text) b.appendChild(h("span", "rb-label", shortLabel(spec.label)));
+  if (spec.text) b.classList.add("rb-text");
   if (spec.menu) { b.appendChild(caret()); b.setAttribute("aria-haspopup", "true"); b.setAttribute("aria-expanded", "false"); }
   b.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -178,10 +181,83 @@ function rows(spec) {
   col.dataset.rows = String(spec.rows.length);
   for (const r of spec.rows) {
     const row = h("div", "rb-row");
-    for (const it of r) row.appendChild(button(it, "s"));
+    for (const it of r) row.appendChild(it.kind === "combo" ? combo(it) : button(it, "s"));
     col.appendChild(row);
   }
   return col;
+}
+
+/// A combo box (Font, Font Size). Its value is the command's `value()` when the
+/// registry gives one; with no working command it is drawn disabled, as a button is.
+function combo(spec) {
+  const wrap = h("div", "rb-combo");
+  wrap.style.width = `${spec.width}px`;   // CSSOM, which the CSP allows
+  const b = h("button", "rb-combo-btn");
+  b.type = "button";
+  b.dataset.cmd = spec.id;
+  b.dataset.opProxy = spec.id;
+  b.title = spec.label;
+  b.setAttribute("aria-label", spec.label);
+  b.setAttribute("aria-haspopup", "listbox");
+  const val = h("span", "rb-combo-val", "");
+  b.append(val, caret());
+  b.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run(spec.id); queueSync(); });
+  wrap.appendChild(b);
+  sync.add(() => {
+    const c = command(spec.id);
+    const live = !!c && (!c.enabled || c.enabled());
+    if (b.disabled !== !live) b.disabled = !live;
+    b.title = tip(spec.label, c);
+    const v = c && c.value ? c.value() : "";
+    if (val.textContent !== v) val.textContent = v;
+  });
+  return wrap;
+}
+
+/// An in-ribbon gallery: a row of tiles (our own swatches, or icons) and the
+/// More arrow. The gallery is one command, enabled or not as that command is.
+function gallery(spec) {
+  const g = h("div", "rb-gallery");
+  g.setAttribute("role", "listbox");
+  g.setAttribute("aria-label", spec.label);
+  const tiles = h("div", "rb-gal-tiles");
+  const btns = [];
+  for (const t of spec.tiles) {
+    const b = h("button", "rb-gal-tile");
+    b.type = "button";
+    b.setAttribute("role", "option");
+    b.title = t[0];
+    if (t[1].startsWith("#")) {
+      const sw = h("span", "rb-gal-swatch");
+      sw.style.background = t[1];
+      const aa = h("span", "rb-gal-aa", "Aa");
+      aa.style.color = t[2];
+      const bar = h("span", "rb-gal-bar");
+      bar.style.background = t[2];
+      sw.append(aa, bar);
+      b.appendChild(sw);
+    } else {
+      b.append(icon(t[1], 24), h("span", "rb-gal-name", t[0]));
+    }
+    b.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run(spec.id); queueSync(); });
+    tiles.appendChild(b);
+    btns.push(b);
+  }
+  const more = h("button", "rb-gal-more");
+  more.type = "button";
+  more.title = `More ${spec.label}`;
+  more.setAttribute("aria-label", `More ${spec.label}`);
+  more.appendChild(icon("chevron_down", 12));
+  more.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run(spec.id); queueSync(); });
+  btns.push(more);
+  g.append(tiles, more);
+  sync.add(() => {
+    const c = command(spec.id);
+    const live = !!c && (!c.enabled || c.enabled());
+    for (const b of btns) if (b.disabled !== !live) b.disabled = !live;
+    more.title = tip(`More ${spec.label}`, c);
+  });
+  return g;
 }
 
 function group(spec) {
@@ -190,10 +266,28 @@ function group(spec) {
   g.setAttribute("aria-label", spec.label);
   g.dataset.fold = String(spec.fold ?? 99);
   const items = h("div", "rb-items");
-  for (const it of spec.items) items.appendChild(it.kind === "large" ? button(it, "l") : rows(it));
+  for (const it of spec.items) {
+    items.appendChild(it.kind === "large" ? button(it, "l") : it.kind === "gallery" ? gallery(it) : rows(it));
+  }
   const cap = h("div", "rb-cap");
   cap.appendChild(h("span", "rb-cap-text", spec.label));
   g.append(items, cap);
+  // The dialog launcher at the group's bottom right, as PowerPoint's.
+  if (spec.launcher) {
+    const lb = h("button", "rb-launch");
+    lb.type = "button";
+    lb.dataset.cmd = spec.launcher;
+    lb.appendChild(icon("arrow_down", 12));
+    lb.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run(spec.launcher); queueSync(); });
+    sync.add(() => {
+      const c = command(spec.launcher);
+      lb.disabled = !c || (c.enabled && !c.enabled());
+      const name = shortLabel(c?.label || spec.label);
+      lb.title = tip(name, c);
+      lb.setAttribute("aria-label", name);
+    });
+    g.appendChild(lb);
+  }
   // The folded form: one large button that drops the group's own contents.
   const folded = h("button", "rb-btn rb-l rb-folded");
   folded.type = "button";
@@ -232,9 +326,16 @@ function fit(panel) {
   if (!panel) return;
   for (const g of panel.querySelectorAll(".rb-group.is-folded")) g.classList.remove("is-folded");
   const groups = [...panel.querySelectorAll(".rb-group")].sort((a, b) => a.dataset.fold - b.dataset.fold);
+  const over = () => panel.scrollWidth > panel.clientWidth + 1;
   for (const g of groups) {
-    if (panel.scrollWidth <= panel.clientWidth + 1) break;
+    if (!over()) break;
     g.classList.add("is-folded");
+  }
+  // Folding a narrow group saves little, so open again, highest rank first,
+  // every group that fits now that others are folded.
+  for (const g of groups.filter((x) => x.classList.contains("is-folded")).reverse()) {
+    g.classList.remove("is-folded");
+    if (over()) g.classList.add("is-folded");
   }
 }
 
@@ -295,20 +396,98 @@ function buildTitleBar() {
     if (e.altKey && (e.key === "q" || e.key === "Q" || e.code === "KeyQ")) { e.preventDefault(); e.stopPropagation(); input.focus(); }
   }, true);
 
-  if (right) {
-    const share = h("button", "rb-share");
-    share.type = "button";
-    share.dataset.opProxy = "file.share";
-    share.append(icon("share", 16), h("span", null, "Share"));
-    share.addEventListener("click", () => run("file.share"));
-    right.prepend(share);
-    sync.add(() => {
-      const c = command("file.share");
-      share.disabled = !c || (c.enabled && !c.enabled());
-      share.title = tip("Share", c);
-    });
-  }
 }
+
+/// The right end of the tab row, as PowerPoint for the web: Comments, the
+/// editing mode, Present (a split button) and Share (docs/53).
+function buildTabRowEnd(strip) {
+  const end = h("div", "rb-tabs-end");
+  const plain = (id, ic, label, cls) => {
+    const b = h("button", `rb-end-btn ${cls || ""}`.trim());
+    b.type = "button";
+    b.dataset.opProxy = id;
+    b.append(icon(ic, 16), h("span", "rb-end-label", label));
+    b.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run(id); queueSync(); });
+    sync.add(() => {
+      const c = command(id);
+      b.disabled = !c || (c.enabled && !c.enabled());
+      b.title = tip(label, c);
+    });
+    return b;
+  };
+  end.appendChild(plain("review.show-comments", "comment", "Comments"));
+  // Editing mode: this build edits; Reviewing and Viewing arrive with comments.
+  const mode = h("button", "rb-end-btn rb-mode");
+  mode.type = "button";
+  mode.title = "Editing mode";
+  mode.setAttribute("aria-haspopup", "true");
+  mode.append(icon("edit", 16), h("span", "rb-end-label", "Editing"), caret());
+  mode.addEventListener("click", (e) => { e.stopPropagation(); commandMenu(mode, ["view.mode.editing", "view.mode.reviewing", "view.mode.viewing"]); });
+  end.appendChild(mode);
+  // Present: the main part plays from the current slide, the arrow drops the rest.
+  const present = h("div", "rb-present");
+  const main = h("button", "rb-present-main");
+  main.type = "button";
+  main.dataset.opProxy = "slideshow.from-current";
+  main.append(icon("presenter", 16), h("span", "rb-end-label", "Present"));
+  main.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run("slideshow.from-current"); });
+  const drop = h("button", "rb-present-drop");
+  drop.type = "button";
+  drop.title = "Presenting options";
+  drop.setAttribute("aria-label", "Presenting options");
+  drop.setAttribute("aria-haspopup", "true");
+  drop.appendChild(caret());
+  drop.addEventListener("click", (e) => { e.stopPropagation(); if (openPop?.owner === drop) closePop(); else commandMenu(drop, PRESENT_MENU); });
+  present.append(main, drop);
+  sync.add(() => {
+    const c = command("slideshow.from-current");
+    main.disabled = !c || (c.enabled && !c.enabled());
+    main.title = tip("Present from the current slide (Shift+F5)", c);
+  });
+  end.appendChild(present);
+  end.appendChild(plain("file.share", "share", "Share", "rb-share"));
+  strip.appendChild(end);
+}
+
+/// A right-click menu at a point: command ids run through the registry, `null`
+/// a separator. A verb this build lacks is shown disabled, as on the ribbon.
+export function contextMenu(x, y, ids) {
+  const anchor = { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y }), setAttribute() {} };
+  popover(anchor, (el) => {
+    el.classList.add("rb-ctx");
+    let sep = false;
+    for (const id of ids) {
+      if (id === null) { sep = true; continue; }
+      const c = command(id);
+      if (!c || (c.hidden && c.hidden())) continue;
+      if (sep && el.childElementCount) el.appendChild(h("div", "rb-pop-sep"));
+      sep = false;
+      const b = h("button", "rb-pop-item", shortLabel(c.label || id));
+      b.type = "button";
+      b.dataset.cmd = id;
+      b.setAttribute("role", "menuitem");
+      if (c.shortcut) b.appendChild(h("span", "rb-pop-key", c.shortcut));
+      if (c.enabled && !c.enabled()) { b.disabled = true; b.title = tip(c.label || id, c); }
+      b.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run(id); queueSync(); });
+      el.appendChild(b);
+    }
+  });
+  // Keyboard: arrows move between items, Esc closes (the document's handler).
+  openPop?.el.addEventListener("keydown", (e) => {
+    const items = [...openPop.el.querySelectorAll(".rb-pop-item:not(:disabled)")];
+    const i = items.indexOf(document.activeElement);
+    const step = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0;
+    if (!step || !items.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    items[(i + step + items.length) % items.length].focus();
+  });
+}
+
+/// What decides whether a contextual tab shows: `(kind) => boolean`, set by the
+/// editor (a shape selected shows Shape Format).
+let contextual = () => false;
+export function setContextual(fn) { contextual = fn; queueSync(); }
 
 function buildBackstage() {
   const bs = h("div", "rb-backstage");
@@ -470,6 +649,16 @@ export async function start(anchor) {
     const t = h("button", "rb-tab", tab.label);
     t.type = "button";
     t.id = `rb-tab-${tab.id}`;
+    if (tab.contextual) {
+      t.classList.add("rb-tab-ctx");
+      t.hidden = true;
+      sync.add(() => {
+        const on = contextual(tab.contextual);
+        if (t.hidden === !on) return;
+        t.hidden = !on;
+        if (!on && t.classList.contains("is-on")) select("home");
+      });
+    }
     t.setAttribute("role", "tab");
     t.setAttribute("aria-controls", `rb-panel-${tab.id}`);
     t.addEventListener("click", () => select(tab.id));
@@ -487,6 +676,7 @@ export async function start(anchor) {
   layout.type = "button";
   layout.appendChild(icon("chevron_down", 14));
   band.appendChild(layout);
+  buildTabRowEnd(strip);
   el.append(strip, band);
   anchor.parentElement.insertBefore(el, anchor);
 
@@ -560,7 +750,7 @@ export async function start(anchor) {
   applyLabels(store.get(LABELS_KEY, LABELS_DEFAULT));
 
   tablist.addEventListener("keydown", (e) => {
-    const tabs = [...tablist.querySelectorAll(".rb-tab")];
+    const tabs = [...tablist.querySelectorAll(".rb-tab")].filter((t) => !t.hidden);
     const i = tabs.indexOf(document.activeElement);
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
     if (i < 0 || !step) return;
