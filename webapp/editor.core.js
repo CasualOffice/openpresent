@@ -36,6 +36,7 @@ import * as objects from "./editor.objects.js";
 import * as picture from "./editor.picture.js";
 import * as home from "./editor.home.js";
 import * as clipboard from "./editor.clipboard.js";
+import * as keys from "./editor.keys.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 import * as presence from "./editor.presence.js";
 import { registerFileCommands, initFile } from "./editor.file.js";
@@ -353,6 +354,8 @@ function bindKeys() {
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
     const mod = e.ctrlKey || e.metaKey;
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && build.onKey(e)) return;
+    // PowerPoint's shortcuts, over the browser's own (`PAR-13`, `editor.keys.js`).
+    if (state.deck && !e.target.closest?.(".rb-pop") && keys.handle(e)) return;
     if (mod && !e.altKey && (e.key === "o" || e.key === "O")) { e.preventDefault(); openFilePicker(); return; }
     if (mod && !e.altKey && (e.key === "s" || e.key === "S")) { e.preventDefault(); run("file.save"); return; }
     if (e.key === "F5" && !mod) {

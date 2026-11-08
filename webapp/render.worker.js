@@ -38,9 +38,10 @@ import init, {
   table_style, set_table_style, insert_chart, chart_data, set_chart_data,
   collab_begin, collab_end, collab_flush, collab_acknowledge, collab_unacknowledged,
   collab_receive, collab_replay, collab_map_offset, collab_presence, protocol_version,
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich,
   font_families, font_css_stack, font_face_bytes,
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
+  copy_slides, clipboard_slides, paste_slides,
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
   slide_comments, comment_counts, add_comment, reply_comment, resolve_comment, delete_comment,
   notes_body, text_body_runs, selection_list, rename_shape, set_shape_hidden, move_shape_z,
@@ -77,7 +78,7 @@ const TEXT = {
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   // The Home tab's Font and Paragraph groups, and Copy of text (`UX-003`).
-  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice,
+  text_run_state, text_set_run, text_grow, text_set_paragraphs, text_slice, text_paste_rich,
 };
 
 // Building a deck (`VS-08`): `{ id, op: "build", fn, args }` calls one of these by name
@@ -91,6 +92,7 @@ const BUILD = {
   set_shape_style, slide_palette, edit_break_typing,
   // The shape clipboard and multiple selection (`UX-003`).
   copy_shapes, clipboard_shapes, paste_shapes, duplicate_shapes, set_shape_transforms, delete_shapes,
+  copy_slides, clipboard_slides, paste_slides,
   // Picture Format (`UX-003`).
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
 };
@@ -183,7 +185,10 @@ self.onmessage = async (event) => {
     } else if (msg.op === "text") {
       const fn = Object.hasOwn(TEXT, msg.fn) ? TEXT[msg.fn] : null;
       if (!fn) throw new Error("unknown request");
-      let value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      const args = Array.isArray(msg.args) ? msg.args.slice() : [];
+      // Rich paste (`PAR-11`): the runs' looks and the paragraphs' lists as typed arrays.
+      if (msg.fn === "text_paste_rich") { args[5] = new Int32Array(args[5] || []); args[6] = new Uint8Array(args[6] || []); }
+      let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()) });
     } else if (msg.op === "plan") {
@@ -211,6 +216,8 @@ self.onmessage = async (event) => {
       if (msg.fn === "insert_picture") args[1] = new Uint8Array(args[1]);
       if (NODE_LISTS.has(msg.fn)) args[1] = new Uint32Array(args[1] || []);
       if (msg.fn === "set_shape_transforms") args[1] = new Float64Array(args[1] || []);
+      // The thumbnail pane's slide clipboard (`PAR-10`).
+      if (msg.fn === "copy_slides") args[0] = new Uint32Array(args[0] || []);
       let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });

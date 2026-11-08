@@ -207,7 +207,7 @@ pub(crate) fn read_slide_kind(
 }
 
 /// Give every node of a part this ordinal.
-fn renumber_part(part: &mut SlidePart, ordinal: u32) {
+pub(crate) fn renumber_part(part: &mut SlidePart, ordinal: u32) {
     part.id = ObjectId::part(ordinal);
     if let Some(root) = part.shape_tree_mut() {
         let mut stack = vec![root];
@@ -401,7 +401,7 @@ impl Viewer {
         parts.structure.entry(parts.structure.slide(index)?)?.layout
     }
 
-    fn next_ordinal(&self) -> Result<u32, BridgeError> {
+    pub(crate) fn next_ordinal(&self) -> Result<u32, BridgeError> {
         u32::try_from(self.deck.parts().parts.len()).map_err(|_| BridgeError::BadArgument)
     }
 
@@ -412,37 +412,49 @@ impl Viewer {
         part: SlidePart,
         origin: Origin,
     ) -> Result<usize, BridgeError> {
-        let ordinal = entry.id.part;
-        let op = Operation::Batch(vec![
-            Operation::AddPart {
-                entry: Box::new(entry),
-                part: Box::new(part),
-            },
-            Operation::InsertSlide { index: at, ordinal },
-        ]);
-        self.typing = None;
-        self.history.apply(self.deck.parts_mut(), op)?;
-        self.origins.insert(ordinal, origin);
-        self.reports.clear();
+        self.add_slide_parts(vec![(at, entry, part, origin)])?;
         Ok(at)
     }
 
-    /// New Slide: a slide on layout `layout` (an ordinal from [`Viewer::layouts`]) at
-    /// place `at`, with an empty copy of each of the layout's placeholders. One undo step.
-    pub fn new_slide(&mut self, at: usize, layout: u32) -> Result<usize, BridgeError> {
-        let parts = self.deck.parts();
-        if at > parts.structure.slides.len() {
-            return Err(BridgeError::Edit(
-                casual_slide_transaction::TxnError::NoSuchSlide(at),
-            ));
+    /// Add several new slides, each `(place, entry, part, origin)`, as one undo step.
+    pub(crate) fn add_slide_parts(
+        &mut self,
+        slides: Vec<(usize, PartEntry, SlidePart, Origin)>,
+    ) -> Result<(), BridgeError> {
+        let mut ops = Vec::with_capacity(slides.len() * 2);
+        let mut origins = Vec::with_capacity(slides.len());
+        for (at, entry, part, origin) in slides {
+            let ordinal = entry.id.part;
+            ops.push(Operation::AddPart {
+                entry: Box::new(entry),
+                part: Box::new(part),
+            });
+            ops.push(Operation::InsertSlide { index: at, ordinal });
+            origins.push((ordinal, origin));
         }
-        let layout_entry = parts
+        self.typing = None;
+        self.history
+            .apply(self.deck.parts_mut(), Operation::Batch(ops))?;
+        self.origins.extend(origins);
+        self.reports.clear();
+        Ok(())
+    }
+
+    /// A new slide part on layout `layout` at part ordinal `ordinal`, with an empty copy
+    /// of each of the layout's placeholders, and its entry: what New Slide adds.
+    pub(crate) fn layout_slide(
+        &mut self,
+        layout: u32,
+        ordinal: u32,
+    ) -> Result<(PartEntry, SlidePart), BridgeError> {
+        let layout_entry = self
+            .deck
+            .parts()
             .structure
             .entry(layout)
             .filter(|e| e.kind == SlideKind::Layout)
             .ok_or(BridgeError::BadArgument)?
             .clone();
-        let ordinal = self.next_ordinal()?;
         let xml = self
             .deck
             .read_part(&layout_entry.part)
@@ -461,6 +473,20 @@ impl Viewer {
             notes: None,
             theme: None,
         };
+        Ok((entry, part))
+    }
+
+    /// New Slide: a slide on layout `layout` (an ordinal from [`Viewer::layouts`]) at
+    /// place `at`, with an empty copy of each of the layout's placeholders. One undo step.
+    pub fn new_slide(&mut self, at: usize, layout: u32) -> Result<usize, BridgeError> {
+        let parts = self.deck.parts();
+        if at > parts.structure.slides.len() {
+            return Err(BridgeError::Edit(
+                casual_slide_transaction::TxnError::NoSuchSlide(at),
+            ));
+        }
+        let ordinal = self.next_ordinal()?;
+        let (entry, part) = self.layout_slide(layout, ordinal)?;
         self.add_slide_part(at, entry, part, Origin::Layout(layout))
     }
 
