@@ -330,6 +330,8 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_WIRE_TEXT` | `1 << 20` | Characters of one inserted text on the wire (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_WIRE_XML` | `1 << 20` | Bytes of one node's XML on the wire, which is then read under the reader's own limits (`VS-09`) | CS-COL-0004 | Untested |
 | `MAX_CLIP_SHAPES` | `1000` | Shapes one Copy, Paste, Duplicate, group move or group delete takes (`UX-003`) | CS-WSM-0006 | Untested |
+| `MAX_COMMENT_CHARS` | `10_000` | Characters of one comment or reply typed in the Comments pane (`UX-011`) | None: the text is cut; control characters but line feeds are dropped; empty text is CS-WSM-0006 | Untested |
+| `MAX_RENAME_CHARS` | `255` | Characters of a name given in the Selection Pane, or of a comment author's name (`UX-011`) | None: the name is cut and control characters dropped | Untested |
 | `MAX_CROP` | `99_000` | Thousandths of a percent Crop may cut from one side, or two opposite sides together, so some of the picture stays (`UX-003`) | CS-WSM-0006 | Tested: `a_crop_cutting_everything_or_a_shape_not_a_picture_is_refused` |
 | `MAX_PAD` | `1_000_000` | Thousandths of a percent a negative crop may pad one side (`UX-003`) | CS-WSM-0006 | Untested |
 | `MAX_FONT_POINTS` | `4000.0` | Points the Font Size box takes, `ST_TextFontSize`'s bound (`UX-003`) | CS-WSM-0006 | `home_tests::a_bad_size_or_colour_is_refused_and_changes_nothing` |

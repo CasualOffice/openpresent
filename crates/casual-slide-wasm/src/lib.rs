@@ -40,6 +40,7 @@ mod format;
 mod home_tests;
 mod picture;
 pub use picture::{MAX_CROP, MAX_PAD, PICTURE_STYLES};
+mod review;
 mod rich;
 mod shapes;
 pub use animate::AnimationItem;
@@ -265,6 +266,11 @@ pub struct Viewer {
     shared: Option<collab::Shared>,
     /// This deck's number in the session, so a paste knows whether it came from it.
     serial: u64,
+    /// The deck's modern comments and authors, edited (`UX-011`), and as opened.
+    review: casual_slide_transaction::Review,
+    original_review: casual_slide_transaction::Review,
+    /// Where each slide's comment part and the author list were found, as opened.
+    review_parts: review::ReviewParts,
 }
 
 impl Viewer {
@@ -272,6 +278,7 @@ impl Viewer {
     /// reader's code; a damaged one opens with a best reading where the reader recovers one (`docs/29`).
     pub fn open(bytes: Vec<u8>) -> Result<Self, BridgeError> {
         let deck = Deck::open(bytes)?;
+        let (original_review, review_parts) = review::read(&deck);
         let original = deck.parts().clone();
         let original_themes = deck.themes().clone();
         let original_size = deck.size();
@@ -290,6 +297,9 @@ impl Viewer {
             minted: 0,
             shared: None,
             serial: clipboard::next_serial(),
+            review: original_review.clone(),
+            original_review,
+            review_parts,
         })
     }
 
@@ -598,7 +608,9 @@ impl Viewer {
     /// Undo the latest edit; the slide it changed, if any.
     pub fn undo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self.history.undo(&mut DeckDoc(&mut self.deck))?;
+        let op = self
+            .history
+            .undo(&mut DeckDoc(&mut self.deck, &mut self.review))?;
         self.reports.clear();
         Ok(self.slide_of(op))
     }
@@ -606,7 +618,9 @@ impl Viewer {
     /// Redo the latest undone edit; the slide it changed, if any.
     pub fn redo(&mut self) -> Result<Option<usize>, BridgeError> {
         self.typing = None;
-        let op = self.history.redo(&mut DeckDoc(&mut self.deck))?;
+        let op = self
+            .history
+            .redo(&mut DeckDoc(&mut self.deck, &mut self.review))?;
         self.reports.clear();
         Ok(self.slide_of(op))
     }

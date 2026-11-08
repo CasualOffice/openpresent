@@ -165,7 +165,9 @@ impl Viewer {
             }
             _ => set,
         };
-        let changed = self.history.apply(&mut DeckDoc(&mut self.deck), op)?;
+        let changed = self
+            .history
+            .apply(&mut DeckDoc(&mut self.deck, &mut self.review), op)?;
         self.reports.clear();
         Ok(changed)
     }
@@ -207,7 +209,7 @@ impl Viewer {
         let at = root.children.len();
         self.typing = None;
         self.history.apply(
-            &mut DeckDoc(&mut self.deck),
+            &mut DeckDoc(&mut self.deck, &mut self.review),
             Operation::InsertNode {
                 parent,
                 index: at,
@@ -456,7 +458,7 @@ impl Viewer {
         };
         self.typing = None;
         let changed = self.history.apply(
-            &mut DeckDoc(&mut self.deck),
+            &mut DeckDoc(&mut self.deck, &mut self.review),
             Operation::SetChart {
                 part: key.clone(),
                 chart: Box::new(new),
