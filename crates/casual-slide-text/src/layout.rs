@@ -574,6 +574,10 @@ fn break_lines(
     }
     if lines.is_empty() {
         lines.push((skip, text.len()));
+    } else if start == text.len() && text.ends_with('\n') {
+        // A break ending the paragraph opens an empty last line, sized by the
+        // paragraph mark, as PowerPoint draws it.
+        lines.push((start, start));
     }
     lines
 }

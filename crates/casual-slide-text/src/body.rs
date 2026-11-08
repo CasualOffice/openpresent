@@ -943,6 +943,37 @@ mod tests {
         }
 
         #[test]
+        fn a_break_ending_a_paragraph_opens_a_line_sized_by_the_paragraph_mark() {
+            let body = |with_break: bool| {
+                let mut items = vec![run("x", props(1800, false, "Arial", None))];
+                if with_break {
+                    items.push(TextItem::Break(Default::default()));
+                }
+                TextBody {
+                    properties: Some(BodyProperties {
+                        anchor: Some(TextAnchor::Bottom),
+                        ..BodyProperties::default()
+                    }),
+                    list_style: None,
+                    paragraphs: vec![Paragraph {
+                        properties: None,
+                        items,
+                        end_properties: Some(Box::new(props(4400, false, "Arial", None))),
+                    }],
+                }
+            };
+            let env = TextEnv::default();
+            let plain = layout_text_body(&body(false), &TextChain::default(), &env, FRAME);
+            let broken = layout_text_body(&body(true), &TextChain::default(), &env, FRAME);
+            assert_eq!((plain.lines, broken.lines), (1, 2));
+            let lift = plain.runs[0].glyphs[0].y - broken.runs[0].glyphs[0].y;
+            assert!(
+                lift > 44.0,
+                "the empty last line is 44 pt type high, not 18: lifted {lift}"
+            );
+        }
+
+        #[test]
         fn a_hyperlinked_run_takes_the_hlink_colour_and_an_underline() {
             use casual_slide_model::shape::Hyperlink;
             use casual_slide_model::theme::{ColorMap, ColorScheme, ColorSchemeIndex};
