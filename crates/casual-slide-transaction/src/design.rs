@@ -38,6 +38,11 @@ pub trait Document {
         let _ = part;
         None
     }
+
+    /// The deck's modern comments and authors (`UX-011`), if the host keeps them.
+    fn review_mut(&mut self) -> Option<&mut crate::Review> {
+        None
+    }
 }
 
 impl Document for SlideParts {
