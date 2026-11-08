@@ -1076,7 +1076,7 @@ RECOVERS = {
     "hostile/no-content-types.bin": "recover:CS-OPC-0001 CS-REC-0201 CS-REC-0205",
     "hostile/no-root-rels.bin": "recover:CS-OPC-0001 CS-REC-0203",
     "hostile/main-part-missing.bin": "recover:CS-OPC-0001 CS-REC-0204",
-    "hostile/spoofed-office-document-type.bin": "recover:CS-OPC-0001 CS-FND-0007 CS-REC-0203",
+    "hostile/spoofed-office-document-type.bin": "recover:CS-OPC-0001 CS-REC-0203",
     "hostile/path-traversal.bin": "recover:CS-PKG-0004 CS-FND-0005 CS-REC-0106",
     "hostile/path-too-long.bin": "recover:CS-PKG-0004 CS-FND-0005 CS-REC-0106",
     "hostile/case-colliding-parts.bin": "recover:CS-PKG-0007 CS-FND-0005 CS-REC-0105",

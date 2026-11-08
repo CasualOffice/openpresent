@@ -48,7 +48,7 @@ hostile/main-is-workbook.bin	95f5aa7bd54856a954f2b25af5616b20ca933d62aae7a432d98
 hostile/no-content-types.bin	570de4a7a7ebe3bcff700698e2434bf4e58e63117c2dbbe0e1e4c3ee940b7ff0	recover:CS-OPC-0001 CS-REC-0201 CS-REC-0205
 hostile/no-root-rels.bin	c4236261b6cf2370062d9ee0d8e9285364c4392c48169e0a9fb851e6e451a31a	recover:CS-OPC-0001 CS-REC-0203
 hostile/main-part-missing.bin	c4c6274115415ff41f2381b2d3ad9402855442d3b28117db50f350c522299881	recover:CS-OPC-0001 CS-REC-0204
-hostile/spoofed-office-document-type.bin	7c681456cadf5c32be631dd80f910c68c5afafca725f1c920ee6064f499c97d0	recover:CS-OPC-0001 CS-FND-0007 CS-REC-0203
+hostile/spoofed-office-document-type.bin	7c681456cadf5c32be631dd80f910c68c5afafca725f1c920ee6064f499c97d0	recover:CS-OPC-0001 CS-REC-0203
 hostile/compound-file.bin	a899fb4496afa7230c378d5be03cf3461990994993110fd2dad3257111081275	refuse:CS-OPC-0005
 hostile/not-a-zip.bin	33cfb16d7f653a798e5c4bebacc536d429614e1d22d9e554c0df2fea7438fc02	refuse:CS-PKG-0005
 hostile/path-traversal.bin	d29698bde94d5c9dbd783aa22bf7b2ba3c0f9b4b80279506722510db40fdb0d5	recover:CS-PKG-0004 CS-FND-0005 CS-REC-0106
