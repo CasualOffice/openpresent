@@ -297,6 +297,7 @@ Past one of these the picture, shape or slide is not drawn, and the render repor
 | Limit | Default | Bounds | Code | Status |
 | --- | --- | --- | --- | --- |
 | `MAX_IMAGE_PIXELS` | `40_000_000` | Pixels a picture may declare before it is decoded | Report: image over the pixel limit | Partial: `a_png_declaring_too_many_pixels_is_refused_before_decoding` |
+| `MAX_EMF_RECORDS` | `100_000` | Records read from an EMF looking for its one bitmap (`T2E-03`, `FH-05`); the bitmap itself is held to `MAX_IMAGE_PIXELS` | Report: EMF not decoded | Partial: `truncated_and_hostile_metafiles_never_panic` |
 | `MAX_IMAGE_SIDE` | `20_000` | Pixels on one side of a JPEG, given to the decoder as its limit | Report: image over the pixel limit | Untested |
 | `MAX_MEDIA_BYTES` | `64 * 1024 * 1024` | Bytes of one media part read for drawing | Report: media not supplied | Untested |
 | `MAX_SIDE_PX` | `16_384` | Pixels on one side of a rendered slide | CS-RND-0001 | Untested |

@@ -28,6 +28,7 @@
 pub mod deck;
 mod diagram;
 pub mod display;
+mod emf;
 mod images;
 pub mod pdf;
 pub mod raster;

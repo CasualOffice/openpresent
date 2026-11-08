@@ -228,6 +228,13 @@ pub(crate) fn decode(
         return Err(UndrawnReason::NotSupplied);
     };
     if let Some(format) = foreign_format(bytes) {
+        // A metafile wrapping one bitmap is that bitmap (`FH-05`); any other EMF
+        // stays reported.
+        if format == "emf"
+            && let Some(bitmap) = crate::emf::lone_bitmap(bytes)
+        {
+            return bitmap;
+        }
         return Err(UndrawnReason::UnsupportedFormat(format));
     }
     if is_jpeg(bytes) {
@@ -281,6 +288,14 @@ mod tests {
             decode("absent", &source).err(),
             Some(UndrawnReason::NotSupplied)
         );
+    }
+
+    #[test]
+    fn an_emf_wrapping_one_bitmap_draws_as_that_bitmap() {
+        let mut source = BTreeMap::new();
+        source.insert("e".to_owned(), crate::emf::tests::wrapped_bitmap(4, &[]));
+        let pixmap = decode("e", &source).expect("the bitmap");
+        assert_eq!((pixmap.width(), pixmap.height()), (4, 2));
     }
 
     #[test]
