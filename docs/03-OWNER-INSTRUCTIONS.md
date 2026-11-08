@@ -52,6 +52,7 @@ by saying so.
 | 41 | 2026-11-08 | Phase 2 needs proper planning before it starts: scope, targets, decisions and an ETA, done deliberately and not rushed | [06](06-ROADMAP-AND-DELIVERY.md) |
 | 42 | 2026-11-08 | Don't reintroduce problems OpenCalc already solved. Each Phase 2 task starts from OpenCalc's working solution, copied with provenance, and changes only what slides need | [06](06-ROADMAP-AND-DELIVERY.md), [CLAUDE.md](../CLAUDE.md) |
 | 43 | 2026-11-08 | A visible outcome within 3 hours: start Phase 2 now with the plan's recommended decisions, aiming at real slides rendered to images the owner can see. This waives the rule that rendering waits for Phase 1's sign-off | [06](06-ROADMAP-AND-DELIVERY.md), `DEC-16` to `DEC-20` |
+| 44 | 2026-11-08 | Plan vertically: ship thin end-to-end slices a user can see and use, then deepen them, instead of perfecting each layer before the next | [06](06-ROADMAP-AND-DELIVERY.md), [05](05-PHASES-AND-TASKS.md) |
 
 ## Boundaries set by the environment
 
