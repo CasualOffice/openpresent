@@ -70,13 +70,13 @@ fn main() -> ExitCode {
         let _ = writeln!(report, "themes not read: {}", deck.themes_unread);
     }
     let path = outdir.join("report.txt");
-    if let Err(e) = std::fs::write(&path, &report) {
+    if let Err(e) = std::fs::write(&path, report) {
         eprintln!("render-deck: cannot write {}: {e}", path.display());
         return ExitCode::FAILURE;
     }
     println!(
         "render-deck: {} of {} slides rendered to {}",
-        deck.slide_count() - failed,
+        deck.slide_count().saturating_sub(failed),
         deck.slide_count(),
         outdir.display()
     );

@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 
 use casual_slide_geometry::{Adjust, Extents, FillMode, GeometryDef, Segment, preset_shape};
 use casual_slide_model::color::{Color, ResolveContext, resolve};
+use casual_slide_model::effect::EffectProperties;
 use casual_slide_model::fill::{
     BlipFill, BlipFillMode, Fill, GradientFill, GradientShade, PathShadeType, PatternFill,
 };
@@ -534,12 +535,14 @@ impl<'a> Builder<'a> {
         } else {
             None
         };
-        if levels.iter().any(|n| n.properties.effects.is_some())
-            || style
-                .and_then(|s| s.effect.as_ref())
-                .and_then(|e| e.idx)
-                .is_some_and(|i| i > 0)
-        {
+        // The nearest stated effect list wins, as for fills; an empty one is none.
+        let own_effects = levels.iter().find_map(|n| n.properties.effects.as_ref());
+        let style_effects = style
+            .and_then(|s| s.effect.as_ref())
+            .and_then(|e| e.idx)
+            .and_then(|i| self.format().and_then(|f| f.effect(i)))
+            .and_then(|e| e.effects.as_ref());
+        if own_effects.or(style_effects).is_some_and(has_effect) {
             self.report.note("effects");
         }
         if node.properties.scene3d.is_some() || node.properties.sp3d.is_some() {
@@ -740,6 +743,14 @@ impl<'a> Builder<'a> {
             out.push((cmds, path.fill, path.stroke));
         }
         out
+    }
+}
+
+/// Whether an effect list draws anything.
+fn has_effect(e: &EffectProperties) -> bool {
+    match e {
+        EffectProperties::List(list) => !list.is_empty(),
+        EffectProperties::Dag(_) => true,
     }
 }
 

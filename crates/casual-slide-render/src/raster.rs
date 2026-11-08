@@ -159,12 +159,12 @@ fn draw(
                 alpha.clamp(0.0, 1.0) as f32,
                 place,
             );
-            let mut sk = SkPaint {
+            let sk = SkPaint {
                 shader,
                 anti_alias: true,
+                force_hq_pipeline: true,
                 ..SkPaint::default()
             };
-            sk.force_hq_pipeline = true;
             match stroke {
                 Some(s) => pixmap.stroke_path(path, &sk, s, transform, None),
                 None => pixmap.fill_path(path, &sk, FillRule::Winding, transform, None),

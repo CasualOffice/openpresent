@@ -24,8 +24,8 @@ use crate::{RenderError, RenderReport};
 /// supplied.
 pub const MAX_MEDIA_BYTES: u64 = 64 * 1024 * 1024;
 
-/// The slide size used when the deck states none: the schema requires `sldSz`, and
-/// PowerPoint's 4:3 default is assumed.
+/// The slide size used when the deck states none, or one of no size: the schema
+/// requires `sldSz`, and PowerPoint's 4:3 default is assumed.
 pub const DEFAULT_SLIDE_SIZE: (i64, i64) = (9_144_000, 6_858_000);
 
 /// Internal relationship targets, by part ordinal then relationship id.
@@ -81,7 +81,10 @@ impl Deck {
         let size = deck
             .presentation
             .slide_size
-            .map_or(DEFAULT_SLIDE_SIZE, |s| (i64::from(s.cx), i64::from(s.cy)));
+            .map(|s| (i64::from(s.cx), i64::from(s.cy)))
+            // A size of nothing cannot be drawn; the default stands in, as for none.
+            .filter(|&(w, h)| w > 0 && h > 0)
+            .unwrap_or(DEFAULT_SLIDE_SIZE);
 
         let mut themes = BTreeMap::new();
         let mut themes_unread = 0u32;
