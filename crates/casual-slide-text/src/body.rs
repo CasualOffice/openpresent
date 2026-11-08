@@ -308,10 +308,13 @@ fn run_style<'a>(
         fonts.record(f);
     }
     // A hyperlinked run is drawn in the theme's `hlink` and underlined, whatever
-    // its own fill, as PowerPoint and LibreOffice draw it. The 2019 extension that
-    // asks for the text's own colour (`hlinkClr val="tx"`) is not modelled
-    // (`FH-04`).
-    let link = props.is_some_and(|c| c.hyperlink_click.is_some());
+    // its own fill, as PowerPoint and LibreOffice draw it, unless the 2019
+    // extension asks for the text's own colour (`hlinkClr val="tx"`): then only
+    // the underline is added.
+    let click = props.and_then(|c| c.hyperlink_click.as_deref());
+    let link = click.is_some();
+    let link_colour =
+        click.is_some_and(|h| h.color != Some(casual_slide_model::shape::HyperlinkColor::Text));
     RunStyle {
         family,
         size: chain.font_size(props, paragraph).value.max(1) as f32 / 100.0,
@@ -321,7 +324,7 @@ fn run_style<'a>(
         italic: chain
             .run(props, paragraph, |c| c.italic)
             .is_some_and(|b| b.value),
-        color: link
+        color: link_colour
             .then(|| hyperlink_color(fonts.env))
             .flatten()
             .unwrap_or_else(|| {
@@ -1014,6 +1017,53 @@ mod tests {
             assert_eq!(runs[0].style.underline, Some(UnderlineType::Sng));
             assert_eq!(runs[1].style.color, Rgba::BLACK);
             assert_eq!(runs[1].style.underline, None);
+        }
+
+        #[test]
+        fn a_hyperlink_asking_for_the_text_colour_keeps_the_runs_own_fill() {
+            use casual_slide_model::shape::{Hyperlink, HyperlinkColor};
+            use casual_slide_model::theme::{ColorMap, ColorScheme, ColorSchemeIndex};
+            let mut scheme = ColorScheme::default();
+            scheme.slots[ColorSchemeIndex::Hlink as usize] = Some(Color::srgb(5, 99, 193));
+            let mut map = ColorMap::default();
+            map.slots[casual_slide_model::theme::ColorMapSlot::Hlink as usize] =
+                Some(ColorSchemeIndex::Hlink);
+            let env = TextEnv {
+                colors: ResolveContext {
+                    scheme: Some(&scheme),
+                    map: Some(&map),
+                    ..ResolveContext::default()
+                },
+                fonts: None,
+            };
+            let mut linked = props(2100, false, "Arial", Some(Color::srgb(200, 10, 20)));
+            linked.hyperlink_click = Some(Box::new(Hyperlink {
+                rel_id: Some("rId2".to_owned()),
+                color: Some(HyperlinkColor::Text),
+                ..Hyperlink::default()
+            }));
+            let body = TextBody {
+                properties: None,
+                list_style: None,
+                paragraphs: vec![Paragraph {
+                    properties: None,
+                    items: vec![run("link", linked)],
+                    end_properties: None,
+                }],
+            };
+            let (resolved, _) = resolve_body(&body, &TextChain::default(), &env);
+            let style = &resolved.paragraphs[0].runs[0].style;
+            let c = style.color;
+            assert_eq!(
+                (c.r, c.g, c.b),
+                (200, 10, 20),
+                "the run's own fill, not hlink"
+            );
+            assert_eq!(
+                style.underline,
+                Some(UnderlineType::Sng),
+                "still underlined"
+            );
         }
     }
 }

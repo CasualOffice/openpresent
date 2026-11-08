@@ -835,6 +835,20 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
     })
     .unwrap_err();
     assert_eq!(code, "CS-EXP-0003");
+    // A hyperlink's colour extension is read, not written.
+    let code = edit_slide(&source, |s| {
+        let run = first_run_of_mut(named_mut(s, "Every Property"));
+        let link = run
+            .properties
+            .as_mut()
+            .unwrap()
+            .hyperlink_click
+            .as_mut()
+            .unwrap();
+        link.color = Some(casual_slide_model::shape::HyperlinkColor::Text);
+    })
+    .unwrap_err();
+    assert_eq!(code, "CS-EXP-0009");
 }
 
 /// Tier 1E's writer, from a run: each kind is made, changed in place and taken away,

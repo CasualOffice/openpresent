@@ -926,3 +926,23 @@ fn a_universal_measure_on_spc_keeps_its_unit() {
         (-150, Some("-1.5pt"))
     );
 }
+
+#[test]
+fn a_hyperlinks_colour_extension_is_read_and_its_ext_list_kept() {
+    use casual_slide_model::shape::HyperlinkColor;
+    let (body, findings, _) = read(
+        r#"<a:bodyPr/><a:p><a:r><a:rPr lang="en-US"><a:hlinkClick r:id="rId2"><a:extLst><a:ext uri="{A12FA001-AC4F-418D-AE19-62706E023703}"><ahyp:hlinkClr xmlns:ahyp="http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor" val="tx"/></a:ext></a:extLst></a:hlinkClick></a:rPr><a:t>link</a:t></a:r></a:p>"#,
+    );
+    let TextItem::Run(run) = &body.paragraphs[0].items[0] else {
+        panic!("not a run");
+    };
+    let link = run
+        .properties
+        .as_ref()
+        .unwrap()
+        .hyperlink_click
+        .as_ref()
+        .unwrap();
+    assert_eq!(link.color, Some(HyperlinkColor::Text));
+    assert!(findings.has(K::RetainedElement, "extLst"), "{findings:?}");
+}

@@ -8645,7 +8645,7 @@ x:drawing/2018/hyperlinkcolor:ST_HyperlinkColor/=hlink	SHAPE	ST_HyperlinkColor	v
 x:drawing/2018/hyperlinkcolor:ST_HyperlinkColor/=tx	SHAPE	ST_HyperlinkColor	value	=tx					r	r	r	.	.
 x:drawing/2018/hyperlinkcolor:CT_HyperlinkColor	SHAPE		type	CT_HyperlinkColor					r	r	r	.	.
 x:drawing/2018/hyperlinkcolor:CT_HyperlinkColor/@val	SHAPE	CT_HyperlinkColor	attribute	@val	ST_HyperlinkColor	required			r	r	r	.	.
-x:drawing/2018/hyperlinkcolor:<hlinkClr>	SHAPE		root	<hlinkClr>	CT_HyperlinkColor				r	r	r	.	.
+x:drawing/2018/hyperlinkcolor:<hlinkClr>	SHAPE		root	<hlinkClr>	CT_HyperlinkColor				y	y	r	.	.
 x:drawing/2018/animation/model3d:ST_EmbeddedAnimationID	MODEL3D		simple	ST_EmbeddedAnimationID				base=unsignedInt	r	r	r	.	.
 x:drawing/2018/animation/model3d:CT_EmbeddedAnimation	MODEL3D		type	CT_EmbeddedAnimation					r	r	r	.	.
 x:drawing/2018/animation/model3d:CT_EmbeddedAnimation/animPr	MODEL3D	CT_EmbeddedAnimation	element	animPr	CT_AnimationProperties				r	r	r	.	.

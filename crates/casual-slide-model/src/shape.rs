@@ -214,7 +214,14 @@ impl Action {
     }
 }
 
-/// `a:CT_Hyperlink`, for `hlinkClick` and `hlinkHover`. `extLst` stays in the tree.
+token_enum!(
+    /// `ahyp:ST_HyperlinkColor` (Office 2019): which colour a hyperlinked run is drawn
+    /// in, the theme's `hlink` or the text's own.
+    HyperlinkColor { Hlink = "hlink", Text = "tx" }
+);
+
+/// `a:CT_Hyperlink`, for `hlinkClick` and `hlinkHover`. `extLst` stays in the tree,
+/// and `ahyp:hlinkClr` in it is read as [`Hyperlink::color`].
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Hyperlink {
     /// `@r:id`. Empty is meaningful: an action with no target part.
@@ -235,6 +242,9 @@ pub struct Hyperlink {
     pub end_sound: Option<bool>,
     /// `snd`.
     pub sound: Option<crate::media::EmbeddedWavAudioFile>,
+    /// `extLst/ext/ahyp:hlinkClr/@val`: `tx` keeps the run's own colour.
+    // spec-audit: x:drawing/2018/hyperlinkcolor:<hlinkClr>
+    pub color: Option<HyperlinkColor>,
 }
 
 /// `a:CT_NonVisualDrawingProps`, `cNvPr`.
