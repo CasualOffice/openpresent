@@ -834,6 +834,9 @@ impl Viewer {
         for (_, f, m) in pairs {
             let mut after = f.clone();
             after.show = m.show;
+            // Transitions and animations (`VS-10`): the writer patches only what differs.
+            after.transition.clone_from(&m.transition);
+            after.timing.clone_from(&m.timing);
             // A background set by Format Background (`VS-12`).
             if let (Some(c), Some(k)) = (after.common.as_mut(), m.common.as_ref()) {
                 c.background.clone_from(&k.background);

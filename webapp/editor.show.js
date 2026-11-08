@@ -8,10 +8,18 @@
 // or `.` blacks the screen and W or `,` whites it; Esc or `-` ends. Hidden slides
 // (`@show="0"`) are skipped, as PowerPoint skips them, unless jumped to by number.
 //
-// Every slide with a transition gets a simple fade over the transition's own
-// duration. Any effect other than a fade or a cut is played as that fade, and
-// when the show ends the status bar names which (`VS-07`; the effects are a later
-// slice). Animations do not play; each slide shows as it finally stands.
+// Transitions (`VS-10`): fade, push, wipe and split play as themselves over the
+// transition's own duration, and a cut changes at once. Any other effect is played
+// as a fade, and when the show ends the status bar names which (`VS-07`).
+//
+// Animations (`VS-10`): a slide's main sequence plays click by click. A shape whose
+// first effect is an entrance starts hidden; each click plays its effects, step by
+// step for After Previous. Appear and Disappear are instant, Fade and Fade Out fade
+// the shape's part of the slide, Fly In moves it up from below, Pulse grows and
+// shrinks it. The engine draws each state with the right shapes hidden; a moving
+// shape is its box cut from that drawing, unrotated. Effects this build does not
+// write play as the change of state at once, and are named at the end. Going back
+// undoes a click at once.
 //
 // The deck stays in the engine. This module asks the worker for pictures, the
 // show plan and the notes, and keeps no model. The notes, document text, reach
@@ -55,7 +63,7 @@ async function loadPlan() {
     const r = await request({ op: "plan" }, { priority: 9 });
     for (let i = 0; i < count; i++) {
       const flags = r.plan[i * 2] | 0;
-      plan[i] = { hidden: !!(flags & 1), transition: !!(flags & 2), asIs: !!(flags & 4), ms: r.plan[i * 2 + 1] | 0, effect: r.effects?.[i] || "" };
+      plan[i] = { hidden: !!(flags & 1), transition: !!(flags & 2), asIs: !!(flags & 4), ms: r.plan[i * 2 + 1] | 0, effect: r.effects?.[i] || "", dir: r.directions?.[i] || "" };
     }
   } catch (e) {
     // Without the plan the show still runs: every slide, no transitions.
@@ -117,33 +125,249 @@ async function draw(fade) {
   }
   const index = show.index;
   const w = Math.min(box.clientWidth || window.innerWidth, (box.clientHeight || window.innerHeight) / aspect());
-  const url = await picture(index, w * dpr(), SHOW_PRIORITY);
+  show.width = w * dpr();
+  // A slide entered forward starts before its first click; backward, after its last.
+  const kept = show.anim && show.anim.index === index ? show.anim.at : 0;
+  const anim = await loadAnimations(index);
+  if (t !== token || !show) return;
+  show.anim = anim;
+  show.playing = false;
+  if (anim) {
+    anim.index = index;
+    const n = anim.clicks.length;
+    anim.at = fade || show.entering === "start" ? 0 : show.entering === "keep" ? Math.min(kept, n) : n;
+  }
+  show.entering = null;
+  const url = anim ? await stateAt(index, anim, anim.at) : await picture(index, show.width, SHOW_PRIORITY);
   if (!url || t !== token || !show) { if (url) URL.revokeObjectURL(url); return; }
   const p = show.plan[index];
   if (p.transition && !p.asIs && p.effect) show.standIns.add(p.effect);
   const alt = `Slide ${index + 1}`;
   clearOver();
+  const autoStart = () => { if (anim && anim.at === 0 && anim.auto && t === token && show) playClick(); };
   if (fade && p.transition && p.ms > 0 && !base.hidden) {
-    // The new slide fades in over the one shown, then takes its place.
     show.overUrl = url;
-    over.style.transitionDuration = `${p.ms}ms`;
     over.src = url;
     over.alt = alt;
     over.hidden = false;
-    void over.offsetWidth;          // start from transparent
-    over.classList.add("is-in");
     const done = () => {
       if (!show || show.overUrl !== url) return;
       setBase(url, alt);
       show.overUrl = null;
       clearLayer(over);
+      over.style.transitionDuration = "";
+      autoStart();
     };
-    over.addEventListener("transitionend", done, { once: true });
-    setTimeout(done, p.ms + 100);   // a fade the browser skipped still ends
+    const motion = p.asIs ? transitionFrames(p.effect, p.dir) : null;
+    if (motion) {
+      // Push, wipe and split: the new slide moves in, or is uncovered, over the old.
+      over.style.transitionDuration = "0ms";
+      over.classList.add("is-in");
+      const opts = { duration: p.ms, easing: "ease-in-out" };
+      const a = over.animate(motion.over, opts);
+      const b = motion.base ? base.animate(motion.base, opts) : null;
+      a.finished.then(() => { b?.cancel(); done(); }, () => {});
+      setTimeout(() => { b?.cancel(); done(); }, p.ms + 200);
+    } else {
+      // A fade, or the fade a stand-in plays: the new slide fades in over the old.
+      over.style.transitionDuration = `${p.ms}ms`;
+      void over.offsetWidth;          // start from transparent
+      over.classList.add("is-in");
+      over.addEventListener("transitionend", done, { once: true });
+      setTimeout(done, p.ms + 100);   // a fade the browser skipped still ends
+    }
   } else {
     setBase(url, alt);
+    autoStart();
   }
   updatePresenter();
+}
+
+/// Keyframes for push, wipe and split by the direction the file states; `null`
+/// for anything else, which plays the fade.
+function transitionFrames(effect, dir) {
+  const d = (dir || "").split(" ");
+  if (effect === "push") {
+    const [x, y] = { l: [100, 0], r: [-100, 0], u: [0, 100], d: [0, -100] }[d[0]] || [100, 0];
+    return {
+      over: [{ transform: `translate(${x}%, ${y}%)` }, { transform: "translate(0, 0)" }],
+      base: [{ transform: "translate(0, 0)" }, { transform: `translate(${-x}%, ${-y}%)` }],
+    };
+  }
+  if (effect === "wipe") {
+    const from = { l: "inset(0 0 0 100%)", r: "inset(0 100% 0 0)", u: "inset(100% 0 0 0)", d: "inset(0 0 100% 0)" }[d[0]] || "inset(0 0 0 100%)";
+    return { over: [{ clipPath: from }, { clipPath: "inset(0 0 0 0)" }] };
+  }
+  if (effect === "split") {
+    const vert = d[0] === "vert";
+    const closed = vert ? "inset(0 50% 0 50%)" : "inset(50% 0 50% 0)";
+    const edges = vert ? "polygon(0 0, 0 0, 0 100%, 0 100%, 100% 100%, 100% 100%, 100% 0, 100% 0)" : "polygon(0 0, 100% 0, 100% 0, 0 0, 0 100%, 100% 100%, 100% 100%, 0 100%)";
+    if (d[1] === "in") {
+      // In: the new slide closes in from both edges over the old.
+      const full = vert ? "polygon(0 0, 50% 0, 50% 100%, 0 100%, 100% 100%, 50% 100%, 50% 0, 100% 0)" : "polygon(0 0, 100% 0, 100% 50%, 0 50%, 0 100%, 100% 100%, 100% 50%, 0 50%)";
+      return { over: [{ clipPath: edges }, { clipPath: full }] };
+    }
+    return { over: [{ clipPath: closed }, { clipPath: "inset(0 0 0 0)" }] };
+  }
+  return null;
+}
+
+/* ── Animations (`VS-10`) ───────────────────────────────────────────────── */
+
+const ENTRANCE = 1, EXIT = 3;
+const KIND = { appear: 0, fade: 1, fly: 2, pulse: 3, disappear: 4, fadeOut: 5 };
+
+/// Slide `index`'s main sequence as clicks, each a list of steps, each a list of
+/// effects; `null` for a slide with none, or one the engine cannot read.
+async function loadAnimations(index) {
+  let v;
+  try {
+    v = (await request({ op: "animate", fn: "slide_animations", args: [index] }, { priority: SHOW_PRIORITY })).value;
+  } catch {
+    return null;
+  }
+  const effects = [];
+  for (let i = 0; i + 8 < v.length; i += 9) {
+    effects.push({ node: v[i], kind: v[i + 1], cls: v[i + 2], start: v[i + 3], ms: v[i + 4], box: [v[i + 5], v[i + 6], v[i + 7], v[i + 8]] });
+  }
+  const shown = effects.filter((e) => e.node >= 0);
+  if (!shown.length) return null;
+  const clicks = [];
+  for (const e of shown) {
+    const last = clicks[clicks.length - 1];
+    if (e.start === 0 || !last) clicks.push([[e]]);
+    else if (e.start === 1) last[last.length - 1].push(e);
+    else last.push([e]);
+  }
+  // Hidden before anything plays: each shape whose first effect is an entrance.
+  const initial = new Set();
+  const seen = new Set();
+  for (const e of shown) {
+    if (seen.has(e.node)) continue;
+    seen.add(e.node);
+    if (e.cls === ENTRANCE) initial.add(e.node);
+  }
+  return { clicks, initial, auto: shown[0].start !== 0, at: 0 };
+}
+
+function applyEffect(hidden, e) {
+  if (e.cls === ENTRANCE) hidden.delete(e.node);
+  else if (e.cls === EXIT) hidden.add(e.node);
+}
+
+/// The shapes hidden once the first `clicks` clicks have played.
+function hiddenAfter(anim, clicks) {
+  const hidden = new Set(anim.initial);
+  for (const c of anim.clicks.slice(0, clicks)) for (const s of c) for (const e of s) applyEffect(hidden, e);
+  return hidden;
+}
+
+function drawHiding(index, hidden) {
+  const width = Math.max(1, Math.min(MAX_WIDTH, Math.round(show.width)));
+  return request({ op: "png-hiding", index, width, nodes: [...hidden] }, { priority: SHOW_PRIORITY })
+    .then((r) => URL.createObjectURL(new Blob([r.png], { type: "image/png" })), () => null);
+}
+
+/// The slide as it stands after `clicks` clicks.
+function stateAt(index, anim, clicks) {
+  return drawHiding(index, hiddenAfter(anim, clicks));
+}
+
+/// A shape's part of a slide picture, placed exactly over the slide shown.
+function part(url, box) {
+  const host = byId("show");
+  const r = byId("show-img").getBoundingClientRect();
+  const o = host.getBoundingClientRect();
+  const img = document.createElement("img");
+  img.className = "show-part";
+  img.alt = "";
+  img.style.visibility = "hidden";   // shown when its effect starts
+  img.src = url;
+  Object.assign(img.style, { left: `${r.left - o.left}px`, top: `${r.top - o.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+  const [x, y, cx, cy] = box;
+  const W = state.deck.width, H = state.deck.height;
+  if (cx > 0 || cy > 0) {
+    const pct = (v, of) => `${Math.max(0, Math.min(100, (v / of) * 100))}%`;
+    img.style.clipPath = `inset(${pct(y, H)} ${pct(W - x - cx, W)} ${pct(H - y - cy, H)} ${pct(x, W)})`;
+    img.style.transformOrigin = `${((x + cx / 2) / W) * 100}% ${((y + cy / 2) / H) * 100}%`;
+  }
+  host.appendChild(img);
+  return img;
+}
+
+/// Play one step: its shapes leave the drawing and come back moving, as their effect.
+async function playStep(index, before, hidden, effects) {
+  const after = new Set(hidden);
+  for (const e of effects) applyEffect(after, e);
+  const moving = new Set(hidden);
+  for (const e of effects) moving.add(e.node);
+  const [mid, end] = await Promise.all([drawHiding(index, moving), drawHiding(index, after)]);
+  if (!show || !mid || !end) { for (const u of [mid, end]) if (u) URL.revokeObjectURL(u); return after; }
+  const parts = [];
+  for (const e of effects) {
+    if (e.kind === KIND.disappear || (e.cls === EXIT && e.kind !== KIND.fadeOut)) continue;
+    parts.push([e, part(e.cls === EXIT ? before : end, e.box)]);
+  }
+  // Every part is decoded, and starts where its effect starts, before the drawing
+  // without them goes under, so nothing blinks.
+  await Promise.all(parts.map(([, img]) => img.decode().catch(() => {})));
+  const plays = [];
+  for (const [e, img] of parts) {
+    img.style.visibility = "";
+    const opts = { duration: Math.max(1, e.ms), easing: "ease-out", fill: "forwards" };
+    if (e.kind === KIND.fade) plays.push(img.animate([{ opacity: 0 }, { opacity: 1 }], opts).finished);
+    else if (e.kind === KIND.fadeOut) plays.push(img.animate([{ opacity: 1 }, { opacity: 0 }], opts).finished);
+    else if (e.kind === KIND.fly) {
+      const dy = ((state.deck.height - e.box[1]) / state.deck.height) * 100;
+      plays.push(img.animate([{ transform: `translateY(${dy}%)` }, { transform: "translateY(0)" }], opts).finished);
+    } else if (e.kind === KIND.pulse) {
+      plays.push(img.animate([{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }], { ...opts, easing: "ease-in-out" }).finished);
+    } else if (e.kind !== KIND.appear) {
+      show.standIns.add("animations other than Appear, Fade, Fly In, Pulse, Disappear and Fade Out");
+    }
+  }
+  show.baseUrl = null;            // `before` is still drawn from; released below
+  setBase(mid, `Slide ${index + 1}`);
+  const longest = Math.max(0, ...effects.map((e) => e.ms));
+  await Promise.race([Promise.all(plays), new Promise((r) => setTimeout(r, longest + 150))]).catch(() => {});
+  if (before) URL.revokeObjectURL(before);
+  if (!show) { URL.revokeObjectURL(end); return after; }
+  setBase(end, `Slide ${index + 1}`);
+  for (const [, img] of parts) img.remove();
+  return after;
+}
+
+/// Play the next click of the slide shown, and any click after it that starts by itself.
+async function playClick() {
+  const anim = show.anim;
+  if (!anim || show.playing || anim.at >= anim.clicks.length) return;
+  show.playing = true;
+  const index = show.index;
+  const t = token;
+  let hidden = hiddenAfter(anim, anim.at);
+  for (const effects of anim.clicks[anim.at]) {
+    if (!show || t !== token) break;
+    hidden = await playStep(index, show.baseUrl, hidden, effects);
+  }
+  if (!show) return;
+  show.playing = false;
+  if (t !== token) return;
+  anim.at++;
+  updatePresenter();
+  const next = anim.clicks[anim.at];
+  if (next && next[0][0].start !== 0) playClick();
+}
+
+/// Back one click: the slide as it stood before it, at once.
+async function unplayClick() {
+  const anim = show.anim;
+  anim.at = Math.max(0, anim.at - 1);
+  const t = ++token;
+  const url = await stateAt(show.index, anim, anim.at);
+  if (!url || t !== token || !show) { if (url) URL.revokeObjectURL(url); return; }
+  for (const p of byId("show").querySelectorAll(".show-part")) p.remove();
+  clearOver();
+  setBase(url, `Slide ${show.index + 1}`);
 }
 
 function setBlank(colour) {
@@ -158,11 +382,15 @@ function setBlank(colour) {
 
 function next() {
   if (show.index >= show.plan.length) { end(); return; }
+  if (show.playing) return;
+  // A click plays the slide's next animation before it moves on (`VS-10`).
+  if (show.anim && show.anim.at < show.anim.clicks.length) { playClick(); return; }
   show.index = step(show.index, 1);
   draw(true);
 }
 
 function previous() {
+  if (show.index < show.plan.length && show.anim && show.anim.at > 0 && !show.playing) { unplayClick(); return; }
   const j = step(Math.min(show.index, show.plan.length), -1);
   if (j < 0) return;
   show.index = j;
@@ -183,7 +411,7 @@ export async function start(from, { presenterView = false } = {}) {
   // Opened before anything is awaited, so the browser counts it as the user's click.
   if (presenterView) openPresenter();
   const box = byId("show");
-  show = { plan: [], index: 0, baseUrl: null, overUrl: null, blank: null, typed: "", standIns: new Set(), started: Date.now(), from };
+  show = { plan: [], index: 0, baseUrl: null, overUrl: null, blank: null, typed: "", standIns: new Set(), started: Date.now(), from, anim: null, playing: false, entering: "start", width: 0 };
   box.hidden = false;
   box.focus();
   changed();
@@ -207,6 +435,7 @@ export function end() {
   box.hidden = true;
   box.classList.remove("is-end", "is-black", "is-white");
   for (const img of layers()) clearLayer(img);
+  for (const p of box.querySelectorAll(".show-part")) p.remove();
   for (const u of new Set(urls)) if (u) URL.revokeObjectURL(u);
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   closePresenter();
@@ -238,7 +467,7 @@ export function key(e) {
   if (show.blank && (NEXT.has(k) || BACK.has(k) || k === "Enter" || k === "Home" || k === "End")) { setBlank(null); return true; }
   if (NEXT.has(k) || k === "Enter") { next(); return true; }
   if (BACK.has(k)) { previous(); return true; }
-  if (k === "Home") { show.index = step(-1, 1); draw(false); return true; }
+  if (k === "Home") { show.index = step(-1, 1); show.entering = "start"; draw(false); return true; }
   if (k === "End") { const j = step(show.plan.length, -1); if (j >= 0) { show.index = j; draw(false); } return true; }
   return false;
 }
@@ -333,6 +562,6 @@ export function init(after) {
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement && show && !(presenter && !presenter.closed)) end();
   });
-  window.addEventListener("resize", () => { if (show && show.plan.length) draw(false); });
+  window.addEventListener("resize", () => { if (show && show.plan.length) { show.entering = "keep"; draw(false); } });
   window.addEventListener("pagehide", closePresenter);
 }

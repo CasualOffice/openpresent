@@ -29,9 +29,11 @@ mod design;
 use design::DeckDoc;
 pub use design::{BackgroundChoice, BuiltinTheme, Fit, THEMES};
 
+mod animate;
 mod build;
 mod edit;
 mod shapes;
+pub use animate::AnimationItem;
 pub use build::{Ends, Insert, MAX_PICTURE_BYTES};
 pub use edit::{Move, Toggle};
 pub use shapes::{MAX_LINE_WIDTH, parse_color, preset_outline, theme_style};
@@ -1578,4 +1580,186 @@ pub fn set_shape_style(index: u32, node: u32, row: u32, column: u32) -> Result<b
 #[wasm_bindgen]
 pub fn slide_palette(index: u32) -> Result<Vec<String>, JsError> {
     with_viewer(|v| v.palette(index as usize))
+}
+
+/* ── Transitions and animations (`VS-10`) ─────────────────────────────── */
+
+fn bad<T>(v: Option<T>) -> Result<T, BridgeError> {
+    v.ok_or(BridgeError::BadArgument)
+}
+
+/// The transition into slide `index` for the Transitions tab: `[kind, ms]`, kind as
+/// [`casual_slide_transaction::TransitionKind::from_code`] numbers it, 99 for an effect the tab does not offer.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn transition_choice(index: u32) -> Result<Vec<u32>, JsError> {
+    with_viewer(|v| {
+        let (kind, ms) = v.transition_choice(index as usize)?;
+        Ok(vec![kind.map_or(99, |k| k.code()), ms])
+    })
+}
+
+/// Give slide `index` a transition (0 none, 1 cut, 2 fade, 3 push, 4 wipe, 5 split)
+/// lasting `ms` milliseconds.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another kind.
+#[wasm_bindgen]
+pub fn set_slide_transition(index: u32, kind: u32, ms: u32) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let kind = bad(casual_slide_transaction::TransitionKind::from_code(kind))?;
+        v.set_transition(index as usize, kind, ms)
+    })
+}
+
+/// Apply To All: every slide gets slide `index`'s transition.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn transition_to_all(index: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.transition_to_all(index as usize))
+}
+
+/// The Animation Pane's list for slide `index`: nine numbers an effect, `[node (-1
+/// for none), kind (-1 for another), class, start, ms, x, y, cx, cy]`, class 1
+/// entrance, 2 emphasis, 3 exit, 0 other; the box in EMU, zero for a shape the
+/// editor cannot select.
+///
+/// # Errors
+///
+/// `CS-TXN-0008` for a timing this build does not edit.
+#[wasm_bindgen]
+pub fn slide_animations(index: u32) -> Result<Vec<f64>, JsError> {
+    with_viewer(|v| {
+        let boxes = v.shapes(index as usize)?;
+        let mut out = Vec::new();
+        for a in v.animations(index as usize)? {
+            let b = a.node.and_then(|n| boxes.iter().find(|b| b.node == n));
+            let e = &a.entry;
+            out.extend_from_slice(&[
+                a.node.map_or(-1.0, f64::from),
+                e.kind.map_or(-1.0, |k| f64::from(k.code())),
+                f64::from(animate::class_code(e.class)),
+                f64::from(e.start.code()),
+                f64::from(e.duration_ms),
+            ]);
+            match b {
+                Some(b) => {
+                    out.extend_from_slice(&[b.x as f64, b.y as f64, b.cx as f64, b.cy as f64])
+                }
+                None => out.extend_from_slice(&[0.0; 4]),
+            }
+        }
+        Ok(out)
+    })
+}
+
+/// The name of shape `node` on slide `index`: document text, for `textContent` only.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn shape_name(index: u32, node: u32) -> Result<String, JsError> {
+    with_viewer(|v| v.shape_name(index as usize, node))
+}
+
+/// Add Animation: effect `kind` (0 Appear, 1 Fade, 2 Fly In, 3 Pulse, 4 Disappear,
+/// 5 Fade Out) on shape `node`, starting `start` (0 on click, 1 with, 2 after previous).
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another number or a shape with no id; `CS-TXN-0008` for a
+/// timing this build does not edit.
+#[wasm_bindgen]
+pub fn add_animation(index: u32, node: u32, kind: u32, start: u32) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let kind = bad(casual_slide_transaction::EffectKind::from_code(kind))?;
+        let start = bad(casual_slide_transaction::EffectStart::from_code(start))?;
+        v.add_animation(index as usize, node, kind, start)
+    })
+}
+
+/// The Animation Styles gallery: shape `node`'s effects become `kind`; -1 removes them.
+///
+/// # Errors
+///
+/// As [`add_animation`].
+#[wasm_bindgen]
+pub fn replace_animation(index: u32, node: u32, kind: i32) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let kind = match u32::try_from(kind) {
+            Ok(k) => Some(bad(casual_slide_transaction::EffectKind::from_code(k))?),
+            Err(_) => None,
+        };
+        v.replace_animation(index as usize, node, kind)
+    })
+}
+
+/// Delete effect `at` of slide `index`.
+///
+/// # Errors
+///
+/// `CS-TXN-0004` for a place past the end.
+#[wasm_bindgen]
+pub fn remove_animation(index: u32, at: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.remove_animation(index as usize, at as usize))
+}
+
+/// Move effect `from` of slide `index` to `to`.
+///
+/// # Errors
+///
+/// `CS-TXN-0004` for a place past the end.
+#[wasm_bindgen]
+pub fn move_animation(index: u32, from: u32, to: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.move_animation(index as usize, from as usize, to as usize))
+}
+
+/// Set when effect `at` of slide `index` starts.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another number.
+#[wasm_bindgen]
+pub fn set_animation_start(index: u32, at: u32, start: u32) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let start = bad(casual_slide_transaction::EffectStart::from_code(start))?;
+        v.set_animation_start(index as usize, at as usize, start)
+    })
+}
+
+/// Slide `index` as PNG with the shapes `nodes` hidden, for a show's animation steps.
+///
+/// # Errors
+///
+/// As [`render_slide_png`].
+#[wasm_bindgen]
+pub fn render_slide_png_hiding(
+    index: u32,
+    width: u32,
+    nodes: Vec<u32>,
+) -> Result<Vec<u8>, JsError> {
+    with_viewer(|v| v.render_png_hiding(index as usize, width, &nodes))
+}
+
+/// The direction of the transition into slide `index` (`l`, `u`, `horz out`), as
+/// the show plays push, wipe and split; empty for an effect without one.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn transition_direction(index: u32) -> Result<String, JsError> {
+    with_viewer(|v| {
+        Ok(v.show_slide(index as usize)?
+            .transition
+            .map_or(String::new(), |t| t.direction))
+    })
 }

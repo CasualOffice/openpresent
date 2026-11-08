@@ -25,12 +25,15 @@ import init, {
   slide_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
-  show_plan, slide_transition, slide_notes,
+  show_plan, slide_transition, transition_direction, slide_notes,
   design_themes, design_apply_theme, design_slide_size, design_background,
   open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
   preset_names, preset_icon, insert_preset, shape_handles, drag_shape_handle,
   set_shape_fill, set_shape_outline, set_shape_style, slide_palette,
+  transition_choice, set_slide_transition, transition_to_all, slide_animations, shape_name,
+  add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
+  render_slide_png_hiding,
 } from "./pkg/casual_slide_wasm.js";
 
 // Design (`VS-12`): `{ id, op: "design", fn, args }` calls one of these by name and
@@ -52,6 +55,14 @@ const BUILD = {
   // Shapes (`SHAPE-01`): insert a preset, its yellow handles, Shape Format.
   insert_preset, shape_handles, drag_shape_handle, set_shape_fill, set_shape_outline,
   set_shape_style, slide_palette, edit_break_typing,
+};
+
+// Transitions and animations (`VS-10`): `{ id, op: "animate", fn, args }` calls one of
+// these by name and answers `{ value, undo }`; `{ op: "png-hiding", index, width, nodes }`
+// draws a slide with those shapes hidden, for the show's animation steps.
+const ANIMATE = {
+  transition_choice, set_slide_transition, transition_to_all, slide_animations, shape_name,
+  add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
 };
 
 const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });
@@ -76,6 +87,15 @@ self.onmessage = async (event) => {
     } else if (msg.op === "png") {
       const png = render_slide_png(msg.index, msg.width);
       self.postMessage({ id, ok: true, png: png.buffer }, [png.buffer]);
+    } else if (msg.op === "png-hiding") {
+      const png = render_slide_png_hiding(msg.index, msg.width, new Uint32Array(msg.nodes || []));
+      self.postMessage({ id, ok: true, png: png.buffer }, [png.buffer]);
+    } else if (msg.op === "animate") {
+      const fn = Object.hasOwn(ANIMATE, msg.fn) ? ANIMATE[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      let value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      if (ArrayBuffer.isView(value)) value = Array.from(value);
+      self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()) });
     } else if (msg.op === "save") {
       const bytes = save_deck();
       self.postMessage({ id, ok: true, bytes: bytes.buffer }, [bytes.buffer]);
@@ -111,11 +131,11 @@ self.onmessage = async (event) => {
       // Two numbers a slide (`show_plan`), and the effect's name where the show
       // plays a fade in its place, for the report at the end.
       const plan = Array.from(show_plan());
-      const effects = {};
+      const effects = {}, directions = {};
       for (let i = 0; i * 2 < plan.length; i++) {
-        if ((plan[i * 2] & 6) === 2) effects[i] = slide_transition(i);
+        if (plan[i * 2] & 2) { effects[i] = slide_transition(i); directions[i] = transition_direction(i); }
       }
-      self.postMessage({ id, ok: true, plan, effects });
+      self.postMessage({ id, ok: true, plan, effects, directions });
     } else if (msg.op === "notes") {
       self.postMessage({ id, ok: true, notes: slide_notes(msg.index) });
     } else if (msg.op === "icons") {

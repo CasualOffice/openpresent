@@ -3,8 +3,8 @@
 //! transition and how long it runs, and the speaker notes' text for Presenter View.
 //!
 //! The show itself, its keys and its windows, is the webapp's
-//! (`webapp/editor.show.js`). This build plays every transition as a simple fade
-//! and reports the effect it stands in for; nothing here decides how one looks.
+//! (`webapp/editor.show.js`). This build plays fade, push, wipe, split and cut as
+//! themselves (`VS-10`), and any other effect as a fade, reporting it.
 
 use casual_slide_model::shape::PlaceholderType;
 use casual_slide_model::text::{TextBody, TextItem};
@@ -40,10 +40,13 @@ pub struct ShowTransition {
     /// 1000 ms (fast, medium, slow; slow is the schema's default). Zero for a cut
     /// or a transition with no effect, which change the slide at once.
     pub duration_ms: u32,
-    /// Whether this build plays the effect as it is: `fade`, or nothing to see
-    /// (`cut`, or no effect stated). Anything else is played as a fade and
-    /// reported.
+    /// Whether this build plays the effect as it is: `fade`, `push`, `wipe`,
+    /// `split` (`VS-10`), or nothing to see (`cut`, or no effect stated). Anything
+    /// else is played as a fade and reported.
     pub played_as_is: bool,
+    /// The effect's direction as the file spells it (`l`, `u`, `horz out`), or the
+    /// schema's default where it states none; empty for an effect without one.
+    pub direction: String,
 }
 
 impl Viewer {
@@ -67,9 +70,32 @@ impl Viewer {
                     effect: "unread",
                     duration_ms: speed_ms(None),
                     played_as_is: false,
+                    direction: String::new(),
                 };
             }
-            transition_of(slot.resolved())
+            let mut shown = transition_of(slot.resolved());
+            // PowerPoint 2010 and later read `p14:dur` from the branch requiring
+            // `p14`; the fallback has only `@spd`. Play the duration they play, where
+            // that branch has the same effect (`VS-10`).
+            if let (casual_slide_model::timing::Slot::Alternate(a), Some(r)) =
+                (slot, slot.resolved())
+                && shown.duration_ms > 0
+            {
+                let same = |t: &SlideTransition| {
+                    core::mem::discriminant(&t.effect) == core::mem::discriminant(&r.effect)
+                        && t.effect.as_ref().map(effect_name) == r.effect.as_ref().map(effect_name)
+                };
+                if let Some(ms) = a
+                    .branches
+                    .iter()
+                    .filter_map(|b| b.value.as_deref())
+                    .filter(|t| same(t))
+                    .find_map(|t| duration_ms(t.p14_dur.as_deref()))
+                {
+                    shown.duration_ms = ms;
+                }
+            }
+            shown
         });
         Ok(ShowSlide {
             hidden: part.show == Some(false),
@@ -169,7 +195,36 @@ fn transition_of(t: Option<&SlideTransition>) -> ShowTransition {
     ShowTransition {
         effect: if name.is_empty() { "none" } else { name },
         duration_ms,
-        played_as_is: instant || matches!(effect, Some(TransitionEffect::Fade(_))),
+        played_as_is: instant
+            || matches!(
+                effect,
+                Some(
+                    TransitionEffect::Fade(_)
+                        | TransitionEffect::Push(_)
+                        | TransitionEffect::Wipe(_)
+                        | TransitionEffect::Split(_)
+                )
+            ),
+        direction: effect.map_or(String::new(), direction_of),
+    }
+}
+
+/// The direction of push, wipe and split, with the schema's defaults.
+fn direction_of(e: &TransitionEffect) -> String {
+    use casual_slide_model::properties::Lexical;
+    use casual_slide_model::transition::{InOutDirection, OrientationDirection, SideDirection};
+    match e {
+        TransitionEffect::Push(t) | TransitionEffect::Wipe(t) => {
+            t.dir.unwrap_or(SideDirection::Left).to_lexical()
+        }
+        TransitionEffect::Split(t) => format!(
+            "{} {}",
+            t.orient
+                .unwrap_or(OrientationDirection::Horizontal)
+                .to_lexical(),
+            t.dir.unwrap_or(InOutDirection::Out).to_lexical()
+        ),
+        _ => String::new(),
     }
 }
 

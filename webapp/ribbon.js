@@ -242,7 +242,15 @@ function gallery(spec) {
     } else {
       b.append(icon(t[1], 24), h("span", "rb-gal-name", t[0]));
     }
-    b.addEventListener("click", (e) => { e.stopPropagation(); closePop(); run(spec.id); queueSync(); });
+    // A command that takes a tile (`pick`, `VS-10`) gets the tile's name; any
+    // other opens its chooser.
+    b.addEventListener("click", (e) => {
+      e.stopPropagation(); closePop();
+      const c = command(spec.id);
+      if (c && c.pick && (!c.enabled || c.enabled())) c.pick(t[0]); else run(spec.id);
+      queueSync();
+    });
+    b.dataset.tile = t[0];
     tiles.appendChild(b);
     btns.push(b);
   }
@@ -258,6 +266,8 @@ function gallery(spec) {
     const c = command(spec.id);
     const live = !!c && (!c.enabled || c.enabled());
     for (const b of btns) if (b.disabled !== !live) b.disabled = !live;
+    const on = c && c.selected ? c.selected() : null;
+    for (const b of btns) if (b.dataset.tile) b.setAttribute("aria-selected", b.dataset.tile === on ? "true" : "false");
     more.title = tip(`More ${spec.label}`, c);
   });
   return g;
