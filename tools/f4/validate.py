@@ -642,15 +642,44 @@ def redact(message):
     return message.strip()
 
 
+# The most characters of file names one xmllint command line carries. Windows refuses a
+# command line over 32,767 characters (WinError 206), which a deck with many parts of one
+# schema passed; this leaves room for the program, the flags and the schema's path.
+COMMAND_LINE_BUDGET = 24_000
+
+
+def batches(paths, budget=COMMAND_LINE_BUDGET):
+    """Split `paths` into runs whose names, each with a separating space, fit `budget`.
+    A name longer than the budget still gets a run of its own."""
+    run, used = [], 0
+    for p in paths:
+        cost = len(p) + 1
+        if run and used + cost > budget:
+            yield run
+            run, used = [], 0
+        run.append(p)
+        used += cost
+    if run:
+        yield run
+
+
 def run_xmllint(schema, jobs, workdir):
-    """Validate many files against one schema, in one process: compiling is the slow part.
-    Returns {path: (status, [messages])}."""
-    environment = {"PATH": os.environ.get("PATH", ""), "XML_CATALOG_FILES": str(CATALOG)}
+    """Validate many files against one schema, in as few processes as the command line
+    allows: compiling is the slow part. Returns {path: (status, [messages])}."""
     # Bare names, run in the directory that holds them. xmllint reports a file under the
     # name it parsed, and on Windows it writes a full path with `/` for `\`, so a full
     # path given here matched its verdict but none of its messages.
     paths = [pathlib.Path(p).name for p in jobs]
     assert all(pathlib.Path(workdir) / name == pathlib.Path(p) for name, p in zip(paths, jobs))
+    results = {}
+    for run in batches(paths):
+        results.update(_run_xmllint_once(schema, run, workdir))
+    return results
+
+
+def _run_xmllint_once(schema, paths, workdir):
+    """One xmllint process over bare `paths` in `workdir`."""
+    environment = {"PATH": os.environ.get("PATH", ""), "XML_CATALOG_FILES": str(CATALOG)}
     done = subprocess.run(
         ["xmllint", "--noout", "--nonet", "--schema", str(Schemas.path(schema)), *paths],
         capture_output=True, text=True, errors="replace", env=environment, cwd=workdir, timeout=600, check=False)

@@ -105,5 +105,39 @@ class SchemaErrors(unittest.TestCase):
         self.assertEqual(results[str(part)][0], "schema-error")
 
 
+class CommandLine(unittest.TestCase):
+    def test_file_names_are_split_to_fit_the_command_line(self):
+        """One xmllint over every part of a schema passed Windows' 32,767-character
+        command line on a large deck (WinError 206)."""
+        names = [f"part-{i:05}.xml" for i in range(5000)]
+        runs = list(validate.batches(names))
+        self.assertGreater(len(runs), 1)
+        self.assertEqual([n for run in runs for n in run], names)
+        for run in runs:
+            self.assertLessEqual(sum(len(n) + 1 for n in run), validate.COMMAND_LINE_BUDGET)
+
+    def test_a_name_over_the_budget_gets_a_run_of_its_own(self):
+        self.assertEqual(list(validate.batches(["a" * 10, "b", "c"], budget=4)),
+                         [["a" * 10], ["b", "c"]])
+
+    def test_every_file_of_a_split_run_gets_a_verdict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            parts = []
+            for i in range(3):
+                part = work / f"p{i}.xml"
+                part.write_text("<a/>", encoding="utf8")
+                parts.append(part)
+            # One file per xmllint process, so every result comes from a separate run.
+            original = validate.batches
+            validate.batches = lambda paths: original(paths, budget=1)
+            try:
+                results = validate.run_xmllint("ms-extensions/ms-odrawxml-15.xsd", parts, work)
+            finally:
+                validate.batches = original
+        self.assertEqual(sorted(results), sorted(str(p) for p in parts))
+        self.assertTrue(all(status == "invalid" for status, _ in results.values()))
+
+
 if __name__ == "__main__":
     unittest.main()
