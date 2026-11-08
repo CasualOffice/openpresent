@@ -60,6 +60,13 @@ Items carry object ids so the editor can invalidate and reuse them per object.
 | `-render` tiny-skia | Server thumbnails, PNG, the fidelity gate | Same outlines |
 | `-render` PDF | Export, print | Embedded subset fonts, real text |
 
+**As built (at `8011d28`).** The Canvas2D painter is not built. The editor, thumbnails and the
+slide show draw PNGs made by `-render`'s tiny-skia backend inside `casual-slide-wasm`, in the
+editor's worker (`render_slide_png`, and `render_slide_png_hiding` to leave out a shape being
+edited); caret, selection and handles are drawn over them in SVG. The PDF backend serves Export to
+PDF; File > Print draws each shown slide as a PNG at print width, one a page (`FILE-01`). So the
+first row of the table is the target, and the second row serves the editor's uses today.
+
 A stroke is never drawn thinner than one device pixel, as PowerPoint draws a 0.5 pt theme line
 as a solid pixel at low zoom; a line end is sized in line widths from at least 2 pt, so a thin
 line's arrowhead stays readable (`SHAPE-02`; an estimate, not measured against PowerPoint).
