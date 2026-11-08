@@ -99,6 +99,8 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | File | New, Open, render report, Save, Save a Copy, PDF, PNG, Share | Properties, Version History, Print (the File session's) | File rows |
 | Right-click menus | as the ribbon | Layout; Edit Text, Edit Points, Group, Alt Text; Font…, Paragraph…, Numbering; New Comment | as above |
 
+Counted from the registry at the end of the `UX-006` session: of 248 command ids the ribbon, File page and menus
+name, 160 run and 88 are disabled with their reason (114 of 238 were disabled at its start); none runs nothing.
 Menu buttons (Arrange, Align, Rotate, Group, Section, Select, Change Case) are drawn live while any command in their
 menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoint; the web ribbon names Header & Footer only.
 
