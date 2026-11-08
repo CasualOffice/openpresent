@@ -332,7 +332,7 @@ async function insert(item, b) {
     remember(item);
     selection.selectNode(r.value);
     await slides.redrawSlide(index);
-    selectTab("shape-format");
+    wantFormatTab = true;   // once the new shape is selected, as PowerPoint opens it
     status(`${item.name} inserted`);
   } catch (e) {
     errorDialog("OpenPresent could not insert that shape.", e.message);
@@ -344,6 +344,7 @@ async function insert(item, b) {
 let adjLayer = null;
 let adjToken = 0;
 let gesture = null;   // { index, node, handle, first, pending, busy, el }
+let wantFormatTab = false;
 
 function adjustLayer() {
   if (!adjLayer || !adjLayer.isConnected) {
@@ -356,6 +357,11 @@ function adjustLayer() {
 async function paintHandles(s) {
   sel = s;
   queueSync();
+  if (s && wantFormatTab) {
+    wantFormatTab = false;
+    // After the ribbon's next sync has shown the contextual tab.
+    requestAnimationFrame(() => requestAnimationFrame(() => selectTab("shape-format")));
+  }
   if (gesture) return;
   const l = adjustLayer();
   const token = ++adjToken;
