@@ -117,6 +117,7 @@ pub fn resolve_body<'a>(
     let mut fonts = Fonts {
         env,
         substitutions: Vec::new(),
+        script: None,
     };
     let mut numbering = Numbering::default();
     for paragraph in &body.paragraphs {
@@ -196,6 +197,29 @@ pub fn resolve_body<'a>(
 struct Fonts<'e> {
     env: &'e TextEnv<'e>,
     substitutions: Vec<FontSubstitution>,
+    /// The theme's script tag (`Jpan`, `Hang`, ...) for the run being styled, from
+    /// its language; picks a supplemental font when `ea` or `cs` is empty.
+    script: Option<&'static str>,
+}
+
+/// A language tag's script, as theme supplemental fonts name it. Only the East
+/// Asian scripts, whose `ea` font Office themes leave empty.
+fn script_tag(lang: Option<&str>) -> Option<&'static str> {
+    let lang = lang?.to_ascii_lowercase();
+    let mut parts = lang.split(['-', '_']);
+    let primary = parts.next()?;
+    let rest: Vec<&str> = parts.collect();
+    match primary {
+        "ja" => Some("Jpan"),
+        "ko" => Some("Hang"),
+        "zh" => {
+            let traditional = rest
+                .iter()
+                .any(|p| matches!(*p, "hant" | "tw" | "hk" | "mo"));
+            Some(if traditional { "Hant" } else { "Hans" })
+        }
+        _ => None,
+    }
 }
 
 impl Fonts<'_> {
@@ -211,8 +235,23 @@ impl Fonts<'_> {
             FontScript::Latin => collection.latin.as_ref(),
             FontScript::EastAsian => collection.ea.as_ref(),
             FontScript::ComplexScript => collection.cs.as_ref(),
-        }?;
-        font.typeface.clone().filter(|t| !t.trim().is_empty())
+        };
+        let stated = font
+            .and_then(|f| f.typeface.clone())
+            .filter(|t| !t.trim().is_empty());
+        if stated.is_some() || script == FontScript::Latin {
+            return stated;
+        }
+        // An empty `ea` or `cs` gives way to the collection's font for the run's
+        // script, as Office themes write it (`<a:ea typeface=""/>` beside
+        // `<a:font script="Jpan" .../>`): ISO 29500 20.1.4.1.16.
+        let tag = self.script?;
+        collection
+            .fonts
+            .iter()
+            .find(|f| f.script.as_deref() == Some(tag))
+            .and_then(|f| f.typeface.clone())
+            .filter(|t| !t.trim().is_empty())
     }
 
     /// A typeface as written, with `+mj-` and `+mn-` references followed.
@@ -300,6 +339,11 @@ fn run_style<'a>(
     fonts: &mut Fonts<'_>,
 ) -> RunStyle {
     let east_asian = text.chars().any(crate::cjk::is_cjk);
+    fonts.script = script_tag(
+        chain
+            .run(props, paragraph, |c| c.lang.as_deref())
+            .map(|r| r.value),
+    );
     let family = east_asian
         .then(|| run_family(chain, props, paragraph, FontScript::EastAsian, fonts))
         .flatten()
@@ -719,6 +763,7 @@ mod tests {
         let fonts = Fonts {
             env: &env,
             substitutions: Vec::new(),
+            script: None,
         };
         assert_eq!(fonts.typeface("+mj-lt").as_deref(), Some("Calibri Light"));
         assert_eq!(fonts.typeface("+mn-lt").as_deref(), Some("Calibri"));
@@ -728,11 +773,61 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_east_asian_theme_font_takes_the_script_font_for_the_runs_language() {
+        use casual_slide_model::theme::{FontCollection, SupplementalFont, TextFont};
+        let supplemental = |script: &str, face: &str| SupplementalFont {
+            script: Some(script.to_owned()),
+            typeface: Some(face.to_owned()),
+        };
+        let scheme = FontScheme {
+            minor: Some(FontCollection {
+                latin: Some(TextFont {
+                    typeface: Some("Calibri".to_owned()),
+                    ..TextFont::default()
+                }),
+                ea: Some(TextFont {
+                    typeface: Some(String::new()),
+                    ..TextFont::default()
+                }),
+                fonts: vec![
+                    supplemental("Hang", "맑은 고딕"),
+                    supplemental("Jpan", "ＭＳ Ｐゴシック"),
+                ],
+                ..FontCollection::default()
+            }),
+            ..FontScheme::default()
+        };
+        let env = TextEnv {
+            fonts: Some(&scheme),
+            ..TextEnv::default()
+        };
+        let mut fonts = Fonts {
+            env: &env,
+            substitutions: Vec::new(),
+            script: None,
+        };
+        assert_eq!(
+            fonts.typeface("+mn-ea"),
+            None,
+            "no language, no script font"
+        );
+        fonts.script = script_tag(Some("ja-JP"));
+        assert_eq!(fonts.typeface("+mn-ea").as_deref(), Some("ＭＳ Ｐゴシック"));
+        fonts.script = script_tag(Some("ko-KR"));
+        assert_eq!(fonts.typeface("+mn-ea").as_deref(), Some("맑은 고딕"));
+        assert_eq!(fonts.typeface("+mn-lt").as_deref(), Some("Calibri"));
+        assert_eq!(script_tag(Some("zh-TW")), Some("Hant"));
+        assert_eq!(script_tag(Some("zh-CN")), Some("Hans"));
+        assert_eq!(script_tag(Some("en-US")), None);
+    }
+
+    #[test]
     fn a_substitution_is_reported_once_and_a_bundled_family_not_at_all() {
         let env = TextEnv::default();
         let mut fonts = Fonts {
             env: &env,
             substitutions: Vec::new(),
+            script: None,
         };
         fonts.record("Calibri");
         fonts.record("Calibri");
