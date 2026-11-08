@@ -118,6 +118,18 @@ redistributed unmodified, not sold on their own, and no Reserved Font Name is
 used for a modified font. Each face is embedded in the built engine as bytes, so
 a distributed binary carries them under these same terms.
 
+  webapp/fonts/cjk/                 copied unmodified from OpenCalc at 59742cf
+                                    (its webapp/fonts/cjk), on 2026-11-08 (T2D5-02)
+
+  Noto Sans CJK    SIL OFL-1.1     Adobe, Reserved Font Name 'Source'
+  Noto Serif CJK   SIL OFL-1.1     Google
+
+These are WOFF2 slices, a few hundred characters each, subset from the Noto CJK
+releases by OpenCalc; a subset is a modified font under the OFL, and keeps the
+family name Noto, not the reserved name. They are not compiled in: a host loads
+the slices a document needs. The OFL texts ship beside them, in
+webapp/fonts/cjk/OFL-Noto-Sans-CJK.txt and OFL-Noto-Serif-CJK.txt.
+
 ===============================================================================
 4. Test fixtures written by other software
 ===============================================================================

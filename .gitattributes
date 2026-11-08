@@ -14,3 +14,4 @@
 *.bin binary
 *.ttf binary
 crates/**/tests/data/*.xml text eol=lf
+*.woff2 binary

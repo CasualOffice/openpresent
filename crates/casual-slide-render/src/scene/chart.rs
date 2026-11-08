@@ -34,7 +34,7 @@ use casual_slide_text::layout::{
     Align, BodyLayout, ParagraphLayout, Rgba as TextRgba, RunStyle, StyledText, layout_body,
 };
 
-use super::{Builder, EMU_PER_POINT, placement, rect_path};
+use super::{Builder, EMU_PER_POINT, place_in, rect_path};
 use crate::display::{Affine, Cap, DisplayItem, Glyph, Join, Layer, Paint, PathCmd, Rgba, Stroke};
 
 /// One CSS pixel at 96 dpi, in EMU: OpenCalc's `PX`, in this crate's unit.
@@ -153,19 +153,10 @@ impl<'a> Builder<'a> {
             self.report.note("chart (no placement)");
             return;
         };
-        let (w, h) = (t.extent.cx as f64, t.extent.cy as f64);
+        let (transform, w, h) = place_in(parent, &t);
         if w <= 0.0 || h <= 0.0 {
             return;
         }
-        let transform = parent.then_after(&placement(
-            t.offset.x.0 as f64,
-            t.offset.y.0 as f64,
-            w,
-            h,
-            t.rotation,
-            t.flip_h,
-            t.flip_v,
-        ));
         let ordinal = node.id.part;
         // The frame: as the chart's `spPr` says, else nothing.
         self.chart_box(

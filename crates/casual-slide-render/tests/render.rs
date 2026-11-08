@@ -383,3 +383,91 @@ fn norm_autofit_draws_text_at_the_stored_font_scale() {
         assert!((s - 6.25 * 12_700.0).abs() < 1.0, "drawn at {s} EMU");
     }
 }
+
+/// Light and dark pixels along row `y` from `x0` to `x1`: how often it changes
+/// between them.
+fn transitions(png: &[u8], y: u32, x0: u32, x1: u32) -> usize {
+    let dark = |x| {
+        pixel(png, x, y)[..3]
+            .iter()
+            .map(|c| u32::from(*c))
+            .sum::<u32>()
+            < 3 * 128
+    };
+    (x0..x1).filter(|x| dark(*x) != dark(x + 1)).count()
+}
+
+/// A pattern fill draws its cells, foreground on background, not one blended colour
+/// (FH-01: `area-fill` slide 1 drew every preset as a flat blend).
+#[test]
+fn a_pattern_fill_draws_foreground_and_background_cells() {
+    let mut deck = open("area-fill.pptx");
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    // `vert` is the fifth preset in the first row: vertical lines across it.
+    assert!(transitions(&png, 115, 590, 690) > 10, "no lines in `vert`");
+    // `pct90` is nearly all foreground, `pct5` nearly all background.
+    let [r, g, b, _] = pixel(&png, 92, 110);
+    assert!(r > 200 && g > 200 && b > 200, "pct5 is {r},{g},{b}");
+}
+
+/// A tiled picture fill repeats the picture at its own size rather than stretching
+/// it over the box (FH-01: `area-fill` slide 3 drew every tile stretched).
+#[test]
+fn a_tiled_picture_fill_repeats_the_picture() {
+    let mut deck = open("area-fill.pptx");
+    let (png, _) = deck.render_slide_png(2, 96.0, None).unwrap();
+    // "stretch" at the top left: a few cells across. "tile flip none" beside it:
+    // the picture at its own size, many times over.
+    let stretched = transitions(&png, 165, 35, 260);
+    let tiled = transitions(&png, 165, 282, 505);
+    assert!(stretched < 10, "stretch changed {stretched} times");
+    assert!(
+        tiled > 3 * stretched.max(4),
+        "tile changed only {tiled} times"
+    );
+}
+
+fn open_real(name: &str) -> Deck {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/real")
+        .join(name);
+    Deck::open(std::fs::read(path).unwrap()).unwrap()
+}
+
+/// A Japanese deck draws its text once the CJK slices holding the deck's characters
+/// are loaded (T2D5-02; FH-01 found `z21464709-souzou-ja` drawn with no text).
+#[test]
+fn a_japanese_deck_draws_its_text_from_the_slices_its_characters_name() {
+    use casual_slide_text::cjk::{Region, SliceDirectory, Style, Variant};
+    let mut deck = open_real("z21464709-souzou-ja.pptx");
+    let dir =
+        SliceDirectory::open(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../webapp/fonts/cjk"))
+            .unwrap();
+    let jp = Variant::new(Region::Jp, Style::Sans, false);
+    assert!(dir.load(deck.characters().into_iter().map(|c| (jp, c))) > 0);
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    // The title's first five characters, left of its colon, at 960 by 720.
+    let mut ink = 0;
+    for y in (70..120).step_by(2) {
+        for x in (200..370).step_by(2) {
+            if pixel(&png, x, y)[0] < 100 {
+                ink += 1;
+            }
+        }
+    }
+    assert!(ink > 100, "{ink} dark pixels in the title");
+}
+
+/// A group's scale places its children but never thickens their lines. This deck's
+/// groups map a child space of master units onto EMU, 1587.5 times; scaling a 4.5 pt
+/// line by that painted the slide black (FH-01, gallery run 42492516147).
+#[test]
+fn a_group_scale_does_not_thicken_its_childrens_lines() {
+    let mut deck = open_real("z21464709-souzou-ja.pptx");
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    // Above the title and left of the diagram, the slide's white background shows.
+    for (x, y) in [(20, 20), (480, 10), (300, 680), (940, 300)] {
+        let [r, g, b, _] = pixel(&png, x, y);
+        assert!(r > 200 && g > 200 && b > 200, "({x},{y}) is {r},{g},{b}");
+    }
+}

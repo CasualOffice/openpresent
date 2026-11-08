@@ -625,6 +625,10 @@ fn page_content(
                             out.push_str("Q\n");
                             continue;
                         }
+                        Paint::Pattern { fg, .. } => {
+                            note(report, "pdf: pattern line (drawn in its foreground)");
+                            *fg
+                        }
                     };
                     if let Some(gs) = res.alpha(true, f64::from(color.a) / 255.0) {
                         let _ = write!(out, "{gs} gs ");
@@ -837,7 +841,21 @@ fn write_fill(
             );
             shade(out, outline, 3, &coords, stops, res, report);
         }
-        Paint::Picture { part, frame, alpha } => {
+        Paint::Pattern { .. } => {
+            note(report, "pdf: pattern fill (drawn as a blend)");
+            if let Some(c) = paint.representative() {
+                write_fill(out, outline, &Paint::Solid(c), images, res, report);
+            }
+        }
+        Paint::Picture {
+            part,
+            frame,
+            alpha,
+            tile,
+        } => {
+            if tile.is_some() {
+                note(report, "pdf: tiled picture fill (drawn stretched)");
+            }
             let Some(index) = res.picture(part, images, report) else {
                 return;
             };
@@ -976,6 +994,10 @@ fn write_run(
         Paint::Picture { .. } => {
             note(report, "pdf: picture-filled text (drawn black)");
             BLACK
+        }
+        Paint::Pattern { fg, .. } => {
+            note(report, "pdf: pattern-filled text (drawn in its foreground)");
+            *fg
         }
     };
 

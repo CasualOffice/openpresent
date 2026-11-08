@@ -44,7 +44,7 @@ different, because this is general vector art rather than grid decoration.
 
 | Item | Carries |
 | --- | --- |
-| `Path` | Geometry, fill (solid, gradient, pattern, picture), stroke (dash, cap, join, arrowheads) |
+| `Path` | Geometry, fill (solid, gradient, pattern as an 8 by 8 cell bitmap, picture stretched or tiled), stroke (dash, cap, join, arrowheads). A shape in a group is placed in slide units: the group's scale sizes its box, never its line widths or text (`FH-03`) |
 | `GlyphRun` | Face, size, glyph ids and positions, fill, the characters drawn (so the PDF backend keeps text extractable, `VS-04`), and the source range for hit testing |
 | `Image` | Frame, crop, recolour, part hash |
 | `Group` | Transform, opacity, clip, effect list, stable object id, for caching |
