@@ -7,8 +7,11 @@
 //! carries document text out, except to the host that asked for its own edit.
 
 use casual_slide_model::shape::ObjectId;
-use casual_slide_model::text::{CharacterProperties, TextBody, TextItem, UnderlineType};
+use casual_slide_model::text::{
+    CharacterProperties, ParagraphProperties, TextBody, TextItem, UnderlineType,
+};
 use casual_slide_render::display::Affine;
+use casual_slide_style::text::TextChain;
 use casual_slide_text::CaretLine;
 use casual_slide_transaction::{Attribute, Operation, body_length, locate, paragraph_start};
 
@@ -39,12 +42,29 @@ impl Toggle {
         }
     }
 
-    fn is_on(self, p: Option<&CharacterProperties>) -> bool {
-        let Some(p) = p else { return false };
+    /// Whether the run with own properties `run`, in a paragraph with `paragraph`, has
+    /// this attribute as drawn: its own value, else what its levels give it.
+    fn is_on(
+        self,
+        chain: Option<&TextChain<'_>>,
+        run: Option<&CharacterProperties>,
+        paragraph: Option<&ParagraphProperties>,
+    ) -> bool {
+        let own = run.and_then(|p| self.own(p));
+        if let Some(v) = own {
+            return v;
+        }
+        chain
+            .and_then(|c| c.run(None, paragraph, |p| self.own(p)))
+            .is_some_and(|r| r.value)
+    }
+
+    /// What `p` states of this attribute, if anything.
+    fn own(self, p: &CharacterProperties) -> Option<bool> {
         match self {
-            Self::Bold => p.bold == Some(true),
-            Self::Italic => p.italic == Some(true),
-            Self::Underline => p.underline.is_some_and(|u| u != UnderlineType::None),
+            Self::Bold => p.bold,
+            Self::Italic => p.italic,
+            Self::Underline => p.underline.map(|u| u != UnderlineType::None),
         }
     }
 
@@ -148,6 +168,12 @@ fn item_props(item: &TextItem) -> Option<&CharacterProperties> {
 
 /// The run's own properties at a body offset: the character after it, or before it at
 /// the end of a paragraph, or the paragraph's end properties when it is empty.
+/// The properties of the paragraph holding `offset`.
+fn paragraph_at(body: &TextBody, offset: usize) -> Option<&ParagraphProperties> {
+    let (p, _) = locate(body, offset).ok()?;
+    body.paragraphs.get(p)?.properties.as_deref()
+}
+
 fn props_at(body: &TextBody, offset: usize) -> Option<&CharacterProperties> {
     let (p, c) = locate(body, offset).ok()?;
     let paragraph = body.paragraphs.get(p)?;
@@ -368,7 +394,7 @@ impl Viewer {
     }
 
     /// Bold, italic or underline over `[start, end)`: on unless the first character
-    /// already has it, as PowerPoint toggles. An empty range changes nothing.
+    /// already has it, its own or inherited, as PowerPoint toggles. An empty range changes nothing.
     pub fn toggle(
         &mut self,
         object: ObjectId,
@@ -380,7 +406,13 @@ impl Viewer {
         if start == end {
             return Ok(false);
         }
-        let on = !which.is_on(props_at(self.body(object)?, start));
+        let body = self.body(object)?;
+        let chain = self.deck.text_chain(object);
+        let on = !which.is_on(
+            chain.as_ref(),
+            props_at(body, start),
+            paragraph_at(body, start),
+        );
         self.edit(
             Operation::FormatRange {
                 object,
@@ -392,16 +424,16 @@ impl Viewer {
         )
     }
 
-    /// Whether the character at `offset` has bold, italic and underline of its own: bits
-    /// 1, 2 and 4, for the ribbon's pressed state.
+    /// Whether the character at `offset` is drawn bold, italic and underlined, its own
+    /// or inherited: bits 1, 2 and 4, for the ribbon's pressed state.
     pub fn format_state(&self, object: ObjectId, offset: usize) -> Result<u32, BridgeError> {
         let body = self.body(object)?;
         // The character before the caret is the one typing continues.
         let at = offset.saturating_sub(1);
-        let p = props_at(body, at);
-        Ok(u32::from(Toggle::Bold.is_on(p))
-            | u32::from(Toggle::Italic.is_on(p)) << 1
-            | u32::from(Toggle::Underline.is_on(p)) << 2)
+        let (p, para) = (props_at(body, at), paragraph_at(body, at));
+        let chain = self.deck.text_chain(object);
+        let on = |t: Toggle| u32::from(t.is_on(chain.as_ref(), p, para));
+        Ok(on(Toggle::Bold) | on(Toggle::Italic) << 1 | on(Toggle::Underline) << 2)
     }
 
     /// End the typing burst, so the next keystroke starts a new undo step: the caret

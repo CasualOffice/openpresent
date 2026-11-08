@@ -39,6 +39,8 @@ let selected = null;    // node
 let drag = null;        // { kind, start, box, handle?, moved }
 let undoState = [false, false];
 let shapesToken = 0;
+let shapesFor = null;   // the slide index `shapes` was read for; null until read
+let pendingPress = null; // a press made before the shapes were read: { p, shift }
 
 const shape = () => shapes.find((s) => s.node === selected) || null;
 const scale = () => byId("slide-frame").clientWidth / state.deck.width;   // px per EMU
@@ -268,20 +270,46 @@ function onDown(e) {
       : { kind: "resize", start: p, origin: s, box: { ...s }, handle: handle.split(",").map(Number) };
     return;
   }
+  // The slide is drawn but its shapes are not read yet: hold the press, and the
+  // keys typed after it, until they are (`VS-19`).
+  if (shapesFor !== state.current) {
+    pendingPress = { p, shift: e.shiftKey };
+    text.hold();
+    return;
+  }
+  press(p, e.shiftKey);
+}
+
+/// A press at slide point `p` on the shapes as read.
+function press(p, shift) {
   const found = hit(p);
   // A press inside a shape that holds text puts the caret there (`VS-05`).
   if (found && found.part != null && interior(found, p)) {
     selected = found.node;
     drag = { kind: "text" };
-    text.pointerDown(found.part, found.node, p, e.shiftKey);
+    text.pointerDown(found.part, found.node, p, shift);
     paint();
     changed();
-    return;
+    return true;
   }
   text.stop();
   select(found ? found.node : null);
   byId("stage").focus({ preventScroll: true });
   if (found) drag = { kind: "move", start: p, origin: found, box: { ...found } };
+  return false;
+}
+
+/// Replay a press held while the shapes were read; the keys held with it follow
+/// into the box it opens, or are dropped if it opened none.
+function replayPress() {
+  const held = pendingPress;
+  pendingPress = null;
+  if (!held) return;
+  const opened = press(held.p, held.shift);
+  // The button may be up by now: a replayed press does not drag.
+  drag = null;
+  text.pointerUp();
+  text.release(opened);
 }
 
 function onMove(e) {
@@ -447,12 +475,16 @@ export async function refresh() {
     }));
     if (token !== shapesToken || index !== state.current) return;
     shapes = next;
+    shapesFor = index;
     if (pendingSelect != null) { selected = pendingSelect; pendingSelect = null; }
     if (!shape()) selected = null;
     paint();
     changed();
+    replayPress();
   } catch {
     shapes = [];
+    pendingPress = null;
+    text.release(false);
   }
 }
 
@@ -462,6 +494,7 @@ export function reset(deckChanged) {
   drag = null;
   dropGhost();
   shapes = [];
+  shapesFor = null;
   if (deckChanged) undoState = [false, false];
   paint();
 }
