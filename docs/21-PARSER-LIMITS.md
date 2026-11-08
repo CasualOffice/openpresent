@@ -324,6 +324,9 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_TABLE_SIDE` | `75` | Rows or columns a table edit may grow a table to, PowerPoint's own Insert Table bound (`casual-slide-transaction` `rich`, `VS-11`) | CS-TXN-0013 | Untested: no test grows a table past it |
 | `MAX_PICTURE_BYTES` | `64 * 1024 * 1024` | Bytes of one picture Insert > Picture takes, as the writer's media bound (`VS-08`) | CS-WSM-0008 | Untested: no test inserts a picture past it |
 | `MAX_NAME_CHARS` | `128` | Characters of the name a host gives a shape it inserts (`SHAPE-01`) | None: the name is cut; control characters are dropped and the rest escaped | Untested |
+| `MAX_CLIP_SHAPES` | `1000` | Shapes one Copy, Paste, Duplicate, group move or group delete takes (`UX-003`) | CS-WSM-0006 | Untested |
+| `MAX_FONT_POINTS` | `4000.0` | Points the Font Size box takes, `ST_TextFontSize`'s bound (`UX-003`) | CS-WSM-0006 | `home_tests::a_bad_size_or_colour_is_refused_and_changes_nothing` |
+| `MAX_FONT_NAME_CHARS` | `64` | Characters of a name typed in the Font box (`UX-003`) | None: the name is cut; control characters are dropped | Untested |
 | `MAX_LINE_WIDTH` | `20_116_800` | EMU of an outline weight Shape Outline sets, PowerPoint's 1584 points (`SHAPE-01`) | None: a wider one is set to the bound | Untested |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)

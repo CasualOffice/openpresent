@@ -29,11 +29,15 @@
 //!
 //! Nothing here reads a file; offsets come from the host and are checked, never trusted.
 
+use casual_slide_model::color::Color;
 use casual_slide_model::drawing::ShapeProperties;
+use casual_slide_model::fill::Fill;
+use casual_slide_model::presentation::TextFont;
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{Background, PartEntry, SlidePart, SlideParts};
 use casual_slide_model::text::{
-    CharacterProperties, LineBreak, Paragraph, TextBody, TextItem, TextRun, UnderlineType,
+    Bullet, BulletFont, CharacterProperties, LineBreak, Paragraph, ParagraphProperties, TextAlign,
+    TextBody, TextItem, TextRun, UnderlineType,
 };
 use casual_slide_model::theme::{ColorScheme, FontScheme, ShapeStyle};
 use casual_slide_model::timing::{SlideTiming, Slot};
@@ -205,6 +209,14 @@ pub enum Attribute {
     Italic(Option<bool>),
     /// `rPr/@u`.
     Underline(Option<UnderlineType>),
+    /// `rPr/@sz`, hundredths of a point: the Font Size box, Increase and Decrease.
+    Size(Option<i32>),
+    /// `rPr/latin`: the Font box. Only the Latin font, as PowerPoint's box sets.
+    Latin(Option<Box<TextFont>>),
+    /// The run's `EG_FillProperties` choice: Font Color.
+    Fill(Option<Fill>),
+    /// `rPr/highlight`: Text Highlight Color. `None` removes it.
+    Highlight(Option<Color>),
 }
 
 impl Attribute {
@@ -213,6 +225,46 @@ impl Attribute {
             Self::Bold(v) => p.bold = *v,
             Self::Italic(v) => p.italic = *v,
             Self::Underline(v) => p.underline = *v,
+            Self::Size(v) => p.size = *v,
+            Self::Latin(v) => p.latin.clone_from(v),
+            Self::Fill(v) => p.fill.clone_from(v),
+            Self::Highlight(v) => p.highlight = v.clone().map(Some),
+        }
+    }
+}
+
+/// A paragraph property the Home tab's Paragraph group sets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ParagraphChange {
+    /// `pPr/@algn`. `None` removes it, so the paragraph inherits again.
+    Align(Option<TextAlign>),
+    /// The `EG_TextBullet` choice and the `EG_TextBulletTypeface` choice with it.
+    Bullet(Option<Bullet>, Option<BulletFont>),
+    /// `pPr/@marL` and `pPr/@indent`, EMU: where a bullet hangs.
+    Indent {
+        /// `@marL`.
+        margin_left: Option<i32>,
+        /// `@indent`.
+        indent: Option<i32>,
+    },
+}
+
+impl ParagraphChange {
+    fn set(&self, p: &mut ParagraphProperties) {
+        match self {
+            Self::Align(v) => p.align = *v,
+            Self::Bullet(b, f) => {
+                p.bullet.clone_from(b);
+                p.bullet_font.clone_from(f);
+            }
+            Self::Indent {
+                margin_left,
+                indent,
+            } => {
+                p.margin_left = *margin_left;
+                p.indent = *indent;
+            }
         }
     }
 }
@@ -285,6 +337,18 @@ pub enum Operation {
         end: usize,
         /// What to set.
         attribute: Attribute,
+    },
+    /// Give paragraphs `[first, first + count)` a paragraph property. The inverse is a
+    /// [`Operation::Restore`] of the paragraphs as they were.
+    FormatParagraphs {
+        /// The shape.
+        object: ObjectId,
+        /// First paragraph changed.
+        first: usize,
+        /// How many.
+        count: usize,
+        /// What to set.
+        change: ParagraphChange,
     },
     /// Replace paragraphs `[first, first + count)` with `paragraphs`. The inverse of every
     /// other operation: the paragraphs it touched, exactly as they were.
@@ -450,6 +514,7 @@ impl Operation {
             Self::InsertText { object, .. }
             | Self::DeleteRange { object, .. }
             | Self::FormatRange { object, .. }
+            | Self::FormatParagraphs { object, .. }
             | Self::Restore { object, .. } => Some(*object),
             Self::SetTable { node, .. } => Some(*node),
             Self::SetChart { .. } => None,
@@ -521,7 +586,7 @@ impl Operation {
             Self::InsertNode { .. } => "Insert",
             Self::InsertText { .. } => "Typing",
             Self::DeleteRange { .. } => "Delete",
-            Self::FormatRange { .. } => "Format",
+            Self::FormatRange { .. } | Self::FormatParagraphs { .. } => "Format",
             Self::Restore { .. } => "Edit",
             Self::SetTable { .. } => "Table",
             Self::SetChart { .. } => "Chart Data",
@@ -947,6 +1012,43 @@ fn apply_format(
     ))
 }
 
+fn apply_paragraphs(
+    body: &mut TextBody,
+    object: ObjectId,
+    first: usize,
+    count: usize,
+    change: &ParagraphChange,
+) -> Result<Applied, TxnError> {
+    let len = body.paragraphs.len();
+    let end = first
+        .checked_add(count)
+        .filter(|&e| e <= len && count > 0)
+        .ok_or(TxnError::OutOfRange {
+            offset: first.saturating_add(count),
+            length: len,
+        })?;
+    let before: Vec<Paragraph> = body.paragraphs.get(first..end).unwrap_or_default().to_vec();
+    for p in body.paragraphs.get_mut(first..end).unwrap_or_default() {
+        let had = p.properties.is_some();
+        let props = p.properties.get_or_insert_with(Box::default);
+        change.set(props);
+        // Absent stays absent: clearing what was never there writes no empty `pPr`.
+        if !had && **props == ParagraphProperties::default() {
+            p.properties = None;
+        }
+    }
+    let changed = body.paragraphs.get(first..end) != Some(before.as_slice());
+    Ok((
+        Operation::Restore {
+            object,
+            first,
+            count,
+            paragraphs: before,
+        },
+        changed,
+    ))
+}
+
 fn apply_restore(
     body: &mut TextBody,
     object: ObjectId,
@@ -1080,6 +1182,12 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
             end,
             attribute,
         } => apply_format(body_mut(parts, object)?, object, start, end, &attribute),
+        Operation::FormatParagraphs {
+            object,
+            first,
+            count,
+            change,
+        } => apply_paragraphs(body_mut(parts, object)?, object, first, count, &change),
         Operation::Restore {
             object,
             first,
