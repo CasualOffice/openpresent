@@ -22,6 +22,14 @@
   --op-border-hover-color: #c3c9cc;
   --op-surface-color: #f0f2f3;
   --op-popover-background-color: #ffffff;
+  /* Shapes (`SHAPE-01`): PowerPoint's yellow adjust handle, the drawing tool's
+     outline, the colour pickers' hover ring and the contextual tab's colour. */
+  --op-adjust-handle-color: #ffd700;
+  --op-draw-preview-color: #2f5597;
+  --op-swatch-hover-color: #f29436;
+  --op-contextual-tab-color: #c55a11;
+  --op-swatch-border-color: rgba(0, 0, 0, 0.2);
+  --op-popover-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   /* The stage behind the slide: PowerPoint's light grey workspace. */
   --op-stage-color: #e6e8ea;
   /* OpenPresent cyan (`DEC-03`). Not PowerPoint's orange-red, not OpenCalc's green. */
@@ -346,3 +354,49 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .dz-field input[type="number"] { width: 96px; }
 .dz-field[hidden] { display: none; }
 .dz-radios { display: flex; gap: 16px; margin: 0 0 10px; }
+
+/* Shapes (`SHAPE-01`): the gallery and Shape Format menus, the drawing tool and the
+   yellow adjust handles. */
+.shp-pop {
+  position: fixed; z-index: 1000; box-sizing: border-box; max-height: calc(100vh - 16px); overflow: auto;
+  padding: 6px; background: var(--op-popover-background-color); color: var(--op-text-color);
+  border: 1px solid var(--op-control-border-color); border-radius: 6px; box-shadow: var(--op-popover-shadow);
+}
+.shp-gallery { width: 320px; }
+.shp-head { margin: 6px 2px 3px; font-size: 12px; font-weight: 600; color: var(--op-muted-text-color); }
+.shp-grid { display: grid; grid-template-columns: repeat(12, 25px); gap: 1px; }
+.shp-item {
+  position: relative; width: 25px; height: 25px; padding: 1px; border: 1px solid transparent; border-radius: 3px;
+  background: none; color: var(--op-icon-color); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.shp-item:hover, .shp-item:focus-visible { background: var(--op-surface-color); border-color: var(--op-border-hover-color); outline: none; }
+.shp-ends-1::after, .shp-ends-2::after { content: ""; position: absolute; right: 2px; bottom: 2px; border: 3px solid transparent; border-left-color: currentColor; }
+.shp-ends-2::before { content: ""; position: absolute; left: 2px; top: 2px; border: 3px solid transparent; border-right-color: currentColor; }
+.shp-draw { position: absolute; inset: 0; z-index: 6; cursor: crosshair; touch-action: none; }
+.shp-preview { position: absolute; pointer-events: none; color: var(--op-draw-preview-color); }
+.shp-preview line { stroke: var(--op-draw-preview-color); stroke-width: 1.5px; }
+.shp-adj-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.op-reading .shp-adj-layer { display: none; }
+.shp-adj {
+  position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; box-sizing: border-box;
+  background: var(--op-adjust-handle-color); border: 1px solid var(--op-icon-color); border-radius: 50%;
+  pointer-events: auto; cursor: pointer; touch-action: none;
+}
+.shp-menu { width: 260px; }
+.shp-colours { display: grid; grid-template-columns: repeat(10, 20px); gap: 3px; margin: 2px; }
+.shp-swatch { width: 20px; height: 20px; padding: 0; border: 1px solid var(--op-swatch-border-color); cursor: pointer; }
+.shp-swatch:hover, .shp-swatch:focus-visible { outline: 2px solid var(--op-swatch-hover-color); outline-offset: 0; }
+.shp-sep { height: 1px; margin: 6px 0; background: var(--op-border-color); }
+.shp-menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 6px; border: 0; border-radius: 3px;
+  background: none; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; box-sizing: border-box;
+}
+.shp-menu-item:hover, .shp-menu-item:focus-visible { background: var(--op-surface-color); outline: none; }
+.shp-more { position: relative; }
+.shp-color-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.shp-styles { width: 404px; }
+.shp-style-grid { display: grid; grid-template-columns: repeat(7, 52px); gap: 4px; }
+.shp-style { padding: 2px; border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer; }
+.shp-style:hover, .shp-style:focus-visible { border-color: var(--op-swatch-hover-color); outline: none; }
+.shp-style-thumb { display: flex; align-items: center; justify-content: center; height: 34px; box-sizing: border-box; border-radius: 2px; font-size: 13px; }
+.op-chrome-ribbon .rb-tab.rb-tab-contextual { color: var(--op-contextual-tab-color); }

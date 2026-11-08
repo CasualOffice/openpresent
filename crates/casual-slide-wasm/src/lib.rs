@@ -1458,6 +1458,17 @@ pub fn insert_picture(
     })
 }
 
+/// The names of every preset shape the geometry engine has, sorted, for the Shapes
+/// gallery (`SHAPE-01`).
+#[wasm_bindgen]
+#[must_use]
+pub fn preset_names() -> Vec<String> {
+    casual_slide_geometry::preset_shapes()
+        .iter()
+        .map(|d| d.name.to_string())
+        .collect()
+}
+
 /// The Shapes gallery's icon for preset `name` at `w` by `h` units, as SVG path data
 /// ([`preset_outline`]); empty for a name the table lacks (`SHAPE-01`).
 #[wasm_bindgen]

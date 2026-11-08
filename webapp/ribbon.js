@@ -449,6 +449,10 @@ function closeBackstage() {
   el?.querySelector(".rb-file")?.focus();
 }
 
+/// Show tab `id`, as PowerPoint opens Shape Format on a shape just drawn. Before the
+/// ribbon is built it does nothing.
+export let selectTab = () => {};
+
 /// Build the shell before `anchor` (the workspace). Returns the ribbon.
 export async function start(anchor) {
   if (el) return el;
@@ -474,6 +478,18 @@ export async function start(anchor) {
     t.setAttribute("aria-controls", `rb-panel-${tab.id}`);
     t.addEventListener("click", () => select(tab.id));
     tablist.appendChild(t);
+    // A contextual tab (Shape Format, `SHAPE-01`) is there only while its command,
+    // `tab.contextual`, is enabled: PowerPoint shows it while a shape is selected.
+    if (tab.contextual) {
+      t.classList.add("rb-tab-contextual");
+      t.hidden = true;
+      sync.add(() => {
+        const c = command(tab.contextual);
+        const on = !!c && (!c.enabled || c.enabled());
+        if (t.hidden === on) t.hidden = !on;
+        if (!on && t.classList.contains("is-on")) select("home");
+      });
+    }
     const panel = h("div", "rb-panel");
     panel.id = `rb-panel-${tab.id}`;
     panel.setAttribute("role", "tabpanel");
@@ -507,6 +523,7 @@ export async function start(anchor) {
     fit(panels.get(id));
     queueSync();
   }
+  selectTab = (id) => { if (panels.has(id)) select(id); };
 
   const applyLayout = (v) => {
     el.classList.toggle("rb-simplified", v === "simplified");

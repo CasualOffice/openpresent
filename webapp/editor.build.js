@@ -1,6 +1,6 @@
 // Building a deck (`VS-08`): New Slide with a layout picker drawn from the deck's own
 // layouts, Duplicate, Delete and Hide Slide, reordering by dragging thumbnails, and
-// Insert Text Box, Shapes and Pictures. Every verb is a registered command; each is
+// Insert Text Box and Pictures; Insert > Shapes is `editor.shapes.js` (`SHAPE-01`). Every verb is a registered command; each is
 // one engine op with its inverse, so Undo and Redo are the shared `edit.undo`/`edit.redo`.
 //
 // Layout names are document text: they reach the DOM through `textContent` only.
@@ -168,22 +168,6 @@ function insertShape(kind) {
   });
 }
 
-function shapesPicker() {
-  showModal("Shapes", (body) => {
-    const grid = document.createElement("div");
-    grid.className = "op-layouts";
-    for (const [kind, label] of [["rectangle", "Rectangle"], ["oval", "Oval"], ["line", "Line"], ["arrow", "Arrow"]]) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "op-btn op-layout";
-      b.textContent = label;
-      b.addEventListener("click", () => { closeModal(); insertShape(kind); });
-      grid.appendChild(b);
-    }
-    body.appendChild(grid);
-  });
-}
-
 let picker = null;
 function pickPicture() {
   if (!picker) {
@@ -281,7 +265,6 @@ export function init() {
   register("home.delete-slide", { label: "Delete Slide", enabled: hasSlide, run: deleteSlide });
   register("slideshow.hide-slide", { label: "Hide Slide", enabled: hasSlide, checked: () => !!hidden[state.current], run: toggleHidden });
   register("insert.text-box", { label: "Text Box", enabled: hasSlide, run: () => insertShape("textbox") });
-  register("insert.shapes", { label: "Shapes", enabled: hasSlide, run: shapesPicker });
   register("insert.shape.rectangle", { label: "Rectangle", enabled: hasSlide, run: () => insertShape("rectangle") });
   register("insert.shape.oval", { label: "Oval", enabled: hasSlide, run: () => insertShape("oval") });
   register("insert.shape.line", { label: "Line", enabled: hasSlide, run: () => insertShape("line") });

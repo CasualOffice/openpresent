@@ -25,6 +25,7 @@ import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
 import { registerDesignCommands } from "./editor.design.js";
 import * as build from "./editor.build.js";
+import * as shapes from "./editor.shapes.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -347,6 +348,7 @@ async function boot() {
   } catch { /* private mode */ }
   selection.init();
   build.init();
+  shapes.init();   // Insert > Shapes, adjust handles, Shape Format (`SHAPE-01`)
   registerCommands();
   initDialogs(request);
   slides.init();
