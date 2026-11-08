@@ -480,11 +480,15 @@ fn symbol_bullet(font: &str, ch: char) -> Option<char> {
     Some(if drawable { mapped } else { '\u{2022}' })
 }
 
-/// The Wingdings characters decks use most, as the Unicode characters they look like.
+/// The Wingdings characters decks use most, as the Unicode characters they look like,
+/// from the mapping in Unicode's Wingdings and Webdings proposal (L2/11-052): `n` is
+/// the large black square and `§` the small one.
 fn wingdings_char(ch: char) -> Option<char> {
     Some(match ch {
-        '\u{a7}' | 'n' => '\u{25aa}',
+        'n' => '\u{25a0}',
+        '\u{a7}' => '\u{25aa}',
         'l' => '\u{25cf}',
+        // `q` is ❑ (U+2751), which no bundled face draws: the nearest one that does.
         'q' | 'o' => '\u{25a1}',
         'v' => '\u{2756}',
         '\u{d8}' => '\u{27a2}',
@@ -681,6 +685,13 @@ mod tests {
         assert!(crate::faces::coverage_face_bytes(ch, false, false).is_some());
         assert_eq!(symbol_bullet("Arial", '\u{2022}'), None);
         assert_eq!(symbol_bullet("Symbol", '\u{f0b7}'), Some('\u{2022}'));
+    }
+
+    #[test]
+    fn wingdings_n_is_the_large_black_square_and_section_sign_the_small_one() {
+        assert_eq!(symbol_bullet("Wingdings", 'n'), Some('\u{25a0}'));
+        assert_eq!(symbol_bullet("Wingdings", '\u{f06e}'), Some('\u{25a0}'));
+        assert_eq!(symbol_bullet("Wingdings", '\u{a7}'), Some('\u{25aa}'));
     }
 
     #[test]
