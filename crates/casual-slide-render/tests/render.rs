@@ -344,17 +344,15 @@ fn an_outer_shadow_is_drawn_behind_its_shape() {
     let translucent = list.items.iter().any(|i| {
         matches!(
             i,
-            DisplayItem::Path {
-                stroke: Some(casual_slide_render::display::Stroke {
-                    paint: Paint::Solid(Rgba { a, .. }),
-                    ..
-                }),
-                fill: None,
+            DisplayItem::Blurred {
+                color: Rgba { a, .. },
+                filled: true,
+                sigma,
                 ..
-            } if *a < 255
+            } if *a < 255 && *sigma > 0.0
         )
     });
-    assert!(translucent, "no shadow ring drawn");
+    assert!(translucent, "no blurred shadow drawn");
 }
 
 /// `normAutofit` draws at the scale the file stores: a 10 pt run under
@@ -489,4 +487,30 @@ fn a_group_scale_does_not_thicken_its_childrens_lines() {
         let [r, g, b, _] = pixel(&png, x, y);
         assert!(r > 200 && g > 200 && b > 200, "({x},{y}) is {r},{g},{b}");
     }
+}
+
+/// A glow fades out of its shape as a Gaussian does: smoothly, a little every pixel,
+/// with no flat bands. Stepped rings gave bands two or three pixels wide.
+#[test]
+fn a_glow_fades_smoothly_like_a_gaussian_blur() {
+    let mut deck = open("area-effect.pptx");
+    let (png, _) = deck.render_slide_png(0, 96.0, None).unwrap();
+    // `glow 7`: its top edge at 685800 EMU (72 px), its middle at 4419600 EMU
+    // (464 px); an orange glow 139700 EMU (14.7 px) wide, read upwards.
+    let blue = |y: u32| 255 - u32::from(pixel(&png, 464, y)[2]);
+    let profile: Vec<u32> = (59..71).rev().map(blue).collect();
+    assert!(
+        profile[0] > 40,
+        "the glow is drawn beside the shape: {profile:?}"
+    );
+    assert!(
+        profile.windows(2).all(|w| w[1] < w[0]),
+        "it falls every pixel, with no flat band: {profile:?}"
+    );
+    let steps: Vec<u32> = profile.windows(2).map(|w| w[0] - w[1]).collect();
+    let biggest = steps.iter().copied().max().unwrap_or(0);
+    assert!(
+        biggest * 3 < profile[0],
+        "no one step takes a third of it: {profile:?}"
+    );
 }

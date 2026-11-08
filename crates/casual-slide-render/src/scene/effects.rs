@@ -1,20 +1,19 @@
 //! Outer shadow and glow, the effects real decks use most, as display items behind
 //! the shape.
 //!
-//! The display list has no blur, so a blur is stepped: the shape's outline filled
-//! once faintly, then stroked in widening rings of falling opacity out to the blur
-//! radius, which reads as a soft edge at slide sizes. That is an approximation, and
-//! the report says so. Every other effect is reported by name and not drawn.
+//! A blurred shadow or glow is a [`DisplayItem::Blurred`]: the silhouette in one
+//! colour and a Gaussian's deviation, which the raster backend blurs and a backend
+//! with no blur steps into rings. The deviation is Inferred: a quarter of `blurRad`
+//! for a shadow, so its soft edge spans the radius across the outline; a glow grows
+//! the outline by half `rad` and blurs by a quarter, so it fades out to `rad`.
+//! Every other effect is reported by name and not drawn.
 
 use casual_slide_model::color::Color;
 use casual_slide_model::effect::{Effect, EffectProperties, OuterShadow};
 use casual_slide_model::shape::ShapeNode;
 
 use super::Builder;
-use crate::display::{Affine, Cap, Join, Layer, Paint, PathCmd, Rgba, Stroke};
-
-/// Rings a blur or glow is stepped into.
-const BLUR_STEPS: usize = 6;
+use crate::display::{Affine, DisplayItem, Layer, Paint, PathCmd, Rgba};
 
 impl<'a> Builder<'a> {
     /// Draw the shadows and glows of `effects` for the outlines `paths` draw, and
@@ -50,7 +49,7 @@ impl<'a> Builder<'a> {
                         });
                     if r > 0.0 {
                         for p in paths {
-                            self.soft(node, layer, transform, p, c, r, false);
+                            self.blurred(node, layer, transform, p, c, false, r / 2.0, r / 4.0);
                         }
                     }
                 }
@@ -103,59 +102,37 @@ impl<'a> Builder<'a> {
         let at = Affine::translate(dx * dist, dy * dist).then_after(&transform);
         for p in paths {
             if blur > 0.0 {
-                self.soft(node, layer, at, p, color, blur / 2.0, true);
+                self.blurred(node, layer, at, p, color, true, 0.0, blur / 4.0);
             } else {
                 self.push(node, layer, at, p.to_vec(), Some(Paint::Solid(color)), None);
             }
         }
-        if blur > 0.0 {
-            self.report.note("shadow or glow blur (stepped)");
-        }
     }
 
-    /// A soft halo of `color` around `path`, reaching `reach` EMU out; `filled` also
-    /// fills the inside, as a shadow does and a glow does not.
-    #[allow(clippy::too_many_arguments)] // An outline, its place, look, reach and owner.
-    fn soft(
+    /// The silhouette of `path` in `color`, grown by `grow` and blurred by a
+    /// Gaussian of deviation `sigma`, both EMU; `filled` keeps the inside, as a
+    /// shadow does and a glow does not.
+    #[allow(clippy::too_many_arguments)] // An outline, its place, look, blur and owner.
+    fn blurred(
         &mut self,
         node: &ShapeNode,
         layer: Layer,
         at: Affine,
         path: &[PathCmd],
         color: Rgba,
-        reach: f64,
         filled: bool,
+        grow: f64,
+        sigma: f64,
     ) {
-        let alpha = f64::from(color.a);
-        let tint = |a: f64| {
-            Paint::Solid(Rgba {
-                a: a.round().clamp(0.0, 255.0) as u8,
-                ..color
-            })
-        };
-        if filled {
-            // The inside, less a step so the rings fade its edge.
-            self.push(
-                node,
-                layer,
-                at,
-                path.to_vec(),
-                Some(tint(alpha * 0.5)),
-                None,
-            );
-        }
-        // Rings from widest to narrowest: each adds a little, so the colour builds
-        // towards the outline and fades outwards.
-        for k in (1..=BLUR_STEPS).rev() {
-            let width = 2.0 * reach * k as f64 / BLUR_STEPS as f64;
-            let stroke = Stroke {
-                paint: tint(alpha / (BLUR_STEPS as f64 * 0.9)),
-                width,
-                dash: Vec::new(),
-                cap: Cap::Round,
-                join: Join::Round,
-            };
-            self.push(node, layer, at, path.to_vec(), None, Some(stroke));
-        }
+        self.items.push(DisplayItem::Blurred {
+            object: Some(node.id),
+            layer,
+            transform: at,
+            path: path.to_vec(),
+            color,
+            filled,
+            grow,
+            sigma,
+        });
     }
 }
