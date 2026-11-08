@@ -59,8 +59,9 @@ OpenPresent is designed around that problem:
 | Charts, SmartArt, equations, ink | 🟡 Built, tier open; limits not yet mutation-tested |
 | OLE, VML, 3D models: kept with their fallback | 🟡 Built, tier open |
 | Comments, sections, zoom, labels, tags, custom XML | ✅ Tier 1M closed |
-| Rendering to PNG and PDF | ⬜ Phase 2 |
-| Editor, slide show, co-editing, desktop app | ⬜ Phases 3 to 10 |
+| Rendering to PNG and PDF | 🟡 Phase 2 started: slides to PNG; PDF not yet |
+| Viewing a deck in the browser: thumbnails, slide, slide show (`VS-01`) | 🟡 Built, untested in a browser; CI publishes it with the gallery |
+| Editing, co-editing, desktop app | ⬜ Phases 3 to 10 |
 
 **All Phase 1 tiers, 1A to 1N and 1R, are closed** (2026-11-08). Of 8,739 checklist rows, 7,843 are marked `y` or `r` in model, import and export; 469 more are `n/a` in a column that does not apply to them; the 427 others each carry a named reason in `docs/spec/open-rows.tsv` or are accounted for by their members, and `tools/spec-audit` checks every one. What each tier still lacks is in the [tracker](docs/14-EXECUTION-TRACKER.md) under "Tier gates".
 

@@ -93,7 +93,7 @@ pub struct Viewer {
 
 impl Viewer {
     /// Open a deck's bytes. A deck that cannot be read at all is refused with its
-    /// reader's code; a damaged one opens with a best reading (`docs/29`).
+    /// reader's code; a damaged one opens with a best reading where the reader recovers one (`docs/29`).
     pub fn open(bytes: Vec<u8>) -> Result<Self, BridgeError> {
         Ok(Self {
             deck: Deck::open(bytes)?,

@@ -1,0 +1,77 @@
+/* OpenPresent site: the landing page and the pages beside it (deploy, download).
+   Shaped after OpenCalc's `webapp/style.css` at `b23c67c` (webapp/README.md): one
+   stylesheet, no framework, no CDN, tokens first and a dark scheme by media
+   query. Its class names (`site-header`, `wrap`, `page-head`, `btn`) are kept
+   so its pages and ours read alike. The accent is `DEC-03`'s cyan. */
+
+:root {
+  --bg: #ffffff;
+  --fg: #1f1f1f;
+  --muted: #5f6368;
+  --border: #e1e4e6;
+  --panel: #f5f7f8;
+  --accent: #0e7490;
+  --accent-fill: #0e7490;
+  --code-bg: #f0f2f3;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1216;
+    --fg: #e7ebf0;
+    --muted: #9aa6b4;
+    --border: #262c34;
+    --panel: #161a20;
+    --accent: #4fc3dc;
+    --code-bg: #1a1f27;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 1rem/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+a { color: var(--accent); }
+code, pre { font-family: var(--mono); font-size: .9em; background: var(--code-bg); border-radius: 4px; }
+code { padding: .1em .3em; }
+pre { padding: .8rem 1rem; overflow: auto; }
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 1rem; top: 1rem; }
+.wrap { max-width: 64rem; margin: 0 auto; padding: 0 1.25rem; }
+
+.site-header { border-bottom: 1px solid var(--border); }
+.site-header .wrap { display: flex; align-items: center; gap: 1.5rem; height: 3.5rem; }
+.brand { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; color: var(--fg); text-decoration: none; }
+.mark { width: 1.6rem; height: 1.6rem; }
+.m-bg { fill: var(--accent-fill); }
+.m-ln { fill: none; stroke: #fff; stroke-width: 2.4; }
+.nav-links { display: flex; gap: 1.25rem; flex: 1; }
+.nav-links a { color: var(--muted); text-decoration: none; }
+.nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--fg); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: .4rem; padding: .55rem 1rem; border-radius: .4rem;
+  font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--fg);
+}
+.btn-primary { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent-fill), #000 15%); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page-head { padding: 3.5rem 0 2rem; }
+.eyebrow { margin: 0 0 .5rem; color: var(--accent); font-weight: 600; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
+h1 { margin: 0 0 1rem; font-size: 2.4rem; line-height: 1.15; letter-spacing: -.02em; }
+.lede { margin: 0 0 1.5rem; max-width: 40rem; font-size: 1.15rem; color: var(--muted); }
+.cta-row { display: flex; flex-wrap: wrap; gap: .75rem; }
+section.block { padding: 1.5rem 0; border-top: 1px solid var(--border); }
+section.block h2 { font-size: 1.3rem; margin: 0 0 .75rem; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+.tile { padding: 1rem 1.1rem; background: var(--panel); border: 1px solid var(--border); border-radius: .5rem; }
+.tile h3 { margin: 0 0 .35rem; font-size: 1rem; }
+.tile p { margin: 0; color: var(--muted); font-size: .95rem; }
+.note { padding: .8rem 1rem; border-left: 3px solid var(--accent); background: var(--panel); }
+.site-footer { margin-top: 3rem; padding: 1.5rem 0; border-top: 1px solid var(--border); color: var(--muted); font-size: .9rem; }
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  h1 { font-size: 1.8rem; }
+}
