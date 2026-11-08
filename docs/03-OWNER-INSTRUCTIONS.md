@@ -66,6 +66,7 @@ by saying so.
 | 55 | 2026-11-08 | Co-editing presence as PowerPoint shows it: people at the top right of the header with a list, name and colour on each person's cursor and selection. Verify against Microsoft's documentation, not the owner's recollection | [53](53-POWERPOINT-WEB-SHELL-TARGET.md), `COL-04` |
 | 56 | 2026-11-08 | Find every PowerPoint gap, not only the examples the owner names: audit all features and work from a ranked backlog | [96](96-POWERPOINT-FIT-GAP.md), [14](14-EXECUTION-TRACKER.md) |
 | 57 | 2026-11-08 | "Rename and file properties are still pending": rename in the title bar and File > Rename, File > Info properties and Advanced Properties saved into `docProps`, Save As, Download a Copy, Export, Print, and autosave with crash recovery, as PowerPoint for the web does them | `webapp/editor.file.js`, `webapp/editor.drafts.js`, `FILE-01`, `SAVE-01` |
+| 58 | 2026-11-09 | "Docs are not updated or maintained": make every document true to the code and to git today, README first (what works, live links, status, how to run, build, self-host and co-edit, measured fidelity and parity numbers); remove what the code does not do; never claim a PowerPoint match; say which commit the docs are true as of | Every document; `DOC-011`; the `openslide-docs` skill |
 
 ## Boundaries set by the environment
 

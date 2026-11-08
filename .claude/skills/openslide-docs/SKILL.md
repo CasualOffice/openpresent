@@ -10,5 +10,6 @@ Rules:
 - Numbers come from a command, not memory. "Measured" means measured, on a named environment.
 - A contract the code does not keep is a tracker row, not a softened sentence.
 - New documents take the next number and go in `docs/00`.
+- **Docs are true as of a commit (owner instruction 58).** `README.md` §Status, `AGENTS.md` §Current state and `docs/00` each carry one line, `Docs are true as of <short hash> (<date>).`, naming the `main` commit they were last checked against. Move it only after checking.
 
 **Auditing:** use a fresh session, so the check is not anchored on the author. Check each claim by running or reading something, with `file:line`. Report what was checked as well as what failed. Each finding becomes a fix or a row.
