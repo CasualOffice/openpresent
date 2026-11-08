@@ -37,7 +37,7 @@ impl Viewer {
 
     /// Give shape `node` of slide `index` this alt text: one undo step. Control
     /// characters but line breaks are dropped and the text cut at
-    /// [`MAX_ALT_TEXT_CHARS`]; empty removes it. `false` when nothing changed.
+    /// `MAX_ALT_TEXT_CHARS`; empty removes it. `false` when nothing changed.
     ///
     /// # Errors
     ///
