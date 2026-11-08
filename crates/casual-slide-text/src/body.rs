@@ -134,6 +134,8 @@ pub fn resolve_body<'a>(
             if text.is_empty() {
                 continue;
             }
+            let text = symbol_text(props, text);
+            let text = text.as_ref();
             let style = run_style(chain, props, p, text, &mut fonts);
             let caps = chain
                 .run(props, p, |c| c.caps)
@@ -469,19 +471,100 @@ fn symbol_bullet(font: &str, ch: char) -> Option<char> {
             other => other,
         }
     } else {
-        match ch {
-            '\u{a7}' | 'n' => '\u{25aa}',
-            'l' => '\u{25cf}',
-            'q' | 'o' => '\u{25a1}',
-            'v' => '\u{2756}',
-            '\u{d8}' => '\u{27a2}',
-            '\u{fc}' => '\u{2714}',
-            '\u{e0}' | '\u{e8}' => '\u{2192}',
-            _ => '\u{2022}',
-        }
+        wingdings_char(ch).unwrap_or('\u{2022}')
     };
     let drawable = crate::faces::coverage_face_bytes(mapped, false, false).is_some();
     Some(if drawable { mapped } else { '\u{2022}' })
+}
+
+/// The Wingdings characters decks use most, as the Unicode characters they look like.
+fn wingdings_char(ch: char) -> Option<char> {
+    Some(match ch {
+        '\u{a7}' | 'n' => '\u{25aa}',
+        'l' => '\u{25cf}',
+        'q' | 'o' => '\u{25a1}',
+        'v' => '\u{2756}',
+        '\u{d8}' => '\u{27a2}',
+        '\u{fc}' => '\u{2714}',
+        '\u{e0}' | '\u{e8}' => '\u{2192}',
+        _ => return None,
+    })
+}
+
+/// The Symbol font's encoding, as Unicode: Greek for the letters, and the
+/// mathematical signs and bullet decks use. `None` for a code not listed.
+fn symbol_char(ch: char) -> Option<char> {
+    const LOWER: [char; 26] = [
+        'α', 'β', 'χ', 'δ', 'ε', 'φ', 'γ', 'η', 'ι', 'ϕ', 'κ', 'λ', 'μ', 'ν', 'ο', 'π', 'θ', 'ρ',
+        'σ', 'τ', 'υ', 'ϖ', 'ω', 'ξ', 'ψ', 'ζ',
+    ];
+    const UPPER: [char; 26] = [
+        'Α', 'Β', 'Χ', 'Δ', 'Ε', 'Φ', 'Γ', 'Η', 'Ι', 'ϑ', 'Κ', 'Λ', 'Μ', 'Ν', 'Ο', 'Π', 'Θ', 'Ρ',
+        'Σ', 'Τ', 'Υ', 'ς', 'Ω', 'Ξ', 'Ψ', 'Ζ',
+    ];
+    let code = u32::from(ch);
+    Some(match ch {
+        'a'..='z' => *LOWER.get(usize::try_from(code - u32::from('a')).ok()?)?,
+        'A'..='Z' => *UPPER.get(usize::try_from(code - u32::from('A')).ok()?)?,
+        '"' => '∀',
+        '$' => '∃',
+        '\'' => '∋',
+        '*' => '∗',
+        '-' => '−',
+        ' ' | '!' | '#' | '%' | '&' | '('..=',' | '.'..='?' | '[' | ']' | '_' | '{'..='}' => ch,
+        '\u{a3}' => '≤',
+        '\u{a5}' => '∞',
+        '\u{ac}' => '←',
+        '\u{ad}' => '↑',
+        '\u{ae}' => '→',
+        '\u{af}' => '↓',
+        '\u{b0}' => '°',
+        '\u{b1}' => '±',
+        '\u{b3}' => '≥',
+        '\u{b4}' => '×',
+        '\u{b7}' => '\u{2022}',
+        '\u{b8}' => '÷',
+        '\u{b9}' => '≠',
+        '\u{ba}' => '≡',
+        '\u{bb}' => '≈',
+        '\u{d6}' => '√',
+        '\u{d7}' => '⋅',
+        _ => return None,
+    })
+}
+
+/// A run's text with each private-use code of a symbol font (`F020` to `F0FF`,
+/// as Office writes them) replaced by the character it shows, when the run's
+/// `sym` or Latin font is Symbol or Wingdings. A code with no known character is
+/// left, and is reported as having no face.
+fn symbol_text<'t>(
+    props: Option<&CharacterProperties>,
+    text: &'t str,
+) -> std::borrow::Cow<'t, str> {
+    let pua = |c: char| (0xF020..=0xF0FF).contains(&u32::from(c));
+    let font = props
+        .and_then(|c| c.symbol.as_deref().or(c.latin.as_deref()))
+        .map(|f| f.typeface.trim().to_ascii_lowercase());
+    let map: fn(char) -> Option<char> = match font.as_deref() {
+        Some("symbol") => symbol_char,
+        Some(f) if f.starts_with("wingdings") => wingdings_char,
+        _ => return text.into(),
+    };
+    if !text.chars().any(pua) {
+        return text.into();
+    }
+    text.chars()
+        .map(|c| {
+            if pua(c) {
+                char::from_u32(u32::from(c) - 0xF000)
+                    .and_then(map)
+                    .unwrap_or(c)
+            } else {
+                c
+            }
+        })
+        .collect::<String>()
+        .into()
 }
 
 fn bullet<'a>(
@@ -820,6 +903,43 @@ mod tests {
                 .map(|p| p.bullet.as_ref().map_or("", |b| b.text.as_str()))
                 .collect();
             assert_eq!(bullets, ["3)", "4)"]);
+        }
+
+        #[test]
+        fn a_symbol_font_character_in_a_run_draws_as_the_character_it_shows() {
+            let mut with_sym = props(1800, false, "Times New Roman", None);
+            with_sym.symbol = Some(Box::new(TextFont {
+                typeface: "Symbol".to_owned(),
+                panose: None,
+                pitch_family: None,
+                charset: None,
+            }));
+            let mut wingdings = props(1800, false, "Wingdings", None);
+            wingdings.symbol = None;
+            let body = TextBody {
+                properties: None,
+                list_style: None,
+                paragraphs: vec![Paragraph {
+                    properties: None,
+                    items: vec![
+                        run("\u{f0b7}", with_sym),
+                        run("\u{f0fc}", wingdings),
+                        run(" \u{f0b7} plain", props(1800, false, "Arial", None)),
+                    ],
+                    end_properties: None,
+                }],
+            };
+            let (resolved, _) = resolve_body(&body, &TextChain::default(), &TextEnv::default());
+            let texts: Vec<&str> = resolved.paragraphs[0]
+                .runs
+                .iter()
+                .map(|r| r.text.as_str())
+                .collect();
+            assert_eq!(
+                texts,
+                ["\u{2022}", "\u{2714}", " \u{f0b7} plain"],
+                "a symbol font's private-use code is its character; elsewhere it stays"
+            );
         }
 
         #[test]
