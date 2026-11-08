@@ -356,3 +356,30 @@ fn an_outer_shadow_is_drawn_behind_its_shape() {
     });
     assert!(translucent, "no shadow ring drawn");
 }
+
+/// `normAutofit` draws at the scale the file stores: a 10 pt run under
+/// `fontScale="62500"` is drawn at 6.25 pt.
+#[test]
+fn norm_autofit_draws_text_at_the_stored_font_scale() {
+    let deck = open("area-text.pptx");
+    let (list, _) = deck.display_list(2).unwrap();
+    // `Text 55` sits at 8656320,4361688 EMU.
+    let sizes: Vec<f64> = list
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            DisplayItem::GlyphRun {
+                transform, size, ..
+            } if (transform.e - 8_656_320.0).abs() < 1.0
+                && (transform.f - 4_361_688.0).abs() < 1.0 =>
+            {
+                Some(*size)
+            }
+            _ => None,
+        })
+        .collect();
+    assert!(!sizes.is_empty(), "no text in the autofit box");
+    for s in sizes {
+        assert!((s - 6.25 * 12_700.0).abs() < 1.0, "drawn at {s} EMU");
+    }
+}

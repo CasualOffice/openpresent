@@ -29,7 +29,7 @@ use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode, Transform};
 use casual_slide_model::slide::{BackgroundFill, SlideParts};
 use casual_slide_model::table::TableStyleList;
-use casual_slide_model::text::{TextBody, TextListStyle, TextVertical};
+use casual_slide_model::text::{Autofit, TextBody, TextListStyle, TextVertical};
 use casual_slide_model::theme::{ColorScheme, FormatScheme, ShapeStyle, StyleMatrixRef, Theme};
 use casual_slide_style::Chain;
 use casual_slide_text::{Frame, TextEnv, layout_text_body};
@@ -763,7 +763,24 @@ impl<'a> Builder<'a> {
             width: ((rect.r - rect.l).max(0.0) / EMU_PER_POINT) as f32,
             height: ((rect.b - rect.t).max(0.0) / EMU_PER_POINT) as f32,
         };
-        let layout = layout_text_body(body, &chain, &env, frame);
+        let autofit = chain
+            .body(body.properties.as_ref(), |b| b.autofit.as_ref())
+            .map(|r| r.value);
+        let layout = match autofit {
+            Some(Autofit::Normal {
+                font_scale,
+                line_spacing_reduction,
+            }) if font_scale.is_some() || line_spacing_reduction.is_some() => {
+                let scale = font_scale
+                    .as_ref()
+                    .map_or(1.0, |p| f64::from(p.value().0) / 100_000.0);
+                let reduce = line_spacing_reduction
+                    .as_ref()
+                    .map_or(0.0, |p| f64::from(p.value().0) / 100_000.0);
+                autofit_layout(body, &chain, &env, frame, scale, reduce)
+            }
+            _ => layout_text_body(body, &chain, &env, frame),
+        };
         if layout.runs.is_empty() {
             self.report.text_bodies_undrawn = self.report.text_bodies_undrawn.saturating_add(1);
             return;
@@ -989,6 +1006,39 @@ impl<'a> Builder<'a> {
         }
         (out, Some(resolved.text_rect))
     }
+}
+
+/// `normAutofit`'s stored result applied: every run, bullet and paragraph mark
+/// scaled by `fontScale`, and percentage line spacing lowered by
+/// `lnSpcReduction`, as PowerPoint draws a body it last fitted. The scale is the
+/// file's, not recomputed here.
+fn autofit_layout(
+    body: &TextBody,
+    chain: &casual_slide_style::text::TextChain<'_>,
+    env: &TextEnv<'_>,
+    frame: Frame,
+    scale: f64,
+    reduce: f64,
+) -> casual_slide_text::TextLayout {
+    use casual_slide_text::layout::{Spacing, layout_body};
+    let (mut resolved, substitutions) = casual_slide_text::body::resolve_body(body, chain, env);
+    let scale = scale.clamp(0.01, 1.0) as f32;
+    let reduce = reduce.clamp(0.0, 0.9) as f32;
+    let mut text = String::new();
+    for p in &mut resolved.paragraphs {
+        for run in p.runs.iter_mut().chain(p.bullet.iter_mut()) {
+            run.style.size *= scale;
+            text.push_str(&run.text);
+        }
+        p.end.size *= scale;
+        if let Spacing::Percent(v) = &mut p.line_spacing {
+            *v = (*v - reduce).max(0.1);
+        }
+    }
+    let mut layout = layout_body(&resolved, frame);
+    layout.substitutions = substitutions;
+    layout.missing_scripts = casual_slide_text::faces::missing_scripts(&text);
+    layout
 }
 
 /// A line's two ends: `headEnd` at the path's start, `tailEnd` at its end.
