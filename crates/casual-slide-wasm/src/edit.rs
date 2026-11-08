@@ -8,7 +8,7 @@
 
 use casual_slide_model::shape::ObjectId;
 use casual_slide_model::text::{
-    CharacterProperties, ParagraphProperties, TextBody, TextItem, UnderlineType,
+    CharacterProperties, ParagraphProperties, StrikeType, TextBody, TextItem, UnderlineType,
 };
 use casual_slide_render::display::Affine;
 use casual_slide_style::text::TextChain;
@@ -20,6 +20,11 @@ use crate::{BridgeError, Viewer};
 /// EMU in a point.
 const EMU_PER_POINT: f64 = 12_700.0;
 
+/// Superscript's `@baseline`, thousandths of a percent: PowerPoint writes 30%.
+const SUPERSCRIPT: i32 = 30_000;
+/// Subscript's: PowerPoint writes -25%.
+const SUBSCRIPT: i32 = -25_000;
+
 /// Which character attribute a toggle changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Toggle {
@@ -29,15 +34,25 @@ pub enum Toggle {
     Italic,
     /// Underline, Ctrl+U.
     Underline,
+    /// Strikethrough (`PAR-20`).
+    Strike,
+    /// Superscript, Ctrl+Shift+=: `@baseline` 30%.
+    Superscript,
+    /// Subscript, Ctrl+=: `@baseline` -25%.
+    Subscript,
 }
 
 impl Toggle {
-    /// From the bridge's number: 0 bold, 1 italic, 2 underline.
+    /// From the bridge's number: 0 bold, 1 italic, 2 underline, 3 strikethrough, 4
+    /// superscript, 5 subscript.
     pub fn from_code(code: u32) -> Option<Self> {
         match code {
             0 => Some(Self::Bold),
             1 => Some(Self::Italic),
             2 => Some(Self::Underline),
+            3 => Some(Self::Strike),
+            4 => Some(Self::Superscript),
+            5 => Some(Self::Subscript),
             _ => None,
         }
     }
@@ -65,6 +80,9 @@ impl Toggle {
             Self::Bold => p.bold,
             Self::Italic => p.italic,
             Self::Underline => p.underline.map(|u| u != UnderlineType::None),
+            Self::Strike => p.strike.map(|s| s != StrikeType::NoStrike),
+            Self::Superscript => p.baseline.as_ref().map(|b| b.value().0 > 0),
+            Self::Subscript => p.baseline.as_ref().map(|b| b.value().0 < 0),
         }
     }
 
@@ -77,6 +95,14 @@ impl Toggle {
             } else {
                 UnderlineType::None
             })),
+            Self::Strike => Attribute::Strike(Some(if on {
+                StrikeType::SngStrike
+            } else {
+                StrikeType::NoStrike
+            })),
+            // PowerPoint's own offsets, and `0` to turn either off.
+            Self::Superscript => Attribute::Baseline(Some(if on { SUPERSCRIPT } else { 0 })),
+            Self::Subscript => Attribute::Baseline(Some(if on { SUBSCRIPT } else { 0 })),
         }
     }
 }
@@ -424,8 +450,9 @@ impl Viewer {
         )
     }
 
-    /// Whether the character at `offset` is drawn bold, italic and underlined, its own
-    /// or inherited: bits 1, 2 and 4, for the ribbon's pressed state.
+    /// Whether the character at `offset` is drawn bold, italic, underlined, struck,
+    /// superscript and subscript, its own or inherited: bits 1, 2, 4, 8, 16 and 32, for
+    /// the ribbon's pressed state.
     pub fn format_state(&self, object: ObjectId, offset: usize) -> Result<u32, BridgeError> {
         let body = self.body(object)?;
         // The character before the caret is the one typing continues.
@@ -433,7 +460,12 @@ impl Viewer {
         let (p, para) = (props_at(body, at), paragraph_at(body, at));
         let chain = self.deck.text_chain(object);
         let on = |t: Toggle| u32::from(t.is_on(chain.as_ref(), p, para));
-        Ok(on(Toggle::Bold) | on(Toggle::Italic) << 1 | on(Toggle::Underline) << 2)
+        Ok(on(Toggle::Bold)
+            | on(Toggle::Italic) << 1
+            | on(Toggle::Underline) << 2
+            | on(Toggle::Strike) << 3
+            | on(Toggle::Superscript) << 4
+            | on(Toggle::Subscript) << 5)
     }
 
     /// End the typing burst, so the next keystroke starts a new undo step: the caret

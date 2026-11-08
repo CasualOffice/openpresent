@@ -499,7 +499,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 ## Parity today
 
-**Status: audit, 2026-11-09. Task `FIT-02`, re-audited on `main` at `6bf7e2c` (`PAR-01`).** The owner, 2026-11-08: many PowerPoint features are missing, and every gap must be found. This section marks each of the 318 rows above, and 34 more that the ribbon, menus, panes, keys and file operations have and the rows above miss (`PP-FIT-319` to `352`), with what the editor does **today**. The first audit was of `main` at `7539ea5` (35 of 352 working, 9.9%); the re-audit clicked through what merged since, and each later row's change names the `PAR` row that made it. The rows above stay the plan; this table is the state.
+**Status: audit, 2026-11-09. Task `FIT-02`, re-audited on `main` at `6bf7e2c` (`PAR-01`), counts kept current by each `PAR` row since.** The owner, 2026-11-08: many PowerPoint features are missing, and every gap must be found. This section marks each of the 318 rows above, and 34 more that the ribbon, menus, panes, keys and file operations have and the rows above miss (`PP-FIT-319` to `352`), with what the editor does **today**. The first audit was of `main` at `7539ea5` (35 of 352 working, 9.9%); the re-audit clicked through what merged since, and each later row's change names the `PAR` row that made it. The rows above stay the plan; this table is the state.
 
 **How it was checked.** The live editor's code was read (`webapp/`, `crates/casual-slide-wasm`), the engine built with `wasm-pack`, and the editor served on `127.0.0.1` and driven in Chrome: the command registry read at run time (242 commands, 120 of them registered disabled with "Not available yet in this build"), real decks opened (`sdk-strict-animclr`, `pptxts-modern-comments`), shapes inserted and the Arrange menu opened with a multiple selection. A Works mark rests on the registry and code, and the decisive verbs were clicked; nothing was compared against a running PowerPoint (`UX-002`, `PV-01`).
 
@@ -517,11 +517,11 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 | | Works | Partial | Disabled | Faked | Absent | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| The 318 rows above | 40 (12.6%) | 47 (14.8%) | 54 (17.0%) | 0 | 177 (55.7%) | 318 |
-| With the 34 shell rows | 50 (14.2%) | 53 (15.1%) | 63 (17.9%) | 0 | 186 (52.8%) | 352 |
-| Of those, the 280 we build (Edit, Render, Retain) | 50 (17.9%) | 52 (18.6%) | 52 (18.6%) | 0 | 126 (45.0%) | 280 |
+| The 318 rows above | 41 (12.9%) | 48 (15.1%) | 52 (16.4%) | 0 | 177 (55.7%) | 318 |
+| With the 34 shell rows | 52 (14.8%) | 55 (15.6%) | 60 (17.0%) | 0 | 185 (52.6%) | 352 |
+| Of those, the 280 we build (Edit, Render, Retain) | 52 (18.6%) | 54 (19.3%) | 49 (17.5%) | 0 | 125 (44.6%) | 280 |
 
-**Plainly: of the 280 features we mean to build, 50 work (17.9%), 52 work in part (18.6%), and 178 are missing (63.6%),** whether drawn disabled or not there at all. **Of all 352, 50 work (14.2%).** Of the 50 that work, 11 are file facts kept on save rather than verbs a user runs.
+**Plainly: of the 280 features we mean to build, 52 work (18.6%), 54 work in part (19.3%), and 174 are missing (62.1%),** whether drawn disabled or not there at all. **Of all 352, 52 work (14.8%).** Of the 52 that work, 11 are file facts kept on save rather than verbs a user runs.
 
 **Largest gaps a PowerPoint user hits first:** no Group; no Find or Replace; no links; no change of layout; no Slide Sorter; no sections; slides cannot be copied between browser tabs; no z-order; no Font dialog, strikethrough or subscript; no alt text.
 
@@ -619,11 +619,11 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-086 | Sketched outline style | Edit | Absent | No sketched outline | 4 advanced | `PAR-58` |
 | PP-FIT-087 | Draw ruler | Edit | Absent | No Draw ruler | 4 advanced | `PAR-58` |
 | PP-FIT-088 | Maximum number of undos | Edit | Partial | Undo and Redo work across edits; depth not set or stated, no history list | 4 advanced | `PAR-61` |
-| PP-FIT-089 | Font, size, bold, italic and the rest | Edit | Partial | Font, size, grow, shrink, bold, italic, underline work; Strikethrough, Change Case and the Font dialog disabled; no character spacing | 2 formatting | `PAR-20` |
+| PP-FIT-089 | Font, size, bold, italic and the rest | Edit | Partial | Font, size, grow, shrink, bold, italic, underline and Change Case work; Strikethrough and Character Spacing set and save but are not drawn yet (`PAR-67`); the Font dialog is disabled | 2 formatting | `PAR-20` |
 | PP-FIT-090 | Text colour | Edit | Works | Font Color with theme, standard and More Colors |  |  |
 | PP-FIT-091 | Text highlighter | Edit | Works | Text Highlight Color, drawn (`UX-005`) |  |  |
-| PP-FIT-092 | Superscript, subscript | Edit | Disabled | Subscript and Superscript disabled | 2 formatting | `PAR-20` |
-| PP-FIT-093 | Clear formatting | Edit | Disabled | Clear All Formatting disabled; Ctrl+Space does nothing | 2 formatting | `PAR-20` |
+| PP-FIT-092 | Superscript, subscript | Edit | Partial | Superscript (Ctrl+Shift+=) and Subscript (Ctrl+=) toggle, pressed at the caret, saved as PowerPoint's `baseline` 30% and -25% and undone (`PAR-20`); the slide does not draw them raised or lowered yet (`PAR-67`) | 2 formatting | `PAR-67` |
+| PP-FIT-093 | Clear formatting | Edit | Works | Clear All Formatting (Ctrl+Space) removes every character property but language, links and proofing marks, one undo step (`PAR-20`) |  |  |
 | PP-FIT-094 | Alignment, spacing, indents | Edit | Partial | Left, centre, right, justify (and keys); Line Spacing, indents and the Paragraph dialog disabled | 2 formatting | `PAR-21` |
 | PP-FIT-095 | Bullets, numbering | Edit | Works | Bullets and Numbering galleries, Increase and Decrease List Level, Tab and Shift+Tab, Line Spacing (`PAR-06`) |  |  |
 | PP-FIT-096 | Text columns | Edit | Disabled | Columns disabled | 2 formatting | `PAR-21` |
@@ -854,8 +854,8 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-321 | Paste from other applications: rich text, HTML, images (Clipboard) | Edit | Works | HTML text keeps bold, italic, underline, size, colour and lists; a PNG or JPEG pastes as a picture (`PAR-11`). RTF-only sources paste as plain text |  |  |
 | PP-FIT-322 | Clipboard pane (Ribbon, Home launcher) | Edit | Disabled | Launcher disabled | 4 advanced | `PAR-61` |
 | PP-FIT-323 | Font and Paragraph dialogs (Launchers; right-click) | Edit | Disabled | Font… and Paragraph… disabled | 2 formatting | `PAR-20`, `PAR-21` |
-| PP-FIT-324 | Change Case (Ribbon, Home) | Edit | Disabled | Disabled | 2 formatting | `PAR-20` |
-| PP-FIT-325 | Character spacing (Ribbon, Home) | Edit | Absent | Not on the ribbon | 2 formatting | `PAR-20` |
+| PP-FIT-324 | Change Case (Ribbon, Home) | Edit | Works | Sentence case, lowercase, UPPERCASE, Capitalize Each Word and tOGGLE cASE, each run keeping its look, one undo step (`PAR-20`) |  |  |
+| PP-FIT-325 | Character spacing (Ribbon, Home) | Edit | Partial | Character Spacing on the Home tab: Very Tight, Tight, Normal, Loose, Very Loose, saved as `spc` (`PAR-20`); not drawn yet (`PAR-67`); no More Spacing box | 2 formatting | `PAR-67` |
 | PP-FIT-326 | Height and Width boxes on Shape and Picture Format, lock aspect ratio (Ribbon, contextual) | Edit | Disabled | Ribbon boxes disabled; Size & Position pane edits size and position | 2 formatting | `PAR-24` |
 | PP-FIT-327 | Change Shape (Ribbon, Shape Format; right-click) | Edit | Disabled | Disabled | 2 formatting | `PAR-24` |
 | PP-FIT-328 | Duplicate object (Ctrl+D) and arrow-key nudge (Keys) | Edit | Works | Ctrl+D, arrows, Ctrl+arrows |  |  |

@@ -108,6 +108,15 @@ impl Attribute {
             Self::Latin(_) => Self::Latin(p.and_then(|p| p.latin.clone())),
             Self::Fill(_) => Self::Fill(p.and_then(|p| p.fill.clone())),
             Self::Highlight(_) => Self::Highlight(p.and_then(|p| p.highlight.clone().flatten())),
+            Self::Strike(_) => Self::Strike(p.and_then(|p| p.strike)),
+            Self::Baseline(_) => {
+                Self::Baseline(p.and_then(|p| p.baseline.as_ref()).map(|b| b.value().0))
+            }
+            Self::Spacing(_) => {
+                Self::Spacing(p.and_then(|p| p.spacing.as_ref()).map(|s| s.value().0))
+            }
+            // Clear has no one attribute to give back: its undo retypes the range.
+            Self::Clear => Self::Clear,
         }
     }
 }
@@ -127,6 +136,23 @@ fn undo_form(parts: &SlideParts, op: &Operation) -> Option<Operation> {
         Operation::DeleteRange { object, start, end } => {
             let body = body(parts, *object)?;
             Some(typed(*object, *start, pieces(body, *start, *end)))
+        }
+        // Clear All Formatting is taken back by retyping the range as it was.
+        Operation::FormatRange {
+            object,
+            start,
+            end,
+            attribute: Attribute::Clear,
+        } => {
+            let body = body(parts, *object)?;
+            Some(Operation::Batch(vec![
+                Operation::DeleteRange {
+                    object: *object,
+                    start: *start,
+                    end: *end,
+                },
+                typed(*object, *start, pieces(body, *start, *end)),
+            ]))
         }
         Operation::FormatRange {
             object,

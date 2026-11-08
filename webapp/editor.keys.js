@@ -42,6 +42,8 @@ const SHORTCUTS = new Map([
   ["Ctrl+I", "font.italic"],
   ["Ctrl+U", "font.underline"],
   ["Ctrl+Space", "font.clear"],
+  ["Ctrl+=", "font.subscript"],
+  ["Ctrl+Shift+=", "font.superscript"],
   ["Ctrl+Shift+F", "font.dialog"],
   ["Ctrl+Shift+P", "font.dialog"],
   ["Ctrl+Shift+C", "home.format-painter"],
@@ -61,7 +63,7 @@ const SHORTCUTS = new Map([
   ["Alt+Shift+ArrowLeft", "para.indent-less"],
 ]);
 
-const CODES = { BracketRight: "]", BracketLeft: "[", Period: ".", Comma: ",", Space: "Space" };
+const CODES = { BracketRight: "]", BracketLeft: "[", Period: ".", Comma: ",", Space: "Space", Equal: "=" };
 
 /// The key as the table names it: modifiers in the order Ctrl, Alt, Shift, then the key.
 export function combo(e) {

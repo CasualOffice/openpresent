@@ -2270,8 +2270,26 @@ pub fn text_run_state(part: u32, node: u32, offset: u32) -> Result<Vec<String>, 
     with_viewer(|v| v.run_state(object(part, node), offset as usize))
 }
 
+/// Change Case over `[start, end)` (`PAR-20`): `mode` `sentence`, `lower`, `upper`,
+/// `title` or `toggle`. One undo step; each run keeps its look.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another mode or a range past the text.
+#[wasm_bindgen]
+pub fn text_change_case(
+    part: u32,
+    node: u32,
+    start: u32,
+    end: u32,
+    mode: &str,
+) -> Result<bool, JsError> {
+    with_viewer(|v| v.change_case(object(part, node), (start as usize, end as usize), mode))
+}
+
 /// Set a Font group value over `[start, end)`: `what` 0 font name, 1 size in points,
-/// 2 font colour, 3 highlight (a colour as [`parse_color`] reads it, or empty to clear).
+/// 2 font colour, 3 highlight (a colour as [`parse_color`] reads it, or empty to clear),
+/// 4 character spacing in points (empty for normal), 5 clear all formatting.
 ///
 /// # Errors
 ///

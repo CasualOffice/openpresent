@@ -298,6 +298,22 @@ export function init() {
   register("font.increase", { label: "Increase Font Size", shortcut: "Ctrl+Shift+>", enabled: canFormat, run: () => apply("text_grow", [true], "Increase Font Size") });
   register("font.decrease", { label: "Decrease Font Size", shortcut: "Ctrl+Shift+<", enabled: canFormat, run: () => apply("text_grow", [false], "Decrease Font Size") });
   register("font.color", { label: "Font Color", enabled: canFormat, run: fontColour });
+  // The Font group's rest (`PAR-20`): each over the selection, or all the text of
+  // each selected shape, one undo step a shape.
+  const bit = (b) => () => !!(text.caretFormatBits() & b);
+  register("font.strike", { label: "Strikethrough", enabled: canFormat, checked: bit(8), run: () => apply("text_toggle", [3], "Strikethrough") });
+  register("font.superscript", { label: "Superscript", shortcut: "Ctrl+Shift+=", enabled: canFormat, checked: bit(16), run: () => apply("text_toggle", [4], "Superscript") });
+  register("font.subscript", { label: "Subscript", shortcut: "Ctrl+=", enabled: canFormat, checked: bit(32), run: () => apply("text_toggle", [5], "Subscript") });
+  register("font.clear", { label: "Clear All Formatting", shortcut: "Ctrl+Space", enabled: canFormat, run: () => setRun(5, "", "Clear All Formatting") });
+  register("font.case", { label: "Change Case", enabled: canFormat, run: () => {} });
+  for (const [mode, label] of [["sentence", "Sentence case."], ["lower", "lowercase"], ["upper", "UPPERCASE"], ["title", "Capitalize Each Word"], ["toggle", "tOGGLE cASE"]]) {
+    register(`font.case.${mode}`, { label, enabled: canFormat, run: () => apply("text_change_case", [mode], "Change Case") });
+  }
+  register("font.spacing", { label: "Character Spacing", enabled: canFormat, run: () => {} });
+  // PowerPoint's presets, in points.
+  for (const [id, label, pts] of [["very-tight", "Very Tight", "-3"], ["tight", "Tight", "-1.5"], ["normal", "Normal", ""], ["loose", "Loose", "3"], ["very-loose", "Very Loose", "6"]]) {
+    register(`font.spacing.${id}`, { label, enabled: canFormat, run: () => setRun(4, pts, `Character Spacing: ${label}`) });
+  }
   register("font.highlight", { label: "Text Highlight Color", enabled: canFormat, run: highlight });
   for (const [id, token, label, key] of [["para.left", "l", "Align Left", "Ctrl+L"], ["para.center", "ctr", "Center", "Ctrl+E"], ["para.right", "r", "Align Right", "Ctrl+R"], ["para.justify", "just", "Justify", "Ctrl+J"]]) {
     register(id, {

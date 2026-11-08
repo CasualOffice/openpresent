@@ -26,7 +26,7 @@ use casual_slide_model::presentation::{
 };
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
-use casual_slide_model::text::{CharacterProperties, UnderlineType};
+use casual_slide_model::text::{CharacterProperties, StrikeType, UnderlineType};
 use serde::{Deserialize, Serialize};
 
 use super::{Engine, Side};
@@ -204,6 +204,14 @@ pub enum WireAttribute {
     Fill(Option<String>),
     /// `highlight`, in an `a:rPr`.
     Highlight(Option<String>),
+    /// `@strike`, as its token.
+    Strike(Option<String>),
+    /// `@baseline`, thousandths of a percent.
+    Baseline(Option<i32>),
+    /// `@spc`, hundredths of a point.
+    Spacing(Option<i32>),
+    /// Clear All Formatting.
+    Clear,
 }
 
 impl WireAttribute {
@@ -248,6 +256,10 @@ impl WireAttribute {
                     })
                     .transpose()?,
             ),
+            Attribute::Strike(v) => Self::Strike(v.as_ref().map(Lexical::to_lexical)),
+            Attribute::Baseline(v) => Self::Baseline(*v),
+            Attribute::Spacing(v) => Self::Spacing(*v),
+            Attribute::Clear => Self::Clear,
         })
     }
 
@@ -283,6 +295,23 @@ impl WireAttribute {
                 Some(x) => Some(read(x)?.highlight.flatten().ok_or(WireError::BadValue)?),
                 None => None,
             }),
+            Self::Strike(None) => Attribute::Strike(None),
+            Self::Strike(Some(t)) => Attribute::Strike(Some(
+                StrikeType::parse_lexical(t).ok_or(WireError::BadValue)?,
+            )),
+            Self::Baseline(v) => {
+                if v.is_some_and(|b| !(-100_000..=100_000).contains(&b)) {
+                    return Err(WireError::BadValue);
+                }
+                Attribute::Baseline(*v)
+            }
+            Self::Spacing(v) => {
+                if v.is_some_and(|b| !(-400_000..=400_000).contains(&b)) {
+                    return Err(WireError::BadValue);
+                }
+                Attribute::Spacing(*v)
+            }
+            Self::Clear => Attribute::Clear,
         })
     }
 }
