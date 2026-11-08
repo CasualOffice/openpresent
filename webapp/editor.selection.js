@@ -23,6 +23,11 @@
 // nudge, align or distribute is one engine call and one undo step. Handles show
 // only on a single selection, as PowerPoint's.
 //
+// Groups (`UX-015`), as PowerPoint: a first click selects the group, a second
+// selects the shape inside it, or puts the caret in its text, and typing with that
+// shape selected types into it. The engine gives each shape inside a group its box
+// on the slide, and maps a box sent back into the group's own coordinates.
+//
 // Smart guides (`PAR-15`): while shapes move, their left, centre and right edges and
 // their top, middle and bottom snap to another shape's, or to the slide's edges and
 // centre lines, when within a few pixels, and a red dashed line shows each match, as
@@ -37,7 +42,7 @@ import * as text from "./editor.text.js";
 const byId = (id) => document.getElementById(id);
 
 // `ShapeBox`'s flag bits in `casual-slide-wasm`.
-const NO_MOVE = 4, NO_RESIZE = 8, NO_ROTATE = 16, KEEP_ASPECT = 32;
+const NO_MOVE = 4, NO_RESIZE = 8, NO_ROTATE = 16, KEEP_ASPECT = 32, GROUP = 64, TABLE = 256;
 const PLACEHOLDER = 128;              // `ShapeBox::PLACEHOLDER`: only these prompt
 const ROT_UNIT = 60000;               // `@rot` is in 60000ths of a degree
 const NUDGE = 76200;                  // PowerPoint's grid step, 1/12 inch, in EMU
@@ -55,8 +60,22 @@ let undoState = [false, false];
 let shapesToken = 0;
 let shapesFor = null;   // the slide index `shapes` was read for; null until read
 let pendingPress = null; // a press made before the shapes were read: { p, shift }
+/// The groups a click has gone into, outermost first, each with the shapes directly
+/// inside it as the engine placed them on the slide (`UX-015`): a press inside the
+/// group picks among these.
+let levels = [];        // [{ group, kids: [shape] }]
 
-const shape = () => shapes.find((s) => s.node === selected) || null;
+/// A selectable shape by node: one at the top of the slide, or inside a group gone into.
+function known(node) {
+  const top = shapes.find((s) => s.node === node);
+  if (top) return top;
+  for (const l of levels) {
+    const k = l.kids.find((s) => s.node === node);
+    if (k) return k;
+  }
+  return null;
+}
+const shape = () => (selected == null ? null : known(selected));
 /// Every selected shape, the primary last.
 const chosen = () => {
   const p = shape();
@@ -92,16 +111,39 @@ function interior(s, p) {
   return Math.abs(lx) <= s.cx / 2 - b && Math.abs(ly) <= s.cy / 2 - b;
 }
 
-function hit([px, py]) {
+function hit([px, py], list = shapes) {
   // Topmost first: the last shape in z-order is drawn on top. A line has no
   // width, so every box is grown by a few pixels to be clickable.
   const slop = 4 / scale();
-  for (let i = shapes.length - 1; i >= 0; i--) {
-    const s = shapes[i];
-    const [lx, ly] = local(s, [px, py]);
-    if (Math.abs(lx) <= s.cx / 2 + slop && Math.abs(ly) <= s.cy / 2 + slop) return s;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const s = list[i];
+    if (covers(s, [px, py], slop)) return s;
   }
   return null;
+}
+
+/// Whether a press at `p` lands on `s`. A group is pressed only where a shape inside
+/// it is, as PowerPoint's: the empty parts of its box let the press through to the
+/// shapes under it (`UX-015`).
+function covers(s, p, slop, depth = 0) {
+  const [lx, ly] = local(s, p);
+  if (Math.abs(lx) > s.cx / 2 + slop || Math.abs(ly) > s.cy / 2 + slop) return false;
+  if (!(s.flags & GROUP) || !s.kids?.length || depth > 16) return true;
+  return s.kids.some((k) => covers(k, p, slop, depth + 1));
+}
+
+/// The shape a press at `p` picks, `top` being the slide's own shape there: inside
+/// each group already gone into, the shape under the press, as PowerPoint's second
+/// click; `depth` is how many groups it is inside.
+function deepHit(top, p) {
+  let found = top, depth = 0;
+  while (found && depth < levels.length && levels[depth].group === found.node) {
+    const kid = hit(p, levels[depth].kids);
+    if (!kid) break;
+    found = kid;
+    depth++;
+  }
+  return { found, depth };
 }
 
 /// The box a resize drag gives: the handle opposite stays where it is.
@@ -296,6 +338,10 @@ function dropGhostWhenDrawn() {
   setTimeout(done, 3000);
 }
 
+/// Who opens a table's cell on a press inside it (`editor.objects.js`).
+let tablePress = null;
+export function onTablePress(f) { tablePress = f; }
+
 /// Who draws over the selection, as the yellow adjust handles (`editor.shapes.js`):
 /// each is told the selected shape after every paint, or `null` while a drag runs.
 const painters = [];
@@ -358,6 +404,19 @@ function paintSelection() {
   }
   const b = drag?.box || shape();
   if (!b) return;
+  // A shape inside a group: the group shows as a dashed box round it, as PowerPoint's.
+  for (const g of levels) {
+    const o = known(g.group);
+    if (!o || o.node === b.node) continue;
+    const d = document.createElement("div");
+    d.className = "sel-box is-group";
+    d.style.left = `${o.x * k}px`;
+    d.style.top = `${o.y * k}px`;
+    d.style.width = `${o.cx * k}px`;
+    d.style.height = `${o.cy * k}px`;
+    d.style.transform = `rotate(${o.rot}deg)`;
+    l.appendChild(d);
+  }
   if (ghost && drag) moveGhost(b);
   const box = document.createElement("div");
   box.className = text.editing() ? "sel-box is-editing" : "sel-box";
@@ -423,8 +482,9 @@ function onDown(e) {
 /// A press at slide point `p` on the shapes as read. `add`: Shift or Ctrl was held,
 /// so the press adds the shape to the selection or takes it out (`UX-003`).
 function press(p, shift, add = false) {
-  const found = hit(p);
+  const top = hit(p);
   if (add && !text.editing()) {
+    const found = top;
     text.stop();
     if (found) toggleInSelection(found.node);
     else drag = { kind: "marquee", start: p, at: p, add: true };
@@ -432,7 +492,8 @@ function press(p, shift, add = false) {
     return false;
   }
   // A press on a shape of a multiple selection moves them all.
-  if (found && chosen().length > 1 && chosen().some((s) => s.node === found.node)) {
+  if (top && chosen().length > 1 && chosen().some((s) => s.node === top.node)) {
+    const found = top;
     text.stop();
     const all = chosen().map((s) => ({ ...s }));
     selected = found.node;
@@ -444,6 +505,9 @@ function press(p, shift, add = false) {
     paintSoon();
     return false;
   }
+  // Inside a group already selected, the shape under the press (`UX-015`).
+  const { found, depth } = deepHit(top, p);
+  levels = levels.slice(0, depth);
   // A press inside a shape that holds text puts the caret there (`VS-05`).
   if (found && found.part != null && interior(found, p)) {
     others = [];
@@ -456,6 +520,13 @@ function press(p, shift, add = false) {
   }
   text.stop();
   select(found ? found.node : null);
+  if (found && found.flags & GROUP) enterGroup(found);
+  // A press inside a table, off its border, types in the cell under it, as
+  // PowerPoint's; it selected the table only, and typing went nowhere (`UX-015`).
+  if (found && found.flags & TABLE && tablePress && interior(found, p)) {
+    tablePress(found, p);
+    return false;
+  }
   byId("stage").focus({ preventScroll: true });
   if (found) drag = { kind: "move", start: p, origin: found, box: { ...found } };
   // A press on an empty part of the slide draws a marquee.
@@ -504,7 +575,7 @@ function onMove(e) {
     const l = byId("sel-layer");
     if (!l || !state.deck) return;
     const p = pointer(e);
-    const s = hit(p);
+    const s = deepHit(hit(p), p).found;
     l.style.cursor = !s ? "" : s.part != null && interior(s, p) ? "text" : "move";
     return;
   }
@@ -719,6 +790,7 @@ function arrange(how) {
 function select(node) {
   selected = node;
   others = [];
+  if (node == null) levels = [];
   paint();
   changed();
 }
@@ -745,11 +817,14 @@ export function selectedShape() { return shape(); }
 /// A right-click on an empty part of the slide clears the selection (`UX-003`).
 export function selectForMenu(e) {
   if (!state.deck || shapesFor !== state.current) return;
-  const found = hit(pointer(e));
+  const p = pointer(e);
+  const { found, depth } = deepHit(hit(p), p);
   if (found && chosen().some((s) => s.node === found.node)) return;
   if (!found && text.editing()) return;
   text.stop();
+  levels = levels.slice(0, depth);
   select(found ? found.node : null);
+  if (found && found.flags & GROUP) enterGroup(found);
   byId("stage").focus({ preventScroll: true });
 }
 
@@ -769,23 +844,18 @@ export async function refresh() {
   try {
     const r = await request({ op: "shapes", index }, { priority: 8 });
     if (token !== shapesToken || index !== state.current) return;
-    const next = [];
-    for (let i = 0; i + 6 < r.shapes.length; i += 7) {
-      const [node, x, y, cx, cy, rot, flags] = r.shapes.slice(i, i + 7);
-      next.push({ node, x, y, cx, cy, rot: rot / ROT_UNIT, flags });
+    const next = await boxes(r.shapes, index);
+    // The groups gone into, as read again: a shape inside may have moved or gone.
+    const inside = [];
+    for (const l of levels) {
+      const parent = inside.length ? inside[inside.length - 1].kids : next;
+      const g = parent.find((s) => s.node === l.group);
+      if (!g) break;
+      inside.push({ group: l.group, kids: g.kids || [] });
     }
-    // Which shapes hold text, and which are empty, so a press is routed at once.
-    await Promise.all(next.map(async (s) => {
-      try {
-        const h = await request({ op: "text", fn: "text_hit", args: [index, s.x + s.cx / 2, s.y + s.cy / 2] }, { priority: 8 });
-        if (h.value.length < 2 || h.value[1] !== s.node) return;
-        s.part = h.value[0];
-        const n = await request({ op: "text", fn: "text_length", args: [s.part, s.node] }, { priority: 8 });
-        s.empty = n.value === 0;
-      } catch { /* no text */ }
-    }));
     if (token !== shapesToken || index !== state.current) return;
     shapes = next;
+    levels = inside;
     shapesFor = index;
     if (pendingSelect != null) {
       const list = Array.isArray(pendingSelect) ? pendingSelect : [pendingSelect];
@@ -805,10 +875,48 @@ export async function refresh() {
   }
 }
 
+/// Shapes from the engine's seven numbers each, with which hold text and which are
+/// empty, so a press is routed at once.
+async function boxes(flat, index, depth = 0) {
+  const out = [];
+  for (let i = 0; i + 6 < flat.length; i += 7) {
+    const [node, x, y, cx, cy, rot, flags] = flat.slice(i, i + 7);
+    out.push({ node, x, y, cx, cy, rot: rot / ROT_UNIT, flags });
+  }
+  await Promise.all(out.map(async (s) => {
+    // What a group holds, so a press is routed through its empty parts at once.
+    if (s.flags & GROUP) { s.kids = depth < 16 ? await kidsOf(index, s.node, depth + 1) : []; return; }
+    try {
+      const h = await request({ op: "text", fn: "text_hit", args: [index, s.x + s.cx / 2, s.y + s.cy / 2] }, { priority: 8 });
+      if (h.value.length < 2 || h.value[1] !== s.node) return;
+      s.part = h.value[0];
+      const n = await request({ op: "text", fn: "text_length", args: [s.part, s.node] }, { priority: 8 });
+      s.empty = n.value === 0;
+    } catch { /* no text */ }
+  }));
+  return out;
+}
+
+/// The shapes directly inside group `group` of slide `index`, boxes on the slide.
+async function kidsOf(index, group, depth) {
+  try {
+    const r = await request({ op: "build", fn: "group_shapes", args: [index, group] }, { priority: 8 });
+    return await boxes(r.value, index, depth);
+  } catch {
+    return [];
+  }
+}
+
+/// Group `g` was selected: the next press inside it picks a shape inside (`UX-015`).
+function enterGroup(g) {
+  if (!levels.some((l) => l.group === g.node)) levels.push({ group: g.node, kids: g.kids || [] });
+}
+
 /// A new deck, or another slide: nothing is selected.
 export function reset(deckChanged) {
   selected = null;
   others = [];
+  levels = [];
   drag = null;
   dropGhost();
   shapes = [];
@@ -819,7 +927,9 @@ export function reset(deckChanged) {
 
 /// Keys while the stage has a selection. Returns true when the key was used.
 export function onKey(e) {
-  if (text.editing()) return false;
+  // A key typed just after a click into text, while the box opens, is the box's: taken
+  // here, it typed at the text's end and dropped the click's caret (`UX-015`).
+  if (text.ownsKeys()) return false;
   const mod = e.ctrlKey || e.metaKey;
   if (mod && !e.altKey && (e.key === "z" || e.key === "Z") && !e.shiftKey) { e.preventDefault(); run("edit.undo"); return true; }
   if (mod && !e.altKey && (e.key === "y" || e.key === "Y" || ((e.key === "z" || e.key === "Z") && e.shiftKey))) { e.preventDefault(); run("edit.redo"); return true; }

@@ -225,3 +225,35 @@ fn the_saved_deck_passes_f4_and_the_sdk_validator() {
     }
     std::fs::remove_file(&file).unwrap();
 }
+
+/// `UX-015`: a table's rows as drawn, grown to fit their text, follow the stated ones,
+/// so a click is placed in the cell under it. On `z17310490-vierfelder-de` the rows
+/// state less height than their two-line cells take, and a click in "falsch-positiv"
+/// landed in the row below.
+#[test]
+fn a_tables_drawn_rows_follow_its_stated_ones() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/real/z17310490-vierfelder-de.pptx");
+    let v = Viewer::open(std::fs::read(path).unwrap()).unwrap();
+    let table = v
+        .shapes(0)
+        .unwrap()
+        .into_iter()
+        .find(|b| b.flags & ShapeBox::TABLE != 0)
+        .unwrap()
+        .node;
+    let shape = v.table_shape(0, table).unwrap();
+    let (rows, cols) = (shape[0] as usize, shape[1] as usize);
+    assert_eq!(
+        shape.len(),
+        2 + cols + 2 * rows,
+        "drawn heights follow: {shape:?}"
+    );
+    let stated = &shape[2 + cols..2 + cols + rows];
+    let drawn = &shape[2 + cols + rows..];
+    assert!(drawn.iter().zip(stated).all(|(d, s)| d >= s));
+    assert!(
+        drawn.iter().zip(stated).any(|(d, s)| d > s),
+        "{stated:?} {drawn:?}"
+    );
+}

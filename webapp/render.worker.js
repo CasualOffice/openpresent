@@ -23,7 +23,7 @@
 
 import init, {
   open, slide_count, slide_size, render_slide_png, slide_report, save_deck, export_pdf, version,
-  slide_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
+  slide_shapes, group_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   show_plan, show_advance, slide_transition, transition_direction, slide_notes,
@@ -109,6 +109,12 @@ const BUILD = {
   set_shape_link, shape_link,
   // Home > Section, Insert > Header & Footer (`UX-006`).
   slide_sections, section_add, section_rename, section_remove, header_footer,
+  // A second click inside a group (`UX-015`).
+  group_shapes,
+  // Tables and charts (`VS-11`): `editor.objects.js` asks for them as `build`; they sat
+  // under `animate`, so every table and chart call was refused (`UX-015`).
+  insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
+  table_style, set_table_style, insert_chart, chart_data, set_chart_data,
 };
 
 /// Arguments that cross as typed arrays: the bridge takes `Vec<u32>` and `Vec<f64>`.
@@ -121,8 +127,6 @@ const ANIMATE = {
   transition_choice, set_slide_transition, set_transition_advance, transition_to_all, slide_animations, shape_name,
   add_animation, replace_animation, remove_animation, move_animation, set_animation_start,
   set_animation, paint_animation,
-  insert_table, table_shape, table_cell_text, set_table_cell_text, edit_table, table_styles,
-  table_style, set_table_style, insert_chart, chart_data, set_chart_data,
 };
 
 const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });

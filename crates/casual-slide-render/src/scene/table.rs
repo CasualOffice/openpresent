@@ -181,6 +181,9 @@ impl<'a> Builder<'a> {
                 *h = need;
             }
         }
+        if layer == Layer::Slide {
+            self.text.table_rows.insert(node.id, heights.clone());
+        }
         let mut ys = Vec::with_capacity(nrows + 1);
         ys.push(0.0);
         for h in &heights {

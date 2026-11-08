@@ -271,9 +271,16 @@ impl Viewer {
     }
 
     /// A table's shape for the editor: rows, columns, then each column's width and each
-    /// row's height, EMU (0 where the file states none).
+    /// row's height, EMU (0 where the file states none), then each row's height as
+    /// drawn, grown to fit its text, which a click on the table is placed by (`UX-015`).
     pub fn table_shape(&self, index: usize, node: u32) -> Result<Vec<i64>, BridgeError> {
-        let (_, t) = self.table(index, node)?;
+        let (id, t) = self.table(index, node)?;
+        let drawn = self
+            .deck
+            .slide_text(index, None)?
+            .table_rows
+            .remove(&id)
+            .unwrap_or_default();
         let grid = t.tbl_grid.as_ref().map_or(&[][..], |g| &g.grid_col[..]);
         let mut out = vec![t.rows.len() as i64, grid.len() as i64];
         out.extend(
@@ -285,6 +292,14 @@ impl Viewer {
                 .iter()
                 .map(|r| r.height.as_ref().map_or(0, |h| h.value().0)),
         );
+        if drawn.len() == t.rows.len() {
+            // Finite and within a slide's extent: rounding cannot overflow.
+            out.extend(
+                drawn
+                    .iter()
+                    .map(|h| if h.is_finite() { h.round() as i64 } else { 0 }),
+            );
+        }
         Ok(out)
     }
 
