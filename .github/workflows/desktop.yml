@@ -74,14 +74,19 @@ jobs:
           cargo install wasm-pack --version 0.14.0 --locked
           wasm-pack build crates/casual-slide-wasm --release --target web --out-dir ../../webapp/pkg
       # `desktop/` is its own cargo workspace, so the root `checks` job reaches none of it.
-      # Format, lint and the shell's own tests run here; platform-independent, so Linux only.
-      - name: Format, lint and test the desktop shell
+      # Format and the shell's own tests are platform-independent, so Linux only.
+      - name: Format and test the desktop shell
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
           cargo fmt --manifest-path desktop/Cargo.toml -- --check
-          cargo clippy --manifest-path desktop/Cargo.toml --all-targets --locked -- -D warnings
           cargo test --manifest-path desktop/Cargo.toml --locked
+      # On every platform, as OpenCalc's job does: besides linting, this runs `desktop/build.rs`,
+      # which stages `webapp/` into `desktop/web-dist/`. `cargo tauri build` checks that
+      # `frontendDist` exists before it compiles anything, so without this step macOS and
+      # Windows failed with "Unable to find your web assets" (`CI-19`).
+      - name: Lint the desktop shell
+        run: cargo clippy --manifest-path desktop/Cargo.toml --all-targets --locked -- -D warnings
       - name: Install the Tauri CLI
         run: cargo install tauri-cli --version "^2.0.0" --locked
       # Unsigned. `tauri build` runs `cargo build --release`, where `desktop/build.rs` panics if
