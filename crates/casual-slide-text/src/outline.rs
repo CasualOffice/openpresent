@@ -220,7 +220,7 @@ mod tests {
             "y down: the letter is above the baseline"
         );
         assert!(
-            (top(&large) - 2.0 * top(&small)).abs() < 0.05,
+            (top(&large) - 2.0 * top(&small)).abs() < 0.01,
             "linear within two 26.6 roundings"
         );
     }
