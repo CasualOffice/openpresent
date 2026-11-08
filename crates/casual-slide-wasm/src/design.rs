@@ -182,6 +182,9 @@ impl Document for DeckDoc<'_> {
     fn slide_size_mut(&mut self) -> Option<&mut (i64, i64)> {
         Some(self.0.size_mut())
     }
+    fn chart_mut(&mut self, part: &str) -> Option<&mut casual_slide_model::chart::ChartPart> {
+        self.0.chart_mut(part)
+    }
 }
 
 /// Whether an operation changes more than one slide's picture: a theme or the slide

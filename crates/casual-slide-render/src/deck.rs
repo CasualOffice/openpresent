@@ -258,6 +258,59 @@ impl Deck {
         self.themes.get_mut(&master)
     }
 
+    /// The deck's table styles (`tableStyles`), as read (`VS-11`).
+    pub fn table_styles(&self) -> Option<&TableStyleList> {
+        self.table_styles.as_ref()
+    }
+
+    /// A chart part as read, or as edited since (`VS-11`). `None` for one set aside.
+    pub fn chart(&self, part: &str) -> Option<&casual_slide_model::chart::ChartPart> {
+        match &self.charts.get(part)?.status {
+            casual_slide_import::chart::ChartStatus::Read(p) => Some(p),
+            casual_slide_import::chart::ChartStatus::SetAside { .. } => None,
+        }
+    }
+
+    /// A chart part, to edit (`VS-11`). The next drawing draws it; the file is not
+    /// touched until a save.
+    pub fn chart_mut(&mut self, part: &str) -> Option<&mut casual_slide_model::chart::ChartPart> {
+        let chart = self.charts.parts.iter_mut().find(|p| p.part == part)?;
+        match &mut chart.status {
+            casual_slide_import::chart::ChartStatus::Read(p) => Some(p),
+            casual_slide_import::chart::ChartStatus::SetAside { .. } => None,
+        }
+    }
+
+    /// Draw relationship `rel_id` of part `ordinal` as this chart: one inserted since the
+    /// deck was opened, which no part of the file holds yet (`VS-11`). `key` names it
+    /// within this session and never reaches the file.
+    pub fn add_chart(
+        &mut self,
+        ordinal: u32,
+        rel_id: &str,
+        key: &str,
+        chart: casual_slide_model::chart::ChartPart,
+    ) {
+        self.rels
+            .0
+            .entry(ordinal)
+            .or_default()
+            .insert(rel_id.to_owned(), key.to_owned());
+        self.charts.parts.retain(|p| p.part != key);
+        self.charts
+            .parts
+            .push(casual_slide_import::chart::DeckChart {
+                part: key.to_owned(),
+                owner: String::new(),
+                status: casual_slide_import::chart::ChartStatus::Read(chart),
+            });
+    }
+
+    /// The part relationship `rel_id` of part `ordinal` lands on.
+    pub fn related_part(&self, ordinal: u32, rel_id: &str) -> Option<String> {
+        self.rels.media_part(ordinal, rel_id)
+    }
+
     /// The slide size, EMU, to edit (`VS-12`). The caller keeps both sides positive.
     pub fn size_mut(&mut self) -> &mut (i64, i64) {
         &mut self.size

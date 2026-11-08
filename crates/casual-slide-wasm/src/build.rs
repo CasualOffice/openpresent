@@ -43,13 +43,13 @@ pub const MAX_PICTURE_BYTES: usize = 64 * 1024 * 1024;
 
 /// The prefix of a relationship id minted for a picture inserted in this session. It
 /// never reaches the file: the writer names the relationship it adds.
-const NEW_REL: &str = "rIdOpenPresentNew";
+pub(crate) const NEW_REL: &str = "rIdOpenPresentNew";
 
-const NAMESPACES: &str = "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" \
+pub(crate) const NAMESPACES: &str = "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" \
      xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" \
      xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"";
 
-const TREE_HEAD: &str =
+pub(crate) const TREE_HEAD: &str =
     "<p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>";
 
 /// What Insert puts on a slide.
@@ -111,7 +111,7 @@ fn sniff(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
     }
 }
 
-fn spid(node: &ShapeNode) -> Option<u32> {
+pub(crate) fn spid(node: &ShapeNode) -> Option<u32> {
     node.non_visual.as_ref()?.spid
 }
 
@@ -126,7 +126,7 @@ fn embed(node: &ShapeNode) -> Option<&str> {
 }
 
 /// Read a slide part's XML as the reader does.
-fn read_slide(xml: &[u8], part: &str, ordinal: u32) -> Result<SlidePart, BridgeError> {
+pub(crate) fn read_slide(xml: &[u8], part: &str, ordinal: u32) -> Result<SlidePart, BridgeError> {
     let xml_limits = OoxmlLimits::default();
     let tree = XmlTree::parse(xml, part, &xml_limits).map_err(|e| BridgeError::Build(e.code()))?;
     let import_limits = ImportLimits::default();
@@ -226,7 +226,7 @@ fn shape_xml(kind: Insert, id: u32, name: &str, rel: Option<&str>, b: [i64; 4]) 
 }
 
 /// The highest `cNvPr/@id` and node number in a part.
-fn highest(part: &SlidePart) -> (u32, u32) {
+pub(crate) fn highest(part: &SlidePart) -> (u32, u32) {
     part.shape_tree()
         .into_iter()
         .flat_map(ShapeNode::descendants)
@@ -509,6 +509,7 @@ impl Viewer {
         let bytes = self.slides_pass(self.deck.source_bytes())?;
         let bytes = self.shapes_pass(bytes)?;
         let bytes = self.patch_pass(bytes)?;
+        let bytes = self.chart_pass(bytes)?;
         self.design_pass(bytes)
     }
 
@@ -658,6 +659,7 @@ impl Viewer {
                             .ok_or(BridgeError::Save("CS-WSM-0009"))?;
                         NewShape::Picture(media.clone())
                     }
+                    NodeKind::GraphicFrame => self.new_frame(node)?,
                     _ => return Err(BridgeError::Save("CS-WSM-0009")),
                 };
                 inserts.push(Op::InsertShape {
@@ -743,6 +745,11 @@ fn overlay(file: &mut ShapeNode, model: &ShapeNode) {
     copy.rel_id = rel_id;
     if embed(model).is_some_and(|e| e.starts_with(NEW_REL)) {
         copy.properties.picture = picture;
+    }
+    // A new chart's relationship is the writer's too (`VS-11`).
+    let model_chart_rel = model.chart.as_ref().and_then(|c| c.rel_id.as_deref());
+    if model_chart_rel.is_some_and(|r| r.starts_with(NEW_REL)) {
+        copy.chart.clone_from(&file.chart);
     }
     *file = copy;
     let mut used = BTreeSet::new();

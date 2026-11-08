@@ -263,6 +263,28 @@ pub enum NewShape {
     Connector,
     /// `p:pic`, stretched over its box.
     Picture(MediaBytes),
+    /// `p:graphicFrame` holding a table of these column widths and row heights, EMU,
+    /// each cell an empty paragraph (`VS-11`). Its look and text are the patch's.
+    Table {
+        /// `gridCol/@w`, one a column.
+        columns: Vec<i64>,
+        /// `tr/@h`, one a row.
+        rows: Vec<i64>,
+    },
+    /// `p:graphicFrame` holding a chart (`VS-11`): a new chart part with these bytes,
+    /// in which [`NewShape::WORKBOOK_REL`] is replaced by the relationship to a new
+    /// embedded workbook with these bytes.
+    Chart {
+        /// The chart part's XML.
+        chart: String,
+        /// The `.xlsx` the chart's data is edited in.
+        workbook: Vec<u8>,
+    },
+}
+
+impl NewShape {
+    /// What a new chart's XML says where its workbook's relationship id goes.
+    pub const WORKBOOK_REL: &'static str = "OPENPRESENT-WORKBOOK-REL";
 }
 
 /// New media, for [`Op::ApplyMediaReplacement`].

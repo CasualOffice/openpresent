@@ -31,8 +31,10 @@ pub use design::{BackgroundChoice, BuiltinTheme, Fit, THEMES};
 
 mod build;
 mod edit;
+mod rich;
 pub use build::{Insert, MAX_PICTURE_BYTES};
 pub use edit::{Move, Toggle};
+pub use rich::{DEFAULT_TABLE_STYLE, TableEdit};
 mod show;
 pub use show::{MAX_NOTES_CHARS, MAX_TRANSITION_MS, ShowSlide, ShowTransition};
 
@@ -186,6 +188,10 @@ impl ShapeBox {
     pub const KEEP_ASPECT: u32 = 32;
     /// A group.
     pub const GROUP: u32 = 64;
+    /// A graphic frame holding a table (`VS-11`).
+    pub const TABLE: u32 = 128;
+    /// A graphic frame holding a chart (`VS-11`).
+    pub const CHART: u32 = 256;
 }
 
 /// A Design edit for the save plan.
@@ -218,6 +224,8 @@ pub struct Viewer {
     new_media: BTreeMap<String, casual_slide_export::writer::MediaBytes>,
     /// Pictures inserted so far, which names the next one.
     minted: u32,
+    /// Chart parts of the file whose data was edited (`VS-11`), patched at save.
+    edited_charts: std::collections::BTreeSet<String>,
 }
 
 impl Viewer {
@@ -240,6 +248,7 @@ impl Viewer {
             origins: BTreeMap::new(),
             new_media: BTreeMap::new(),
             minted: 0,
+            edited_charts: std::collections::BTreeSet::new(),
         })
     }
 
@@ -391,7 +400,9 @@ impl Viewer {
                 | bit(locks.no_resize, ShapeBox::NO_RESIZE)
                 | bit(locks.no_rot, ShapeBox::NO_ROTATE)
                 | bit(locks.no_change_aspect, ShapeBox::KEEP_ASPECT)
-                | bit(Some(shape.kind == NodeKind::Group), ShapeBox::GROUP);
+                | bit(Some(shape.kind == NodeKind::Group), ShapeBox::GROUP)
+                | bit(Some(shape.table.is_some()), ShapeBox::TABLE)
+                | bit(Some(shape.chart.is_some()), ShapeBox::CHART);
             out.push(ShapeBox {
                 node: shape.id.node,
                 x: t.offset.x.0,
@@ -1452,6 +1463,223 @@ pub fn insert_picture(
             index as usize,
             bytes,
             [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
+}
+
+/* ── Rich objects (`VS-11`) ─────────────────────────────────────────────── */
+
+/// Insert > Table: `rows` by `columns` on slide `index` in a box, EMU; returns its node.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for no rows or columns, or more than 75.
+#[wasm_bindgen]
+pub fn insert_table(
+    index: u32,
+    rows: u32,
+    columns: u32,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        v.insert_table(
+            index as usize,
+            rows as usize,
+            columns as usize,
+            [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
+}
+
+/// A table's rows, columns, each column's width and each row's height, EMU.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a node that holds no table.
+#[wasm_bindgen]
+pub fn table_shape(index: u32, node: u32) -> Result<Vec<f64>, JsError> {
+    with_viewer(|v| {
+        Ok(v.table_shape(index as usize, node)?
+            .into_iter()
+            .map(|n| n as f64)
+            .collect())
+    })
+}
+
+/// A cell's plain text, a line feed between paragraphs. Document text: the page shows
+/// it through a form field's value only.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a cell that is not there.
+#[wasm_bindgen]
+pub fn table_cell_text(index: u32, node: u32, row: u32, column: u32) -> Result<String, JsError> {
+    with_viewer(|v| v.table_cell_text(index as usize, node, row as usize, column as usize))
+}
+
+/// Type a cell's text: one undo step. Returns whether anything changed.
+///
+/// # Errors
+///
+/// `CS-TXN-0013` for a cell that is not there.
+#[wasm_bindgen]
+pub fn set_table_cell_text(
+    index: u32,
+    node: u32,
+    row: u32,
+    column: u32,
+    text: String,
+) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        v.set_table_cell_text(index as usize, node, row as usize, column as usize, &text)
+    })
+}
+
+/// Insert a row (0) or column (2) at `at`, or delete one (1, 3): one undo step.
+///
+/// # Errors
+///
+/// `CS-TXN-0013` for an edit the table cannot take; `CS-WSM-0006` for another number.
+#[wasm_bindgen]
+pub fn edit_table(index: u32, node: u32, what: u32, at: u32) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let edit = TableEdit::from_u32(what).ok_or(BridgeError::BadArgument)?;
+        v.edit_table(index as usize, node, edit, at as usize)
+    })
+}
+
+/// Table Design's styles: `[id, name, id, name, …]`. Names are document text.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn table_styles() -> Result<Vec<String>, JsError> {
+    with_viewer(|v| {
+        Ok(v.table_styles()
+            .into_iter()
+            .flat_map(|(id, name)| [id, name])
+            .collect())
+    })
+}
+
+/// The style id a table names, or empty.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a node that holds no table.
+#[wasm_bindgen]
+pub fn table_style(index: u32, node: u32) -> Result<String, JsError> {
+    with_viewer(|v| v.table_style(index as usize, node))
+}
+
+/// Give a table a style by id: one undo step.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for an id that is not a GUID, or a node with no table.
+#[wasm_bindgen]
+pub fn set_table_style(index: u32, node: u32, style: String) -> Result<bool, JsError> {
+    with_viewer(|v| v.set_table_style(index as usize, node, &style))
+}
+
+/// Insert > Chart: column (0), bar (1), line (2) or pie (3), with sample data, in a box,
+/// EMU; returns its node.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another kind.
+#[wasm_bindgen]
+pub fn insert_chart(
+    index: u32,
+    kind: u32,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        let kind = casual_slide_export::new_chart::NewChartKind::from_u32(kind)
+            .ok_or(BridgeError::BadArgument)?;
+        v.insert_chart(
+            index as usize,
+            kind,
+            [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
+}
+
+/// A chart's data as `[kind, categories, series, category…, (name, value…)…]`, every
+/// item a string and a blank value empty. Names are document text.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a chart other than column, bar, line or pie.
+#[wasm_bindgen]
+pub fn chart_data(index: u32, node: u32) -> Result<Vec<String>, JsError> {
+    with_viewer(|v| {
+        let g = v.chart_grid(index as usize, node)?;
+        let mut out = vec![
+            g.kind.code().to_string(),
+            g.categories.len().to_string(),
+            g.series.len().to_string(),
+        ];
+        out.extend(g.categories.iter().cloned());
+        for (name, values) in &g.series {
+            out.push(name.clone());
+            out.extend(
+                values
+                    .iter()
+                    .map(|x| x.map_or(String::new(), |x| x.to_string())),
+            );
+        }
+        Ok(out)
+    })
+}
+
+/// Change a chart's data, in [`chart_data`]'s form: one undo step. A value that is not
+/// a number is blank.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a malformed list, or a chart of the file given another shape.
+#[wasm_bindgen]
+pub fn set_chart_data(index: u32, node: u32, data: Vec<String>) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let num = |i: usize| -> Result<usize, BridgeError> {
+            data.get(i)
+                .and_then(|s| s.parse::<usize>().ok())
+                .filter(|n| *n <= casual_slide_export::new_chart::MAX_GRID_SIDE)
+                .ok_or(BridgeError::BadArgument)
+        };
+        let (n, m) = (num(1)?, num(2)?);
+        let mut it = data.iter().skip(3);
+        let categories: Vec<String> = it.by_ref().take(n).cloned().collect();
+        let mut series = Vec::new();
+        for _ in 0..m {
+            let name = it.next().cloned().ok_or(BridgeError::BadArgument)?;
+            let values = it
+                .by_ref()
+                .take(n)
+                .map(|s| s.trim().parse::<f64>().ok().filter(|x| x.is_finite()))
+                .collect();
+            series.push((name, values));
+        }
+        if categories.len() != n {
+            return Err(BridgeError::BadArgument);
+        }
+        let kind = v.chart_grid(index as usize, node)?.kind;
+        v.set_chart_grid(
+            index as usize,
+            node,
+            casual_slide_export::new_chart::ChartGrid {
+                kind,
+                categories,
+                series,
+            },
         )
     })
 }

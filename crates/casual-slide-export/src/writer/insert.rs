@@ -12,6 +12,13 @@ use super::view::pml_child;
 
 const DML: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const REL: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const CHART_NS: &str = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+const TABLE_URI: &str = "http://schemas.openxmlformats.org/drawingml/2006/table";
+const CHART_CONTENT_TYPE: &str =
+    "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+const XLSX_CONTENT_TYPE: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+/// The most rows or columns a new table has, as the editor's own bound.
+const MAX_NEW_TABLE_SIDE: usize = 75;
 
 /// The shape tree's children that are not shapes.
 const NOT_SHAPES: [&str; 3] = ["nvGrpSpPr", "grpSpPr", "extLst"];
@@ -47,7 +54,18 @@ impl Draft<'_> {
                     self.media_part(&media.bytes, &media.extension, &media.content_type)?;
                 Some(self.reuse_relationship(&part, "image", &target)?)
             }
-            NewShape::Shape | NewShape::Connector => None,
+            NewShape::Shape | NewShape::Connector | NewShape::Table { .. } => None,
+            NewShape::Chart { chart, workbook } => {
+                let chart_part = self.families.mint("ppt/charts", "chart", "xml")?;
+                let book =
+                    self.families
+                        .mint("ppt/embeddings", "Microsoft_Excel_Worksheet", "xlsx")?;
+                self.add_part(&book, Some(XLSX_CONTENT_TYPE), workbook.clone())?;
+                let book_rel = self.add_relationship(&chart_part, "package", &book)?;
+                let xml = chart.replace(NewShape::WORKBOOK_REL, &book_rel);
+                self.add_part(&chart_part, Some(CHART_CONTENT_TYPE), xml.into_bytes())?;
+                Some(self.add_relationship(&part, "chart", &chart_part)?)
+            }
         };
         let conformance = self.conformance;
         let dml = conformance.spell(DML);
@@ -64,8 +82,109 @@ impl Draft<'_> {
         if taken || shape_id == 0 {
             return Err(bad("a shape id the slide already uses", wanted));
         }
+        let pml = sibling_name(tree, sp_tree, "graphicFrame")
+            .trim_end_matches("graphicFrame")
+            .to_owned();
         let p = |local: &str| sibling_name(tree, sp_tree, local);
+        if let NewShape::Table { columns, rows } = shape
+            && (columns.is_empty()
+                || rows.is_empty()
+                || columns.len() > MAX_NEW_TABLE_SIDE
+                || rows.len() > MAX_NEW_TABLE_SIDE)
+        {
+            return Err(bad("a table with no rows or columns, or too many", part));
+        }
         let (root_local, nv_local, kind_local) = match shape {
+            NewShape::Table { .. } | NewShape::Chart { .. } => {
+                let a = match tree.prefix_for_namespace(sp_tree, dml).as_deref() {
+                    Some("") => String::new(),
+                    Some(prefix) => format!("{prefix}:"),
+                    None => "a:".to_owned(),
+                };
+                let declare_a = tree.prefix_for_namespace(sp_tree, dml).is_none();
+                let root = tree.new_element(&format!("{pml}graphicFrame"));
+                if declare_a {
+                    set_attr(tree, root, "xmlns:a", dml, &part)?;
+                }
+                let nv = tree.new_element(&format!("{pml}nvGraphicFramePr"));
+                let c_nv = tree.new_element(&format!("{pml}cNvPr"));
+                set_attr(tree, c_nv, "id", &wanted, &part)?;
+                set_attr(tree, c_nv, "name", name, &part)?;
+                let kind = tree.new_element(&format!("{pml}cNvGraphicFramePr"));
+                let locks = tree.new_element(&format!("{a}graphicFrameLocks"));
+                set_attr(tree, locks, "noGrp", "1", &part)?;
+                tree.insert_child(kind, None, locks);
+                let app = tree.new_element(&format!("{pml}nvPr"));
+                for child in [c_nv, kind, app] {
+                    tree.insert_child(nv, None, child);
+                }
+                let xfrm = tree.new_element(&format!("{pml}xfrm"));
+                let off = tree.new_element(&format!("{a}off"));
+                set_attr(tree, off, "x", "0", &part)?;
+                set_attr(tree, off, "y", "0", &part)?;
+                let ext = tree.new_element(&format!("{a}ext"));
+                set_attr(tree, ext, "cx", "0", &part)?;
+                set_attr(tree, ext, "cy", "0", &part)?;
+                tree.insert_child(xfrm, None, off);
+                tree.insert_child(xfrm, None, ext);
+                let graphic = tree.new_element(&format!("{a}graphic"));
+                let data = tree.new_element(&format!("{a}graphicData"));
+                tree.insert_child(graphic, None, data);
+                match (shape, embed.as_deref()) {
+                    (NewShape::Table { columns, rows }, _) => {
+                        set_attr(tree, data, "uri", TABLE_URI, &part)?;
+                        let tbl = tree.new_element(&format!("{a}tbl"));
+                        let grid = tree.new_element(&format!("{a}tblGrid"));
+                        for w in columns {
+                            let col = tree.new_element(&format!("{a}gridCol"));
+                            set_attr(tree, col, "w", &w.max(&0).to_string(), &part)?;
+                            tree.insert_child(grid, None, col);
+                        }
+                        tree.insert_child(tbl, None, grid);
+                        for h in rows {
+                            let tr = tree.new_element(&format!("{a}tr"));
+                            set_attr(tree, tr, "h", &h.max(&0).to_string(), &part)?;
+                            for _ in columns {
+                                let tc = tree.new_element(&format!("{a}tc"));
+                                let body = tree.new_element(&format!("{a}txBody"));
+                                for local in ["bodyPr", "lstStyle", "p"] {
+                                    let child = tree.new_element(&format!("{a}{local}"));
+                                    tree.insert_child(body, None, child);
+                                }
+                                let tc_pr = tree.new_element(&format!("{a}tcPr"));
+                                tree.insert_child(tc, None, body);
+                                tree.insert_child(tc, None, tc_pr);
+                                tree.insert_child(tr, None, tc);
+                            }
+                            tree.insert_child(tbl, None, tr);
+                        }
+                        tree.insert_child(data, None, tbl);
+                    }
+                    (_, Some(rel_id)) => {
+                        set_attr(tree, data, "uri", CHART_NS, &part)?;
+                        let c = tree.new_element("c:chart");
+                        set_attr(tree, c, "xmlns:c", CHART_NS, &part)?;
+                        set_attr(tree, c, "xmlns:r", rel_uri, &part)?;
+                        set_attr(tree, c, "r:id", rel_id, &part)?;
+                        tree.insert_child(data, None, c);
+                    }
+                    _ => return Err(bad("a chart with no part", part)),
+                }
+                for child in [nv, xfrm, graphic] {
+                    tree.insert_child(root, None, child);
+                }
+                let shapes: Vec<ElementId> = tree
+                    .child_elements(sp_tree)
+                    .into_iter()
+                    .filter(|&el| !NOT_SHAPES.contains(&tree.local_name(el)))
+                    .collect();
+                let before = match shapes.get(index) {
+                    Some(&el) => Some(el),
+                    None => pml_child(tree, sp_tree, "extLst"),
+                };
+                tree.insert_child(sp_tree, before, root);
+                return Ok(());
+            }
             NewShape::Shape => ("sp", "nvSpPr", "cNvSpPr"),
             NewShape::Connector => ("cxnSp", "nvCxnSpPr", "cNvCxnSpPr"),
             NewShape::Picture(_) => ("pic", "nvPicPr", "cNvPicPr"),
