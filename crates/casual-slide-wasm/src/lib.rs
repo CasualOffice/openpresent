@@ -1145,3 +1145,157 @@ mod tests {
         assert_eq!(v.can_undo_redo(), (false, false));
     }
 }
+
+/* ── Building a deck (`VS-08`) ─────────────────────────────────────────── */
+
+/// File > New: open the built-in blank presentation, one Title Slide, replacing any
+/// deck open before.
+///
+/// # Errors
+///
+/// `CS-WSM-0007` if the blank deck could not be built, which a correct build never does.
+#[wasm_bindgen]
+pub fn open_blank() -> Result<(), JsError> {
+    let viewer = Viewer::blank().map_err(js)?;
+    SESSION.with(|s| *s.borrow_mut() = Some(viewer));
+    Ok(())
+}
+
+/// The deck's layouts for the New Slide gallery: `[ordinal, name, ordinal, name, …]`.
+/// A name is document text: the page shows it through `textContent` only.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn slide_layouts() -> Result<Vec<String>, JsError> {
+    with_viewer(|v| {
+        Ok(v.layouts()
+            .into_iter()
+            .flat_map(|(o, n)| [o.to_string(), n])
+            .collect())
+    })
+}
+
+/// The layout ordinal slide `index` is on, or -1.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn slide_layout(index: u32) -> Result<i64, JsError> {
+    with_viewer(|v| Ok(v.layout_of(index as usize).map_or(-1, i64::from)))
+}
+
+/// New Slide on layout `layout` at place `at`; returns the place.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a layout that is not one; `CS-TXN-0006` for a bad place.
+#[wasm_bindgen]
+pub fn new_slide(at: u32, layout: u32) -> Result<u32, JsError> {
+    with_viewer(|v| v.new_slide(at as usize, layout).map(to_u32))
+}
+
+/// Duplicate slide `index`; returns the copy's place.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn duplicate_slide(index: u32) -> Result<u32, JsError> {
+    with_viewer(|v| v.duplicate_slide(index as usize).map(to_u32))
+}
+
+/// Delete slide `index`.
+///
+/// # Errors
+///
+/// `CS-TXN-0006` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn delete_slide(index: u32) -> Result<(), JsError> {
+    with_viewer(|v| v.delete_slide(index as usize))
+}
+
+/// Move slide `from` to place `to`.
+///
+/// # Errors
+///
+/// `CS-TXN-0006` for a place past the end.
+#[wasm_bindgen]
+pub fn move_slide(from: u32, to: u32) -> Result<(), JsError> {
+    with_viewer(|v| v.move_slide(from as usize, to as usize))
+}
+
+/// Which slides are hidden, one byte each, 1 for hidden.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn hidden_slides() -> Result<Vec<u8>, JsError> {
+    with_viewer(|v| {
+        (0..v.slide_count())
+            .map(|i| v.is_hidden(i).map(u8::from))
+            .collect()
+    })
+}
+
+/// Hide slide `index` in a slide show, or show it again.
+///
+/// # Errors
+///
+/// `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn set_slide_hidden(index: u32, hidden: bool) -> Result<(), JsError> {
+    with_viewer(|v| v.set_hidden(index as usize, hidden))
+}
+
+/// Insert a text box (0), rectangle (1), oval (2), line (3) or arrow (4) on slide
+/// `index` at a box in EMU; returns its node.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for another kind.
+#[wasm_bindgen]
+pub fn insert_shape(
+    index: u32,
+    kind: u32,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        let kind = Insert::from_u32(kind).ok_or(BridgeError::BadArgument)?;
+        v.insert_shape(
+            index as usize,
+            kind,
+            [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
+}
+
+/// Insert > Picture: PNG or JPEG bytes on slide `index` at a box in EMU; returns its
+/// node.
+///
+/// # Errors
+///
+/// `CS-WSM-0008` for bytes that are not a PNG or JPEG picture.
+#[wasm_bindgen]
+pub fn insert_picture(
+    index: u32,
+    bytes: Vec<u8>,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        v.insert_picture(
+            index as usize,
+            bytes,
+            [x as i64, y as i64, cx as i64, cy as i64],
+        )
+    })
+}

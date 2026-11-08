@@ -9,6 +9,9 @@
 // `{ op: "shapes", index }`, `{ op: "transform", index, node, x, y, cx, cy, rot }`,
 // `{ op: "delete", index, node }`, `{ op: "undo" }` and `{ op: "redo" }`; each edit
 // answers with `undo: [canUndo, canRedo]`, and undo and redo with the slide changed.
+// Building (`VS-08`): `{ op: "blank" }` opens the built-in new presentation, and
+// `{ op: "build", fn, args }` runs one slide or insert call; undo and redo also
+// answer the slide count, since they may add or remove slides.
 // Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name. Out: `{ id, ok: true, ... }` or
 // `{ id, ok: false, error }`, where `error` is the engine's message with its code.
 // Nothing here fetches anything but the engine itself, from this origin.
@@ -18,6 +21,8 @@ import init, {
   slide_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
+  open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
+  hidden_slides, set_slide_hidden, insert_shape, insert_picture,
 } from "./pkg/casual_slide_wasm.js";
 
 // Text editing (`VS-05`): `{ id, op: "text", fn, args }` calls one of these by name and
@@ -25,6 +30,13 @@ import init, {
 const TEXT = {
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
+};
+
+// Building a deck (`VS-08`): `{ id, op: "build", fn, args }` calls one of these by name
+// and answers `{ value, count, undo }`, `count` being the deck's slides afterwards.
+const BUILD = {
+  slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
+  hidden_slides, set_slide_hidden, insert_shape, insert_picture,
 };
 
 const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });
@@ -41,8 +53,9 @@ self.onmessage = async (event) => {
   const { id } = msg;
   try {
     await ready;
-    if (msg.op === "open") {
-      open(new Uint8Array(msg.bytes));
+    if (msg.op === "open" || msg.op === "blank") {
+      // `blank` is File > New, and the deck the editor starts with (`VS-08`).
+      if (msg.op === "blank") open_blank(); else open(new Uint8Array(msg.bytes));
       const size = slide_size();
       self.postMessage({ id, ok: true, count: slide_count(), width: size[0], height: size[1], version: version() });
     } else if (msg.op === "png") {
@@ -62,15 +75,24 @@ self.onmessage = async (event) => {
     } else if (msg.op === "delete") {
       delete_shape(msg.index, msg.node);
       self.postMessage({ id, ok: true, undo: Array.from(undo_state()) });
-    } else if (msg.op === "undo" || msg.op === "redo") {
-      const slide = msg.op === "undo" ? undo() : redo();
-      self.postMessage({ id, ok: true, slide, undo: Array.from(undo_state()) });
     } else if (msg.op === "text") {
       const fn = Object.hasOwn(TEXT, msg.fn) ? TEXT[msg.fn] : null;
       if (!fn) throw new Error("unknown request");
       let value = fn(...(Array.isArray(msg.args) ? msg.args : []));
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()) });
+    } else if (msg.op === "build") {
+      const fn = Object.hasOwn(BUILD, msg.fn) ? BUILD[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      const args = Array.isArray(msg.args) ? msg.args.slice() : [];
+      // A picture's bytes cross as an ArrayBuffer.
+      if (msg.fn === "insert_picture") args[1] = new Uint8Array(args[1]);
+      let value = fn(...args);
+      if (ArrayBuffer.isView(value)) value = Array.from(value);
+      self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
+    } else if (msg.op === "undo" || msg.op === "redo") {
+      const slide = msg.op === "undo" ? undo() : redo();
+      self.postMessage({ id, ok: true, slide, count: slide_count(), undo: Array.from(undo_state()) });
     } else if (msg.op === "report") {
       self.postMessage({ id, ok: true, lines: slide_report(msg.index) });
     } else {
