@@ -377,5 +377,33 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(connections, [])
 
 
+try:
+    import numpy  # noqa: F401
+    import PIL  # noqa: F401
+    HAVE_SCORE = True
+except ImportError:
+    HAVE_SCORE = False
+
+
+@unittest.skipUnless(HAVE_SCORE, "score.py needs numpy and Pillow (CI's gallery job has them)")
+class Score(unittest.TestCase):
+    def test_a_reference_one_pixel_wider_is_cropped_not_resampled(self):
+        # pdftoppm rounds a 13.333 in page up to 1281 px at 96 dpi; resampling that
+        # to 1280 blurs every edge, and the blur scored as our difference (FH-05).
+        import score
+        from PIL import Image, ImageDraw
+        with tempfile.TemporaryDirectory() as tmp:
+            ours, lo = pathlib.Path(tmp) / "ours.png", pathlib.Path(tmp) / "lo.png"
+            for path, width in ((ours, 400), (lo, 401)):
+                image = Image.new("RGB", (width, 100), "white")
+                draw = ImageDraw.Draw(image)
+                for x in range(0, 400, 8):
+                    draw.line((x, 0, x, 99), fill="black")
+                image.save(path)
+            result = score.score_pair(ours, lo)
+            self.assertEqual(result["differ"], 0.0)
+            self.assertNotIn("resized", result.get("note", ""))
+
+
 if __name__ == "__main__":
     unittest.main()

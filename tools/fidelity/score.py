@@ -23,7 +23,8 @@ Per slide, two numbers, each blind to what the other sees:
 
 Slides are paired in order. A deck whose two renders have different slide counts is not
 scored, and says so, since hidden slides or a failed render would pair the wrong slides.
-A LibreOffice image of another size is resized to ours first, and the slide says so.
+A LibreOffice image of another size is resized to ours first, and the slide says so; one
+at most two pixels larger, as pdftoppm's rounding up makes it, is cropped instead.
 
 Needs numpy and Pillow (pip, on CI only); the rest of tools/fidelity is standard library.
 The stdlib `compare.py` takes about two seconds a page, too slow for the whole gallery; the
@@ -48,6 +49,7 @@ LOOSE_TARGET = 0.05
 WINDOW = 8
 C1, C2 = (0.01 * 255) ** 2, (0.03 * 255) ** 2
 MAX_PIXELS = 40_000_000
+CROP_SLACK = 2           # px a reference may exceed ours by and be cropped, not resampled.
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 
@@ -62,7 +64,12 @@ def pngs(folder):
 
 
 def load(path, size=None):
-    """RGB as uint8 (h, w, 3), alpha composited on white; resized to `size` (w, h) if given."""
+    """RGB as uint8 (h, w, 3), alpha composited on white, fitted to `size` (w, h) if given,
+    and how: None, "cropped" or "resized".
+
+    An image up to CROP_SLACK px larger on each side is cropped, not resampled:
+    pdftoppm rounds the page up (a 13.333 in slide is 1281 px at 96 dpi), and resampling
+    1281 to 1280 blurs every edge on the page, which scored as our difference."""
     with Image.open(path) as image:
         image.load()
         if image.mode in ("RGBA", "LA", "P", "PA") or "transparency" in image.info:
@@ -70,10 +77,14 @@ def load(path, size=None):
             white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
             image = Image.alpha_composite(white, rgba)
         image = image.convert("RGB")
-        resized = size is not None and image.size != size
-        if resized:
-            image = image.resize(size, Image.Resampling.LANCZOS)
-        return np.asarray(image, dtype=np.uint8), resized
+        fitted = None
+        if size is not None and image.size != size:
+            over = (image.size[0] - size[0], image.size[1] - size[1])
+            if all(0 <= d <= CROP_SLACK for d in over):
+                image, fitted = image.crop((0, 0, size[0], size[1])), "cropped"
+            else:
+                image, fitted = image.resize(size, Image.Resampling.LANCZOS), "resized"
+        return np.asarray(image, dtype=np.uint8), fitted
 
 
 def to_lab(rgb):
@@ -128,15 +139,15 @@ def ssim(ra, rb):
 
 def score_pair(ours_path, lo_path):
     ours, _ = load(ours_path)
-    lo, resized = load(lo_path, size=(ours.shape[1], ours.shape[0]))
+    lo, fitted = load(lo_path, size=(ours.shape[1], ours.shape[0]))
     if np.array_equal(ours, lo):
         result = {"differ": 0.0, "ssim": 1.0}
     else:
         lab_ours, lab_lo = to_lab(ours), to_lab(lo)
         mask = far_from_neighbours(lab_ours, lab_lo) | far_from_neighbours(lab_lo, lab_ours)
         result = {"differ": round(float(mask.mean()), 6), "ssim": round(ssim(ours, lo), 5)}
-    if resized:
-        result["note"] = "LibreOffice image resized to ours"
+    if fitted:
+        result["note"] = f"LibreOffice image {fitted} to ours"
     return result
 
 
