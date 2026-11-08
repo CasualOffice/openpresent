@@ -643,7 +643,8 @@ impl Viewer {
         let bytes = self.shapes_pass(bytes)?;
         let bytes = self.patch_pass(bytes)?;
         let bytes = self.chart_pass(bytes)?;
-        self.design_pass(bytes)
+        let bytes = self.design_pass(bytes)?;
+        self.properties_pass(bytes)
     }
 
     /// What Design changed in themes and the slide size (`VS-12`), last, on the file the

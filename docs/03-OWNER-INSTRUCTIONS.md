@@ -65,6 +65,7 @@ by saying so.
 | 54 | 2026-11-08 | For the Font box and everything font-related in the editor (the font list shown, substitution when a font is missing, loading font files in the browser), do exactly what OpenCalc's webapp does: copy its font picker and on-demand font loading with provenance | `webapp/editor.home.js`, `UX-003` |
 | 55 | 2026-11-08 | Co-editing presence as PowerPoint shows it: people at the top right of the header with a list, name and colour on each person's cursor and selection. Verify against Microsoft's documentation, not the owner's recollection | [53](53-POWERPOINT-WEB-SHELL-TARGET.md), `COL-04` |
 | 56 | 2026-11-08 | Find every PowerPoint gap, not only the examples the owner names: audit all features and work from a ranked backlog | [96](96-POWERPOINT-FIT-GAP.md), [14](14-EXECUTION-TRACKER.md) |
+| 57 | 2026-11-08 | "Rename and file properties are still pending": rename in the title bar and File > Rename, File > Info properties and Advanced Properties saved into `docProps`, Save As, Download a Copy, Export, Print, and autosave with crash recovery, as PowerPoint for the web does them | `webapp/editor.file.js`, `webapp/editor.drafts.js`, `FILE-01`, `SAVE-01` |
 
 ## Boundaries set by the environment
 

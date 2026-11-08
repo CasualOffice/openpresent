@@ -35,6 +35,8 @@ import * as home from "./editor.home.js";
 import * as clipboard from "./editor.clipboard.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 import * as presence from "./editor.presence.js";
+import { registerFileCommands, initFile } from "./editor.file.js";
+import { initDrafts } from "./editor.drafts.js";
 
 const byId = (id) => document.getElementById(id);
 
@@ -226,7 +228,7 @@ const EXPORT_WIDTH_PX = 1920;
 const baseName = () => (state.deck?.name || "Presentation").replace(/\.[^.]+$/, "");
 let busy = false;
 
-async function produce(what, msg, name, type) {
+async function produce(what, msg, name, type, onDone) {
   if (busy || !state.deck) return;
   busy = true;
   changed();
@@ -235,6 +237,7 @@ async function produce(what, msg, name, type) {
     const r = await request(msg, { priority: 5 });
     const written = await download(new Uint8Array(r.bytes || r.png), name, type);
     status(written === null ? `${what} cancelled` : `${what}: ${written}`);
+    if (written !== null) onDone?.();
   } catch (e) {
     status(`${what} failed`);
     errorDialog(`OpenPresent could not finish: ${what.toLowerCase()}.`, e.message);
@@ -246,7 +249,9 @@ async function produce(what, msg, name, type) {
 
 export function saveDeck() {
   const name = state.deck?.name || "Presentation.pptx";
-  return produce("Saving", { op: "save" }, name, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+  // A completed save tells autosave its draft is spent (`SAVE-01`).
+  return produce("Saving", { op: "save" }, name, "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    () => document.dispatchEvent(new CustomEvent("op-saved")));
 }
 
 export function exportPdf() {
@@ -272,7 +277,6 @@ function registerCommands() {
   register("file.open", { label: "Open", shortcut: "Ctrl+O", run: openFilePicker });
   const canProduce = () => hasDeck() && !busy;
   register("file.save", { label: "Save", shortcut: "Ctrl+S", enabled: canProduce, run: saveDeck });
-  register("file.save-copy", { label: "Save a Copy", enabled: canProduce, run: saveDeck });
   register("file.export-pdf", { label: "Create PDF", enabled: canProduce, run: exportPdf });
   register("file.export-png", { label: "Export Slide as PNG", enabled: canProduce, run: exportPng });
   register("file.render-report", { label: "What this slide leaves out", enabled: hasDeck, run: () => reportDialog(state.current) });
@@ -303,6 +307,8 @@ function registerCommands() {
   register("help.keyboard-shortcuts", { label: "Keyboard Shortcuts", run: shortcutsDialog });
   register("help.about", { label: "About OpenPresent", run: () => aboutDialog(state.engineVersion) });
   register("file.info", { label: "Info", run: () => openBackstage("Info") });
+  // Rename, Save As, Download a Copy, Advanced Properties and Print (`FILE-01`).
+  registerFileCommands();
 
   // The shell's own verbs (`UX-003`, docs/53): the Format Shape pane, the
   // editing mode, and the context menu.
@@ -423,6 +429,7 @@ async function boot() {
   slides.init();
   text.init();
   initFiles({ onOpen: openDeck });
+  initFile();
   buildStatusBar();
   bindKeys();
   menus.init();
@@ -439,6 +446,9 @@ async function boot() {
   // arriving (the desktop shell's, or one dropped while the engine started).
   if (!state.deck && !opening) await newDeck();
   presence.joinFromLink();
+  // Autosave and the recovery bar (`SAVE-01`): after the first deck, so a draft from an
+  // earlier session is offered beside it, never applied by itself.
+  initDrafts();
 }
 
 boot();
