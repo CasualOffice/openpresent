@@ -204,3 +204,51 @@ fn a_cjk_glyph_is_upright_at_slide_sizes_in_emu() {
         assert!(bottom < 0.3 * size, "{size}: bottom {bottom}");
     }
 }
+
+/// OpenCalc's `FaceSelector::primary`: a run's line metrics come from its own
+/// substituted face, so East Asian text drawn from a CJK slice does not take the
+/// slice's taller ascent and descent (Noto Sans CJK's are 1.448 em).
+#[test]
+fn east_asian_lines_are_spaced_by_the_runs_own_face_not_the_cjk_slice() {
+    use crate::layout::{BodyLayout, Frame, ParagraphLayout, RunStyle, StyledText, layout_body};
+    let dir = dir();
+    dir.load(wanted(JP_SANS, "日本"));
+    let size = 24.0;
+    let style = RunStyle {
+        family: Some("ＭＳ Ｐゴシック".to_owned()),
+        size,
+        ..RunStyle::default()
+    };
+    let body = BodyLayout {
+        wrap: true,
+        paragraphs: vec![ParagraphLayout {
+            runs: vec![StyledText {
+                text: "日本\n日本".to_owned(),
+                style: style.clone(),
+            }],
+            end: style,
+            ..ParagraphLayout::default()
+        }],
+        ..BodyLayout::default()
+    };
+    let frame = Frame {
+        x: 0.0,
+        y: 0.0,
+        width: 400.0,
+        height: 400.0,
+    };
+    let laid = layout_body(&body, frame);
+    let mut ys: Vec<f32> = laid
+        .runs
+        .iter()
+        .flat_map(|r| r.glyphs.iter().map(|g| g.y))
+        .collect();
+    ys.dedup_by(|a, b| (*a - *b).abs() < 0.01);
+    assert_eq!(ys.len(), 2, "{ys:?}");
+    let pitch = ys[1] - ys[0];
+    // Liberation Sans, this family's substitute: 0.905 + 0.212 em.
+    assert!(
+        (pitch - 1.117 * size).abs() < 0.05 * size,
+        "pitch {pitch} at {size} pt"
+    );
+}

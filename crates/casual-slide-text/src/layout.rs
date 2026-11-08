@@ -650,9 +650,11 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
                 let Some(style) = prepared.styles.get(item.style) else {
                     continue;
                 };
-                let face = item.face.unwrap_or_else(|| {
-                    crate::faces::face_bytes_for(style.family.as_deref(), style.bold, style.italic)
-                });
+                // A line's metrics come from the run's own substituted face, not
+                // the fallback that draws a character it lacks, as OpenCalc's
+                // `FaceSelector::primary` gives a cell's (owner instruction 42).
+                let face =
+                    crate::faces::face_bytes_for(style.family.as_deref(), style.bold, style.italic);
                 let im = metrics(face, style.size);
                 m = Some(m.map_or(im, |m| Metrics {
                     ascent: m.ascent.max(im.ascent),
