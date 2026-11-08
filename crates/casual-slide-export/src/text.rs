@@ -1037,6 +1037,17 @@ fn patch_run_hyperlink(
     b: Option<&Box<Hyperlink>>,
     a: &Box<Hyperlink>,
 ) -> Result {
+    patch_new_hyperlink(w, el, b.map(|b| &**b), a)
+}
+
+/// A hyperlink element brought to `a`: patched where it was, or written new with the
+/// `r:id` the schema requires (a run's, `UX-006` a shape's `cNvPr`).
+pub(crate) fn patch_new_hyperlink(
+    w: &mut Writer<'_>,
+    el: &Elem,
+    b: Option<&Hyperlink>,
+    a: &Hyperlink,
+) -> Result {
     if let Some(before) = b {
         return patch_hyperlink(w, el, before, a);
     }

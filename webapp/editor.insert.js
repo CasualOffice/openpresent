@@ -6,6 +6,10 @@
 // text box saying "Your text here" with its fill, outline and text warp, placed in the
 // middle of the slide and selected, one undo step. The warp is saved; this build's
 // renderer draws the text unwarped.
+//
+// Insert > Link (Ctrl+K) on the selected shape (`UX-006`): a web or mail address the
+// shape links to on a click in PowerPoint's show. The address is stored in the file,
+// never fetched or opened here; the engine takes only `http:`, `https:` and `mailto:`.
 
 import { register } from "./commands.js";
 import { state, request } from "./editor.core.js";
@@ -98,7 +102,79 @@ async function insertWordArt(style) {
   }
 }
 
+const oneShape = () => !!state.deck && selection.selectedNodes().length === 1 && selection.selectedNode() != null && !text.editing();
+
+async function linkDialog() {
+  const node = selection.selectedNode();
+  const index = state.current;
+  let now = null;
+  try { now = (await request({ op: "build", fn: "shape_link", args: [index, node] }, { priority: 9 })).value ?? null; } catch { now = null; }
+  showModal("Insert Link", (body) => {
+    const label = document.createElement("label");
+    label.className = "fp-row";
+    label.appendChild(document.createTextNode("Address "));
+    const input = document.createElement("input");
+    input.type = "url";
+    input.className = "fp-input";
+    input.placeholder = "https://";
+    input.value = now || "";
+    input.setAttribute("aria-label", "Address");
+    label.appendChild(input);
+    const note = document.createElement("p");
+    note.className = "fp-none";
+    note.textContent = now === "" ? "This shape has a link from the file." : "Stored in the presentation; OpenPresent never opens it.";
+    const row = document.createElement("div");
+    row.className = "fd-buttons";
+    const ok = document.createElement("button");
+    ok.type = "button";
+    ok.className = "op-btn primary";
+    ok.textContent = "OK";
+    const go = async () => {
+      const url = input.value.trim();
+      if (!url) { input.focus(); return; }
+      try {
+        const r = await request({ op: "build", fn: "set_shape_link", args: [index, node, url] }, { priority: 9 });
+        if (r.undo) selection.noteUndoState(r.undo);
+        closeModal();
+      } catch {
+        note.textContent = "Use a web address (https://…) or a mail address (mailto:…), without spaces.";
+        input.focus();
+      }
+    };
+    ok.addEventListener("click", go);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    row.appendChild(ok);
+    if (now) {
+      // A link added in this session can go again; one from the file stays (`RIB-04`).
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "op-btn";
+      remove.textContent = "Remove Link";
+      remove.addEventListener("click", async () => {
+        try {
+          const r = await request({ op: "build", fn: "set_shape_link", args: [index, node, ""] }, { priority: 9 });
+          if (r.undo) selection.noteUndoState(r.undo);
+          closeModal();
+        } catch (e) { errorDialog("OpenPresent could not remove the link.", e.message); }
+      });
+      row.appendChild(remove);
+    }
+    body.append(label, row, note);
+    setTimeout(() => input.focus(), 0);
+  });
+}
+
+/// Ctrl+K with one shape selected, from the editor's keys.
+export function onKey(e) {
+  const mod = e.ctrlKey || e.metaKey;
+  if (!mod || e.altKey || e.shiftKey || (e.key !== "k" && e.key !== "K") || !oneShape()) return false;
+  e.preventDefault();
+  linkDialog();
+  return true;
+}
+
 export function init() {
+  register("insert.link", { label: "Link", shortcut: "Ctrl+K", enabled: oneShape, run: linkDialog });
   register("insert.wordart", { label: "WordArt", enabled: () => !!state.deck && state.deck.count > 0, run: wordartDialog });
   register("insert.symbol", { label: "Symbol", enabled: () => !!state.deck && state.deck.count > 0, run: symbolDialog });
 }

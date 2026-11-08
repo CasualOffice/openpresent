@@ -693,7 +693,8 @@ impl Viewer {
         let bytes = self.slides_pass(self.deck.source_bytes())?;
         let bytes = self.shapes_pass(bytes)?;
         let bytes = self.order_pass(bytes)?;
-        let bytes = self.patch_pass(bytes)?;
+        let (bytes, links) = self.links_pass(bytes)?;
+        let bytes = self.patch_pass(bytes, &links)?;
         let bytes = self.chart_pass(bytes)?;
         self.design_pass(bytes)
     }
@@ -870,7 +871,11 @@ impl Viewer {
         Self::run(&plan, bytes)
     }
 
-    fn patch_pass(&self, bytes: Vec<u8>) -> Result<Vec<u8>, BridgeError> {
+    fn patch_pass(
+        &self,
+        bytes: Vec<u8>,
+        links: &std::collections::BTreeMap<String, String>,
+    ) -> Result<Vec<u8>, BridgeError> {
         let file = Deck::open(bytes.clone())?;
         let mut changed: Vec<SlidePart> = Vec::new();
         let mut pairs = self.pairs(file.parts())?;
@@ -904,7 +909,7 @@ impl Viewer {
                 c.background.clone_from(&k.background);
             }
             if let (Some(root), Some(model_root)) = (after.shape_tree_mut(), m.shape_tree()) {
-                overlay(root, model_root);
+                overlay(root, model_root, links);
             }
             if &after != f {
                 changed.push(after);
@@ -922,7 +927,11 @@ impl Viewer {
 
 /// Bring a node of the file to its model's values, keeping the file's own ids and what
 /// only the file knows: a new picture's relationship, which the writer named.
-fn overlay(file: &mut ShapeNode, model: &ShapeNode) {
+fn overlay(
+    file: &mut ShapeNode,
+    model: &ShapeNode,
+    links: &std::collections::BTreeMap<String, String>,
+) {
     let children = core::mem::take(&mut file.children);
     let id = file.id;
     let picture = file.properties.picture.clone();
@@ -940,6 +949,16 @@ fn overlay(file: &mut ShapeNode, model: &ShapeNode) {
         copy.chart.clone_from(&file.chart);
     }
     *file = copy;
+    // A link added this session names the relationship the links pass gave it
+    // (`UX-006`).
+    if let Some(link) = file
+        .non_visual
+        .as_mut()
+        .and_then(|nv| nv.hyperlink_click.as_mut())
+        && let Some(id) = link.rel_id.as_ref().and_then(|r| links.get(r))
+    {
+        link.rel_id = Some(id.clone());
+    }
     let mut used = BTreeSet::new();
     file.children = children
         .into_iter()
@@ -953,7 +972,7 @@ fn overlay(file: &mut ShapeNode, model: &ShapeNode) {
             });
             if let Some((i, m)) = found {
                 used.insert(i);
-                overlay(&mut child, m);
+                overlay(&mut child, m, links);
             }
             child
         })

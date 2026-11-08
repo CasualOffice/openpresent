@@ -56,6 +56,8 @@ mod views;
 pub use arrange::Order;
 mod find;
 pub use find::{Found, MAX_FIND_MATCHES};
+mod links;
+pub use links::{MAX_LINK_BYTES, link_allowed};
 pub use views::OutlineSlide;
 
 use casual_slide_transaction::{History, Operation, TxnError};
@@ -265,6 +267,9 @@ pub struct Viewer {
     origins: BTreeMap<u32, build::Origin>,
     /// Pictures inserted in this session, by the relationship id the model gives them.
     new_media: BTreeMap<String, casual_slide_export::writer::MediaBytes>,
+    /// Links added in this session (`UX-006`): the address each relationship id the
+    /// model gives them stands for. Stored in the file, never fetched.
+    new_links: BTreeMap<String, String>,
     /// Pictures inserted so far, which names the next one.
     minted: u32,
     /// A shared session, while one is on (`COL-04`).
@@ -293,6 +298,7 @@ impl Viewer {
             wide: false,
             origins: BTreeMap::new(),
             new_media: BTreeMap::new(),
+            new_links: BTreeMap::new(),
             minted: 0,
             shared: None,
             serial: clipboard::next_serial(),
@@ -2508,6 +2514,32 @@ pub fn wordart_styles() -> Vec<String> {
         .iter()
         .map(|s| s.0.to_owned())
         .collect()
+}
+
+/// Insert > Link (`UX-006`): shape `node` of slide `index` links to `url` on a click,
+/// or, with an empty `url`, its link is taken away. One undo step. Stored, never
+/// fetched.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for an address other than `http:`, `https:` or `mailto:`.
+#[wasm_bindgen]
+pub fn set_shape_link(index: u32, node: u32, url: String) -> Result<bool, JsError> {
+    with_viewer(|v| {
+        let url = url.trim();
+        v.set_shape_link(index as usize, node, (!url.is_empty()).then_some(url))
+    })
+}
+
+/// The address shape `node` of slide `index` links to; empty for a link from the file
+/// and `undefined` for none.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn shape_link(index: u32, node: u32) -> Result<Option<String>, JsError> {
+    with_viewer(|v| Ok(v.shape_link(index as usize, node)))
 }
 
 /// Slide `index` in Outline View (`UX-006`): `[part, title, body]`, a node being -1

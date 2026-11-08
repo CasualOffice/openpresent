@@ -100,6 +100,17 @@ pub enum Op {
         /// The shape.
         shape_id: u32,
     },
+    /// Add an external `hyperlink` relationship to a slide under the id given, for a
+    /// link the edit added (`UX-006`, Insert > Link). The target is stored, never
+    /// fetched. Refused for an id the slide already uses.
+    AddLink {
+        /// Which slide.
+        slide: SlideRef,
+        /// The relationship's `Id`, as the slide's model names it.
+        id: String,
+        /// The address.
+        target: String,
+    },
     /// Move a top-level shape of the shape tree to place `index` among its shapes, in
     /// z-order, by its `cNvPr/@id` (`UX-006`, Bring Forward, Send Backward). The element
     /// moves whole, with its `mc:AlternateContent` where it is in one; nothing else
@@ -436,6 +447,17 @@ impl Draft<'_> {
                 shape_id,
                 index,
             } => self.move_shape(slide, *shape_id, *index),
+            Op::AddLink { slide, id, target } => {
+                let (_, entry) = self.slide(slide)?;
+                let part = Self::slide_part(&entry)?;
+                let rel = Relationship {
+                    id: id.clone(),
+                    rel_type: self.rel_type("hyperlink"),
+                    target: target.clone(),
+                    mode: TargetMode::External,
+                };
+                self.add_relationship_exact(&part, &rel, target)
+            }
             Op::ReplaceMedia {
                 slide,
                 rel_id,

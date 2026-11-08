@@ -300,6 +300,15 @@ pub enum Operation {
         /// Its `p:style`. `None` removes it.
         style: Option<Box<ShapeStyle>>,
     },
+    /// Properties: a shape's click hyperlink (`cNvPr/hlinkClick`, `UX-006`, Insert >
+    /// Link). `None` removes it. Its inverse is the link it had. Refused on a node
+    /// with no `cNvPr`.
+    SetLink {
+        /// The node.
+        node: ObjectId,
+        /// What its link becomes.
+        link: Option<Box<casual_slide_model::shape::Hyperlink>>,
+    },
     /// Tree: remove a node and everything under it.
     DeleteNode {
         /// The node.
@@ -528,6 +537,7 @@ impl Operation {
         match self {
             Self::SetTransform { node, .. }
             | Self::SetLook { node, .. }
+            | Self::SetLink { node, .. }
             | Self::DeleteNode { node } => Some(*node),
             Self::InsertNode { node, .. } => Some(node.id),
             Self::InsertText { object, .. }
@@ -603,6 +613,7 @@ impl Operation {
         match self {
             Self::SetTransform { .. } => "Move",
             Self::SetLook { .. } => "Format Shape",
+            Self::SetLink { .. } => "Link",
             Self::DeleteNode { .. } => "Delete",
             Self::InsertNode { .. } => "Insert",
             Self::InsertText { .. } => "Typing",
@@ -1165,6 +1176,26 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
                 Operation::SetTransform {
                     node,
                     transform: before,
+                },
+                changed,
+            ))
+        }
+        Operation::SetLink { node, link } => {
+            let shape = parts
+                .get_mut(node.part)
+                .and_then(|p| p.node_mut(node))
+                .ok_or(TxnError::NoSuchObject(node))?;
+            let nv = shape
+                .non_visual
+                .as_mut()
+                .ok_or(TxnError::NoSuchObject(node))?;
+            let link = link.map(|l| *l);
+            let changed = nv.hyperlink_click != link;
+            let before = core::mem::replace(&mut nv.hyperlink_click, link);
+            Ok((
+                Operation::SetLink {
+                    node,
+                    link: before.map(Box::new),
                 },
                 changed,
             ))

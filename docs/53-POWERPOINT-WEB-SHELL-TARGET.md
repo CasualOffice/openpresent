@@ -79,7 +79,7 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | Insert / Slides, Tables, Images | New Slide, Table, Pictures | Reuse Slides | `RIB-02` |
 | Insert / Illustrations | Shapes, Chart (4) | Icons, 3D Models, SmartArt | `RIB-05` |
 | Insert / Camera, Forms, Add-ins, Media | | Cameo, Forms, Add-ins, Video, Audio | `RIB-05` |
-| Insert / Links | | Link, Action | `RIB-04` |
+| Insert / Links | Link (Ctrl+K) on a selected shape: `http`, `https`, `mailto`, stored and never fetched | Link on selected text, Action | `RIB-04` |
 | Insert / Comments | | Comment (the comments session's) | `COL` rows |
 | Insert / Text | Text Box, WordArt (eight styles: fill, outline, text warp) | Header & Footer | `RIB-04` |
 | Insert / Symbols | Symbol | Equation | `RIB-05` |
@@ -97,7 +97,7 @@ that name (it is disabled until `RIB-02`), and Zoom and Slide Size run from sear
 | Shape Format | Shapes, Text Box, Shape Styles, Fill, Outline, Format Text pane, Arrange as Home, Size launcher | Edit Shape, Edit Points, Change Shape, Text Fill, Text Outline, Text Effects, Shape Effects, Alt Text, Group, Selection Pane, Height, Width | `RIB-10` |
 | Picture Format, Table Design, Layout, Chart Design | Reset Picture (2), Picture Styles, Crop, Arrange, Table Styles, rows and columns (6), Edit Text, Edit Data | Alt Text, Height, Width | `RIB-10` |
 | File | New, Open, render report, Save, Save a Copy, PDF, PNG, Share | Properties, Version History, Print (the File session's) | File rows |
-| Right-click menus | as the ribbon | Layout, Add Section; Edit Text, Edit Points, Group, Link, Alt Text; Font…, Paragraph…, Numbering; New Comment | as above |
+| Right-click menus | as the ribbon | Layout, Add Section; Edit Text, Edit Points, Group, Alt Text; Font…, Paragraph…, Numbering; New Comment | as above |
 
 Menu buttons (Arrange, Align, Rotate, Group, Section, Select, Change Case) are drawn live while any command in their
 menu is. Insert > Slide Number and Date & Time open Header & Footer in PowerPoint and wait with it (`RIB-04`).

@@ -715,7 +715,26 @@ impl Patch<'_, '_> {
                 continue;
             }
             let (Some(bl), Some(al)) = (before, after) else {
-                return Err(self.unsupported("adding or removing a hyperlink"));
+                // Insert > Link on a shape (`UX-006`): a new `hlinkClick` or
+                // `hlinkHover` in `cNvPr`'s order. Its relationship is the writer's
+                // op's, added before this patch runs. Taking one away would leave its
+                // relationship behind, so it is still refused.
+                if after.is_none() {
+                    return Err(self.unsupported("removing a hyperlink"));
+                }
+                const ORDER: [&str; 3] = ["hlinkClick", "hlinkHover", "extLst"];
+                sync_ordered(
+                    &mut self.w,
+                    el,
+                    ns::DML,
+                    "a",
+                    &ORDER,
+                    local,
+                    before.as_ref(),
+                    after.as_ref(),
+                    crate::text::patch_new_hyperlink,
+                )?;
+                continue;
             };
             let link = self.child(el, ns::DML, local)?;
             let link = self.need(link, "a hyperlink")?;

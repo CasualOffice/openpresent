@@ -363,6 +363,7 @@ function bindKeys() {
     // Undo and redo anywhere; with a shape selected, its keys come first (`VS-06`).
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && arrange.onKey(e)) return;
     if (state.deck && find.onKey(e)) return;
+    if (state.deck && insert.onKey(e)) return;
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
     const mod = e.ctrlKey || e.metaKey;
     if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && build.onKey(e)) return;
