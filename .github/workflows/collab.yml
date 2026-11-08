@@ -36,3 +36,27 @@ jobs:
       - run: cargo build --locked
       - name: Two clients through a running server
         run: cargo test --locked
+
+  # COL-04: the editor itself in two headless Chrome pages against the running server,
+  # as OpenCalc's browser-smoke job runs its collaboration suite. The engine is built
+  # here, never taken from the tree. Chrome is the runner's own; playwright-core only
+  # drives it, pinned, with no browser download.
+  collab-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install wasm-pack
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-pack --version 0.14.0 --locked
+      - name: Build the engine for the browser
+        run: wasm-pack build crates/casual-slide-wasm --release --target web --out-dir ../../webapp/pkg
+      - name: Build the collaboration server
+        working-directory: server/casual-slide-collab-server
+        run: cargo build --locked
+      - name: Install the driver
+        working-directory: tests/browser
+        run: npm install --no-save --no-package-lock playwright-core@1.48.2
+      - name: Two pages co-edit and save the same deck
+        run: node tests/browser/collab-two-pages.mjs server/casual-slide-collab-server/target/debug/casual-slide-collab-server

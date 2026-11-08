@@ -26,6 +26,10 @@ returns its inverse.
 
 **Built for rich objects** (`casual-slide-transaction` `rich.rs`, slice 11, `VS-11`): `SetTable` sets a graphic frame's table whole and `SetChart` a chart part's model whole, each returning the value it replaced as its inverse; charts are reached through `Document::chart_mut`. Typing in a cell, Insert and Delete Row and Column, and a Table Design style are each one `SetTable` of a table built by `rich`'s pure functions (refused on merged cells, `CS-TXN-0013`). Insert Table and Insert Chart are `InsertNode` of a frame read from a template. Whole-value sets: under OT a concurrent edit of the same table or chart conflicts as one property; finer cell ops are a later pass.
 
+`InsertRun` (`COL-01`) inserts text whose every run and line break has the given run
+properties rather than a neighbour's: typed text as it crosses to another editor, and the
+undo of a delete in a shared session.
+
 `Batch` makes one undo step and one atomic submission. A drag is a single op committed at
 the end; intermediate positions are presence, not edits, so a 60 fps drag never floods the
 log. Other users see it live through presence, and it lands once.
@@ -52,6 +56,16 @@ which is the most common collaboration in a slide deck.
 Local undo reverts my own last step, rebased over what others have done since, following
 OpenCalc's collaborative undo policy (its docs/69) and its decision that clients rebase
 rather than merge (its ADR-031). If the object is gone the step is skipped and reported.
+
+**Built** (`COL-04`): in a shared session `History` keeps each step's undo in a form that
+travels (`casual-slide-transaction` `shared.rs`): typing is undone by a delete, a delete by
+typing the deleted runs back as `InsertRun`s with their own run properties, a format by the
+old value per stretch of characters, and shape transforms, inserts and deletes by their own
+inverses. Every arrival is folded into the undo and redo steps with the server's transform
+(`collab::rebase_history`): the newest step over the arrival, the arrival over that step,
+the next step over what it became. An undo is then an ordinary edit, sent and ordered as
+any other, so nothing on the wire says it is one (OpenCalc's docs/69). Alone, undo stays a
+`Restore`, exact. What a shared undo of a delete does not give back is `COL-08`.
 
 ## The server
 
@@ -102,6 +116,18 @@ typed where that text would take the format, judged by the sender at the range's
 (`typing_takes_after`). TP1 is a property test over the real model, including transforms of
 what transform made; a two-client simulation through `ServerSession` converges.
 
+**Protocol 2** (`COL-01`, `COL-06`, `COL-04`) replaced those two rules. Typed text crosses
+with the run properties it took at the sender (`InsertText`'s `run`, an `a:rPr` the writer
+wrote), so where it lands no longer decides its format: text typed inside a concurrently
+deleted range stays, at the cut; a format grows over text typed strictly inside it, the
+insert picking the format up (`formats`), and never at its edges. Format carries every Font
+group attribute: size as a number, font, colour and highlight as an `a:rPr` holding that one
+element. An inserted node's XML is written by the writer from the model, as a save writes a
+new shape, so Paste and Duplicate travel; a picture's bytes travel with its node, base64,
+at most `MAX_WIRE_MEDIA` (32 MiB), sniffed as PNG or JPEG on arrival. Each participant mints
+node ids, `cNvPr/@id`s and relationship ids from its own range. Formats now converge too:
+the two-client simulation compares every character's bold, italic, underline and size.
+
 `server/casual-slide-collab-server` is the copied server, in part (its `PROVENANCE.md`): one
 WebSocket per participant, a join first, ordering, acknowledgement, relay, presence and
 colours. **It holds no model**: the first participant seeds a room with the deck's bytes, and
@@ -111,11 +137,10 @@ clients over real sockets.
 The browser half (`COL-04`) followed: the bridge's shared session in `casual-slide-wasm`
 `collab.rs`, `webapp/collab.js` and `editor.presence.js`, checked in two Chrome tabs; its CI
 browser run is left. Not done: tokens, resume, the cluster and the
-integrator's save are `COL-03` and `COL-05`; a typed character's format can still differ
-after three concurrent edits (`COL-01`); OpenCalc's chained pipelining diverged in the
-simulation, so a client keeps one chunk in flight (`COL-02`). Undo in a shared session works
-for moves, inserts and deletes of shapes; undo of typing is a `Restore`, which has no wire
-form yet, so it is refused there (`COL-04`).
+integrator's save are `COL-03` and `COL-05`; OpenCalc's chained pipelining diverged in the
+simulation, so a client keeps one chunk in flight (`COL-02`); shape look, slides, motion,
+design, tables and charts are refused while shared (`COL-07`). Undo in a shared session
+works for typing, deletes, formats, moves, inserts and deletes of shapes (§Undo).
 
 ## Presence
 

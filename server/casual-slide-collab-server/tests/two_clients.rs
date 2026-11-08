@@ -11,9 +11,10 @@ use std::time::Duration;
 use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
 use casual_slide_model::slide::{CommonSlideData, SlideKind, SlidePart, SlideParts};
 use casual_slide_model::text::{Paragraph, TextBody, TextItem, TextRun};
-use casual_slide_transaction::collab::wire::{Id, SlideEngine, WireOp, WireTransform};
+use casual_slide_model::text::CharacterProperties;
+use casual_slide_transaction::collab::wire::{Codec, Id, SlideEngine, WireOp, WireTransform};
 use casual_slide_transaction::collab::{
-    ClientId, ClientMessage, ClientSession, Presence, Replica, ServerMessage,
+    ClientId, ClientMessage, ClientSession, Engine, Presence, Replica, ServerMessage,
 };
 use casual_slide_transaction::{Operation, apply};
 use futures_util::{SinkExt, StreamExt};
@@ -78,11 +79,30 @@ fn text(parts: &SlideParts) -> String {
 
 struct Copy(SlideParts);
 
+/// The test's codec: a node is only its number, and the deck's runs have no
+/// properties, so none is ever written.
+struct Plain;
+
+impl Codec for Plain {
+    fn node_xml(&self, _: &ShapeNode) -> Option<String> {
+        None
+    }
+    fn run_xml(&self, _: &CharacterProperties) -> Option<String> {
+        None
+    }
+    fn read_node(&self, _: &str, id: ObjectId) -> Option<ShapeNode> {
+        Some(ShapeNode::new(id, NodeKind::Shape))
+    }
+    fn read_run(&self, _: &str) -> Option<CharacterProperties> {
+        None
+    }
+}
+
 impl Replica<SlideEngine> for Copy {
     type Error = String;
     fn apply_remote(&mut self, op: &WireOp) -> Result<(), String> {
         let op = op
-            .operation(&|_, id| Some(ShapeNode::new(id, NodeKind::Shape)))
+            .operation(&Plain)
             .map_err(|e| e.to_string())?;
         apply(&mut self.0, op)
             .map(|_| ())
@@ -116,7 +136,7 @@ async fn join(url: &str, name: &str) -> Client {
     send(
         &mut socket,
         &ClientMessage::Join {
-            protocol: 1,
+            protocol: SlideEngine::PROTOCOL,
             name: name.to_owned(),
             seed: Some("ZGVjaw==".to_owned()),
         },
@@ -154,7 +174,9 @@ impl Client {
     /// Make an edit locally and note it for sending, as the editor does.
     fn edit(&mut self, op: Operation) {
         let inverse = apply(&mut self.copy.0, op.clone()).unwrap();
-        let wire = WireOp::of(&op, &inverse, &|_| None, &|_, _| false).unwrap();
+        // Typed text crosses as the runs it became, as a shared history sends it.
+        let sent = casual_slide_transaction::sent_form(&self.copy.0, op);
+        let wire = WireOp::of(&sent, &inverse, &Plain).unwrap();
         self.session.record(wire);
     }
 
@@ -230,7 +252,7 @@ async fn two_clients_see_each_others_edits_and_cursors_and_converge() {
                 ..Default::default()
             }),
         }
-        .operation(&|_, _| None)
+        .operation(&Plain)
         .unwrap()
     };
     ada.edit(moved(10));

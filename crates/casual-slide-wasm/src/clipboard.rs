@@ -23,7 +23,7 @@ use casual_slide_transaction::Operation;
 
 #[cfg(test)]
 use crate::build::spid;
-use crate::build::{MAX_PICTURE_BYTES, NEW_REL, embed, highest, sniff};
+use crate::build::{MAX_PICTURE_BYTES, embed, highest, sniff};
 use crate::{BridgeError, Viewer};
 
 /// The most shapes one copy holds: PowerPoint's own slide holds no more in practice,
@@ -271,12 +271,11 @@ impl Viewer {
         clip: &Clip,
         offset: i64,
     ) -> Result<Vec<u32>, BridgeError> {
-        if self.is_shared() {
-            // A pasted shape carries no XML the other participants could read yet
-            // (`COL-04`); refused before anything changes.
-            return Err(BridgeError::Edit(
-                casual_slide_transaction::TxnError::NotShared,
-            ));
+        // Shared, a pasted picture's bytes cross with it, within the wire's bound.
+        for shape in &clip.shapes {
+            if let Some(p) = &shape.picture {
+                self.shared_media_fits(p.bytes.len())?;
+            }
         }
         let part = self
             .deck
@@ -292,8 +291,14 @@ impl Viewer {
         let mut media = Vec::new();
         for (at, shape) in (first..).zip(&clip.shapes) {
             let mut node = shape.node.clone();
-            top_spid = top_spid.checked_add(1).ok_or(BridgeError::BadArgument)?;
-            top_node = top_node.checked_add(1).ok_or(BridgeError::BadArgument)?;
+            // Shared, from this participant's own range, so two pastes never collide.
+            match self.shared_mint() {
+                Some(m) => (top_spid, top_node) = (m, m),
+                None => {
+                    top_spid = top_spid.checked_add(1).ok_or(BridgeError::BadArgument)?;
+                    top_node = top_node.checked_add(1).ok_or(BridgeError::BadArgument)?;
+                }
+            }
             node.id = ObjectId {
                 part: ordinal,
                 node: top_node,
@@ -313,8 +318,7 @@ impl Viewer {
                 off.y.0 = off.y.0.saturating_add(offset);
             }
             if let Some(picture) = &shape.picture {
-                self.minted = self.minted.saturating_add(1);
-                let rel = format!("{NEW_REL}{}", self.minted);
+                let (rel, _) = self.mint_media();
                 let blip = node
                     .properties
                     .picture
