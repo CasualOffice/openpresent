@@ -24,7 +24,20 @@ fn edit_a_deck(v: &mut Viewer) {
         v.set_table_cell_text(0, table, 1, 2, "North & <South>")
             .unwrap()
     );
+    let tall = |v: &Viewer| {
+        v.shapes(0)
+            .unwrap()
+            .into_iter()
+            .find(|b| b.node == table)
+            .unwrap()
+            .cy
+    };
+    let before = tall(v);
     v.edit_table(0, table, TableEdit::InsertRow, 1).unwrap();
+    // The frame grows with its rows, as PowerPoint's.
+    let row = v.table_shape(0, table).unwrap()[2 + 4];
+    assert_eq!(before, row * 3);
+    assert_eq!(tall(v), before + row);
     v.edit_table(0, table, TableEdit::DeleteColumn, 3).unwrap();
     v.edit_table(0, table, TableEdit::InsertColumn, 0).unwrap();
     assert_eq!(&v.table_shape(0, table).unwrap()[..2], &[4, 4]);

@@ -118,15 +118,54 @@ impl Viewer {
         Ok((frame.id, table))
     }
 
-    fn set_table(&mut self, id: ObjectId, table: Table) -> Result<bool, BridgeError> {
+    fn set_table(&mut self, id: ObjectId, table: Table, resize: bool) -> Result<bool, BridgeError> {
         self.typing = None;
-        let changed = self.history.apply(
-            &mut DeckDoc(&mut self.deck),
-            Operation::SetTable {
-                node: id,
-                table: Some(Box::new(table)),
-            },
-        )?;
+        let set = Operation::SetTable {
+            node: id,
+            table: Some(Box::new(table.clone())),
+        };
+        // A row or column added or deleted (`resize`): the frame grows or shrinks with its grid, as
+        // PowerPoint's does, in the same undo step. Rows grow past their stated height
+        // with text; that is the renderer's, so only a stated sum larger than the frame
+        // grows it.
+        let frame = self
+            .deck
+            .parts()
+            .get(id.part)
+            .and_then(|p| p.node(id))
+            .and_then(|n| n.transform);
+        let op = match frame {
+            Some(mut t) if resize && t.extent.is_some() => {
+                let width: i64 = table
+                    .tbl_grid
+                    .iter()
+                    .flat_map(|g| &g.grid_col)
+                    .map(|c| c.width.as_ref().map_or(0, |w| w.value().0))
+                    .fold(0i64, i64::saturating_add);
+                let height: i64 = table
+                    .rows
+                    .iter()
+                    .map(|r| r.height.as_ref().map_or(0, |h| h.value().0))
+                    .fold(0i64, i64::saturating_add);
+                if let Some(e) = t.extent.as_mut() {
+                    if width > 0 {
+                        e.cx = width;
+                    }
+                    if height > 0 {
+                        e.cy = height;
+                    }
+                }
+                Operation::Batch(vec![
+                    set,
+                    Operation::SetTransform {
+                        node: id,
+                        transform: Some(t),
+                    },
+                ])
+            }
+            _ => set,
+        };
+        let changed = self.history.apply(&mut DeckDoc(&mut self.deck), op)?;
         self.reports.clear();
         Ok(changed)
     }
@@ -205,7 +244,10 @@ impl Viewer {
         }
         let style = self.default_table_style();
         let width = (b[2].max(0) / columns as i64).max(1);
-        let height = b[3].max(0).max(ROW_HEIGHT.saturating_mul(rows as i64));
+        // Rows share the box's height, none shorter than PowerPoint's 0.4 inch, and the
+        // frame is as tall as its rows.
+        let row_height = (b[3].max(0) / rows as i64).max(ROW_HEIGHT);
+        let height = row_height.saturating_mul(rows as i64);
         let b = [b[0], b[1], width.saturating_mul(columns as i64), height];
         self.insert_frame(index, "Table", b, |id, name, b| {
             let grid: String = (0..columns)
@@ -213,7 +255,7 @@ impl Viewer {
                 .collect();
             let cell = "<a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p>\
                         <a:endParaRPr lang=\"en-US\" dirty=\"0\"/></a:p></a:txBody><a:tcPr/></a:tc>";
-            let row = format!("<a:tr h=\"{ROW_HEIGHT}\">{}</a:tr>", cell.repeat(columns));
+            let row = format!("<a:tr h=\"{row_height}\">{}</a:tr>", cell.repeat(columns));
             format!(
                 "<p:graphicFrame>{}<a:graphic><a:graphicData \
                  uri=\"http://schemas.openxmlformats.org/drawingml/2006/table\"><a:tbl>\
@@ -267,7 +309,7 @@ impl Viewer {
     ) -> Result<bool, BridgeError> {
         let (id, t) = self.table(index, node)?;
         let edited = rich::set_cell_text(t, row, column, text)?;
-        self.set_table(id, edited)
+        self.set_table(id, edited, false)
     }
 
     /// Insert or delete a row or column at `at`: one undo step.
@@ -285,7 +327,7 @@ impl Viewer {
             TableEdit::InsertColumn => rich::insert_column(t, at)?,
             TableEdit::DeleteColumn => rich::delete_column(t, at)?,
         };
-        self.set_table(id, edited)
+        self.set_table(id, edited, true)
     }
 
     /// Table Design's gallery: `(id, name)` for each style the deck's `tableStyles`
@@ -341,7 +383,7 @@ impl Viewer {
         }
         let (id, t) = self.table(index, node)?;
         let edited = rich::set_style(t, Some(style));
-        self.set_table(id, edited)
+        self.set_table(id, edited, false)
     }
 
     /// Insert > Chart: a chart of this kind with PowerPoint's sample data, in this box.
