@@ -3,7 +3,7 @@
 // geometry engine; a pick arms a drawing tool (drag to size, a click for the default
 // size, Shift for proportions or 45° lines, Esc to cancel; lines run point to point);
 // a selected shape shows its yellow adjust handles, which drag live; and the Shape
-// Format tab sets Shape Fill, Shape Outline and a theme Shape Style.
+// Format tab (`ribbon.model.js`) sets Shape Fill, Shape Outline and a theme Shape Style.
 //
 // Every verb is a registered command and every change one engine op with its
 // inverse, so Undo and Redo are the shared `edit.undo`/`edit.redo`. Nothing here
@@ -12,7 +12,6 @@
 
 import { register } from "./commands.js";
 import { state, request, status, changed } from "./editor.core.js";
-import { TABS } from "./ribbon.model.js";
 import { selectTab, queueSync } from "./ribbon.js";
 import { errorDialog } from "./editor.dialogs.js";
 import * as slides from "./editor.slides.js";
@@ -119,6 +118,12 @@ function popKey(e) { if (e.key === "Escape") { e.stopPropagation(); closePop(); 
 
 /// The button that ran command `id`, to drop a popover from; else the stage.
 function anchorFor(ids) {
+  // The control pressed: a gallery tile or a menu's button.
+  const active = document.activeElement;
+  if (active?.closest?.(".op-ribbon")) {
+    const r = active.getBoundingClientRect();
+    if (r.width && r.height) return r;
+  }
   for (const id of ids) {
     for (const b of document.querySelectorAll(`.op-ribbon [data-cmd="${CSS.escape(id)}"]`)) {
       const r = b.getBoundingClientRect();
@@ -159,7 +164,7 @@ async function gallery() {
     errorDialog("OpenPresent could not list the shapes.", e.message);
     return;
   }
-  openPop(["insert.shapes", "format.insert-shapes"], "shp-gallery", (p) => {
+  openPop(["insert.shapes"], "shp-gallery", (p) => {
     const groups = [];
     const used = recent();
     if (used.length) groups.push({ name: "Recently Used Shapes", items: used });
@@ -556,7 +561,7 @@ async function format(what, fn, args) {
 async function fillMenu() {
   if (!formattable()) return;
   const colours = await palette();
-  openPop(["format.shape-fill", "drawing.fill"], "shp-menu", (p) => {
+  openPop(["drawing.fill"], "shp-menu", (p) => {
     colourMenu(p, colours, "No Fill", (spec) => format("Shape Fill", "set_shape_fill", [spec]));
   });
 }
@@ -594,7 +599,7 @@ async function outlineMenu() {
   if (!formattable()) return;
   const colours = await palette();
   const outline = (what, value, label) => format(label, "set_shape_outline", [what, value]);
-  openPop(["format.shape-outline", "drawing.outline"], "shp-menu", (p) => {
+  openPop(["drawing.outline"], "shp-menu", (p) => {
     colourMenu(p, colours, "No Outline", (spec) => outline(0, spec, "Shape Outline"));
     p.appendChild(el("div", "shp-head", "Weight"));
     for (const w of WEIGHTS) {
@@ -639,7 +644,7 @@ async function stylesMenu() {
   const colours = await palette();
   const light = colours[0] || "FFFFFF", dark = colours[1] || "000000";
   const base = [dark, ...colours.slice(4, 10)];
-  openPop(["format.shape-styles", "drawing.quick-styles"], "shp-menu shp-styles", (p) => {
+  openPop(["drawing.quick-styles"], "shp-menu shp-styles", (p) => {
     p.appendChild(el("div", "shp-head", "Theme Styles"));
     const grid = el("div", "shp-style-grid");
     for (let row = 0; row < STYLE_ROWS.length; row++) {
@@ -660,33 +665,12 @@ async function stylesMenu() {
 
 /* ── The Shape Format tab ───────────────────────────────────────────────── */
 
-// A contextual tab: there while a shape is selected (`tab.contextual` in `ribbon.js`).
-// It is added to the ribbon's model here, so the Shapes work lives in one module.
-TABS.push({ id: "shape-format", label: "Shape Format", key: "JD", contextual: "format.tab", groups: [
-  { label: "Insert Shapes", fold: 2, icon: "shapes", items: [
-    { kind: "large", id: "insert.shapes", icon: "shapes", label: "Shapes" },
-    { kind: "large", id: "insert.text-box", icon: "textbox", label: "Text Box" },
-  ] },
-  { label: "Shape Styles", fold: 3, icon: "style_guide", items: [
-    { kind: "large", id: "format.shape-styles", icon: "style_guide", label: "Shape Styles" },
-    { kind: "rows", rows: [
-      [{ kind: "small", id: "format.shape-fill", icon: "paint_bucket", label: "Shape Fill" }],
-      [{ kind: "small", id: "format.shape-outline", icon: "border_outside", label: "Shape Outline" }],
-      [{ kind: "small", id: "format.shape-effects", icon: "asterisk", label: "Shape Effects" }],
-    ] },
-  ] },
-] });
-
 export function init() {
   register("insert.shapes", { label: "Shapes", enabled: hasSlide, run: gallery });
-  register("format.tab", { label: "Shape Format", enabled: formattable, run: () => selectTab("shape-format") });
-  for (const [ids, label, runIt] of [
-    [["format.shape-fill", "drawing.fill"], "Shape Fill", fillMenu],
-    [["format.shape-outline", "drawing.outline"], "Shape Outline", outlineMenu],
-    [["format.shape-styles", "drawing.quick-styles"], "Shape Styles", stylesMenu],
-  ]) {
-    for (const id of ids) register(id, { label, enabled: formattable, run: runIt });
-  }
+  // Home > Drawing and the Shape Format tab (`ribbon.model.js`) share these ids.
+  register("drawing.fill", { label: "Shape Fill", enabled: formattable, run: fillMenu });
+  register("drawing.outline", { label: "Shape Outline", enabled: formattable, run: outlineMenu });
+  register("drawing.quick-styles", { label: "Shape Styles", enabled: formattable, run: stylesMenu });
   selection.onPaint(paintHandles);
   window.addEventListener("resize", () => paintHandles(sel));
 }

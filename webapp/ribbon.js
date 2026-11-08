@@ -688,18 +688,6 @@ export async function start(anchor) {
     t.setAttribute("aria-controls", `rb-panel-${tab.id}`);
     t.addEventListener("click", () => select(tab.id));
     tablist.appendChild(t);
-    // A contextual tab (Shape Format, `SHAPE-01`) is there only while its command,
-    // `tab.contextual`, is enabled: PowerPoint shows it while a shape is selected.
-    if (tab.contextual) {
-      t.classList.add("rb-tab-contextual");
-      t.hidden = true;
-      sync.add(() => {
-        const c = command(tab.contextual);
-        const on = !!c && (!c.enabled || c.enabled());
-        if (t.hidden === on) t.hidden = !on;
-        if (!on && t.classList.contains("is-on")) select("home");
-      });
-    }
     const panel = h("div", "rb-panel");
     panel.id = `rb-panel-${tab.id}`;
     panel.setAttribute("role", "tabpanel");

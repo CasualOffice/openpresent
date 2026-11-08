@@ -23,11 +23,10 @@
   --op-surface-color: #f0f2f3;
   --op-popover-background-color: #ffffff;
   /* Shapes (`SHAPE-01`): PowerPoint's yellow adjust handle, the drawing tool's
-     outline, the colour pickers' hover ring and the contextual tab's colour. */
+     outline and the colour pickers' hover ring. */
   --op-adjust-handle-color: #ffd700;
   --op-draw-preview-color: #2f5597;
   --op-swatch-hover-color: #f29436;
-  --op-contextual-tab-color: #c55a11;
   --op-swatch-border-color: rgba(0, 0, 0, 0.2);
   --op-popover-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   /* The stage behind the slide: PowerPoint's light grey workspace. */
@@ -461,4 +460,3 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .shp-style { padding: 2px; border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer; }
 .shp-style:hover, .shp-style:focus-visible { border-color: var(--op-swatch-hover-color); outline: none; }
 .shp-style-thumb { display: flex; align-items: center; justify-content: center; height: 34px; box-sizing: border-box; border-radius: 2px; font-size: 13px; }
-.op-chrome-ribbon .rb-tab.rb-tab-contextual { color: var(--op-contextual-tab-color); }

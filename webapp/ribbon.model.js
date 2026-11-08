@@ -38,7 +38,6 @@ const ZOOM = ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", 
 const SECTION = ["slide.section.add", "slide.section.rename", "slide.section.remove", "slide.section.collapse-all", "slide.section.expand-all"];
 const ARRANGE = ["arrange.bring-to-front", "arrange.bring-forward", "arrange.send-backward", "arrange.send-to-back", "arrange.group", "arrange.ungroup", "arrange.align-left", "arrange.align-center", "arrange.align-right", "arrange.align-top", "arrange.align-middle", "arrange.align-bottom", "arrange.rotate-right", "arrange.flip-horizontal", "arrange.selection-pane"];
 const SELECT = ["edit.select-all", "arrange.selection-pane"];
-const SHAPES = ["insert.shape.rectangle", "insert.shape.oval", "insert.shape.line", "insert.shape.arrow", "insert.text-box"];
 const PRESENT = ["slideshow.from-beginning", "slideshow.from-current", "slideshow.presenter-view"];
 
 // Our own gallery swatches: plain colour pairs, not Microsoft's theme artwork.
@@ -76,10 +75,10 @@ export const TABS = [
       ]),
     ] },
     { label: "Drawing", fold: 5, icon: "shapes", launcher: "format.shape-pane", items: [
-      L("insert.shapes", "shapes", "Shapes", { menu: SHAPES }),
+      L("insert.shapes", "shapes", "Shapes"),
       L("drawing.arrange", "position_to_front", "Arrange", { menu: ARRANGE }),
-      L("drawing.quick-styles", "text_edit_style", "Quick Styles", { menu: ["drawing.quick-styles"] }),
-      R([[S("drawing.fill", "color_fill", "Shape Fill", { menu: ["drawing.fill"] })], [S("drawing.outline", "color_line", "Shape Outline", { menu: ["drawing.outline"] })], [S("drawing.effects", "square_shadow", "Shape Effects", { menu: ["drawing.effects"] })]]),
+      L("drawing.quick-styles", "text_edit_style", "Quick Styles"),
+      R([[S("drawing.fill", "color_fill", "Shape Fill")], [S("drawing.outline", "color_line", "Shape Outline")], [S("drawing.effects", "square_shadow", "Shape Effects", { menu: ["drawing.effects"] })]]),
     ] },
     { label: "Editing", fold: 4, icon: "search", items: [
       R([[S("edit.find", "search", "Find (Ctrl+F)")], [S("edit.replace", "text_wrap", "Replace (Ctrl+H)")], [S("edit.select", "select_object", "Select", { menu: SELECT })]]),
@@ -93,7 +92,7 @@ export const TABS = [
     { label: "Images", fold: 7, icon: "image_add", items: [L("insert.pictures", "image_add", "Pictures")] },
     { label: "Camera", fold: 1, icon: "video", items: [L("insert.cameo", "video", "Cameo")] },
     { label: "Illustrations", fold: 6, icon: "shapes", items: [
-      L("insert.shapes", "shapes", "Shapes", { menu: SHAPES }),
+      L("insert.shapes", "shapes", "Shapes"),
       L("insert.icons", "icons", "Icons"),
       L("insert.3d", "cube", "3D Models"),
       L("insert.smartart", "data_area", "SmartArt"),
@@ -219,12 +218,12 @@ export const TABS = [
   // Contextual: PowerPoint adds it after Help, in the accent, while a shape is selected.
   { id: "shape-format", label: "Shape Format", key: "JD", contextual: "shape", groups: [
     { label: "Insert Shapes", fold: 3, icon: "shapes", items: [
-      L("insert.shapes", "shapes", "Shapes", { menu: SHAPES }),
+      L("insert.shapes", "shapes", "Shapes"),
       R([[S("shape.edit", "edit", "Edit Shape", { menu: ["shape.edit-points", "shape.change"] })], [S("insert.text-box", "textbox", "Text Box")]]),
     ] },
     { label: "Shape Styles", fold: 4, icon: "text_edit_style", launcher: "format.shape-pane", items: [
       G("drawing.quick-styles", "Shape Styles", SHAPE_STYLES),
-      R([[S("drawing.fill", "color_fill", "Shape Fill", { menu: ["drawing.fill"] })], [S("drawing.outline", "color_line", "Shape Outline", { menu: ["drawing.outline"] })], [S("drawing.effects", "square_shadow", "Shape Effects", { menu: ["drawing.effects"] })]]),
+      R([[S("drawing.fill", "color_fill", "Shape Fill")], [S("drawing.outline", "color_line", "Shape Outline")], [S("drawing.effects", "square_shadow", "Shape Effects", { menu: ["drawing.effects"] })]]),
     ] },
     { label: "WordArt Styles", fold: 2, icon: "text_effects", launcher: "format.text-pane", items: [
       R([[S("wordart.fill", "text_color", "Text Fill", { menu: ["wordart.fill"] })], [S("wordart.outline", "text_effects", "Text Outline", { menu: ["wordart.outline"] })], [S("wordart.effects", "text_effects_sparkle", "Text Effects", { menu: ["wordart.effects"] })]]),
