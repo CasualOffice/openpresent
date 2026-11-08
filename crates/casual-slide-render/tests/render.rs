@@ -327,3 +327,32 @@ fn an_ole_object_is_drawn_from_its_fallback_picture() {
         }
     )));
 }
+
+/// An outer shadow is drawn behind its shape as translucent paint, and the slide no
+/// longer reports its effects as skipped.
+#[test]
+fn an_outer_shadow_is_drawn_behind_its_shape() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/real/z19828779-education-ar.pptx");
+    let deck = Deck::open(std::fs::read(path).unwrap()).unwrap();
+    let (list, scene) = deck.display_list(0).unwrap();
+    assert!(
+        !scene.features.contains_key("effects"),
+        "{:?}",
+        scene.features
+    );
+    let translucent = list.items.iter().any(|i| {
+        matches!(
+            i,
+            DisplayItem::Path {
+                stroke: Some(casual_slide_render::display::Stroke {
+                    paint: Paint::Solid(Rgba { a, .. }),
+                    ..
+                }),
+                fill: None,
+                ..
+            } if *a < 255
+        )
+    });
+    assert!(translucent, "no shadow ring drawn");
+}

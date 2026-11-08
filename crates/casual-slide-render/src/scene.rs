@@ -117,6 +117,7 @@ const DEFAULT_LINE_WIDTH: f64 = 0.0;
 const EMU_PER_POINT: f64 = 12_700.0;
 
 mod chart;
+mod effects;
 mod table;
 
 struct Builder<'a> {
@@ -655,14 +656,33 @@ impl<'a> Builder<'a> {
             .and_then(|e| e.idx)
             .and_then(|i| self.format().and_then(|f| f.effect(i)))
             .and_then(|e| e.effects.as_ref());
-        if own_effects.or(style_effects).is_some_and(has_effect) {
-            self.report.note("effects");
-        }
+        let effects = own_effects.or(style_effects).filter(|e| has_effect(e));
+        // An effect reference's colour stands for `phClr` in a theme effect.
+        let effect_ph = if own_effects.is_some() {
+            None
+        } else {
+            style
+                .and_then(|s| s.effect.as_ref())
+                .and_then(|e| e.color.as_ref())
+        };
         if node.properties.scene3d.is_some() || node.properties.sp3d.is_some() {
             self.report.note("3D");
         }
         let geometry = levels.iter().find_map(|n| n.properties.geometry.as_ref());
         let (paths, text_rect) = self.paths(geometry, w, h, node.kind);
+        if let Some(effects) = effects {
+            // Shadows and glows sit behind what the shape draws.
+            let drawn: Vec<&[PathCmd]> = paths
+                .iter()
+                .filter(|(_, mode, stroked)| {
+                    picture.is_some()
+                        || (fill.is_some() && *mode != FillMode::None)
+                        || (stroke.is_some() && *stroked)
+                })
+                .map(|(p, _, _)| p.as_slice())
+                .collect();
+            self.effects(node, layer, transform, effects, effect_ph, &drawn);
+        }
         for (path, mode, stroked) in paths {
             let fill = match mode {
                 FillMode::None => None,
