@@ -136,8 +136,10 @@ impl Viewer {
             if nodes.contains(&child.id.node) {
                 let mut copy = child.clone();
                 // A placeholder is copied as an ordinary shape at the box it is drawn
-                // in: the writer cannot yet add one, and another slide's layout may
-                // have no match. The text style it inherited is not carried (`UX-003`).
+                // in, with what it inherited from its layout and master written into
+                // it, as PowerPoint pastes one where no layout placeholder follows it
+                // (`UX-004`): the writer cannot yet add a placeholder, and another
+                // slide's layout may have no match.
                 if copy.placeholder().is_some() {
                     if let Some(t) = chain.transform(child) {
                         let mut own = copy.transform.unwrap_or_default();
@@ -145,6 +147,7 @@ impl Viewer {
                         own.extent = Some(t.value.extent);
                         copy.transform = Some(own);
                     }
+                    self.fold_inherited(child, &chain, &mut copy);
                     if let Some(app) = copy.app.as_mut() {
                         app.placeholder = None;
                     }
@@ -168,6 +171,51 @@ impl Viewer {
             part: ordinal,
             shapes,
         })
+    }
+
+    /// Write into `copy` what placeholder `original` draws with from its layout and
+    /// master: its text's list style and body properties, folded level by level, and
+    /// the fill, line, effects, geometry and style it takes from them. A picture fill
+    /// names the layout's or master's relationship, which the slide does not have, so
+    /// it is left behind.
+    fn fold_inherited(
+        &self,
+        original: &ShapeNode,
+        chain: &casual_slide_style::Chain<'_>,
+        copy: &mut ShapeNode,
+    ) {
+        if let (Some(text), Some(target)) =
+            (self.deck.text_chain(original.id), copy.text_body.as_mut())
+        {
+            let own = original.text_body.as_deref();
+            let style = text.folded_list_style();
+            let body = text.folded_body(own.and_then(|b| b.properties.as_ref()));
+            // Absent stays absent: an empty fold adds no `lstStyle`; `bodyPr` is
+            // required, so it is always written.
+            if style != Default::default() || target.list_style.is_some() {
+                target.list_style = Some(style);
+            }
+            target.properties = Some(body);
+        }
+        let inherited = chain.inherited(original);
+        for from in [inherited.layout, inherited.master].into_iter().flatten() {
+            let (to, p) = (&mut copy.properties, &from.properties);
+            if to.fill.is_none() && !matches!(p.fill, Some(Fill::Blip(_))) {
+                to.fill.clone_from(&p.fill);
+            }
+            if to.line.is_none() {
+                to.line.clone_from(&p.line);
+            }
+            if to.effects.is_none() {
+                to.effects.clone_from(&p.effects);
+            }
+            if to.geometry.is_none() {
+                to.geometry.clone_from(&p.geometry);
+            }
+            if copy.style.is_none() {
+                copy.style.clone_from(&from.style);
+            }
+        }
     }
 
     /// A picture shape's image: one inserted in this session, or the file's part.

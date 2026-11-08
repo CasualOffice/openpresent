@@ -401,4 +401,81 @@ impl<'a> TextChain<'a> {
         self.paragraph(own, |p| p.latin_line_break)
             .unwrap_or(TextResolved::new(false, TextLevel::SchemaDefault))
     }
+
+    /// Every list style of this chain folded into one, nearest first, attribute by
+    /// attribute, as [`Self::paragraph`] and [`Self::run`] read them: what a shape's
+    /// own `lstStyle` must say to draw its text as this chain does without the levels
+    /// behind it. PowerPoint does this when a placeholder is pasted where its layout and
+    /// master do not follow it (`UX-004`). Where the shape's `fontRef` sits above a
+    /// level, that level's run fill and fonts are left out, so the `fontRef` still wins.
+    /// `defPPr` and `lvl` take no part, as in resolution.
+    pub fn folded_list_style(&self) -> TextListStyle {
+        let mut out = TextListStyle::default();
+        for (level, slot) in out.levels.iter_mut().enumerate() {
+            let mut merged = ParagraphProperties::default();
+            let mut run = CharacterProperties::default();
+            for (from, style) in &self.styles {
+                let Some(p) = style.levels.get(level).and_then(|l| l.as_deref()) else {
+                    continue;
+                };
+                fill_paragraph(&mut merged, p);
+                if let Some(r) = p.default_run.as_deref() {
+                    let under_style = self.font_ref.is_some() && *from != TextLevel::ShapeListStyle;
+                    fill_run(&mut run, r, under_style);
+                }
+            }
+            if run != CharacterProperties::default() {
+                merged.default_run = Some(Box::new(run));
+            }
+            if merged != ParagraphProperties::default() {
+                *slot = Some(Box::new(merged));
+            }
+        }
+        out
+    }
+
+    /// `own` with every attribute it lacks taken from the levels behind it, as
+    /// [`Self::body`] reads them (`UX-004`).
+    pub fn folded_body(&self, own: Option<&BodyProperties>) -> BodyProperties {
+        let mut out = own.cloned().unwrap_or_default();
+        for (_, props) in &self.bodies {
+            fill_body(&mut out, props);
+        }
+        out
+    }
+}
+
+/// Copy each attribute `from` states that `into` does not.
+macro_rules! fill_absent {
+    ($into:ident, $from:ident; $($field:ident),* $(,)?) => {
+        $(if $into.$field.is_none() {
+            $into.$field = $from.$field.clone();
+        })*
+    };
+}
+
+fn fill_paragraph(into: &mut ParagraphProperties, from: &ParagraphProperties) {
+    fill_absent!(into, from;
+        margin_left, margin_right, indent, align, default_tab_size, rtl,
+        east_asian_line_break, font_align, latin_line_break, hanging_punctuation,
+        line_spacing, space_before, space_after, bullet_color, bullet_size, bullet_font,
+        bullet, tabs);
+}
+
+fn fill_run(into: &mut CharacterProperties, from: &CharacterProperties, under_style: bool) {
+    fill_absent!(into, from;
+        kumimoji, lang, alt_lang, size, bold, italic, underline, strike, kerning, caps,
+        spacing, normalize_height, baseline, no_proof, line, effects, highlight,
+        underline_line, underline_fill, symbol, rtl);
+    if !under_style {
+        fill_absent!(into, from; fill, latin, east_asian, complex_script);
+    }
+}
+
+fn fill_body(into: &mut BodyProperties, from: &BodyProperties) {
+    fill_absent!(into, from;
+        rotation, space_first_last_paragraph, vertical_overflow, horizontal_overflow,
+        vertical, wrap, inset_left, inset_top, inset_right, inset_bottom, columns,
+        column_spacing, rtl_columns, from_word_art, anchor, anchor_center,
+        force_antialias, upright, compat_line_spacing, warp, autofit, scene3d, text_3d);
 }

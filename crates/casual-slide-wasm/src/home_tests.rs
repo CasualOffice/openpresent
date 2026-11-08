@@ -348,3 +348,49 @@ fn a_shape_with_a_link_does_not_paste_onto_another_slide() {
     // Onto its own slide its relationships still hold.
     assert_eq!(v.paste_shapes(0, &clip).unwrap().len(), 1);
 }
+
+/// What the Home tab shows for a shape's first character: font, size, alignment,
+/// bulleted.
+fn look(v: &Viewer, node: u32) -> Vec<String> {
+    let part = v.slide_part(0).unwrap();
+    v.run_state(ObjectId { part, node }, 0).unwrap()
+}
+
+#[test]
+fn a_duplicated_or_pasted_placeholder_keeps_its_inherited_look_saved_and_read_back() {
+    let mut v = Viewer::blank().unwrap();
+    let shapes = v.shapes(0).unwrap();
+    let (title, subtitle) = (shapes[0], shapes[1]);
+    let title_look = look(&v, title.node);
+    let subtitle_look = look(&v, subtitle.node);
+    // The layout's centred title: not the 18 pt default a bare text box draws in.
+    assert_ne!(title_look[1], "18");
+    let new = v.duplicate_shapes(0, &[title.node, subtitle.node]).unwrap();
+    assert_eq!(look(&v, new[0]), title_look);
+    assert_eq!(look(&v, new[1]), subtitle_look);
+    let got = v.shapes(0).unwrap();
+    let copy = got.iter().find(|s| s.node == new[0]).unwrap();
+    assert_eq!(
+        (copy.x, copy.y, copy.cx, copy.cy),
+        (
+            title.x + PASTE_OFFSET,
+            title.y + PASTE_OFFSET,
+            title.cx,
+            title.cy
+        )
+    );
+    // Saved and opened again, the copies still draw as the originals.
+    let again = Viewer::open(v.save().unwrap()).unwrap();
+    let back = again.shapes(0).unwrap();
+    assert_eq!(back.len(), 4);
+    assert_eq!(look(&again, back[2].node), title_look);
+    assert_eq!(look(&again, back[3].node), subtitle_look);
+    // Pasted into another deck, too.
+    let clip = v.copy_shapes(0, &[title.node]).unwrap();
+    let mut other = Viewer::open(fixture("preset-shapes.pptx")).unwrap();
+    let pasted = other.paste_shapes(0, &clip).unwrap();
+    assert_eq!(look(&other, pasted[0])[1], title_look[1]);
+    // One undo takes the duplicate back.
+    v.undo().unwrap();
+    assert_eq!(v.shapes(0).unwrap().len(), 2);
+}
