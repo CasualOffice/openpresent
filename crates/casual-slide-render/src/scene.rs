@@ -19,7 +19,9 @@ use casual_slide_model::fill::{
     BlipFill, BlipFillMode, Fill, GradientFill, GradientShade, PathShadeType, PatternFill,
 };
 use casual_slide_model::geometry::Geometry;
-use casual_slide_model::line::{Line, LineCap, LineDash, LineJoin, PresetLineDash};
+use casual_slide_model::line::{
+    Line, LineCap, LineDash, LineEnd, LineEndType, LineJoin, PresetLineDash,
+};
 use casual_slide_model::properties::Lexical;
 use casual_slide_model::shape::{NodeKind, ShapeNode, Transform};
 use casual_slide_model::slide::{BackgroundFill, SlideParts};
@@ -459,7 +461,11 @@ impl<'a> Builder<'a> {
                     return;
                 };
                 let mapping = parent.then_after(&group_mapping(t));
-                let fill = node.properties.fill.as_ref().or(group_fill);
+                // A group whose own fill is `grpFill`, or none, passes its parent's on.
+                let fill = match node.properties.fill.as_ref() {
+                    Some(Fill::Group) | None => group_fill,
+                    own => own,
+                };
                 for child in &node.children {
                     self.node(child, layer, &mapping, fill, depth + 1);
                 }
@@ -520,13 +526,15 @@ impl<'a> Builder<'a> {
                 None => None,
             },
         };
-        let stroke = self.stroke(
-            &levels,
-            style.and_then(|s| s.line.as_ref()),
-            w,
-            h,
-            group_fill,
-        );
+        let (stroke, ends) = self
+            .stroke(
+                &levels,
+                style.and_then(|s| s.line.as_ref()),
+                w,
+                h,
+                group_fill,
+            )
+            .unzip();
         let picture = if node.kind == NodeKind::Picture {
             node.properties
                 .picture
@@ -571,7 +579,14 @@ impl<'a> Builder<'a> {
                 }
                 self.push(node, layer, transform, path, Some(pic.clone()), stroke);
             } else if fill.is_some() || stroke.is_some() {
+                let heads = match (&stroke, ends) {
+                    (Some(s), Some(ends)) => arrowheads(&path, s, ends),
+                    _ => Vec::new(),
+                };
                 self.push(node, layer, transform, path, fill, stroke);
+                for (head, fill, stroke) in heads {
+                    self.push(node, layer, transform, head, fill, stroke);
+                }
             }
         }
     }
@@ -602,7 +617,7 @@ impl<'a> Builder<'a> {
         w: f64,
         h: f64,
         group_fill: Option<&'a Fill>,
-    ) -> Option<Stroke> {
+    ) -> Option<(Stroke, Ends)> {
         // Field by field: the shape's own line over its placeholders', over the theme
         // line its style names. The style's colour stands for `phClr`.
         let theme_line = style.and_then(|r| {
@@ -619,17 +634,6 @@ impl<'a> Builder<'a> {
         let ordinal = levels.first().map_or(0, |n| n.id.part);
         let paint = self.fill_paint(merged.fill.as_ref()?, ph, w, h, ordinal, group_fill)?;
         let width = merged.width.map_or(DEFAULT_LINE_WIDTH, f64::from);
-        if merged
-            .head_end
-            .and_then(|e| e.end_type)
-            .is_some_and(|t| t.to_lexical() != "none")
-            || merged
-                .tail_end
-                .and_then(|e| e.end_type)
-                .is_some_and(|t| t.to_lexical() != "none")
-        {
-            self.report.note("line end");
-        }
         if merged.compound.is_some_and(|c| c.to_lexical() != "sng") {
             self.report.note("compound line (drawn single)");
         }
@@ -656,13 +660,19 @@ impl<'a> Builder<'a> {
             // The schema has no default join; PowerPoint's own lines are round.
             None => Join::Round,
         };
-        Some(Stroke {
-            paint,
-            width,
-            dash,
-            cap,
-            join,
-        })
+        Some((
+            Stroke {
+                paint,
+                width,
+                dash,
+                cap,
+                join,
+            },
+            Ends {
+                head: merged.head_end,
+                tail: merged.tail_end,
+            },
+        ))
     }
 
     /// The shape's outlines in its own space, each with its fill mode and whether it
@@ -744,6 +754,148 @@ impl<'a> Builder<'a> {
         }
         out
     }
+}
+
+/// A line's two ends: `headEnd` at the path's start, `tailEnd` at its end.
+#[derive(Debug, Clone, Copy)]
+struct Ends {
+    head: Option<LineEnd>,
+    tail: Option<LineEnd>,
+}
+
+/// One drawn piece: a path, its fill, its stroke.
+type Piece = (Vec<PathCmd>, Option<Paint>, Option<Stroke>);
+
+/// The points a path passes through and is pulled towards, in order.
+fn path_points(path: &[PathCmd]) -> Vec<(f64, f64)> {
+    let mut out = Vec::new();
+    for cmd in path {
+        match *cmd {
+            PathCmd::MoveTo(x, y) | PathCmd::LineTo(x, y) => out.push((x, y)),
+            PathCmd::QuadTo(a, b, x, y) => out.extend([(a, b), (x, y)]),
+            PathCmd::CubicTo(a, b, c, d, x, y) => out.extend([(a, b), (c, d), (x, y)]),
+            PathCmd::Close => {}
+        }
+    }
+    out
+}
+
+/// The tip of one end and the unit direction pointing out of the line there.
+fn end_of(points: &[(f64, f64)]) -> Option<((f64, f64), (f64, f64))> {
+    let (&tip, rest) = points.split_first()?;
+    let from = rest.iter().find(|p| **p != tip)?;
+    let (dx, dy) = (tip.0 - from.0, tip.1 - from.1);
+    let len = (dx * dx + dy * dy).sqrt();
+    (len > 0.0 && len.is_finite()).then_some((tip, (dx / len, dy / len)))
+}
+
+/// Size of a line end in line widths, as PowerPoint draws `sm`, `med` and `lg`.
+fn end_scale(token: Option<String>) -> f64 {
+    match token.as_deref() {
+        Some("sm") => 2.0,
+        Some("lg") => 5.0,
+        _ => 3.0,
+    }
+}
+
+fn polyline(points: &[(f64, f64)], close: bool) -> Vec<PathCmd> {
+    let mut cmds: Vec<PathCmd> = points
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            if i == 0 {
+                PathCmd::MoveTo(p.0, p.1)
+            } else {
+                PathCmd::LineTo(p.0, p.1)
+            }
+        })
+        .collect();
+    if close {
+        cmds.push(PathCmd::Close);
+    }
+    cmds
+}
+
+/// Arrowheads for an open stroked path, in its space, filled or stroked with the
+/// line's own paint.
+fn arrowheads(path: &[PathCmd], stroke: &Stroke, ends: Ends) -> Vec<Piece> {
+    if path.iter().any(|c| matches!(c, PathCmd::Close)) {
+        return Vec::new();
+    }
+    let points = path_points(path);
+    let reversed: Vec<(f64, f64)> = points.iter().rev().copied().collect();
+    let unit = stroke.width.max(9_525.0);
+    let mut out = Vec::new();
+    for (end, pts) in [(ends.head, &points), (ends.tail, &reversed)] {
+        let Some(kind) = end.and_then(|e| e.end_type) else {
+            continue;
+        };
+        let Some((tip, d)) = end_of(pts) else {
+            continue;
+        };
+        let len = unit * end_scale(end.and_then(|e| e.length).map(|l| l.to_lexical()));
+        let wid = unit * end_scale(end.and_then(|e| e.width).map(|w| w.to_lexical()));
+        let n = (-d.1, d.0);
+        let at = |along: f64, across: f64| {
+            (
+                tip.0 + d.0 * along + n.0 * across,
+                tip.1 + d.1 * along + n.1 * across,
+            )
+        };
+        let filled = |cmds: Vec<PathCmd>| (cmds, Some(stroke.paint.clone()), None);
+        let piece = match kind {
+            LineEndType::None => continue,
+            LineEndType::Triangle => filled(polyline(
+                &[tip, at(-len, wid / 2.0), at(-len, -wid / 2.0)],
+                true,
+            )),
+            LineEndType::Stealth => filled(polyline(
+                &[
+                    tip,
+                    at(-len, wid / 2.0),
+                    at(-len * 0.6, 0.0),
+                    at(-len, -wid / 2.0),
+                ],
+                true,
+            )),
+            LineEndType::Diamond => filled(polyline(
+                &[
+                    at(len / 2.0, 0.0),
+                    at(0.0, wid / 2.0),
+                    at(-len / 2.0, 0.0),
+                    at(0.0, -wid / 2.0),
+                ],
+                true,
+            )),
+            LineEndType::Oval => {
+                // An ellipse as four cubics, in the end's own frame.
+                const K: f64 = 0.552_284_749_830_793_6;
+                let (a, b) = (len / 2.0, wid / 2.0);
+                let start = at(a, 0.0);
+                let mut cmds = vec![PathCmd::MoveTo(start.0, start.1)];
+                for [c1, c2, e] in [
+                    [at(a, b * K), at(a * K, b), at(0.0, b)],
+                    [at(-a * K, b), at(-a, b * K), at(-a, 0.0)],
+                    [at(-a, -b * K), at(-a * K, -b), at(0.0, -b)],
+                    [at(a * K, -b), at(a, -b * K), at(a, 0.0)],
+                ] {
+                    cmds.push(PathCmd::CubicTo(c1.0, c1.1, c2.0, c2.1, e.0, e.1));
+                }
+                cmds.push(PathCmd::Close);
+                filled(cmds)
+            }
+            LineEndType::Arrow => (
+                polyline(&[at(-len, wid / 2.0), tip, at(-len, -wid / 2.0)], false),
+                None,
+                Some(Stroke {
+                    dash: Vec::new(),
+                    ..stroke.clone()
+                }),
+            ),
+        };
+        out.push(piece);
+    }
+    out
 }
 
 /// Whether an effect list draws anything.
@@ -931,6 +1083,66 @@ mod tests {
             panic!("not linear");
         };
         assert!((start.1 - 0.0).abs() < 1e-9 && (end.1 - 50.0).abs() < 1e-9);
+    }
+
+    fn solid_stroke(width: f64) -> Stroke {
+        Stroke {
+            paint: Paint::Solid(Rgba {
+                r: 0,
+                g: 0,
+                b: 0,
+                a: 255,
+            }),
+            width,
+            dash: vec![10.0, 10.0],
+            cap: Cap::Butt,
+            join: Join::Round,
+        }
+    }
+
+    fn end(kind: LineEndType) -> Option<LineEnd> {
+        Some(LineEnd {
+            end_type: Some(kind),
+            width: None,
+            length: None,
+        })
+    }
+
+    #[test]
+    fn a_tail_triangle_points_out_of_the_end_of_an_open_line() {
+        let path = vec![PathCmd::MoveTo(0.0, 0.0), PathCmd::LineTo(100_000.0, 0.0)];
+        let ends = Ends {
+            head: None,
+            tail: end(LineEndType::Triangle),
+        };
+        let heads = arrowheads(&path, &solid_stroke(10_000.0), ends);
+        assert_eq!(heads.len(), 1);
+        let (cmds, fill, stroke) = &heads[0];
+        assert!(fill.is_some() && stroke.is_none());
+        // Tip at the end; the base three widths back, three widths across.
+        assert_eq!(cmds[0], PathCmd::MoveTo(100_000.0, 0.0));
+        assert_eq!(cmds[1], PathCmd::LineTo(70_000.0, 15_000.0));
+        assert_eq!(cmds[2], PathCmd::LineTo(70_000.0, -15_000.0));
+    }
+
+    #[test]
+    fn a_closed_path_and_an_end_of_none_draw_no_heads() {
+        let open = vec![PathCmd::MoveTo(0.0, 0.0), PathCmd::LineTo(1.0, 0.0)];
+        let none = Ends {
+            head: end(LineEndType::None),
+            tail: None,
+        };
+        assert!(arrowheads(&open, &solid_stroke(1.0), none).is_empty());
+        let mut closed = open.clone();
+        closed.push(PathCmd::Close);
+        let arrow = Ends {
+            head: end(LineEndType::Arrow),
+            tail: None,
+        };
+        assert!(arrowheads(&closed, &solid_stroke(1.0), arrow).is_empty());
+        // An open arrow is stroked, undashed.
+        let heads = arrowheads(&open, &solid_stroke(1.0), arrow);
+        assert!(heads[0].2.as_ref().is_some_and(|s| s.dash.is_empty()));
     }
 
     #[test]
