@@ -22,21 +22,26 @@
 //! - [`layout`]: paragraphs and a body, already resolved, to [`layout::GlyphRun`]s.
 //! - [`body`]: a model text body, through the style chain, to that layout. The
 //!   one call a renderer makes is [`layout_text_body`].
+//! - [`outline`]: a run's face by a stable key, and its glyphs' outlines, which
+//!   is all a backend needs to draw a run.
 //!
 //! Units are points throughout, `y` growing downwards, positions in the
-//! coordinate space of the frame the caller passes.
+//! coordinate space of the frame the caller passes. Outlines scale with the size
+//! they are asked at, so a backend working in EMU asks in EMU.
 
 pub mod body;
 mod breaks;
 pub mod cjk;
 pub mod faces;
 pub mod layout;
+pub mod outline;
 pub mod shape;
 pub mod substitution;
 pub mod woff2;
 
 pub use body::{TextEnv, layout_text_body};
 pub use layout::{Frame, Glyph, GlyphRun, TextLayout};
+pub use outline::{OutlineOp, face_by_key, glyph_outline, outline_by_key};
 
 use skrifa::{FontRef, MetadataProvider, instance::LocationRef, prelude::Size};
 

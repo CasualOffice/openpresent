@@ -613,4 +613,179 @@ mod tests {
             SubstituteKind::MetricCompatible
         );
     }
+
+    mod from_the_model {
+        use super::*;
+        use casual_slide_model::color::Color;
+        use casual_slide_model::presentation::{Coordinate, TextFont};
+        use casual_slide_model::text::{BodyProperties, Paragraph, TextRun, Written};
+
+        fn props(size: i32, bold: bool, font: &str, color: Option<Color>) -> CharacterProperties {
+            CharacterProperties {
+                size: Some(size),
+                bold: Some(bold),
+                latin: Some(Box::new(TextFont {
+                    typeface: font.to_owned(),
+                    panose: None,
+                    pitch_family: None,
+                    charset: None,
+                })),
+                fill: color.map(|c| Fill::Solid(Some(c))),
+                ..CharacterProperties::default()
+            }
+        }
+
+        fn run(text: &str, p: CharacterProperties) -> TextItem {
+            TextItem::Run(TextRun {
+                properties: Some(Box::new(p)),
+                text: Some(text.to_owned()),
+            })
+        }
+
+        fn deck_body() -> TextBody {
+            TextBody {
+                properties: Some(BodyProperties {
+                    anchor: Some(TextAnchor::Bottom),
+                    inset_left: Some(Written::new(Coordinate(0))),
+                    ..BodyProperties::default()
+                }),
+                list_style: None,
+                paragraphs: vec![
+                    Paragraph {
+                        properties: None,
+                        items: vec![run(
+                            "Title text",
+                            props(2400, true, "Calibri", Some(Color::srgb(200, 0, 0))),
+                        )],
+                        end_properties: None,
+                    },
+                    Paragraph {
+                        properties: Some(Box::new(ParagraphProperties {
+                            margin_left: Some(342_900),
+                            indent: Some(-342_900),
+                            bullet: Some(Bullet::Char(Some("\u{2022}".to_owned()))),
+                            ..ParagraphProperties::default()
+                        })),
+                        items: vec![
+                            run("First ", props(1800, false, "Arial", None)),
+                            TextItem::Break(Default::default()),
+                            run("second", props(1800, false, "Arial", None)),
+                        ],
+                        end_properties: None,
+                    },
+                    Paragraph::default(),
+                ],
+            }
+        }
+
+        const FRAME: Frame = Frame {
+            x: 0.0,
+            y: 0.0,
+            width: 400.0,
+            height: 300.0,
+        };
+
+        #[test]
+        fn a_body_lays_out_with_its_runs_sizes_colours_and_bullet() {
+            let body = deck_body();
+            let layout = layout_text_body(&body, &TextChain::default(), &TextEnv::default(), FRAME);
+            let texts: Vec<&str> = layout.runs.iter().map(|r| r.text.as_str()).collect();
+            assert_eq!(texts, ["Title text", "\u{2022}", "First", "second"]);
+            assert_eq!(layout.lines, 4, "title, two lines, and the empty paragraph");
+            let title = &layout.runs[0];
+            assert_eq!(title.size, 24.0);
+            assert_eq!(
+                (title.color.r, title.color.g, title.color.b, title.color.a),
+                (200, 0, 0, 255)
+            );
+            assert_eq!(title.face_key, "Carlito-Bold");
+            assert_eq!(layout.runs[2].face_key, "LiberationSans-Regular");
+            assert_eq!(layout.runs[2].color, Rgba::BLACK, "no fill stated");
+            // lIns 0, so the title starts at the frame's edge; the bullet hangs at
+            // marL + indent = 0 and the text sits at marL = 27 pt.
+            assert!(title.glyphs[0].x.abs() < 0.01);
+            assert!(layout.runs[1].glyphs[0].x.abs() < 0.01);
+            assert!((layout.runs[2].glyphs[0].x - 27.0).abs() < 0.01);
+            assert!(
+                (layout.runs[3].glyphs[0].x - 27.0).abs() < 0.01,
+                "the line after a break starts at marL"
+            );
+            // Anchored at the bottom, above the default bottom inset of 3.6 pt.
+            let last_baseline = layout.runs[3].glyphs[0].y;
+            assert!(last_baseline > 200.0 && last_baseline < 300.0 - 3.6);
+        }
+
+        #[test]
+        fn every_substitution_is_reported_once_in_order_of_use() {
+            let body = deck_body();
+            let layout = layout_text_body(&body, &TextChain::default(), &TextEnv::default(), FRAME);
+            let reported: Vec<(&str, &str)> = layout
+                .substitutions
+                .iter()
+                .map(|s| (s.requested.as_str(), s.used))
+                .collect();
+            assert_eq!(
+                reported,
+                [("Calibri", "Carlito"), ("Arial", "Liberation Sans")]
+            );
+            assert!(layout.missing_scripts.is_empty());
+        }
+
+        #[test]
+        fn absent_values_take_the_schema_defaults_and_nothing_is_filled_in() {
+            let body = TextBody {
+                properties: None,
+                list_style: None,
+                paragraphs: vec![Paragraph {
+                    properties: None,
+                    items: vec![TextItem::Run(TextRun {
+                        properties: None,
+                        text: Some("x".to_owned()),
+                    })],
+                    end_properties: None,
+                }],
+            };
+            let before = body.clone();
+            let (resolved, _) = resolve_body(&body, &TextChain::default(), &TextEnv::default());
+            assert_eq!(body, before, "the model is not changed");
+            assert_eq!(resolved.insets.left, 7.2);
+            assert_eq!(resolved.insets.top, 3.6);
+            assert!(resolved.wrap);
+            assert_eq!(resolved.anchor, Anchor::Top);
+            let p = &resolved.paragraphs[0];
+            assert_eq!(p.align, Align::Left);
+            assert_eq!(p.runs[0].style.size, 18.0, "MS-OI29500's 1800");
+            assert_eq!(p.bullet, None);
+        }
+
+        #[test]
+        fn autonumbered_paragraphs_count_up() {
+            let numbered = |text: &str| Paragraph {
+                properties: Some(Box::new(ParagraphProperties {
+                    bullet: Some(Bullet::AutoNumber {
+                        scheme: Some(AutonumberScheme::ArabicParenR),
+                        start_at: Some(3),
+                    }),
+                    ..ParagraphProperties::default()
+                })),
+                items: vec![TextItem::Run(TextRun {
+                    properties: None,
+                    text: Some(text.to_owned()),
+                })],
+                end_properties: None,
+            };
+            let body = TextBody {
+                properties: None,
+                list_style: None,
+                paragraphs: vec![numbered("a"), numbered("b")],
+            };
+            let (resolved, _) = resolve_body(&body, &TextChain::default(), &TextEnv::default());
+            let bullets: Vec<&str> = resolved
+                .paragraphs
+                .iter()
+                .map(|p| p.bullet.as_ref().map_or("", |b| b.text.as_str()))
+                .collect();
+            assert_eq!(bullets, ["3)", "4)"]);
+        }
+    }
 }

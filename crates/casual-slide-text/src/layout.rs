@@ -197,6 +197,9 @@ pub struct Glyph {
 pub struct GlyphRun {
     /// The face's bytes, for `skrifa` to outline. Bundled or supplied, so `'static`.
     pub face: &'static [u8],
+    /// The face's stable name, for a display list: [`crate::outline::face_by_key`]
+    /// finds the bytes again.
+    pub face_key: String,
     /// Size in points.
     pub size: f32,
     /// Fill colour.
@@ -738,6 +741,7 @@ fn emit(
         if let (Some(face), false) = (item.face, glyphs.is_empty()) {
             out.push(GlyphRun {
                 face,
+                face_key: crate::outline::face_key(face),
                 size: style.size,
                 color: style.color,
                 synthetic_bold: item.synthetic_bold,

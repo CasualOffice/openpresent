@@ -120,7 +120,9 @@ name = "casual-slide-text"
 version = "0.0.0"
 dependencies = [
  "brotli-decompressor",
+ "casual-slide-import",
  "casual-slide-model",
+ "casual-slide-ooxml",
  "casual-slide-style",
  "harfrust",
  "skrifa",
