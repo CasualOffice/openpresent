@@ -19,6 +19,12 @@
 //! glyphs is counted in [`SceneReport::text_bodies_undrawn`], and
 //! [`RenderReport::lines`] says so.
 
+// rustdoc proves auto traits through the generated chart and equation types (here
+// `scene::chart::SerParts` borrowing `c::DLbls`), which nest deeper than the default
+// limit of 128 allows (E0275 on `math::schema::MC`). Compilation itself never needs
+// it; `casual-slide-import` carries the same attribute for the same reason.
+#![recursion_limit = "256"]
+
 pub mod deck;
 mod diagram;
 pub mod display;
