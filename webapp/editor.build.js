@@ -114,6 +114,40 @@ function layoutPicker() {
   });
 }
 
+/// Home > Layout (`PAR-07`): the current slide onto another of the deck's layouts, its
+/// placeholders remapped by the engine; the one it is on is marked. One undo step.
+function changeLayout() {
+  return guarded("list the layouts", async () => {
+    const all = await readLayouts();
+    const on = (await call("slide_layout", [state.current])).value;
+    showModal("Layout", (body) => {
+      const p = document.createElement("p");
+      p.textContent = "Choose a layout for this slide.";
+      body.appendChild(p);
+      const grid = document.createElement("div");
+      grid.className = "op-layouts";
+      for (const l of all) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = Number(on) === l.ordinal ? "op-btn op-layout primary" : "op-btn op-layout";
+        b.textContent = l.name;
+        b.setAttribute("aria-pressed", Number(on) === l.ordinal ? "true" : "false");
+        b.addEventListener("click", () => {
+          closeModal();
+          const index = state.current;
+          guarded("change the layout", async () => {
+            await call("change_slide_layout", [index, l.ordinal]);
+            await slides.redrawSlide(index);
+            await selection.refresh();
+          });
+        });
+        grid.appendChild(b);
+      }
+      body.appendChild(grid);
+    });
+  });
+}
+
 function duplicateSlide() {
   return guarded("duplicate the slide", async () => {
     const r = await call("duplicate_slide", [state.current]);
@@ -263,6 +297,7 @@ function initDrag() {
 
 export function init() {
   register("home.new-slide", { label: "New Slide", shortcut: "Ctrl+M", enabled: has, run: newSlide });
+  register("home.layout", { label: "Layout", enabled: has, run: changeLayout });
   register("home.new-slide-layout", { label: "New Slide from Layout", enabled: has, run: layoutPicker });
   register("home.duplicate-slide", { label: "Duplicate Slide", enabled: hasSlide, run: duplicateSlide });
   register("home.delete-slide", { label: "Delete Slide", enabled: hasSlide, run: deleteSlide });

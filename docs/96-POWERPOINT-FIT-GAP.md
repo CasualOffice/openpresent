@@ -517,13 +517,13 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 | | Works | Partial | Disabled | Faked | Absent | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| The 318 rows above | 53 (16.7%) | 49 (15.4%) | 39 (12.3%) | 0 | 177 (55.7%) | 318 |
-| With the 34 shell rows | 66 (18.8%) | 56 (15.9%) | 45 (12.8%) | 0 | 185 (52.6%) | 352 |
-| Of those, the 280 we build (Edit, Render, Retain) | 66 (23.6%) | 55 (19.6%) | 34 (12.1%) | 0 | 125 (44.6%) | 280 |
+| The 318 rows above | 54 (17.0%) | 48 (15.1%) | 39 (12.3%) | 0 | 177 (55.7%) | 318 |
+| With the 34 shell rows | 67 (19.0%) | 55 (15.6%) | 45 (12.8%) | 0 | 185 (52.6%) | 352 |
+| Of those, the 280 we build (Edit, Render, Retain) | 67 (23.9%) | 54 (19.3%) | 34 (12.1%) | 0 | 125 (44.6%) | 280 |
 
-**Plainly: of the 280 features we mean to build, 66 work (23.6%), 55 work in part (19.6%), and 159 are missing (56.8%),** whether drawn disabled or not there at all. **Of all 352, 66 work (18.8%), after Group and Ungroup (`PAR-03`) and alt text (`PAR-44`).** Of the 66 that work, 11 are file facts kept on save rather than verbs a user runs.
+**Plainly: of the 280 features we mean to build, 67 work (23.9%), 54 work in part (19.3%), and 159 are missing (56.8%),** whether drawn disabled or not there at all. **Of all 352, 67 work (19.0%), after Group and Ungroup (`PAR-03`), alt text (`PAR-44`) and Home > Layout (`PAR-07`).** Of the 67 that work, 11 are file facts kept on save rather than verbs a user runs.
 
-**Largest gaps a PowerPoint user hits first:** no change of layout; links on shapes only; slides cannot be copied between browser tabs. Group and Ungroup (`PAR-03`) and alt text (`PAR-44`) work; z-order works (`UX-006`).
+**Largest gaps a PowerPoint user hits first:** links on shapes only; slides cannot be copied between browser tabs. Group and Ungroup (`PAR-03`), alt text (`PAR-44`) and change of layout (`PAR-07`) work; z-order works (`UX-006`).
 
 **Re-audit, 2026-11-09 (`PAR-01`).** Merged after `7539ea5` and clicked in Chrome on `127.0.0.1` with `pptxts-modern-comments.pptx`: the File tab (`FILE-01`): New, Open, Info with editable properties, Save As with `.pptx`, `.potx` and `.ppsx`, Print, and rename in the title bar; autosave and the recovery bar (`SAVE-01`), a draft seen written after quiet; the Comments pane (`UX-011`), a deck's thread shown, a reply posted, saved and reopened; notes typed, saved and reopened; the Selection Pane; a hidden slide's struck, dimmed thumbnail; the lists, selection, rich paste, keys, slide copy and smart guides rows `PAR-06` and `PAR-10` to `PAR-15` had already updated. Found and fixed in the same pass: New Slide failed on every deck that had a slide (the engine's `i64` layout reached the page as a BigInt), and closing the tab gave no warning. The ribbon session's Arrange, Find, Outline, Slide Sorter, WordArt and Symbol were not on `main` and are not counted.
 
@@ -576,7 +576,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-043 | Tags, customer data, custom XML | Retain | Works | Kept in the file |  |  |
 | PP-FIT-044 | Script links | Retain | Works | Kept in the file |  |  |
 | PP-FIT-045 | Add, rearrange, duplicate, delete slides | Edit | Works | New Slide (Ctrl+M), Duplicate, Delete, Hide, drag to reorder in thumbnails, all undoable |  |  |
-| PP-FIT-046 | Layouts: choose, reset | Edit | Partial | New Slide from Layout picks from the deck's layouts; Reset Slide works (`UX-006`); Layout (change an existing slide's layout) disabled | 1 everyday editing | `PAR-07` |
+| PP-FIT-046 | Layouts: choose, reset | Edit | Works | New Slide from Layout picks from the deck's layouts; Reset Slide works (`UX-006`); Home > Layout puts the current slide on another layout, its placeholders remapped by kind and `idx`, text kept, one undo step, saved (`PAR-07`). The chooser lists names, not pictures | | `PAR-07` |
 | PP-FIT-047 | Slide size and orientation | Edit | Works | Design, Slide Size: Standard, Widescreen, Custom, with Maximize or Ensure Fit |  |  |
 | PP-FIT-048 | Mixed orientation in one deck | Refuse | Absent | Refused by decision | decided: not built |  |
 | PP-FIT-049 | Sections | Edit | Partial | Add, Rename and Remove Section, Collapse and Expand All, headers in the thumbnail pane, saved (`UX-006`); no Move Section or drag between sections | 1 everyday editing | `PAR-09` |
@@ -863,7 +863,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-330 | Status bar: Slide x of y, language, accessibility (Status bar) | Edit | Partial | Slide count shown; no language or accessibility indicator | 4 advanced | `PAR-61` |
 | PP-FIT-331 | Ribbon Display Options: Classic, Simplified, show tabs only, Ctrl+F1 (Ribbon) | Edit | Works | Toggle and Ctrl+F1 |  |  |
 | PP-FIT-332 | KeyTips (Alt, Alt+Period) (Keys) | Edit | Works | Letters over tabs and commands (`UX-003`) |  |  |
-| PP-FIT-333 | Right-click menus for slide, thumbnail, shape and text (Menus) | Edit | Partial | Present; Layout, Reset Slide, Add Section, Edit Text, Edit Points, Bring to Front, Link, Font…, Paragraph…, Numbering and New Comment disabled | 1 everyday editing | `PAR-07`, `PAR-14` |
+| PP-FIT-333 | Right-click menus for slide, thumbnail, shape and text (Menus) | Edit | Partial | Present; Add Section, Edit Text, Edit Points, Bring to Front, Link, Font…, Paragraph…, Numbering and New Comment disabled | 1 everyday editing | `PAR-07`, `PAR-14` |
 | PP-FIT-334 | Shift+F10 menu and Ctrl+F6 region cycling (Keys) | Edit | Works | Both registered |  |  |
 | PP-FIT-335 | Editing, Reviewing, Viewing modes (Tab row) | Edit | Disabled | Only Editing; the other two disabled | 3 review and sharing | `PAR-48` |
 | PP-FIT-336 | Rename the file from the title bar (Title bar) | Edit | Works | Click the name in the title bar, type, Enter: Save, Save As and Export use it (`FILE-01`) |  |  |

@@ -734,6 +734,8 @@ impl Viewer {
         // Group and Ungroup move the file's own elements before shapes are added or
         // removed at the top of the tree (`PAR-03`).
         let bytes = self.group_pass(bytes)?;
+        // A slide put on another layout (`PAR-07`).
+        let bytes = self.layout_pass(bytes)?;
         let bytes = self.shapes_pass(bytes)?;
         let bytes = self.order_pass(bytes)?;
         let bytes = self.notes_pass(bytes)?;

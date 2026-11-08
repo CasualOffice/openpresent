@@ -174,3 +174,39 @@ fn bad_places_and_parts_are_refused_and_change_nothing() {
         assert_eq!(parts, start, "{op:?} left a trace");
     }
 }
+
+#[test]
+fn set_slide_layout_moves_a_slide_to_another_layout_and_back() {
+    let mut start = deck();
+    // A second layout at ordinal 4.
+    start.structure.parts.push(entry(4, SlideKind::Layout));
+    start.structure.layouts.push(4);
+    start
+        .parts
+        .push(Some(SlidePart::new(ObjectId::part(4), SlideKind::Layout)));
+    let mut parts = start.clone();
+    let inverse = apply(
+        &mut parts,
+        Operation::SetSlideLayout {
+            ordinal: 2,
+            layout: 4,
+        },
+    )
+    .unwrap();
+    assert_eq!(parts.structure.entry(2).unwrap().layout, Some(4));
+    assert_eq!(
+        inverse,
+        Operation::SetSlideLayout {
+            ordinal: 2,
+            layout: 0
+        }
+    );
+    apply(&mut parts, inverse).unwrap();
+    assert_eq!(parts, start);
+    // A slide is not a layout, nor a layout a slide.
+    for (ordinal, layout) in [(2, 3), (0, 4), (9, 4)] {
+        let mut p = start.clone();
+        assert!(apply(&mut p, Operation::SetSlideLayout { ordinal, layout }).is_err());
+        assert_eq!(p, start);
+    }
+}

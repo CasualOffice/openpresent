@@ -44,6 +44,7 @@ mod format;
 mod group;
 #[cfg(test)]
 mod home_tests;
+mod layout;
 mod picture;
 mod regroup;
 pub use picture::{MAX_CROP, MAX_PAD, PICTURE_STYLES};
@@ -2999,4 +3000,16 @@ pub fn shape_alt_text(index: u32, node: u32) -> Result<String, JsError> {
 #[wasm_bindgen]
 pub fn set_shape_alt_text(index: u32, node: u32, text: &str) -> Result<bool, JsError> {
     with_viewer(|v| v.set_alt_text(index as usize, node, text))
+}
+
+/// Put slide `index` on layout `layout`, an ordinal from `slide_layouts`, remapping its
+/// placeholders (`PAR-07`, Home > Layout): one undo step. `false` when it is already on
+/// it.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a part that is not a layout; `CS-TXN-0015` in a shared session.
+#[wasm_bindgen]
+pub fn change_slide_layout(index: u32, layout: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.change_layout(index as usize, layout))
 }

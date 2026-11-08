@@ -221,14 +221,23 @@ impl Draft<'_> {
         tree.insert_child(nv, None, c_nv);
         tree.insert_child(nv, None, kind);
         if let NewShape::Placeholder { kind, idx } = shape {
-            if !matches!(kind.as_str(), "dt" | "ftr" | "sldNum" | "hdr") {
+            // Header & Footer's (`UX-006`), and a layout's text and content
+            // placeholders that Home > Layout adds (`PAR-07`); empty is `obj`, the
+            // schema default, written with no `@type`.
+            const KINDS: [&str; 16] = [
+                "", "title", "body", "ctrTitle", "subTitle", "dt", "sldNum", "ftr", "hdr", "obj",
+                "chart", "tbl", "clipArt", "dgm", "media", "pic",
+            ];
+            if !KINDS.contains(&kind.as_str()) {
                 return Err(bad(
                     "a placeholder type this writer does not add",
                     kind.clone(),
                 ));
             }
             let ph = tree.new_element(&ph_name);
-            set_attr(tree, ph, "type", kind, &part)?;
+            if !kind.is_empty() {
+                set_attr(tree, ph, "type", kind, &part)?;
+            }
             if let Some(idx) = idx {
                 set_attr(tree, ph, "idx", &idx.to_string(), &part)?;
             }

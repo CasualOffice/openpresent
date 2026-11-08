@@ -251,6 +251,14 @@ pub enum Op {
     },
     /// Drop the VBA project: the host has the user's confirmation.
     DropVba,
+    /// Put a slide on another layout (`PAR-07`): its layout relationship points at
+    /// `layout`, keeping its id. The slide's own placeholders are the patch's.
+    SetLayout {
+        /// The slide.
+        slide: SlideRef,
+        /// The layout part, as the archive spells it.
+        layout: String,
+    },
     /// Attach a new part to a source, with a fresh name in `dir`. For parts the writer
     /// has no operation of its own for.
     AttachPart {
@@ -278,7 +286,8 @@ pub enum NewShape {
     /// `p:sp`: a text box or a preset shape.
     Shape,
     /// `p:sp` that is a placeholder: `p:ph` with this `@type` and `@idx` (`UX-006`,
-    /// Header & Footer's date, footer and slide number). Its text is the patch's.
+    /// Header & Footer's date, footer and slide number; `PAR-07`, a layout's text and
+    /// content placeholders, empty `@type` for `obj`). Its text is the patch's.
     Placeholder {
         /// `@type`, as the schema spells it (`dt`, `ftr`, `sldNum`).
         kind: String,
@@ -500,6 +509,7 @@ impl Draft<'_> {
             } => self.insert_shape(slide, *index, shape, *shape_id, name),
             Op::Retype { extension } => self.retype(extension),
             Op::DropVba => self.drop_vba(),
+            Op::SetLayout { slide, layout } => self.set_layout(slide, layout),
             Op::AttachPart {
                 source,
                 kind,
@@ -510,6 +520,20 @@ impl Draft<'_> {
                 bytes,
             } => self.attach_part(source, kind, dir, stem, extension, content_type, bytes),
         }
+    }
+
+    fn set_layout(&mut self, slide: &SlideRef, layout: &str) -> Result<(), WriterError> {
+        let (_, entry) = self.slide(slide)?;
+        let part = Self::slide_part(&entry)?;
+        let layout = self
+            .actual(layout)
+            .ok_or_else(|| bad("no such layout", layout))?;
+        let rel = self
+            .relationships(&part)?
+            .into_iter()
+            .find(|r| rel_kind(&r.rel_type) == "slideLayout")
+            .ok_or_else(|| bad("the slide has no layout relationship", part.clone()))?;
+        self.retarget_relationship(&part, &rel.id, &layout)
     }
 
     fn first_layout(&mut self) -> Result<String, WriterError> {

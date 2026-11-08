@@ -138,3 +138,33 @@ pub(crate) fn set_show(
         before != show,
     ))
 }
+
+/// `SetSlideLayout`: slide `ordinal` on layout `layout`. Its inverse names the layout it
+/// was on.
+pub(crate) fn set_layout(
+    parts: &mut SlideParts,
+    ordinal: u32,
+    layout: u32,
+) -> Result<Applied, TxnError> {
+    let is = |o: u32, kind: SlideKind| parts.structure.entry(o).is_some_and(|e| e.kind == kind);
+    if !is(ordinal, SlideKind::Slide) || parts.get(ordinal).is_none() {
+        return Err(TxnError::BadPart(ordinal));
+    }
+    if !is(layout, SlideKind::Layout) || parts.get(layout).is_none() {
+        return Err(TxnError::BadPart(layout));
+    }
+    let entry = parts
+        .structure
+        .parts
+        .get_mut(usize::try_from(ordinal).map_err(|_| TxnError::BadPart(ordinal))?)
+        .ok_or(TxnError::BadPart(ordinal))?;
+    let before = entry.layout.ok_or(TxnError::BadPart(ordinal))?;
+    entry.layout = Some(layout);
+    Ok((
+        Operation::SetSlideLayout {
+            ordinal,
+            layout: before,
+        },
+        before != layout,
+    ))
+}

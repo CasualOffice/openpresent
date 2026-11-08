@@ -536,6 +536,15 @@ pub enum Operation {
         /// What `@show` becomes.
         show: Option<bool>,
     },
+    /// Deck: the layout a slide is on (`PAR-07`, Home > Layout). Its inverse is the
+    /// layout it was on. Refused for a part that is not a slide, or a layout that is
+    /// not one.
+    SetSlideLayout {
+        /// The slide part.
+        ordinal: u32,
+        /// The layout part.
+        layout: u32,
+    },
     /// Motion: a slide's `p:transition`; `None` removes it (`VS-10`).
     SetTransition {
         /// The slide part.
@@ -685,6 +694,7 @@ impl Operation {
             | Self::RemoveSlide { .. }
             | Self::MoveSlide { .. }
             | Self::SetSlideShow { .. }
+            | Self::SetSlideLayout { .. }
             | Self::SetTransition { .. }
             | Self::SetTiming { .. }
             | Self::AddEffect { .. }
@@ -701,6 +711,7 @@ impl Operation {
             Self::SetBackground { part, .. } => Some(*part),
             Self::SetTextStyles { master, .. } => Some(*master),
             Self::SetSlideShow { ordinal, .. }
+            | Self::SetSlideLayout { ordinal, .. }
             | Self::InsertSlide { ordinal, .. }
             | Self::SetTransition { ordinal, .. }
             | Self::SetTiming { ordinal, .. }
@@ -763,6 +774,7 @@ impl Operation {
             Self::DropPart { .. } | Self::RemoveSlide { .. } => "Delete Slide",
             Self::MoveSlide { .. } => "Move Slide",
             Self::SetSlideShow { .. } => "Hide Slide",
+            Self::SetSlideLayout { .. } => "Layout",
             Self::SetTransition { .. } => "Transition",
             Self::SetTiming { .. }
             | Self::AddEffect { .. }
@@ -1518,6 +1530,7 @@ pub(crate) fn apply_inner<D: Document + ?Sized>(
         Operation::RemoveSlide { index } => slides::remove_slide(parts, index),
         Operation::MoveSlide { from, to } => slides::move_slide(parts, from, to),
         Operation::SetSlideShow { ordinal, show } => slides::set_show(parts, ordinal, show),
+        Operation::SetSlideLayout { ordinal, layout } => slides::set_layout(parts, ordinal, layout),
         Operation::SetTransition {
             ordinal,
             transition,
