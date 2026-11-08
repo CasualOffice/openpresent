@@ -71,26 +71,120 @@ function socketUrl() {
 
 /* ── Who is here ─────────────────────────────────────────────────────────── */
 
+// As PowerPoint for the web (docs/53, Co-authoring): a badge with each present
+// person's initials at the right end of the header, beside Share; selecting the
+// badges lists them, and selecting a name goes to the slide they are on; a label
+// with the name sits at the top right of the thumbnail of the slide each is on.
+
+function initials(name) {
+  const words = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  const first = Array.from(words[0])[0] || "";
+  const last = words.length > 1 ? Array.from(words[words.length - 1])[0] || "" : "";
+  return (first + last).toUpperCase();
+}
+
+function badge(name, colour) {
+  const b = el("span", "people-badge", initials(name));
+  b.style.backgroundColor = colour || "#666";
+  b.title = name;
+  return b;
+}
+
+let peopleList = null;   // the open list, if any
+
+function closePeople() {
+  peopleList?.remove();
+  peopleList = null;
+  document.removeEventListener("pointerdown", outsidePeople, true);
+}
+
+function outsidePeople(e) {
+  if (peopleList && !peopleList.contains(e.target) && !byId("presence-people")?.contains(e.target)) closePeople();
+}
+
+function openPeople(anchor) {
+  closePeople();
+  const list = el("div", "people-list");
+  list.id = "people-list";
+  list.setAttribute("role", "menu");
+  const row = (name, colour, where, slide) => {
+    const b = el("button", "people-row");
+    b.type = "button";
+    b.setAttribute("role", "menuitem");
+    b.append(badge(name, colour), el("span", "people-row-name", name), el("span", "people-row-where", where));
+    if (slide != null) b.addEventListener("click", () => { closePeople(); slides.go(slide); });
+    else b.disabled = true;
+    return b;
+  };
+  list.appendChild(row("You", me.colour, `Slide ${state.current + 1}`, null));
+  for (const p of roster.values()) list.appendChild(row(p.name, p.colour, `Slide ${p.slide + 1}`, p.slide));
+  const r = anchor.getBoundingClientRect();
+  list.style.top = `${r.bottom + 4}px`;
+  list.style.right = `${Math.max(4, document.documentElement.clientWidth - r.right)}px`;
+  document.body.appendChild(list);
+  peopleList = list;
+  document.addEventListener("pointerdown", outsidePeople, true);
+}
+
+function peopleButton() {
+  let box = byId("presence-people");
+  if (box) return box;
+  const end = document.querySelector(".rb-tabs-end");
+  if (!end) return null;
+  box = el("button", "presence-people");
+  box.type = "button";
+  box.id = "presence-people";
+  box.hidden = true;
+  box.setAttribute("aria-haspopup", "true");
+  box.addEventListener("click", (e) => { e.stopPropagation(); if (peopleList) closePeople(); else openPeople(box); });
+  const share = end.querySelector(".rb-share");
+  if (share) end.insertBefore(box, share); else end.appendChild(box);
+  return box;
+}
+
+function markThumbs() {
+  for (const m of document.querySelectorAll(".thumb-person")) m.remove();
+  if (!session) return;
+  const thumbs = byId("thumbs");
+  if (!thumbs) return;
+  const bySlide = new Map();
+  for (const p of roster.values()) {
+    if (!bySlide.has(p.slide)) bySlide.set(p.slide, []);
+    bySlide.get(p.slide).push(p);
+  }
+  for (const [slide, people] of bySlide) {
+    const frame = thumbs.children[slide]?.querySelector(".thumb-frame");
+    if (!frame) continue;
+    const stack = el("span", "thumb-person");
+    for (const p of people) {
+      const tag = el("span", "thumb-person-name", p.name);
+      tag.style.backgroundColor = p.colour;
+      stack.appendChild(tag);
+    }
+    frame.appendChild(stack);
+  }
+}
+
 function showRoster() {
   // The bar's promise that nothing leaves the browser is not true while sharing.
   const local = document.querySelector(".bottom-status");
   if (local) local.hidden = !!session;
-  const box = byId("collab-status");
+  const box = peopleButton();
+  markThumbs();
   if (!box) return;
   box.replaceChildren();
   box.hidden = !session;
-  if (!session) return;
-  const dot = (colour, label) => {
-    const d = el("span", "collab-dot");
-    d.style.backgroundColor = colour;
-    d.title = label;
-    return d;
-  };
-  if (me.colour) box.appendChild(dot(me.colour, "You"));
-  for (const p of roster.values()) box.appendChild(dot(p.colour, p.name));
+  if (!session) { closePeople(); return; }
   const names = ["You", ...Array.from(roster.values(), (p) => p.name)];
   const live = connection === "live" ? "" : ` (${connection})`;
-  box.appendChild(el("span", "collab-names", `Sharing: ${names.join(", ")}${live}`));
+  box.setAttribute("aria-label", `People here: ${names.join(", ")}${live}`);
+  box.title = `People here: ${names.join(", ")}${live}`;
+  // Others first, as PowerPoint shows who else is here; this participant last.
+  for (const p of roster.values()) box.appendChild(badge(p.name, p.colour));
+  if (me.colour) box.appendChild(badge("You", me.colour));
+  if (connection && connection !== "live") box.appendChild(el("span", "people-state", connection));
+  if (peopleList) openPeople(box);
 }
 
 /* ── Others' selection and caret ─────────────────────────────────────────── */
@@ -118,6 +212,8 @@ async function drawPresence() {
     if (p.slide !== state.current) continue;
     for (const n of p.shapes || []) {
       const s = shapes.find((x) => x.node === n);
+      // In text, the name rides on the caret instead.
+      const inText = p.caret && p.caret.node === n;
       if (!s) continue;
       const r = document.createElementNS(SVG, "rect");
       r.setAttribute("x", String(s.x));
@@ -131,7 +227,9 @@ async function drawPresence() {
       nodes.push(r);
       // The name as a page element: SVG text at slide scale is too large a font
       // for Chrome to draw.
+      if (inText) continue;
       const label = el("span", "presence-name", p.name);
+      label.dataset.client = String(client);
       label.style.left = `${(s.x / state.deck.width) * 100}%`;
       label.style.top = `${(s.y / state.deck.height) * 100}%`;
       label.style.backgroundColor = p.colour;
@@ -160,6 +258,13 @@ async function drawPresence() {
         line.setAttribute("class", "presence-caret");
         line.dataset.client = String(client);
         nodes.push(line);
+        // Their name on the caret, in their colour.
+        const flag = el("span", "presence-name presence-flag", p.name);
+        flag.style.left = `${(Math.min(x1, x2) / state.deck.width) * 100}%`;
+        flag.style.top = `${(Math.min(y1, y2) / state.deck.height) * 100}%`;
+        flag.style.backgroundColor = p.colour;
+        flag.dataset.client = String(client);
+        labels.push(flag);
       } catch { /* the caret is past what this copy has yet */ }
     }
   }
@@ -376,11 +481,9 @@ export function participants() {
 
 export function init() {
   register("file.share", { label: "Share", enabled: () => !!state.deck, checked: () => !!session, run: shareDialog });
-  const box = el("span", "collab-status");
-  box.id = "collab-status";
-  box.hidden = true;
-  box.setAttribute("aria-live", "polite");
-  byId("tb-status").after(box);
+  peopleButton();
+  // The thumbnail labels survive the pane being built again.
+  document.addEventListener("op-slides-built", () => markThumbs());
   // Others' marks follow the slide on the stage.
   document.addEventListener("op-changed", () => { if (session) drawPresence(); });
 }
