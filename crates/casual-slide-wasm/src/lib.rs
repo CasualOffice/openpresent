@@ -1523,6 +1523,20 @@ pub fn open_blank() -> Result<(), JsError> {
     Ok(())
 }
 
+/// File > New from a template (`PAR-18`): the blank presentation in built-in theme
+/// `theme` (an index of [`design_themes`]), replacing any deck open before.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a theme that is not there; `CS-WSM-0007` if the blank deck could
+/// not be built.
+#[wasm_bindgen]
+pub fn open_template(theme: u32) -> Result<(), JsError> {
+    let viewer = Viewer::template(theme as usize).map_err(js)?;
+    SESSION.with(|s| *s.borrow_mut() = Some(viewer));
+    Ok(())
+}
+
 /// The deck's layouts for the New Slide gallery: `[ordinal, name, ordinal, name, …]`.
 /// A name is document text: the page shows it through `textContent` only.
 ///

@@ -369,6 +369,15 @@ impl Viewer {
         Self::open(bytes)
     }
 
+    /// File > New from a template (`PAR-18`): the blank presentation in built-in theme
+    /// `theme`'s colours and fonts, written and opened again, so it starts as a deck
+    /// just opened does, with nothing to undo.
+    pub fn template(theme: usize) -> Result<Self, BridgeError> {
+        let mut deck = Self::blank()?;
+        deck.apply_theme(theme, 0, false)?;
+        Self::open(deck.save()?)
+    }
+
     /// The part ordinal of slide `index`, which names its shapes' [`ObjectId`]s.
     pub fn slide_part(&self, index: usize) -> Result<u32, BridgeError> {
         self.slide_ordinal(index)

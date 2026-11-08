@@ -517,13 +517,13 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 
 | | Works | Partial | Disabled | Faked | Absent | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| The 318 rows above | 38 (11.9%) | 48 (15.1%) | 54 (17.0%) | 0 | 178 (56.0%) | 318 |
-| With the 34 shell rows | 48 (13.6%) | 54 (15.3%) | 63 (17.9%) | 0 | 187 (53.1%) | 352 |
-| Of those, the 280 we build (Edit, Render, Retain) | 48 (17.1%) | 53 (18.9%) | 52 (18.6%) | 0 | 127 (45.4%) | 280 |
+| The 318 rows above | 40 (12.6%) | 47 (14.8%) | 54 (17.0%) | 0 | 177 (55.7%) | 318 |
+| With the 34 shell rows | 50 (14.2%) | 53 (15.1%) | 63 (17.9%) | 0 | 186 (52.8%) | 352 |
+| Of those, the 280 we build (Edit, Render, Retain) | 50 (17.9%) | 52 (18.6%) | 52 (18.6%) | 0 | 126 (45.0%) | 280 |
 
-**Plainly: of the 280 features we mean to build, 48 work (17.1%), 53 work in part (18.9%), and 179 are missing (63.9%),** whether drawn disabled or not there at all. **Of all 352, 48 work (13.6%).** Of the 48 that work, 11 are file facts kept on save rather than verbs a user runs.
+**Plainly: of the 280 features we mean to build, 50 work (17.9%), 52 work in part (18.6%), and 178 are missing (63.6%),** whether drawn disabled or not there at all. **Of all 352, 50 work (14.2%).** Of the 50 that work, 11 are file facts kept on save rather than verbs a user runs.
 
-**Largest gaps a PowerPoint user hits first:** no Group; no Find or Replace; no links; no change of layout; no Slide Sorter; no sections; slides cannot be copied between browser tabs; no z-order; no template gallery or recent files; no alt text.
+**Largest gaps a PowerPoint user hits first:** no Group; no Find or Replace; no links; no change of layout; no Slide Sorter; no sections; slides cannot be copied between browser tabs; no z-order; no Font dialog, strikethrough or subscript; no alt text.
 
 **Re-audit, 2026-11-09 (`PAR-01`).** Merged after `7539ea5` and clicked in Chrome on `127.0.0.1` with `pptxts-modern-comments.pptx`: the File tab (`FILE-01`): New, Open, Info with editable properties, Save As with `.pptx`, `.potx` and `.ppsx`, Print, and rename in the title bar; autosave and the recovery bar (`SAVE-01`), a draft seen written after quiet; the Comments pane (`UX-011`), a deck's thread shown, a reply posted, saved and reopened; notes typed, saved and reopened; the Selection Pane; a hidden slide's struck, dimmed thumbnail; the lists, selection, rich paste, keys, slide copy and smart guides rows `PAR-06` and `PAR-10` to `PAR-15` had already updated. Found and fixed in the same pass: New Slide failed on every deck that had a slide (the engine's `i64` layout reached the page as a BigInt), and closing the tab gave no warning. The ribbon session's Arrange, Find, Outline, Slide Sorter, WordArt and Symbol were not on `main` and are not counted.
 
@@ -781,7 +781,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-248 | Format background | Edit | Partial | Format Background: solid and gradient, apply to all; no picture or pattern fill, no hide background graphics | 2 formatting | `PAR-39` |
 | PP-FIT-249 | Header, footer, date, slide number | Edit | Disabled | Header & Footer disabled; stored footers draw | 2 formatting | `PAR-40` |
 | PP-FIT-250 | Handout and notes header and footer | Edit | Absent | No handout or notes headers | 4 advanced | `PAR-49` |
-| PP-FIT-251 | New presentation, template gallery | Edit | Partial | New gives a blank deck; no template gallery | 1 everyday editing | `PAR-18` |
+| PP-FIT-251 | New presentation, template gallery | Edit | Works | File, New offers Blank Presentation and six templates of our own, one for each built-in theme (Plain, Harbour, Meadow, Ember, Slate, Orchid), each tile in its theme's colours; a template opens as a new deck in its colours and fonts with nothing to undo (`PAR-18`). Opening a `.potx` as a template is `PAR-49` |  |  |
 | PP-FIT-252 | Designer (Design Ideas) | Host seam | Disabled | Designer disabled; host seam | decided: not built |  |
 | PP-FIT-253 | Designer metadata in decks | Retain | Works | Kept in the file |  |  |
 | PP-FIT-254 | Microsoft Designer image generation | Host seam | Absent | Host seam, not built | decided: not built |  |
@@ -837,7 +837,7 @@ Macros are **never run**, in any host, at any setting: owner, in [01](01-ORD.md)
 | PP-FIT-304 | Customise shortcuts | Edit | Absent | No shortcut customisation | 4 advanced | `PAR-61` |
 | PP-FIT-305 | Dark mode, Office theme | Edit | Works | Theme: Automatic, Light, Dark |  |  |
 | PP-FIT-306 | Touch mode | Edit | Absent | No touch mode | 4 advanced | `PAR-61` |
-| PP-FIT-307 | Recent files, pinned | Edit | Absent | No recent files list | 1 everyday editing | `PAR-19` |
+| PP-FIT-307 | Recent files, pinned | Edit | Works | File, Open and New list recent decks, kept in this browser's IndexedDB with their bytes: pin, unpin, remove, and open again from the list (`PAR-19`). Nothing uploaded |  |  |
 | PP-FIT-308 | Advanced options set | Edit | Absent | No Options page | 4 advanced | `PAR-61` |
 | PP-FIT-309 | Disable slide show hardware acceleration | Refuse | Absent | Refused by decision | decided: not built |  |
 | PP-FIT-310 | Responsive phone shell: view, present, light edit | Edit | Absent | No phone layout | 4 advanced | `PAR-63` |

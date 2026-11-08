@@ -294,9 +294,15 @@ TABS.push(
 /// The File page, in PowerPoint's order. As OpenCalc's: each page is a list of
 /// sections, and an item names a command, its icon, and one line of what it does.
 const F = (id, icon, label, desc) => ({ id, icon, label, desc });
+/// The built-in themes File > New offers as templates, in the engine's order
+/// (`casual-slide-wasm` `THEMES`); the tiles take their colours from the engine.
+export const TEMPLATES = ["Plain", "Harbour", "Meadow", "Ember", "Slate", "Orchid"];
 export const FILE_RAIL = [
   { id: "new", label: "New", icon: "document_add", sections: [
     { tiles: true, items: [F("file.new", "slide_add", "Blank Presentation", "Start a new presentation with one title slide")] },
+    // Our own templates, one for each built-in theme (`PAR-18`), not Microsoft's.
+    { title: "Templates", tiles: true, items: TEMPLATES.map((name, i) =>
+      F(`file.new.template.${i}`, "slide_add", name, `Start a new presentation in the ${name} theme`)) },
   ] },
   { id: "open", label: "Open", icon: "folder_open", sections: [
     { items: [F("file.open", "folder_open", "Browse", "Open a PowerPoint presentation (.pptx) from this device. It stays in this browser")] },

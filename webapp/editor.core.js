@@ -17,8 +17,8 @@
 // disabled, saying so, and arrives working with its own slice.
 
 import { register, run, all as allCommands } from "./commands.js";
-import { start as startRibbon, queueSync, openBackstage, icon, setContextual } from "./ribbon.js";
-import { TABS, FILE_RAIL, LABELS, modelCommandIds } from "./ribbon.model.js";
+import { start as startRibbon, queueSync, openBackstage, closeBackstage, icon, setContextual } from "./ribbon.js";
+import { TABS, FILE_RAIL, LABELS, TEMPLATES, modelCommandIds } from "./ribbon.model.js";
 import * as menus from "./editor.menus.js";
 import * as panes from "./editor.panes.js";
 import * as comments from "./editor.comments.js";
@@ -41,6 +41,7 @@ import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } 
 import * as presence from "./editor.presence.js";
 import { registerFileCommands, initFile } from "./editor.file.js";
 import { initDrafts } from "./editor.drafts.js";
+import { initRecent, remember } from "./editor.recent.js";
 
 const byId = (id) => document.getElementById(id);
 
@@ -170,9 +171,10 @@ export function openDeck(name, bytes) {
 /// File > New, and what the editor starts with (`VS-08`): the built-in blank
 /// presentation, one title slide, ready to edit, as PowerPoint opens.
 let untitled = 0;
-export function newDeck() {
+export function newDeck(template) {
   untitled++;
-  return load(`Presentation${untitled}.pptx`, { op: "blank" }, [], "OpenPresent could not start a new presentation.");
+  const msg = Number.isInteger(template) ? { op: "blank", template } : { op: "blank" };
+  return load(`Presentation${untitled}.pptx`, msg, [], "OpenPresent could not start a new presentation.");
 }
 
 let openingBlank = false;
@@ -282,7 +284,9 @@ function setTheme(v) {
 function registerCommands() {
   text.registerTextCommands();
   registerDesignCommands();
-  register("file.new", { label: "New", run: newDeck });
+  register("file.new", { label: "New", run: () => newDeck() });
+  // File > New's templates (`PAR-18`): the blank deck in each built-in theme.
+  TEMPLATES.forEach((name, i) => register(`file.new.template.${i}`, { label: `New: ${name}`, run: () => newDeck(i) }));
   register("file.open", { label: "Open", shortcut: "Ctrl+O", run: openFilePicker });
   const canProduce = () => hasDeck() && !busy;
   register("file.save", { label: "Save", shortcut: "Ctrl+S", enabled: canProduce, run: saveDeck });
@@ -442,7 +446,14 @@ async function boot() {
   slides.init();
   notes.init();      // the notes pane, editable (`UX-011`)
   text.init();
-  initFiles({ onOpen: openDeck });
+  // A deck opened from this device is kept for File > Open's Recent list (`PAR-19`):
+  // copied first, as opening hands the bytes to the engine.
+  initFiles({ onOpen: async (name, bytes) => {
+    const kept = new Uint8Array(bytes.slice(0));
+    await openDeck(name, bytes);
+    if (state.deck?.name === name) remember(name, kept);
+  } });
+  initRecent(closeBackstage);
   initFile();
   buildStatusBar();
   bindKeys();

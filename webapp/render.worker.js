@@ -9,7 +9,8 @@
 // `{ op: "shapes", index }`, `{ op: "transform", index, node, x, y, cx, cy, rot }`,
 // `{ op: "delete", index, node }`, `{ op: "undo" }` and `{ op: "redo" }`; each edit
 // answers with `undo: [canUndo, canRedo]`, and undo and redo with the slide changed.
-// Building (`VS-08`): `{ op: "blank" }` opens the built-in new presentation, and
+// Building (`VS-08`): `{ op: "blank" }` opens the built-in new presentation, with
+// `template: n` in built-in theme n (`PAR-18`), and
 // `{ op: "build", fn, args }` runs one slide or insert call; undo and redo also
 // answer the slide count, since they may add or remove slides.
 // Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name.
@@ -27,7 +28,7 @@ import init, {
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   show_plan, slide_transition, transition_direction, slide_notes,
   design_themes, design_apply_theme, design_slide_size, design_background,
-  open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
+  open_blank, open_template, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
   preset_names, preset_icon, insert_preset, shape_handles, drag_shape_handle,
   set_shape_fill, set_shape_outline, set_shape_style, slide_palette,
@@ -137,7 +138,8 @@ self.onmessage = async (event) => {
     await ready;
     if (msg.op === "open" || msg.op === "blank") {
       // `blank` is File > New, and the deck the editor starts with (`VS-08`).
-      if (msg.op === "blank") open_blank(); else open(new Uint8Array(msg.bytes));
+      if (msg.op === "blank" && Number.isInteger(msg.template)) open_template(msg.template);
+      else if (msg.op === "blank") open_blank(); else open(new Uint8Array(msg.bytes));
       const size = slide_size();
       self.postMessage({ id, ok: true, count: slide_count(), width: size[0], height: size[1], version: version() });
     } else if (msg.op === "png") {
