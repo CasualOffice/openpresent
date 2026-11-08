@@ -303,6 +303,8 @@ Past one of these the picture, shape or slide is not drawn, and the render repor
 | `MAX_GROUP_DEPTH` | `64` | Groups walked inside one another, beyond import's own bound | Report: group nested too deep | Untested |
 | `MAX_SEGMENTS_PER_SHAPE` | `200_000` | Path segments drawn for one shape | Report: geometry over the segment budget | Untested |
 | `MAX_TABLE_CELLS` | `100_000` | Grid cells of one table drawn | Report: table over the cell budget | Untested |
+| `MAX_CHART_POINTS` | `4_096` | Points of one chart series plotted | Points past it are not plotted | Untested |
+| `MAX_CHART_SERIES` | `256` | Series of one chart plotted | Series past it are not plotted | Untested |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
 

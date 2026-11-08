@@ -88,6 +88,8 @@ pub struct SlideScene<'a> {
     pub default_text_style: Option<&'a TextListStyle>,
     /// The deck's `tableStyles` part, which a table's `tableStyleId` names into.
     pub table_styles: Option<&'a TableStyleList>,
+    /// The deck's chart parts, which a chart frame's relationship names.
+    pub charts: Option<&'a casual_slide_import::chart::DeckCharts>,
 }
 
 impl core::fmt::Debug for SlideScene<'_> {
@@ -112,6 +114,7 @@ const DEFAULT_LINE_WIDTH: f64 = 0.0;
 /// EMU in a point.
 const EMU_PER_POINT: f64 = 12_700.0;
 
+mod chart;
 mod table;
 
 struct Builder<'a> {
@@ -514,7 +517,7 @@ impl<'a> Builder<'a> {
                 if let Some(table) = node.table.as_deref() {
                     self.table(node, table, layer, parent);
                 } else if node.chart.is_some() {
-                    self.report.note("chart");
+                    self.chart(node, layer, parent);
                 } else if node.diagram.is_some() {
                     self.report.note("diagram");
                 } else {

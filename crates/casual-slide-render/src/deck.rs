@@ -49,6 +49,7 @@ pub struct Deck {
     size: (i64, i64),
     default_text_style: Option<TextListStyle>,
     table_styles: Option<TableStyleList>,
+    charts: casual_slide_import::chart::DeckCharts,
     media: BTreeMap<String, Vec<u8>>,
     unreadable_media: BTreeSet<String>,
     /// Masters whose theme could not be read.
@@ -83,6 +84,7 @@ impl Deck {
         .map_err(|e| RenderError::Open(e.code()))?;
         let parts = imported.parts;
         let table_styles = imported.table_styles;
+        let charts = imported.charts;
         let size = deck
             .presentation
             .slide_size
@@ -136,6 +138,7 @@ impl Deck {
             size,
             default_text_style: deck.presentation.default_text_style.clone(),
             table_styles,
+            charts,
             media: BTreeMap::new(),
             unreadable_media: BTreeSet::new(),
             themes_unread,
@@ -175,6 +178,7 @@ impl Deck {
             media: &self.rels,
             default_text_style: self.default_text_style.as_ref(),
             table_styles: self.table_styles.as_ref(),
+            charts: Some(&self.charts),
         };
         build_slide(scene, ordinal)
     }

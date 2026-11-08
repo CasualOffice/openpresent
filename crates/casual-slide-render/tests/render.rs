@@ -244,3 +244,41 @@ fn a_table_draws_its_cells_and_is_not_reported_as_skipped() {
     let [r, g, b, _] = pixel(&png, px(500_000.0), px(150_000.0));
     assert!(r < 60 && g < 60 && b < 60, "{r},{g},{b}");
 }
+
+/// Classic charts are drawn from their cached values: bars, lines, areas, pies and
+/// scatters reach the display list, and the report names only the families left.
+#[test]
+fn classic_charts_draw_from_their_cached_values() {
+    let deck = open("chart-families.pptx");
+    let (list, scene) = deck.display_list(0).unwrap();
+    for key in scene.features.keys() {
+        assert!(
+            *key != "chart" && !key.starts_with("chart (part") && !key.starts_with("chart (rel"),
+            "{:?}",
+            scene.features
+        );
+    }
+    let filled = list
+        .items
+        .iter()
+        .filter(|i| matches!(i, DisplayItem::Path { fill: Some(_), .. }))
+        .count();
+    let stroked = list
+        .items
+        .iter()
+        .filter(|i| {
+            matches!(
+                i,
+                DisplayItem::Path {
+                    fill: None,
+                    stroke: Some(_),
+                    ..
+                }
+            )
+        })
+        .count();
+    assert!(
+        filled > 30 && stroked > 10,
+        "{filled} filled, {stroked} stroked"
+    );
+}

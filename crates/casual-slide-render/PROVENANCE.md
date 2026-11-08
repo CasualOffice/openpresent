@@ -21,7 +21,17 @@ Copied, and changed only where slides need it:
   deterministic, painter's order, pictures by package path. The item set is new, per
   `docs/42` §Display list, because a slide is vector art rather than a grid.
 
-New here: `src/scene.rs` (a slide's shapes to a display list) and `src/deck.rs`.
+- `src/scene/chart.rs` ports OpenCalc's plotter, `casual-calc-layout/src/chart.rs` at
+  `b23c67c`: the frame, title and legend taken off the plot first, the value extent that
+  holds zero and stacks each sign apart, bars from the zero line, the pie from twelve
+  o'clock, the accent palette varied past six series (`vary`, `ACCENT_VARIANTS`), and
+  category labels thinned to fit. Changes: EMU for twips (`PX` is one pixel at 96 dpi);
+  a series' or point's own `spPr` colour wins over the palette; `gapWidth` sets bar
+  width; horizontal bars, line and area series, round value-axis ticks with gridlines
+  (PowerPoint's look, where OpenCalc labels the two extremes), and doughnut holes from
+  `holeSize`. The cached values are read from `c:chartSpace`; no workbook is opened.
+
+New here: `src/scene.rs`, `src/scene/table.rs` (a slide's shapes to a display list) and `src/deck.rs`.
 
 Not yet copied: glyph outlining and shaping (`shape.rs`, the text crate's, lane B), the
 PDF writer (`pdf.rs`, `subset.rs`).
