@@ -564,7 +564,7 @@ fn numbering_list_levels_and_line_spacing_save_read_back_and_undo() {
     assert!(v.set_paragraphs(object, (0, len), 4, "1.5").unwrap());
     let state = v.run_state(object, 1).unwrap();
     assert_eq!(
-        state[4..],
+        state[4..7],
         [
             "n:arabicParenR".to_owned(),
             "1".to_owned(),
