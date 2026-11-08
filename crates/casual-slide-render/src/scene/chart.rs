@@ -600,6 +600,7 @@ impl<'a> Builder<'a> {
                 b: color.b,
                 a: color.a,
             },
+            underline: None,
         };
         let body = BodyLayout {
             wrap: false,

@@ -875,6 +875,37 @@ impl<'a> Builder<'a> {
                 }),
                 text: run.text,
             });
+            if let Some(line) = run.underline {
+                let (strokes, note) = underline_strokes(&line);
+                if let Some(note) = note {
+                    self.report.note(note);
+                }
+                let paint = Paint::Solid(Rgba {
+                    r: run.color.r,
+                    g: run.color.g,
+                    b: run.color.b,
+                    a: run.color.a,
+                });
+                for s in strokes {
+                    self.items.push(DisplayItem::Path {
+                        object: Some(node.id),
+                        layer,
+                        transform,
+                        path: vec![
+                            PathCmd::MoveTo(pt(line.x0), pt(s.y)),
+                            PathCmd::LineTo(pt(line.x1), pt(s.y)),
+                        ],
+                        fill: None,
+                        stroke: Some(Stroke {
+                            paint: paint.clone(),
+                            width: pt(s.width),
+                            dash: s.dash.iter().map(|d| pt(d * s.width)).collect(),
+                            cap: Cap::Butt,
+                            join: Join::Bevel,
+                        }),
+                    });
+                }
+            }
         }
     }
 
@@ -1327,6 +1358,75 @@ fn shade(p: Paint, mode: FillMode) -> Paint {
     })
 }
 
+/// One line of an underline, points: its centre, width, and dash and gap lengths in
+/// widths (empty is solid).
+#[derive(Debug, Clone, PartialEq)]
+struct UnderlineStroke {
+    y: f32,
+    width: f32,
+    dash: &'static [f32],
+}
+
+/// The lines that draw `u`, and what is drawn differently from PowerPoint, if
+/// anything. Single, double, heavy, dotted and dashed kinds are drawn as their name
+/// says; `words` underlines the spaces too, and a wavy kind is drawn straight.
+fn underline_strokes(
+    u: &casual_slide_text::Underline,
+) -> (Vec<UnderlineStroke>, Option<&'static str>) {
+    use casual_slide_text::UnderlineType as U;
+    let t = u.thickness;
+    let line = |width: f32, dash: &'static [f32]| UnderlineStroke {
+        y: u.y,
+        width,
+        dash,
+    };
+    const DOT: &[f32] = &[1.0, 1.0];
+    const DASH: &[f32] = &[4.0, 3.0];
+    const LONG: &[f32] = &[8.0, 3.0];
+    const DOT_DASH: &[f32] = &[4.0, 3.0, 1.0, 3.0];
+    const DOT_DOT_DASH: &[f32] = &[4.0, 3.0, 1.0, 3.0, 1.0, 3.0];
+    let double = || {
+        vec![
+            UnderlineStroke {
+                y: u.y,
+                width: t,
+                dash: &[],
+            },
+            UnderlineStroke {
+                y: u.y + 2.0 * t,
+                width: t,
+                dash: &[],
+            },
+        ]
+    };
+    match u.kind {
+        U::None => (Vec::new(), None),
+        U::Sng => (vec![line(t, &[])], None),
+        U::Words => (
+            vec![line(t, &[])],
+            Some("underline words (spaces underlined)"),
+        ),
+        U::Dbl => (double(), None),
+        U::Heavy => (vec![line(2.0 * t, &[])], None),
+        U::Dotted => (vec![line(t, DOT)], None),
+        U::DottedHeavy => (vec![line(2.0 * t, DOT)], None),
+        U::Dash => (vec![line(t, DASH)], None),
+        U::DashHeavy => (vec![line(2.0 * t, DASH)], None),
+        U::DashLong => (vec![line(t, LONG)], None),
+        U::DashLongHeavy => (vec![line(2.0 * t, LONG)], None),
+        U::DotDash => (vec![line(t, DOT_DASH)], None),
+        U::DotDashHeavy => (vec![line(2.0 * t, DOT_DASH)], None),
+        U::DotDotDash => (vec![line(t, DOT_DOT_DASH)], None),
+        U::DotDotDashHeavy => (vec![line(2.0 * t, DOT_DOT_DASH)], None),
+        U::Wavy => (vec![line(t, &[])], Some("wavy underline (drawn straight)")),
+        U::WavyHeavy => (
+            vec![line(2.0 * t, &[])],
+            Some("wavy underline (drawn straight)"),
+        ),
+        U::WavyDbl => (double(), Some("wavy underline (drawn straight)")),
+    }
+}
+
 /// Dash and gap lengths in line widths, as PowerPoint draws each preset.
 fn preset_dash(p: PresetLineDash) -> &'static [f64] {
     match p {
@@ -1499,5 +1599,38 @@ mod tests {
         );
         assert_eq!(base.width, Some(25_400));
         assert_eq!(base.cap, Some(LineCap::Rnd));
+    }
+}
+
+#[cfg(test)]
+mod underline_tests {
+    use super::underline_strokes;
+    use casual_slide_text::{Underline, UnderlineType};
+
+    fn under(kind: UnderlineType) -> Underline {
+        Underline {
+            kind,
+            x0: 10.0,
+            x1: 50.0,
+            y: 30.0,
+            thickness: 2.0,
+        }
+    }
+
+    #[test]
+    fn single_double_heavy_and_dash_underlines_draw_as_powerpoint_names_them() {
+        let (sng, note) = underline_strokes(&under(UnderlineType::Sng));
+        assert_eq!(sng.len(), 1);
+        assert_eq!((sng[0].y, sng[0].width, sng[0].dash.len()), (30.0, 2.0, 0));
+        assert!(note.is_none());
+        let (dbl, _) = underline_strokes(&under(UnderlineType::Dbl));
+        assert_eq!(dbl.len(), 2, "double is two lines");
+        assert!(dbl[1].y - dbl[0].y >= 2.0, "with a gap: {dbl:?}");
+        let (heavy, _) = underline_strokes(&under(UnderlineType::Heavy));
+        assert_eq!(heavy[0].width, 4.0, "heavy is twice as thick");
+        let (dash, _) = underline_strokes(&under(UnderlineType::Dash));
+        assert!(!dash[0].dash.is_empty(), "dash is dashed");
+        let (_, wavy) = underline_strokes(&under(UnderlineType::Wavy));
+        assert!(wavy.is_some(), "a kind not drawn as named is reported");
     }
 }

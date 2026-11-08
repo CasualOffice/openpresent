@@ -17,12 +17,15 @@
 //! | Trailing spaces do not count towards fitting or alignment | UAX #14 practice; **Inferred** for PowerPoint |
 //! | A word wider than the line breaks between characters | **Inferred** |
 //! | `just` and `dist` anchoring are laid out as top | Not yet modelled: `T2D4-01` |
+//! | An underline runs under each glyph run, trailing spaces of the line excluded, at the face's `post` underline position and thickness, in the run's colour | ECMA-376 21.1.2.3.9 names the kinds; the metrics are **Inferred** from how PowerPoint draws (`VS-18`) |
 //!
 //! Not yet here: tabs, columns, vertical and rotated text, autofit's scale,
 //! kinsoku, bidi reordering across runs. Each is a row in `docs/14`.
 
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, MetadataProvider, instance::LocationRef, prelude::Size};
+
+pub use casual_slide_model::text::UnderlineType;
 
 use crate::breaks::{Break, opportunities};
 use crate::faces::TextFaces;
@@ -76,6 +79,9 @@ pub struct RunStyle {
     pub italic: bool,
     /// Colour.
     pub color: Rgba,
+    /// `u`: the underline kind; `None` draws none. [`UnderlineType::None`] is never
+    /// stored here: the caller maps it to `None`.
+    pub underline: Option<UnderlineType>,
 }
 
 /// Text with one style. A line break inside a paragraph is a `\n` in `text`.
@@ -210,6 +216,24 @@ pub struct GlyphRun {
     pub glyphs: Vec<Glyph>,
     /// The characters these glyphs draw, for text extraction. Document data.
     pub text: String,
+    /// The run's underline, if it has one.
+    pub underline: Option<Underline>,
+}
+
+/// Where an underline is drawn under one [`GlyphRun`], points, in the layout's space.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Underline {
+    /// The kind, as the run asks; never [`UnderlineType::None`].
+    pub kind: UnderlineType,
+    /// Start, at the first glyph's pen position.
+    pub x0: f32,
+    /// End, after the last glyph's advance.
+    pub x1: f32,
+    /// The centre of the line, `y` down: below the baseline by the face's
+    /// underline position.
+    pub y: f32,
+    /// The face's underline thickness at the run's size.
+    pub thickness: f32,
 }
 
 /// What laying out a body produced.
@@ -293,6 +317,26 @@ fn metrics(face: &[u8], size: f32) -> Metrics {
         }
     } else {
         fallback
+    }
+}
+
+/// The face's underline offset below the baseline (positive down) and its thickness,
+/// in points at `size`, from `post`; a tenth and a twentieth of the size when the face
+/// does not say.
+fn underline_metrics(face: &[u8], size: f32) -> (f32, f32) {
+    let fallback = (size * 0.1, size * 0.05);
+    let Ok(font) = FontRef::new(face) else {
+        return fallback;
+    };
+    match font
+        .metrics(Size::new(size), LocationRef::default())
+        .underline
+    {
+        Some(d) if d.thickness > 0.0 && d.thickness.is_finite() && d.offset.is_finite() => {
+            // `post` gives the top of the line, y up; the centre is half a thickness below.
+            (-d.offset + d.thickness / 2.0, d.thickness)
+        }
+        _ => fallback,
     }
 }
 
@@ -728,6 +772,9 @@ pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
         for glyph in runs.iter_mut().flat_map(|r| r.glyphs.iter_mut()) {
             glyph.y += offset;
         }
+        for line in runs.iter_mut().filter_map(|r| r.underline.as_mut()) {
+            line.y += offset;
+        }
         for line in &mut carets {
             line.top += offset;
             line.bottom += offset;
@@ -772,6 +819,7 @@ fn emit(
             continue;
         };
         let mut glyphs = Vec::new();
+        let x_start = at.origin_x + *pen;
         for g in item
             .glyphs
             .iter()
@@ -795,6 +843,16 @@ fn emit(
             }
         }
         if let (Some(face), false) = (item.face, glyphs.is_empty()) {
+            let underline = style.underline.map(|kind| {
+                let (below, thickness) = underline_metrics(face, style.size);
+                Underline {
+                    kind,
+                    x0: x_start,
+                    x1: at.origin_x + *pen,
+                    y: at.baseline + below,
+                    thickness,
+                }
+            });
             out.push(GlyphRun {
                 face,
                 face_key: crate::outline::face_key(face),
@@ -807,6 +865,7 @@ fn emit(
                     .get(item.start.max(from)..item.end.min(to))
                     .unwrap_or_default()
                     .to_owned(),
+                underline,
             });
         }
     }
