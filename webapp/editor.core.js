@@ -27,6 +27,7 @@ import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
 import { registerDesignCommands } from "./editor.design.js";
 import * as build from "./editor.build.js";
+import * as objects from "./editor.objects.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -384,6 +385,7 @@ async function boot() {
   } catch { /* private mode */ }
   selection.init();
   build.init();
+  objects.init();
   registerCommands();
   initDialogs(request);
   slides.init();
@@ -392,7 +394,11 @@ async function boot() {
   buildStatusBar();
   bindKeys();
   menus.init();
-  setContextual((kind) => kind === "shape" && !!state.deck && selection.hasSelection());
+  setContextual((kind) => {
+    if (kind === "table") return objects.tableSelected();
+    if (kind === "chart") return objects.chartSelected();
+    return kind === "shape" && !!state.deck && selection.hasSelection() && !objects.tableSelected() && !objects.chartSelected();
+  });
   await startRibbon(byId("workspace"));
   changed();
   status("Ready");

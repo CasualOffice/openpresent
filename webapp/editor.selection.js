@@ -414,6 +414,9 @@ function select(node) {
 
 export function hasSelection() { return !!shape(); }
 
+/// The selected shape's box and flags, or null (`VS-11`: tables and charts read it).
+export function selectedShape() { return shape(); }
+
 /// Clear the selection: a press off the slide.
 export function deselect() { if (selected != null) select(null); }
 

@@ -161,6 +161,17 @@ body {
 .thumb.drop-after { box-shadow: inset 0 -3px 0 var(--op-accent-color); }
 .op-layouts { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; }
 .op-layout { min-height: 56px; white-space: normal; }
+/* Rich objects (`VS-11`): Insert Table's grid, a cell's field, Edit Data's sheet. */
+.op-table-pick { display: grid; grid-template-columns: repeat(10, 22px); gap: 3px; margin: 6px 0 10px; }
+.op-table-cell { width: 22px; height: 22px; padding: 0; border: 1px solid var(--op-border-color, #c8c8c8); background: var(--op-surface-color, #fff); border-radius: 2px; cursor: pointer; }
+.op-table-cell.is-on { background: color-mix(in srgb, var(--op-accent-color, #c43e1c) 22%, transparent); border-color: var(--op-accent-color, #c43e1c); }
+.op-table-size { width: 56px; }
+.op-cell-editor { position: absolute; z-index: 20; box-sizing: border-box; margin: 0; padding: 4px 6px; resize: none; font: 14px/1.3 system-ui, sans-serif; border: 2px solid var(--op-accent-color, #c43e1c); background: #fff; color: #000; }
+.op-sheet-wrap { max-height: 50vh; overflow: auto; margin-bottom: 10px; }
+.op-sheet { border-collapse: collapse; }
+.op-sheet th, .op-sheet td { border: 1px solid var(--op-border-color, #c8c8c8); padding: 0; }
+.op-sheet-field { width: 96px; box-sizing: border-box; border: 0; padding: 4px 6px; font: inherit; background: transparent; color: inherit; }
+.op-sheet th .op-sheet-field { font-weight: 600; }
 
 .stage-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .stage {
