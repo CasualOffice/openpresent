@@ -500,14 +500,11 @@ fn what_this_tier_does_not_write_is_refused_and_nothing_is_saved() {
         "CS-SLE-0001",
         "removing a node"
     );
-    assert_eq!(
-        code(
-            |m| m.get_mut(5).unwrap().common.as_mut().unwrap().background =
-                Some(Default::default())
-        ),
-        "CS-SLE-0001",
-        "a background is Tier 1E"
-    );
+    // A background is written since VS-12, so it is no longer refused here.
+    try_edit(&source, &[5], |m| {
+        m.get_mut(5).unwrap().common.as_mut().unwrap().background = Some(Default::default())
+    })
+    .unwrap();
     assert_eq!(
         code(
             |m| named_mut(m.get_mut(5).unwrap(), "Table 16").graphic_uri = Some("urn:x".to_owned())
