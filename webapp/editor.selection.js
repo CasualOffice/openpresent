@@ -251,7 +251,8 @@ async function history(op) {
   try {
     const r = await request({ op }, { priority: 9 });
     afterEdit(r);
-    if (r.slide >= 0) {
+    if (r.slide === -2) slides.redrawAll(r.size);   // a theme, the size, several slides (`VS-12`)
+    else if (r.slide >= 0) {
       if (r.slide !== state.current) slides.go(r.slide);
       slides.redrawSlide(r.slide);
     }

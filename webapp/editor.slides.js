@@ -133,6 +133,23 @@ async function drawStage() {
   text.refresh();
 }
 
+/// Every slide changed (`VS-12`): a theme, the slide size, or several backgrounds.
+/// The size is taken again, and the stage and every thumbnail are drawn again.
+export function redrawAll(size) {
+  if (!state.deck) return;
+  if (Array.isArray(size) && size[0] > 0 && size[1] > 0) {
+    state.deck.width = size[0];
+    state.deck.height = size[1];
+  }
+  generation++;
+  dropQueued((m) => m.op === "png" || m.op === "report");
+  for (const u of thumbUrls.splice(0)) URL.revokeObjectURL(u);
+  buildThumbs();
+  markThumb();
+  changed();
+  drawStage();
+}
+
 /// Slide `index` was edited (`VS-06`): draw it again on the stage, if it is there,
 /// and in its thumbnail.
 export async function redrawSlide(index) {

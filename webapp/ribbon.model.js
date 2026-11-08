@@ -24,6 +24,7 @@ const S = (id, icon, label, o = {}) => ({ kind: "small", id, icon, label, ...o }
 const R = (rows) => ({ kind: "rows", rows });
 
 const NEW_SLIDE = ["home.new-slide", "home.duplicate-slide", "home.reuse-slides"];
+const SLIDE_SIZE = ["design.slide-size.standard", "design.slide-size.widescreen", "design.slide-size.custom"];
 const ZOOM = ["view.zoom.fit", "view.zoom.50", "view.zoom.75", "view.zoom.100", "view.zoom.150", "view.zoom.200"];
 
 export const TABS = [
@@ -84,7 +85,7 @@ export const TABS = [
     { label: "Themes", fold: 3, icon: "style_guide", items: [L("design.themes", "style_guide", "Themes")] },
     { label: "Variants", fold: 2, icon: "paint_bucket", items: [L("design.variants", "paint_bucket", "Variants")] },
     { label: "Customize", fold: 4, icon: "table_resize_column", items: [
-      L("design.slide-size", "table_resize_column", "Slide Size"),
+      L("design.slide-size", "table_resize_column", "Slide Size", { menu: SLIDE_SIZE }),
       L("design.format-background", "paint_bucket", "Format Background"),
     ] },
   ] },

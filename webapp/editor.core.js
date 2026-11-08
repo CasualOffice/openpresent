@@ -11,7 +11,8 @@
 // its slides; slice 4 (`VS-04`) adds Save, Export to PDF and the slide as PNG;
 // slice 6 (`VS-06`) adds selecting, moving, resizing, rotating and deleting shapes,
 // with undo (`editor.selection.js`); slice 5 (`VS-05`) adds editing text
-// (`editor.text.js`) over the same undo history.
+// (`editor.text.js`) over the same undo history; slice 12 (`VS-12`) the Design tab
+// (`editor.design.js`).
 // Every other PowerPoint command the ribbon names is registered
 // disabled, saying so, and arrives working with its own slice.
 
@@ -22,6 +23,7 @@ import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
 import * as selection from "./editor.selection.js";
 import * as text from "./editor.text.js";
+import { registerDesignCommands } from "./editor.design.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -201,6 +203,7 @@ function setTheme(v) {
 
 function registerCommands() {
   text.registerTextCommands();
+  registerDesignCommands();
   register("file.open", { label: "Open", shortcut: "Ctrl+O", run: openFilePicker });
   const canProduce = () => hasDeck() && !busy;
   register("file.save", { label: "Save", shortcut: "Ctrl+S", enabled: canProduce, run: saveDeck });

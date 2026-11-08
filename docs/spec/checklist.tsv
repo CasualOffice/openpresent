@@ -871,14 +871,14 @@ p:CT_BackgroundProperties/EG_FillProperties	SLIDE	CT_BackgroundProperties	group	
 p:CT_BackgroundProperties/EG_EffectProperties	SLIDE	CT_BackgroundProperties	group	EG_EffectProperties	EG_EffectProperties	0..1			y	y	y	.	.
 p:CT_BackgroundProperties/extLst	SLIDE	CT_BackgroundProperties	element	extLst	CT_ExtensionList	0..1			r	r	r	.	.
 p:CT_BackgroundProperties/@shadeToTitle	SLIDE	CT_BackgroundProperties	attribute	@shadeToTitle	boolean	optional	false		y	r	r	.	.
-p:EG_Background	SLIDE		type	EG_Background					y	y	r	.	.
-p:EG_Background/bgPr	SLIDE	EG_Background	element	bgPr	CT_BackgroundProperties	choice			y	y	r	.	.
-p:EG_Background/bgRef	SLIDE	EG_Background	element	bgRef	CT_StyleMatrixReference	choice			y	y	r	.	.
-p:CT_Background	SLIDE		type	CT_Background					y	y	r	.	.
-p:CT_Background/EG_Background	SLIDE	CT_Background	group	EG_Background	EG_Background				y	y	r	.	.
-p:CT_Background/@bwMode	SLIDE	CT_Background	attribute	@bwMode	ST_BlackWhiteMode	optional	white		y	y	r	.	.
+p:EG_Background	SLIDE		type	EG_Background					y	y	y	.	.
+p:EG_Background/bgPr	SLIDE	EG_Background	element	bgPr	CT_BackgroundProperties	choice			y	y	y	.	.
+p:EG_Background/bgRef	SLIDE	EG_Background	element	bgRef	CT_StyleMatrixReference	choice			y	y	y	.	.
+p:CT_Background	SLIDE		type	CT_Background					y	y	y	.	.
+p:CT_Background/EG_Background	SLIDE	CT_Background	group	EG_Background	EG_Background				y	y	y	.	.
+p:CT_Background/@bwMode	SLIDE	CT_Background	attribute	@bwMode	ST_BlackWhiteMode	optional	white		y	y	y	.	.
 p:CT_CommonSlideData	VIEW		type	CT_CommonSlideData					r	r	.	.	.
-p:CT_CommonSlideData/bg	VIEW	CT_CommonSlideData	element	bg	CT_Background	0..1			y	y	r	.	.
+p:CT_CommonSlideData/bg	VIEW	CT_CommonSlideData	element	bg	CT_Background	0..1			y	y	y	.	.
 p:CT_CommonSlideData/spTree	VIEW	CT_CommonSlideData	element	spTree	CT_GroupShape				y	y	.	.	.
 p:CT_CommonSlideData/custDataLst	VIEW	CT_CommonSlideData	element	custDataLst	CT_CustomerDataList	0..1			r	r	r	.	.
 p:CT_CommonSlideData/controls	VIEW	CT_CommonSlideData	element	controls	CT_ControlList	0..1			r	r	r	.	.
