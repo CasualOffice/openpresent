@@ -23,7 +23,7 @@
 
 import init, {
   open, slide_count, slide_size, render_slide_png, slide_report, save_deck, export_pdf, version,
-  slide_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
+  slide_shapes, group_shapes, set_shape_transform, delete_shape, undo, redo, undo_state,
   text_hit, text_offset_near, text_caret, text_selection, text_navigate, text_length,
   text_insert, text_delete, text_toggle, text_format_state, edit_break_typing,
   show_plan, slide_transition, transition_direction, slide_notes,
@@ -96,6 +96,8 @@ const BUILD = {
   copy_slides, clipboard_slides, paste_slides,
   // Picture Format (`UX-003`).
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
+  // A second click inside a group (`UX-015`).
+  group_shapes,
 };
 
 /// Arguments that cross as typed arrays: the bridge takes `Vec<u32>` and `Vec<f64>`.

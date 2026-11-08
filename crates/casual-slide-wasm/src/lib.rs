@@ -19,9 +19,10 @@ use std::collections::BTreeMap;
 
 use casual_slide_export::writer::Op;
 use casual_slide_model::presentation::{Coordinate, POSITIVE_COORDINATE_MAX, Point, PositiveSize};
-use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
+use casual_slide_model::shape::{ObjectId, ShapeNode};
 use casual_slide_model::slide::{SlidePart, SlideParts};
 use casual_slide_ooxml::{PresentationPackage, XmlTree};
+use casual_slide_render::display::Affine;
 use casual_slide_render::{Deck, PdfMetadata, RenderError};
 use wasm_bindgen::prelude::*;
 
@@ -38,6 +39,7 @@ mod edit;
 mod file;
 pub use file::{CustomKind, PROPERTY_KEYS};
 mod format;
+mod group;
 #[cfg(test)]
 mod home_tests;
 mod picture;
@@ -439,43 +441,11 @@ impl Viewer {
         let Some(root) = parts.get(ordinal).and_then(SlidePart::shape_tree) else {
             return Ok(Vec::new());
         };
-        let mut out = Vec::new();
-        for shape in &root.children {
-            let hidden = shape.non_visual.as_ref().and_then(|n| n.hidden) == Some(true);
-            let locks = shape.locks.unwrap_or_default();
-            if hidden || locks.no_select == Some(true) {
-                continue;
-            }
-            let Some(t) = chain.transform(shape) else {
-                continue;
-            };
-            let t = t.value;
-            let bit = |on: Option<bool>, b: u32| if on == Some(true) { b } else { 0 };
-            let flags = bit(Some(t.flip_h), ShapeBox::FLIP_H)
-                | bit(Some(t.flip_v), ShapeBox::FLIP_V)
-                | bit(locks.no_move, ShapeBox::NO_MOVE)
-                | bit(locks.no_resize, ShapeBox::NO_RESIZE)
-                | bit(locks.no_rot, ShapeBox::NO_ROTATE)
-                | bit(locks.no_change_aspect, ShapeBox::KEEP_ASPECT)
-                | bit(Some(shape.kind == NodeKind::Group), ShapeBox::GROUP)
-                | bit(Some(shape.placeholder().is_some()), ShapeBox::PLACEHOLDER)
-                | bit(Some(shape.table.is_some()), ShapeBox::TABLE)
-                | bit(Some(shape.chart.is_some()), ShapeBox::CHART)
-                | bit(
-                    Some(shape.kind == NodeKind::Picture && shape.properties.picture.is_some()),
-                    ShapeBox::PICTURE,
-                );
-            out.push(ShapeBox {
-                node: shape.id.node,
-                x: t.offset.x.0,
-                y: t.offset.y.0,
-                cx: t.extent.cx,
-                cy: t.extent.cy,
-                rotation: t.rotation,
-                flags,
-            });
-        }
-        Ok(out)
+        Ok(root
+            .children
+            .iter()
+            .filter_map(|shape| group::shape_box(&chain, shape, &Affine::IDENTITY))
+            .collect())
     }
 
     /// Place shape `node` of slide `index` at this box: one property op, one undo
@@ -515,6 +485,16 @@ impl Viewer {
         let inherited = casual_slide_style::Chain::of(parts, ordinal)
             .transform(shape)
             .map(|t| t.value);
+        // A shape inside a group: the box is the slide's, its transform the group's
+        // child space (`UX-015`).
+        let ((x, y, cx, cy), rotation) = match parts
+            .get(ordinal)
+            .and_then(SlidePart::shape_tree)
+            .and_then(|root| group::parent_mapping(root, node))
+        {
+            Some(m) => group::to_child_space(&m, (x, y, cx, cy), rotation),
+            None => ((x, y, cx, cy), rotation),
+        };
         let own = shape.transform;
         let mut t = own.unwrap_or_default();
         let coordinate =
@@ -899,22 +879,36 @@ pub fn export_pdf() -> Result<Vec<u8>, JsError> {
 /// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
 #[wasm_bindgen]
 pub fn slide_shapes(index: u32) -> Result<Vec<f64>, JsError> {
-    with_viewer(|v| {
-        Ok(v.shapes(index as usize)?
-            .into_iter()
-            .flat_map(|b| {
-                [
-                    f64::from(b.node),
-                    b.x as f64,
-                    b.y as f64,
-                    b.cx as f64,
-                    b.cy as f64,
-                    f64::from(b.rotation),
-                    f64::from(b.flags),
-                ]
-            })
-            .collect())
-    })
+    with_viewer(|v| Ok(flat_boxes(v.shapes(index as usize)?)))
+}
+
+/// The shapes directly inside group `group` of slide `index`, as [`slide_shapes`]
+/// gives a slide's, each box on the slide: a second click in a group picks one
+/// (`UX-015`). Empty for a node that is not a group.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn group_shapes(index: u32, group: u32) -> Result<Vec<f64>, JsError> {
+    with_viewer(|v| Ok(flat_boxes(v.group_shapes(index as usize, group)?)))
+}
+
+fn flat_boxes(boxes: Vec<ShapeBox>) -> Vec<f64> {
+    boxes
+        .into_iter()
+        .flat_map(|b| {
+            [
+                f64::from(b.node),
+                b.x as f64,
+                b.y as f64,
+                b.cx as f64,
+                b.cy as f64,
+                f64::from(b.rotation),
+                f64::from(b.flags),
+            ]
+        })
+        .collect()
 }
 
 /// Place a shape at a box, in EMU, rotated in 60000ths of a degree: one edit, one

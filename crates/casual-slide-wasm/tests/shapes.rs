@@ -254,3 +254,50 @@ fn only_placeholders_are_flagged_for_the_empty_text_prompt() {
     let drawn = shapes.iter().find(|b| b.node == node).unwrap();
     assert!(!flagged(drawn));
 }
+
+/// `UX-015`: a shape inside a group is offered with its box on the slide, and a box
+/// sent back for it is saved in the group's child space. On `z21464709-souzou-ja`
+/// slide 1, "Group 13" maps child space (4128, 2832) 864 by 480 onto (6553200,
+/// 4495800) 1371600 by 762000 EMU, 1587.5 EMU a child unit; its first child, "Line
+/// 14", is at (4128, 2832) 576 by 336 in that space.
+#[test]
+fn a_shape_inside_a_group_is_offered_and_moved_in_slide_coordinates() {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/real/z21464709-souzou-ja.pptx");
+    let mut v = Viewer::open(std::fs::read(path).unwrap()).unwrap();
+    let group = v
+        .shapes(0)
+        .unwrap()
+        .into_iter()
+        .find(|b| b.flags & ShapeBox::GROUP != 0 && b.x == 6_553_200 && b.y == 4_495_800)
+        .expect("Group 13 is selectable");
+    let kids = v.group_shapes(0, group.node).unwrap();
+    let line = kids
+        .iter()
+        .find(|b| (b.x, b.y, b.cx, b.cy) == (6_553_200, 4_495_800, 914_400, 533_400))
+        .unwrap_or_else(|| panic!("Line 14 on the slide, among {kids:?}"));
+    assert!(line.flags & ShapeBox::FLIP_V != 0);
+    // Not a group: nothing inside.
+    assert!(v.group_shapes(0, line.node).unwrap().is_empty());
+    // Moved 100 child units right, as a drag on the slide sends it.
+    v.set_transform(
+        0,
+        line.node,
+        (6_553_200 + 158_750, 4_495_800, 914_400, 533_400),
+        0,
+    )
+    .unwrap();
+    let moved = v.group_shapes(0, group.node).unwrap();
+    assert!(
+        moved
+            .iter()
+            .any(|b| b.node == line.node && b.x == 6_553_200 + 158_750)
+    );
+    let saved = v.save().unwrap();
+    let mut p = PresentationPackage::open(saved, OoxmlLimits::default()).unwrap();
+    let xml = String::from_utf8(p.read_part("ppt/slides/slide1.xml").unwrap()).unwrap();
+    assert!(
+        xml.contains(r#"<a:off x="4228" y="2832"/><a:ext cx="576" cy="336"/>"#),
+        "Line 14 saved in the group's space"
+    );
+}

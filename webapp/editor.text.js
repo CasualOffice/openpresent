@@ -53,6 +53,9 @@ const textRange = () => [Math.min(selection.anchor, selection.focus), Math.max(s
 
 /// Whether a text box is open, for the shape selection to stand aside.
 export const editing = () => selection.editing;
+/// Whether a text box is open or being opened: a key typed in the moment after a
+/// click into text is the box's, not the shape's (`UX-015`).
+export const ownsKeys = () => selection.editing || opening > 0 || held !== null;
 
 /// Where the caret is, for presence (`COL-04`): the shape and both ends, or null.
 export function caretState() {

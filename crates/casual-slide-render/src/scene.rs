@@ -106,7 +106,7 @@ impl core::fmt::Debug for SlideScene<'_> {
 
 /// The deepest group nesting walked. Import bounds nesting already; this keeps the
 /// renderer's recursion bounded on its own terms too.
-const MAX_GROUP_DEPTH: usize = 64;
+pub const MAX_GROUP_DEPTH: usize = 64;
 
 /// Paths and points past this are dropped from one shape and reported.
 const MAX_SEGMENTS_PER_SHAPE: usize = 200_000;
@@ -1428,8 +1428,11 @@ fn has_effect(e: &EffectProperties) -> bool {
     }
 }
 
-/// A group's child coordinate space onto its parent's.
-fn group_mapping(t: &Transform) -> Affine {
+/// A group's child coordinate space onto its parent's: its `chOff` and `chExt` onto
+/// its own box, rotated and flipped as it is drawn. The editor maps a grouped
+/// shape's box with it (`UX-015`).
+#[must_use]
+pub fn group_mapping(t: &Transform) -> Affine {
     let off = t
         .offset
         .map_or((0.0, 0.0), |p| (p.x.0 as f64, p.y.0 as f64));
