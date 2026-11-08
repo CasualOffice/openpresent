@@ -236,3 +236,34 @@ fn the_saved_deck_passes_the_sdk_validator() {
         _ => panic!("the SDK validator rejected the saved deck:\n{report}"),
     }
 }
+
+/// `VS-19`: a toggle reads the run's state as drawn, inherited included. In
+/// `text-inheritance.pptx` the body placeholder's runs are italic from the master's
+/// `bodyStyle` and say nothing themselves: Ctrl+I turns italic off, as PowerPoint,
+/// and the ribbon shows italic pressed before it.
+#[test]
+fn a_toggle_turns_off_what_the_run_inherits() {
+    let mut v = Viewer::open(fixture("text-inheritance.pptx")).unwrap();
+    let object = ObjectId {
+        part: v.slide_part(0).unwrap(),
+        node: v.shapes(0).unwrap()[0].node,
+    };
+    // "b", the second character, states nothing of its own.
+    assert_eq!(
+        v.format_state(object, 2).unwrap() & 2,
+        2,
+        "inherited italic shows pressed"
+    );
+    assert!(v.toggle(object, 1, 2, Toggle::Italic).unwrap());
+    let body = v.body(object).unwrap();
+    let run = props_at(body, 1).unwrap();
+    assert_eq!(
+        run.italic,
+        Some(false),
+        "italic is turned off, not stated on"
+    );
+    assert_eq!(v.format_state(object, 2).unwrap() & 2, 0);
+    // And on again.
+    assert!(v.toggle(object, 1, 2, Toggle::Italic).unwrap());
+    assert_eq!(v.format_state(object, 2).unwrap() & 2, 2);
+}

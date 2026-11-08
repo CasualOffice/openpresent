@@ -214,6 +214,19 @@ impl Deck {
         Ok(build_slide_text(self.scene(ordinal), ordinal, capture).2)
     }
 
+    /// The levels shape `object`'s text inherits from, as the slide draws it: what an
+    /// editor reads to know a run's state, its own or inherited (`VS-19`). `None`
+    /// when no such shape is in the deck.
+    pub fn text_chain(&self, object: ObjectId) -> Option<casual_slide_style::text::TextChain<'_>> {
+        let node = self.parts.get(object.part)?.node(object)?;
+        let chain = casual_slide_style::Chain::of(&self.parts, object.part);
+        let defaults = chain
+            .master
+            .and_then(|m| self.themes.get(&m.id.part))
+            .and_then(|t| t.object_defaults.as_ref());
+        Some(chain.text_chain(node, self.default_text_style.as_ref(), defaults))
+    }
+
     fn scene(&self, ordinal: u32) -> SlideScene<'_> {
         let master = casual_slide_style::Chain::of(&self.parts, ordinal)
             .master

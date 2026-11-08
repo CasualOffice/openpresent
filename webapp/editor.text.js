@@ -156,6 +156,7 @@ export function pointerDown(part, node, p, extend) {
   input.focus({ preventScroll: true });
   dragging = true;
   const ticket = ++opens;
+  opening++;
   serial(async () => {
     const at = await call("text_offset_near", state.current, part, node, p[0], p[1]);
     if (ticket !== opens) return;
@@ -167,7 +168,7 @@ export function pointerDown(part, node, p, extend) {
       select(extend ? { focus: at } : { anchor: at, focus: at });
     }
     await paint();
-  });
+  }).finally(() => { opening--; });
 }
 
 let moveQueued = null;
@@ -195,14 +196,42 @@ export function pointerUp() { dragging = false; }
 export function typeInto(part, node, key) {
   input.focus({ preventScroll: true });
   const ticket = ++opens;
+  opening++;
   serial(async () => {
     const length = await call("text_length", part, node);
     if (ticket !== opens) return;
     await call("edit_break_typing");
     select({ object: [part, node], editing: true, anchor: length, focus: length });
     shapes.repaint();
-  });
+  }).finally(() => { opening--; });
   insert(key);
+}
+
+/// What was typed after a press that is waiting for the slide's shapes to be read,
+/// as actions to run once the box is open; null when none is waiting.
+let held = null;
+/// Opens begun and not yet finished: keys typed meanwhile run after them.
+let opening = 0;
+
+/// A press is waiting for the shapes (`VS-19`): take focus now and keep the keys
+/// typed meanwhile, so none is lost.
+export function hold() {
+  held = held ?? [];
+  input.focus({ preventScroll: true });
+}
+
+/// The waiting press was replayed: run the held keys in the box it opened, or drop
+/// them if it opened none.
+export function release(opened) {
+  const keys = held || [];
+  held = null;
+  if (opened) for (const k of keys) k();
+  else if (document.activeElement === input) byId("stage").focus({ preventScroll: true });
+}
+
+/// Run `action` for a key now, or after the waiting press is replayed.
+function act(action) {
+  if (held !== null) held.push(action); else action();
 }
 
 /* ── Edits ──────────────────────────────────────────────────────────────── */
@@ -331,37 +360,48 @@ function selectAll() {
 /* ── Keys ───────────────────────────────────────────────────────────────── */
 
 function onKeyDown(e) {
-  if (!selection.editing || composing || e.isComposing) return;
-  const mod = e.ctrlKey || e.metaKey;
+  // A box being opened takes its keys too: each action runs after the open, in order.
+  if (!(selection.editing || opening > 0 || held !== null) || composing || e.isComposing) return;
+  if (held !== null) {
+    const copy = { key: e.key, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey };
+    if (keyAction(copy, true)) { e.preventDefault(); e.stopPropagation(); act(() => keyAction(copy, false)); }
+    return;
+  }
+  if (keyAction(e, false)) { e.preventDefault(); e.stopPropagation(); }
+}
+
+/// The editing action of key `e`, run unless `probe`; whether the key has one.
+function keyAction(e, probe) {
+  const mod = (e.ctrlKey || e.metaKey) && !e.altKey;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  let handled = true;
-  if (mod && !e.altKey && key === "b") toggle(0);
-  else if (mod && !e.altKey && key === "i") toggle(1);
-  else if (mod && !e.altKey && key === "u") toggle(2);
-  else if (mod && !e.altKey && key === "z" && !e.shiftKey) history("edit.undo");
-  else if (mod && !e.altKey && (key === "y" || (key === "z" && e.shiftKey))) history("edit.redo");
-  else if (mod && !e.altKey && key === "a") selectAll();
-  else if (mod && !e.altKey && key === "s") run("file.save");
-  else if (e.key === "Backspace") remove(-1);
-  else if (e.key === "Delete") remove(1);
-  else if (e.key === "Enter") insert(e.shiftKey ? "\v" : "\n", false);
-  else if (e.key === "Tab" && !mod) insert("\t");
-  else if (e.key === "ArrowLeft") move("left", e.shiftKey);
-  else if (e.key === "ArrowRight") move("right", e.shiftKey);
-  else if (e.key === "ArrowUp") move("up", e.shiftKey);
-  else if (e.key === "ArrowDown") move("down", e.shiftKey);
-  else if (e.key === "Home") move("home", e.shiftKey);
-  else if (e.key === "End") move("end", e.shiftKey);
-  else if (e.key === "Escape") { stop(); byId("stage").focus({ preventScroll: true }); }
-  else handled = false;
-  if (handled) { e.preventDefault(); e.stopPropagation(); }
+  let f = null;
+  if (mod && key === "b") f = () => toggle(0);
+  else if (mod && key === "i") f = () => toggle(1);
+  else if (mod && key === "u") f = () => toggle(2);
+  else if (mod && key === "z" && !e.shiftKey) f = () => history("edit.undo");
+  else if (mod && (key === "y" || (key === "z" && e.shiftKey))) f = () => history("edit.redo");
+  else if (mod && key === "a") f = selectAll;
+  else if (mod && key === "s") f = () => run("file.save");
+  else if (e.key === "Backspace") f = () => remove(-1);
+  else if (e.key === "Delete") f = () => remove(1);
+  else if (e.key === "Enter") f = () => insert(e.shiftKey ? "\v" : "\n", false);
+  else if (e.key === "Tab" && !(e.ctrlKey || e.metaKey)) f = () => insert("\t");
+  else if (e.key === "ArrowLeft") f = () => move("left", e.shiftKey);
+  else if (e.key === "ArrowRight") f = () => move("right", e.shiftKey);
+  else if (e.key === "ArrowUp") f = () => move("up", e.shiftKey);
+  else if (e.key === "ArrowDown") f = () => move("down", e.shiftKey);
+  else if (e.key === "Home") f = () => move("home", e.shiftKey);
+  else if (e.key === "End") f = () => move("end", e.shiftKey);
+  else if (e.key === "Escape") f = () => { stop(); byId("stage").focus({ preventScroll: true }); };
+  if (f && !probe) f();
+  return !!f;
 }
 
 function onInput(e) {
   if (composing || e.isComposing) return;
   const text = input.value;
   input.value = "";
-  if (text) insert(text);
+  if (text) act(() => insert(text));
 }
 
 /* ── Commands ───────────────────────────────────────────────────────────── */
@@ -420,11 +460,12 @@ export function init() {
   input.addEventListener("compositionend", (e) => {
     composing = false;
     input.value = "";
-    if (e.data) insert(e.data);
+    const data = e.data;
+    if (data) act(() => insert(data));
   });
   input.addEventListener("paste", (e) => {
     e.preventDefault();
     const text = e.clipboardData?.getData("text/plain");
-    if (text) insert(text.replace(/\r\n?/g, "\n"), false);
+    if (text) act(() => insert(text.replace(/\r\n?/g, "\n"), false));
   });
 }
