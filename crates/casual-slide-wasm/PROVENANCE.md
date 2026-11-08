@@ -19,3 +19,9 @@ API arrives here piece by piece with the features that need it.
 New here: `Viewer`, which keeps the bridge's logic in plain Rust so it is tested natively;
 the width bound and the pixel bound; RGBA output decoded from the renderer's PNG; and the
 per-slide report.
+
+`src/txn.rs` (`VS-06`) takes the shape of OpenCalc's `crates/casual-calc-transaction` at
+`b23c67c`: `apply` returns the inverse operation, so undo and redo replay inverses, and
+`History` is its `History` cut to two stacks (no depth bound, grouping or dirty count yet),
+keeping its rule that a step which changed nothing is not an undo step. The ops are new:
+set a transform, delete and insert a node, batch.

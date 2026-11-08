@@ -186,8 +186,11 @@ name = "casual-slide-wasm"
 version = "0.0.0"
 dependencies = [
  "casual-slide-export",
+ "casual-slide-import",
+ "casual-slide-model",
  "casual-slide-ooxml",
  "casual-slide-render",
+ "casual-slide-style",
  "tiny-skia",
  "wasm-bindgen",
 ]

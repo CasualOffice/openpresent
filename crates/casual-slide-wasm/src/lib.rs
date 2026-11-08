@@ -17,10 +17,18 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
-use casual_slide_export::writer::SavePlan;
+use casual_slide_export::writer::{Op, SavePlan, SlideRef};
+use casual_slide_import::slide::SlideLimits;
+use casual_slide_model::presentation::{Coordinate, POSITIVE_COORDINATE_MAX, Point, PositiveSize};
+use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
+use casual_slide_model::slide::{SlidePart, SlideParts};
 use casual_slide_ooxml::{OoxmlLimits, PresentationPackage};
 use casual_slide_render::{Deck, PdfMetadata, RenderError};
 use wasm_bindgen::prelude::*;
+
+pub mod txn;
+
+use txn::{History, Operation, TxnError};
 
 /// The widest picture a host may ask for, in pixels. Twice a 2K screen, which is
 /// more than a slide pane or a full-screen show at device pixels needs.
@@ -48,6 +56,11 @@ pub enum BridgeError {
     Render(RenderError),
     /// The writer refused to save; its own code (`CS-SAV-*`, or the reader's).
     Save(&'static str),
+    /// An edit the model refused; its own code (`CS-TXN-*`).
+    Edit(TxnError),
+    /// A shape this build cannot remove from the file yet: animated, without an
+    /// id of its own, or sharing one (`VS-06`).
+    CannotDelete,
 }
 
 impl BridgeError {
@@ -59,6 +72,8 @@ impl BridgeError {
             Self::Decode => "CS-WSM-0003",
             Self::Render(e) => e.code(),
             Self::Save(code) => code,
+            Self::Edit(e) => e.code(),
+            Self::CannotDelete => "CS-WSM-0004",
         }
     }
 }
@@ -79,11 +94,23 @@ impl core::fmt::Display for BridgeError {
             ),
             Self::Render(e) => e.fmt(f),
             Self::Save(code) => write!(f, "[{code}] the presentation could not be saved"),
+            Self::Edit(e) => e.fmt(f),
+            Self::CannotDelete => write!(
+                f,
+                "[{}] this shape is animated or has no id of its own, so it cannot be deleted yet",
+                self.code()
+            ),
         }
     }
 }
 
 impl std::error::Error for BridgeError {}
+
+impl From<TxnError> for BridgeError {
+    fn from(e: TxnError) -> Self {
+        Self::Edit(e)
+    }
+}
 
 impl From<RenderError> for BridgeError {
     fn from(e: RenderError) -> Self {
@@ -91,20 +118,64 @@ impl From<RenderError> for BridgeError {
     }
 }
 
-/// One opened deck, and what each slide's last drawing left out.
+/// One shape a slide shows, where the editor can select it: its node, its
+/// effective box in EMU, and what its locks allow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ShapeBox {
+    /// The node within the slide's part.
+    pub node: u32,
+    /// `off`, EMU, own or inherited.
+    pub x: i64,
+    /// `off`, EMU.
+    pub y: i64,
+    /// `ext`, EMU.
+    pub cx: i64,
+    /// `ext`, EMU.
+    pub cy: i64,
+    /// `@rot`, 60000ths of a degree.
+    pub rotation: i32,
+    /// [`ShapeBox::FLIP_H`] and the other bits.
+    pub flags: u32,
+}
+
+impl ShapeBox {
+    /// `@flipH`.
+    pub const FLIP_H: u32 = 1;
+    /// `@flipV`.
+    pub const FLIP_V: u32 = 2;
+    /// `noMove`.
+    pub const NO_MOVE: u32 = 4;
+    /// `noResize`.
+    pub const NO_RESIZE: u32 = 8;
+    /// `noRot`.
+    pub const NO_ROTATE: u32 = 16;
+    /// `noChangeAspect`: a corner handle keeps the aspect ratio.
+    pub const KEEP_ASPECT: u32 = 32;
+    /// A group.
+    pub const GROUP: u32 = 64;
+}
+
+/// One opened deck, what each slide's last drawing left out, and its edits.
 #[derive(Debug)]
 pub struct Viewer {
     deck: Deck,
     reports: BTreeMap<usize, Vec<String>>,
+    /// The parts as opened: what a save patches from.
+    original: SlideParts,
+    history: History,
 }
 
 impl Viewer {
     /// Open a deck's bytes. A deck that cannot be read at all is refused with its
     /// reader's code; a damaged one opens with a best reading where the reader recovers one (`docs/29`).
     pub fn open(bytes: Vec<u8>) -> Result<Self, BridgeError> {
+        let deck = Deck::open(bytes)?;
+        let original = deck.parts().clone();
         Ok(Self {
-            deck: Deck::open(bytes)?,
+            deck,
             reports: BTreeMap::new(),
+            original,
+            history: History::default(),
         })
     }
 
@@ -161,15 +232,247 @@ impl Viewer {
     }
 
     /// The deck as a file, through the one writer (`SavePlan`). With nothing
-    /// edited, which is all this slice can do, the bytes that were opened.
+    /// edited, the bytes that were opened. Edits reach the file as patches of the
+    /// named nodes only (ADR-013): a changed `xfrm` is patched in place, and a
+    /// removed shape is [`Op::RemoveShape`]; every other byte stays.
     pub fn save(&self) -> Result<Vec<u8>, BridgeError> {
         let mut package =
             PresentationPackage::open(self.deck.source_bytes(), OoxmlLimits::default())
                 .map_err(|e| BridgeError::Save(e.code()))?;
-        let outcome = SavePlan::new()
+        let current = self.deck.parts();
+        // What the model patch brings each part to: the part as opened, with each
+        // surviving node's transform as it now is. Removed nodes stay here and go
+        // through the writer's own operation, which runs after the patches.
+        let mut patched: Vec<SlidePart> = Vec::new();
+        let mut removals: Vec<(String, u32)> = Vec::new();
+        for (ordinal, before) in self.original.parts.iter().enumerate() {
+            let (Some(before), Ok(ordinal)) = (before, u32::try_from(ordinal)) else {
+                continue;
+            };
+            let Some(now) = current.get(ordinal) else {
+                continue;
+            };
+            if now == before {
+                continue;
+            }
+            let Some(entry) = self.original.structure.entry(ordinal) else {
+                continue;
+            };
+            let mut part = before.clone();
+            if let (Some(root), Some(now_root)) = (part.shape_tree_mut(), now.shape_tree()) {
+                let mut stack: Vec<&mut ShapeNode> = vec![root];
+                while let Some(node) = stack.pop() {
+                    match now_root.find(node.id) {
+                        Some(kept) => {
+                            node.transform = kept.transform;
+                            stack.extend(node.children.iter_mut());
+                        }
+                        // The topmost removed node is enough: its subtree goes with it.
+                        None => removals.push((
+                            entry.part.clone(),
+                            node.non_visual
+                                .as_ref()
+                                .and_then(|n| n.spid)
+                                .ok_or(BridgeError::CannotDelete)?,
+                        )),
+                    }
+                }
+            }
+            patched.push(part);
+        }
+        let refs: Vec<&SlidePart> = patched.iter().collect();
+        let limits = SlideLimits::default();
+        let mut plan = SavePlan::new();
+        if !refs.is_empty() {
+            plan = plan.slide_parts(&self.original.structure, &refs, &limits);
+        }
+        for (part, shape_id) in removals {
+            plan = plan.op(Op::RemoveShape {
+                slide: SlideRef::Part(part),
+                shape_id,
+            });
+        }
+        let outcome = plan
             .save(&mut package)
             .map_err(|e| BridgeError::Save(e.code()))?;
         Ok(outcome.bytes)
+    }
+
+    fn slide_ordinal(&self, index: usize) -> Result<u32, BridgeError> {
+        self.deck
+            .parts()
+            .structure
+            .slide(index)
+            .ok_or(BridgeError::Render(RenderError::NoSuchSlide(index)))
+    }
+
+    /// The shapes on slide `index` the editor can select, back to front: the
+    /// slide's own top-level shapes that are placed and not hidden or
+    /// `noSelect`. A group is one shape, as a first click in PowerPoint selects it.
+    pub fn shapes(&self, index: usize) -> Result<Vec<ShapeBox>, BridgeError> {
+        let ordinal = self.slide_ordinal(index)?;
+        let parts = self.deck.parts();
+        let chain = casual_slide_style::Chain::of(parts, ordinal);
+        let Some(root) = parts.get(ordinal).and_then(SlidePart::shape_tree) else {
+            return Ok(Vec::new());
+        };
+        let mut out = Vec::new();
+        for shape in &root.children {
+            let hidden = shape.non_visual.as_ref().and_then(|n| n.hidden) == Some(true);
+            let locks = shape.locks.unwrap_or_default();
+            if hidden || locks.no_select == Some(true) {
+                continue;
+            }
+            let Some(t) = chain.transform(shape) else {
+                continue;
+            };
+            let t = t.value;
+            let bit = |on: Option<bool>, b: u32| if on == Some(true) { b } else { 0 };
+            let flags = bit(Some(t.flip_h), ShapeBox::FLIP_H)
+                | bit(Some(t.flip_v), ShapeBox::FLIP_V)
+                | bit(locks.no_move, ShapeBox::NO_MOVE)
+                | bit(locks.no_resize, ShapeBox::NO_RESIZE)
+                | bit(locks.no_rot, ShapeBox::NO_ROTATE)
+                | bit(locks.no_change_aspect, ShapeBox::KEEP_ASPECT)
+                | bit(Some(shape.kind == NodeKind::Group), ShapeBox::GROUP);
+            out.push(ShapeBox {
+                node: shape.id.node,
+                x: t.offset.x.0,
+                y: t.offset.y.0,
+                cx: t.extent.cx,
+                cy: t.extent.cy,
+                rotation: t.rotation,
+                flags,
+            });
+        }
+        Ok(out)
+    }
+
+    /// Place shape `node` of slide `index` at this box: one property op, one undo
+    /// step, as a whole drag commits once (`docs/24`). A transform the shape only
+    /// inherited becomes its own; a rotation or flip it inherited is kept.
+    pub fn set_transform(
+        &mut self,
+        index: usize,
+        node: u32,
+        (x, y, cx, cy): (i64, i64, i64, i64),
+        rotation: i32,
+    ) -> Result<(), BridgeError> {
+        let ordinal = self.slide_ordinal(index)?;
+        let id = ObjectId {
+            part: ordinal,
+            node,
+        };
+        let parts = self.deck.parts();
+        let shape = parts
+            .get(ordinal)
+            .and_then(|p| p.node(id))
+            .ok_or(TxnError::NoSuchNode(id))?;
+        let inherited = casual_slide_style::Chain::of(parts, ordinal)
+            .transform(shape)
+            .map(|t| t.value);
+        let own = shape.transform;
+        let mut t = own.unwrap_or_default();
+        let coordinate =
+            |v: i64| Coordinate(v.clamp(-POSITIVE_COORDINATE_MAX, POSITIVE_COORDINATE_MAX));
+        let size = |v: i64| v.clamp(0, POSITIVE_COORDINATE_MAX);
+        t.offset = Some(Point {
+            x: coordinate(x),
+            y: coordinate(y),
+        });
+        t.extent = Some(PositiveSize {
+            cx: size(cx),
+            cy: size(cy),
+        });
+        let rotation = rotation.rem_euclid(21_600_000);
+        // Absent stays absent: an unrotated shape that stays unrotated gets no `@rot`.
+        if rotation != 0 || t.rotation.is_some() {
+            t.rotation = Some(rotation);
+        }
+        if own.is_none()
+            && let Some(e) = inherited
+        {
+            if e.flip_h {
+                t.flip_h = Some(true);
+            }
+            if e.flip_v {
+                t.flip_v = Some(true);
+            }
+        }
+        self.history.apply(
+            self.deck.parts_mut(),
+            Operation::SetTransform {
+                node: id,
+                transform: Some(t),
+            },
+        )?;
+        self.reports.remove(&index);
+        Ok(())
+    }
+
+    /// Delete shape `node` of slide `index`, as one undo step. Refused, before
+    /// anything changes, for a shape the writer cannot yet remove from the file:
+    /// one an animation names, or one without an id of its own.
+    pub fn delete(&mut self, index: usize, node: u32) -> Result<(), BridgeError> {
+        let ordinal = self.slide_ordinal(index)?;
+        let id = ObjectId {
+            part: ordinal,
+            node,
+        };
+        let parts = self.deck.parts();
+        let part = parts.get(ordinal).ok_or(TxnError::NoSuchNode(id))?;
+        let shape = part.node(id).ok_or(TxnError::NoSuchNode(id))?;
+        let animated = part.animated_spids();
+        let spid_of = |n: &ShapeNode| n.non_visual.as_ref().and_then(|v| v.spid);
+        let removable = spid_of(shape).is_some_and(|spid| {
+            let shared = part.shape_tree().map_or(0, |root| {
+                root.descendants()
+                    .filter(|n| spid_of(n) == Some(spid))
+                    .count()
+            }) > 1;
+            // An animated child would go with its group.
+            let names_animated = shape
+                .descendants()
+                .any(|n| spid_of(n).is_some_and(|s| animated.contains(&s)));
+            !shared && !names_animated
+        });
+        if !removable {
+            return Err(BridgeError::CannotDelete);
+        }
+        self.history
+            .apply(self.deck.parts_mut(), Operation::DeleteNode { node: id })?;
+        self.reports.remove(&index);
+        Ok(())
+    }
+
+    /// The slide an operation edited, if it is a slide.
+    fn slide_of(&self, op: Option<Operation>) -> Option<usize> {
+        let part = op?.part()?;
+        self.deck
+            .parts()
+            .structure
+            .slides
+            .iter()
+            .position(|&o| o == part)
+    }
+
+    /// Undo the latest edit; the slide it changed, if any.
+    pub fn undo(&mut self) -> Result<Option<usize>, BridgeError> {
+        let op = self.history.undo(self.deck.parts_mut())?;
+        self.reports.clear();
+        Ok(self.slide_of(op))
+    }
+
+    /// Redo the latest undone edit; the slide it changed, if any.
+    pub fn redo(&mut self) -> Result<Option<usize>, BridgeError> {
+        let op = self.history.redo(self.deck.parts_mut())?;
+        self.reports.clear();
+        Ok(self.slide_of(op))
+    }
+
+    /// Whether there is an edit to undo, and one to redo.
+    pub fn can_undo_redo(&self) -> (bool, bool) {
+        (self.history.can_undo(), self.history.can_redo())
     }
 
     /// Every slide as one PDF, a page per slide, with real text. What each page
@@ -305,6 +608,103 @@ pub fn export_pdf() -> Result<Vec<u8>, JsError> {
     with_viewer(|v| v.export_pdf())
 }
 
+/// The shapes on slide `index` the editor can select, back to front, seven numbers
+/// each: node, x, y, cx, cy (EMU), rotation (60000ths of a degree), and flags
+/// (`ShapeBox`'s bits). No document text crosses.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn slide_shapes(index: u32) -> Result<Vec<f64>, JsError> {
+    with_viewer(|v| {
+        Ok(v.shapes(index as usize)?
+            .into_iter()
+            .flat_map(|b| {
+                [
+                    f64::from(b.node),
+                    b.x as f64,
+                    b.y as f64,
+                    b.cx as f64,
+                    b.cy as f64,
+                    f64::from(b.rotation),
+                    f64::from(b.flags),
+                ]
+            })
+            .collect())
+    })
+}
+
+/// Place a shape at a box, in EMU, rotated in 60000ths of a degree: one edit, one
+/// undo step. A drag calls this once, at its end.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003`; `CS-TXN-0001` for no such shape.
+#[wasm_bindgen]
+pub fn set_shape_transform(
+    index: u32,
+    node: u32,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+    rotation: f64,
+) -> Result<(), JsError> {
+    // `as` saturates, and a NaN becomes 0: values from the page cannot trap.
+    with_viewer(|v| {
+        v.set_transform(
+            index as usize,
+            node,
+            (x as i64, y as i64, cx as i64, cy as i64),
+            rotation as i32,
+        )
+    })
+}
+
+/// Delete a shape: one edit, one undo step.
+///
+/// # Errors
+///
+/// `CS-WSM-0004` for a shape that cannot be removed from the file yet.
+#[wasm_bindgen]
+pub fn delete_shape(index: u32, node: u32) -> Result<(), JsError> {
+    with_viewer(|v| v.delete(index as usize, node))
+}
+
+/// Undo the latest edit. Returns the slide it changed, or -1.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn undo() -> Result<i32, JsError> {
+    with_viewer(|v| Ok(v.undo()?.map_or(-1, |i| i32::try_from(i).unwrap_or(-1))))
+}
+
+/// Redo the latest undone edit. Returns the slide it changed, or -1.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck.
+#[wasm_bindgen]
+pub fn redo() -> Result<i32, JsError> {
+    with_viewer(|v| Ok(v.redo()?.map_or(-1, |i| i32::try_from(i).unwrap_or(-1))))
+}
+
+/// `[can undo, can redo]`, each 0 or 1.
+#[wasm_bindgen]
+#[must_use]
+pub fn undo_state() -> Vec<u8> {
+    SESSION.with(|s| match s.borrow().as_ref() {
+        Some(v) => {
+            let (u, r) = v.can_undo_redo();
+            vec![u8::from(u), u8::from(r)]
+        }
+        None => vec![0, 0],
+    })
+}
+
 thread_local! {
     static LAST_RGBA_WIDTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
 }
@@ -424,5 +824,144 @@ mod tests {
         let w = cx as f64 * dpi / EMU_PER_INCH;
         let h = cy as f64 * dpi / EMU_PER_INCH;
         assert!(w * h <= MAX_PIXELS as f64 + 1.0);
+    }
+
+    /// Every part of `saved` but `slide1.xml` is the input's, byte for byte; returns
+    /// the slide's XML before and after.
+    fn only_slide_one_changed(input: &[u8], saved: &[u8]) -> (String, String) {
+        let mut a = PresentationPackage::open(input.to_vec(), OoxmlLimits::default()).unwrap();
+        let mut b = PresentationPackage::open(saved.to_vec(), OoxmlLimits::default()).unwrap();
+        assert_eq!(a.part_names(), b.part_names());
+        let mut slide = None;
+        for name in a.part_names() {
+            let (x, y) = (a.read_part(&name).unwrap(), b.read_part(&name).unwrap());
+            if name.ends_with("slides/slide1.xml") {
+                slide = Some((String::from_utf8(x).unwrap(), String::from_utf8(y).unwrap()));
+            } else {
+                assert!(x == y, "{name} changed");
+            }
+        }
+        slide.unwrap()
+    }
+
+    // `preset-shapes.pptx` slide 1: the title (spid 2), a line (spid 3) at
+    // 274320,685800 sized 1375410 by 1257300, a label (spid 4).
+    const LINE_OFF: &str = r#"<a:off x="274320" y="685800"/>"#;
+    const LINE_EXT: &str = r#"<a:ext cx="1375410" cy="1257300"/>"#;
+
+    fn line(v: &Viewer) -> ShapeBox {
+        let shapes = v.shapes(0).unwrap();
+        let line = shapes[1];
+        assert_eq!(
+            (line.x, line.y, line.cx, line.cy),
+            (274_320, 685_800, 1_375_410, 1_257_300)
+        );
+        line
+    }
+
+    #[test]
+    fn a_move_changes_only_the_shapes_offset_in_the_file() {
+        let input = fixture("preset-shapes.pptx");
+        let mut v = Viewer::open(input.clone()).unwrap();
+        let l = line(&v);
+        v.set_transform(0, l.node, (l.x + 100_000, l.y + 50_000, l.cx, l.cy), 0)
+            .unwrap();
+        let saved = v.save().unwrap();
+        let (before, after) = only_slide_one_changed(&input, &saved);
+        assert_eq!(
+            after,
+            before.replacen(LINE_OFF, r#"<a:off x="374320" y="735800"/>"#, 1)
+        );
+        // Read back, the shape is where it was put.
+        let again = Viewer::open(saved).unwrap();
+        let moved = again.shapes(0).unwrap()[1];
+        assert_eq!((moved.x, moved.y), (374_320, 735_800));
+    }
+
+    #[test]
+    fn a_resize_and_rotate_change_only_the_shapes_xfrm() {
+        let input = fixture("preset-shapes.pptx");
+        let mut v = Viewer::open(input.clone()).unwrap();
+        let l = line(&v);
+        v.set_transform(0, l.node, (l.x, l.y, 2_000_000, 1_000_000), 5_400_000)
+            .unwrap();
+        let saved = v.save().unwrap();
+        let (before, after) = only_slide_one_changed(&input, &saved);
+        let expected = before.replacen(
+            &format!("<a:xfrm>{LINE_OFF}{LINE_EXT}"),
+            &format!(r#"<a:xfrm rot="5400000">{LINE_OFF}<a:ext cx="2000000" cy="1000000"/>"#),
+            1,
+        );
+        assert_ne!(expected, before);
+        assert_eq!(after, expected);
+    }
+
+    #[test]
+    fn a_delete_removes_only_that_shape_from_the_file() {
+        let input = fixture("preset-shapes.pptx");
+        let mut v = Viewer::open(input.clone()).unwrap();
+        let count = v.shapes(0).unwrap().len();
+        let l = line(&v);
+        v.delete(0, l.node).unwrap();
+        assert_eq!(v.shapes(0).unwrap().len(), count - 1);
+        let saved = v.save().unwrap();
+        let (before, after) = only_slide_one_changed(&input, &saved);
+        let id = before.find(r#"<p:cNvPr id="3""#).unwrap();
+        let start = before[..id].rfind("<p:sp>").unwrap();
+        let end = id + before[id..].find("</p:sp>").unwrap() + "</p:sp>".len();
+        let expected = format!("{}{}", &before[..start], &before[end..]);
+        assert_eq!(after, expected);
+        assert_eq!(
+            Viewer::open(saved).unwrap().shapes(0).unwrap().len(),
+            count - 1
+        );
+    }
+
+    #[test]
+    fn undo_and_redo_walk_a_move_and_a_delete_and_save_follows() {
+        let input = fixture("preset-shapes.pptx");
+        let mut v = Viewer::open(input.clone()).unwrap();
+        let l = line(&v);
+        v.set_transform(0, l.node, (0, 0, l.cx, l.cy), 0).unwrap();
+        v.delete(0, l.node).unwrap();
+        assert_eq!(v.can_undo_redo(), (true, false));
+        assert_eq!(v.undo().unwrap(), Some(0));
+        assert_eq!(v.shapes(0).unwrap()[1].x, 0);
+        assert_eq!(v.undo().unwrap(), Some(0));
+        assert_eq!(v.can_undo_redo(), (false, true));
+        line(&v);
+        // Undone to the start, the save is the input, byte for byte.
+        assert!(v.save().unwrap() == input);
+        assert_eq!(v.redo().unwrap(), Some(0));
+        assert_eq!(v.shapes(0).unwrap()[1].x, 0);
+        assert_eq!(v.undo().unwrap(), Some(0));
+        assert_eq!(v.undo().unwrap(), None);
+    }
+
+    #[test]
+    fn an_animated_shape_is_refused_before_anything_changes() {
+        let mut v = Viewer::open(fixture("rr-animated.pptx")).unwrap();
+        let ordinal = v.slide_ordinal(0).unwrap();
+        let animated = v.deck.parts().get(ordinal).unwrap().animated_spids();
+        let node = v
+            .deck
+            .parts()
+            .get(ordinal)
+            .unwrap()
+            .shape_tree()
+            .unwrap()
+            .children
+            .iter()
+            .find(|n| {
+                n.non_visual
+                    .as_ref()
+                    .and_then(|x| x.spid)
+                    .is_some_and(|s| animated.contains(&s))
+            })
+            .unwrap()
+            .id
+            .node;
+        assert_eq!(v.delete(0, node).unwrap_err().code(), "CS-WSM-0004");
+        assert_eq!(v.can_undo_redo(), (false, false));
     }
 }

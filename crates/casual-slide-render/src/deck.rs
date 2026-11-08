@@ -220,6 +220,12 @@ impl Deck {
         &self.parts
     }
 
+    /// The deck's slide-like parts, to edit (`VS-06`). The next drawing draws them as
+    /// they then stand; the file is not touched until a save.
+    pub fn parts_mut(&mut self) -> &mut SlideParts {
+        &mut self.parts
+    }
+
     /// Read the media a display list draws, once each.
     fn load_media(&mut self, list: &DisplayList) {
         for item in &list.items {
