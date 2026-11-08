@@ -6,6 +6,8 @@ are never reused.
 
 Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pillar you are working on.
 
+Docs are true as of `8011d28` (2026-11-09). Outside `docs/`: [README](../README.md) (what works today, how to run it), [AGENTS.md](../AGENTS.md) (the contract and current state), [CHANGELOG](../CHANGELOG.md) (what landed, by date), [webapp/README.md](../webapp/README.md) (the editor's files and how to serve it).
+
 | Doc | What it is | Status |
 | --- | --- | --- |
 | [01-ORD](01-ORD.md) | What and why; scope; targets | Draft for owner |
@@ -22,7 +24,7 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [20-ERROR-CODE-REGISTRY](20-ERROR-CODE-REGISTRY.md) | Every diagnostic code | Live |
 | [22-NORMALIZED-SCHEMA](22-NORMALIZED-SCHEMA.md) | The presentation model and fidelity contract | Draft for owner |
 | [24-OPERATIONS-AND-COLLABORATION](24-OPERATIONS-AND-COLLABORATION.md) | Op set, undo, OT | Draft for owner |
-| [28-PACKAGE-AND-PART-GRAPH](28-PACKAGE-AND-PART-GRAPH.md) | Tier 1A | Structure built; tier open |
+| [28-PACKAGE-AND-PART-GRAPH](28-PACKAGE-AND-PART-GRAPH.md) | Tier 1A | Built; tier closed 2026-11-08 |
 | [42-TEXT-AND-RENDERING-ARCHITECTURE](42-TEXT-AND-RENDERING-ARCHITECTURE.md) | Text engine, display list, canvas, slide show, budgets | Draft for owner |
 | [47-POWERPOINT-SHELL-AND-FEATURE-MAP](47-POWERPOINT-SHELL-AND-FEATURE-MAP.md) | The UI target and the feature inventory | Draft; **recalled, not yet measured** |
 | [48-POWERPOINT-FEATURE-STUDY](48-POWERPOINT-FEATURE-STUDY.md) | What PowerPoint offers, from three views, with conflicts | Draft for owner |
@@ -32,9 +34,9 @@ Read in this order: 03 → 01 → 02 → 05 → 06 → 51 → 07. Then the pilla
 | [50-POWERPOINT-UX-STUDY](50-POWERPOINT-UX-STUDY.md) | How PowerPoint behaves, and 24 rules for our shell. From public sources; no live session | Live |
 | [53-POWERPOINT-WEB-SHELL-TARGET](53-POWERPOINT-WEB-SHELL-TARGET.md) | The web editor's target, compact: every tab, group and command in PowerPoint's order; File page, status bar, right-click menus, Format Shape pane, keys (`UX-003`) | Live; from documented sources and recall, not measured |
 | [52-COMPETITOR-STUDY](52-COMPETITOR-STUDY.md) | What other editors learned; 17 ranked fidelity problems as fixture candidates | Live |
-| [96-POWERPOINT-FIT-GAP](96-POWERPOINT-FIT-GAP.md) | Every PowerPoint feature (318) with a disposition, phase and reason | Live |
-| [36-EXPORT-AND-SAVE](36-EXPORT-AND-SAVE.md) | The writer: 118 invariants, each with a repair-risk fixture; save-as grid; fallback policy. Core families built (`T1N-01` to `T1N-04`), the rest designed | Draft for owner |
+| [96-POWERPOINT-FIT-GAP](96-POWERPOINT-FIT-GAP.md) | Every PowerPoint feature (352) with a disposition, phase and reason, and §Parity today: the audit of what the editor does (`FIT-02`, at `7539ea5`) | Live |
+| [36-EXPORT-AND-SAVE](36-EXPORT-AND-SAVE.md) | The writer: 118 invariants, each with a repair-risk fixture; save-as grid; fallback policy. Tier 1N closed 2026-11-08; what is built and what is designed is marked per section | Draft for owner |
 | [64-SPK-01-TEXT-COST](64-SPK-01-TEXT-COST.md) | Measurements behind ADR-004 and ADR-005: bundle, layout, frame time, appearance | Measured |
 | [15-CI-AND-RELEASE-GATES](15-CI-AND-RELEASE-GATES.md) | Test levels, the CI job contract, repository gates, no-retry flake policy, gates per phase, tag-only releases with dry-run default | Live |
 | [21-PARSER-LIMITS](21-PARSER-LIMITS.md) | Every parser limit the code holds, its default, its code and whether a test proves it; checked against the code | Live |
-| [29-RECOVERY](29-RECOVERY.md) | **Opening and editing damaged decks, including what Microsoft refuses** | Accepted; being built |
+| [29-RECOVERY](29-RECOVERY.md) | **Opening and editing damaged decks, including what Microsoft refuses** | Accepted; Tier 1R closed 2026-11-08 |
