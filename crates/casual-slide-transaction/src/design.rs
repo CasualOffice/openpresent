@@ -32,6 +32,12 @@ pub trait Document {
     fn slide_size_mut(&mut self) -> Option<&mut (i64, i64)> {
         None
     }
+
+    /// The chart part of this name, read or added this session (`VS-11`).
+    fn chart_mut(&mut self, part: &str) -> Option<&mut casual_slide_model::chart::ChartPart> {
+        let _ = part;
+        None
+    }
 }
 
 impl Document for SlideParts {

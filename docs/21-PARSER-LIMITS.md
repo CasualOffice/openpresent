@@ -318,6 +318,7 @@ The browser bridge (`casual-slide-wasm`, `VS-01`) bounds what a page may ask it 
 | `MAX_TRANSITION_MS` | `60_000` | Milliseconds one transition plays, from `p14:dur` (`VS-07`) | None: a longer one plays for a minute | Untested |
 | `MAX_SLIDE_SIZE` | `51_206_400` | EMU of a slide side the Slide Size command may set; `MIN_SLIDE_SIZE`, `914_400`, is the least, `ST_SlideSizeCoordinate`'s range (`casual-slide-transaction`, `VS-12`) | CS-TXN-0011 | Tested: guard loosened, `a_slide_size_outside_the_schema_is_refused_and_changes_nothing` failed |
 | `MAX_DURATION_MS` | `60_000` | Milliseconds an effect or transition is given by the Transitions and Animations tabs (`VS-10`, `casual-slide-transaction`) | None: a longer one is held to a minute | Untested |
+| `MAX_TABLE_SIDE` | `75` | Rows or columns a table edit may grow a table to, PowerPoint's own Insert Table bound (`casual-slide-transaction` `rich`, `VS-11`) | CS-TXN-0013 | Untested: no test grows a table past it |
 | `MAX_PICTURE_BYTES` | `64 * 1024 * 1024` | Bytes of one picture Insert > Picture takes, as the writer's media bound (`VS-08`) | CS-WSM-0008 | Untested: no test inserts a picture past it |
 
 ## Comments, sections, tags and marks (`ReviewLimits`, Tier 1M)
