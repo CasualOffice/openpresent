@@ -51,6 +51,7 @@ by saying so.
 | 40 | 2026-11-08 | When LibreOffice fails on a deck whose unedited input fails the same way, that is LibreOffice's problem, not ours, and does not hold the exports item back | `tools/phase1-exit.py`, `FID-04` |
 | 41 | 2026-11-08 | Phase 2 needs proper planning before it starts: scope, targets, decisions and an ETA, done deliberately and not rushed | [06](06-ROADMAP-AND-DELIVERY.md) |
 | 42 | 2026-11-08 | Don't reintroduce problems OpenCalc already solved. Each Phase 2 task starts from OpenCalc's working solution, copied with provenance, and changes only what slides need | [06](06-ROADMAP-AND-DELIVERY.md), [CLAUDE.md](../CLAUDE.md) |
+| 43 | 2026-11-08 | A visible outcome within 3 hours: start Phase 2 now with the plan's recommended decisions, aiming at real slides rendered to images the owner can see. This waives the rule that rendering waits for Phase 1's sign-off | [06](06-ROADMAP-AND-DELIVERY.md), `DEC-16` to `DEC-20` |
 
 ## Boundaries set by the environment
 
