@@ -835,20 +835,44 @@ fn what_this_tier_cannot_write_is_refused_and_nothing_is_saved() {
     })
     .unwrap_err();
     assert_eq!(code, "CS-EXP-0003");
-    // A hyperlink's colour extension is read, not written.
-    let code = edit_slide(&source, |s| {
-        let run = first_run_of_mut(named_mut(s, "Every Property"));
-        let link = run
-            .properties
-            .as_mut()
-            .unwrap()
-            .hyperlink_click
-            .as_mut()
-            .unwrap();
-        link.color = Some(casual_slide_model::shape::HyperlinkColor::Text);
-    })
-    .unwrap_err();
-    assert_eq!(code, "CS-EXP-0009");
+}
+
+/// `ahyp:hlinkClr` (FH-04, CI-24): set on a hyperlink, changed in place and taken away,
+/// each reading back; the list goes with its last entry.
+#[test]
+fn a_hyperlinks_colour_extension_is_written_changed_and_removed() {
+    use casual_slide_model::shape::HyperlinkColor;
+    let source = read_fixture(FULL);
+    let set = |source: &[u8], color: Option<HyperlinkColor>| {
+        edit_slide(source, move |s| {
+            let run = first_run_of_mut(named_mut(s, "Every Property"));
+            let link = run.properties.as_mut().unwrap();
+            link.hyperlink_click.as_mut().unwrap().color = color;
+        })
+        .unwrap()
+    };
+    let slide =
+        |bytes: &[u8]| String::from_utf8(parts(bytes)["ppt/slides/slide1.xml"].clone()).unwrap();
+    assert!(!slide(&source).contains("hlinkClr"));
+    let text = set(&source, Some(HyperlinkColor::Text));
+    let xml = slide(&text);
+    let written = concat!(
+        r#"<a:extLst><a:ext uri="{A12FA001-AC4F-418D-AE19-62706E023703}">"#,
+        r#"<ahyp:hlinkClr xmlns:ahyp="http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor" val="tx"/>"#,
+        r#"</a:ext></a:extLst></a:hlinkClick>"#
+    );
+    assert!(xml.contains(written), "{xml}");
+    let hlink = set(&text, Some(HyperlinkColor::Hlink));
+    assert_eq!(
+        slide(&hlink),
+        xml.replace(r#"val="tx"/>"#, r#"val="hlink"/>"#)
+    );
+    // An emptied element is written open and closed, as other extension removals are.
+    let link = r#"invalidUrl="http://x.invalid/"/>"#;
+    assert_eq!(
+        slide(&set(&hlink, None)),
+        slide(&source).replace(link, r#"invalidUrl="http://x.invalid/"></a:hlinkClick>"#)
+    );
 }
 
 /// Tier 1E's writer, from a run: each kind is made, changed in place and taken away,

@@ -1550,7 +1550,7 @@ pub fn open_blank() -> Result<(), JsError> {
 }
 
 /// File > New from a template (`PAR-18`): the blank presentation in built-in theme
-/// `theme` (an index of [`design_themes`]), replacing any deck open before.
+/// `theme` (an index of `design_themes`), replacing any deck open before.
 ///
 /// # Errors
 ///
