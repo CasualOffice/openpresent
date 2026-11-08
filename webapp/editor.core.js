@@ -35,6 +35,7 @@ import * as home from "./editor.home.js";
 import * as clipboard from "./editor.clipboard.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 import * as presence from "./editor.presence.js";
+import * as views from "./editor.views.js";
 
 const byId = (id) => document.getElementById(id);
 
@@ -288,8 +289,8 @@ function registerCommands() {
   register("slideshow.from-current", { label: "From Current Slide", shortcut: "Shift+F5", enabled: canPresent, run: () => slides.startShow(state.current) });
   register("slideshow.presenter-view", { label: "Presenter View", shortcut: "Alt+F5", enabled: canPresent, run: () => slides.startShow(0, { presenterView: true }) });
 
-  register("view.normal", { label: "Normal", checked: () => !state.reading, run: () => { state.reading = false; changed(); slides.relayout(); } });
-  register("view.reading", { label: "Reading View", enabled: hasDeck, checked: () => state.reading, run: () => { state.reading = !state.reading; changed(); slides.relayout(); } });
+  // Normal, Outline View, Slide Sorter and Notes Page are `editor.views.js`'s (`UX-006`).
+  register("view.reading", { label: "Reading View", enabled: hasDeck, checked: () => state.reading, run: () => { const on = !state.reading; views.setView("normal"); state.reading = on; changed(); slides.relayout(); } });
   register("view.notes", { label: "Notes", checked: () => state.notes, run: () => { state.notes = !state.notes; changed(); slides.relayout(); } });
   register("view.zoom", { label: "Zoom", enabled: hasDeck, run: () => {} });
   register("view.zoom.fit", { label: "Fit to Window", enabled: hasDeck, checked: () => state.zoom === "fit", run: () => slides.setZoom("fit") });
@@ -419,6 +420,7 @@ async function boot() {
   picture.init();  // Picture Format: Crop, Reset Picture, Picture Styles (`UX-003`)
   home.init();       // the Home tab's Font and Paragraph groups (`UX-003`)
   clipboard.init();  // Cut, Copy, Paste and Duplicate (`UX-003`)
+  views.init();      // Outline View, Slide Sorter, Notes Page (`UX-006`)
   registerCommands();
   presence.init();
   initDialogs(request);

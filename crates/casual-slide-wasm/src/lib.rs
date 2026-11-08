@@ -51,6 +51,8 @@ pub use rich::{DEFAULT_TABLE_STYLE, TableEdit};
 pub use shapes::{MAX_LINE_WIDTH, parse_color, preset_outline, theme_style};
 mod show;
 pub use show::{MAX_NOTES_CHARS, MAX_TRANSITION_MS, ShowSlide, ShowTransition};
+mod views;
+pub use views::OutlineSlide;
 
 use casual_slide_transaction::{History, Operation, TxnError};
 
@@ -2380,6 +2382,35 @@ pub fn text_set_paragraphs(
             value,
         )
     })
+}
+
+/// Slide `index` in Outline View (`UX-006`): `[part, title, body]`, a node being -1
+/// where the slide has no such placeholder.
+///
+/// # Errors
+///
+/// `CS-WSM-0001` with no deck; `CS-RND-0003` for a slide that does not exist.
+#[wasm_bindgen]
+pub fn slide_outline(index: u32) -> Result<Vec<i64>, JsError> {
+    with_viewer(|v| {
+        let o = v.outline(index as usize)?;
+        Ok(vec![
+            i64::from(o.part),
+            o.title.map_or(-1, i64::from),
+            o.body.map_or(-1, i64::from),
+        ])
+    })
+}
+
+/// Replace a shape's whole text, a line feed starting a paragraph, as one undo step
+/// (`UX-006`, Outline View).
+///
+/// # Errors
+///
+/// `CS-WSM-0004` for a shape with no text; the edit's own `CS-TXN` code.
+#[wasm_bindgen]
+pub fn text_replace_all(part: u32, node: u32, text: String) -> Result<bool, JsError> {
+    with_viewer(|v| v.replace_text(object(part, node), &text))
 }
 
 /// The plain text of `[start, end)`, for Copy and Cut.

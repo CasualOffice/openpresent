@@ -535,3 +535,35 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 /* Transitions > Preview (`UX-004`): the transition played over the slide in the editor. */
 .tr-preview { position: absolute; inset: 0; overflow: hidden; background: #000; z-index: 5; pointer-events: none; }
 .tr-preview-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* The View tab's views (`UX-006`, `editor.views.js`). Slide Sorter: the thumbnail
+   pane as a grid in place of the stage. Notes Page: the slide over its notes on a
+   page. Outline View: the outline in the left column in place of the thumbnails. */
+.op-view-sorter .stage-col { display: none; }
+.op-view-sorter .slide-pane { flex: 1; width: auto; }
+.op-view-sorter .thumbs { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 18px 10px; padding: 24px; }
+.op-view-sorter .thumb { flex-direction: column-reverse; align-items: center; gap: 4px; }
+.op-view-sorter .thumb-frame { width: 240px; }
+.op-view-sorter .thumb-num { width: auto; text-align: center; padding: 0; }
+.op-view-sorter .thumb.drop-before { box-shadow: inset 3px 0 0 var(--op-accent-color); }
+.op-view-sorter .thumb.drop-after { box-shadow: inset -3px 0 0 var(--op-accent-color); }
+.op-view-notes .stage-col { display: none; }
+.op-view-outline .slide-pane { display: none; }
+.view-host { overflow: auto; background: var(--op-stage-color); }
+.view-host[data-view="notes"] { flex: 1; display: flex; justify-content: center; padding: 24px; }
+.view-host[data-view="outline"] { flex: none; width: 340px; order: -1; background: var(--op-surface-color); border-right: 1px solid var(--op-border-color); }
+.np-page { width: min(720px, 100%); background: #fff; color: #222; box-shadow: var(--op-slide-shadow); padding: 48px 56px; box-sizing: border-box; align-self: flex-start; }
+.np-slide { display: block; width: 100%; border: 1px solid #ccc; }
+.np-notes { margin: 28px 0 0; white-space: pre-wrap; font-size: 14px; line-height: 1.5; min-height: 8em; }
+.np-notes.is-empty { color: #888; }
+.ov-list { list-style: none; margin: 0; padding: 12px 10px 24px 0; }
+.ov-slide { display: flex; gap: 6px; padding: 6px 0; }
+.ov-slide.is-current .ov-num { color: var(--op-accent-color); font-weight: 600; }
+.ov-num { width: 26px; flex: none; text-align: right; font-size: 12px; color: var(--op-muted-text-color); padding-top: 6px; }
+.ov-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ov-title, .ov-body { font: inherit; color: var(--op-text-color); background: transparent; border: 1px solid transparent; border-radius: 2px; padding: 3px 4px; resize: none; }
+.ov-title { font-weight: 600; font-size: 14px; }
+.ov-body { font-size: 13px; margin-left: 14px; overflow: hidden; }
+.ov-title:hover, .ov-body:hover { border-color: var(--op-control-border-color); }
+.ov-title:focus, .ov-body:focus { outline: none; border-color: var(--op-accent-color); background: var(--op-background-color); }
+.ov-none { font-size: 12px; color: var(--op-muted-text-color); padding: 4px; }

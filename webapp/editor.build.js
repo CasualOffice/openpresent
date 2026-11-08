@@ -217,7 +217,9 @@ function initDrag() {
     if (!li) return null;
     const r = li.getBoundingClientRect();
     const i = Number(li.dataset.index);
-    return e.clientY > r.top + r.height / 2 ? i + 1 : i;   // a gap: before slide i
+    // In Slide Sorter the slides run in rows, so the gap is by the side (`UX-006`).
+    const across = document.documentElement.classList.contains("op-view-sorter");
+    return (across ? e.clientX > r.left + r.width / 2 : e.clientY > r.top + r.height / 2) ? i + 1 : i;   // a gap: before slide i
   };
   const mark = (gap) => {
     for (const li of list.children) {
@@ -229,11 +231,11 @@ function initDrag() {
   list.addEventListener("pointerdown", (e) => {
     const li = e.target.closest?.(".thumb");
     if (!li || e.button !== 0) return;
-    drag = { from: Number(li.dataset.index), y: e.clientY, moving: false, id: e.pointerId };
+    drag = { from: Number(li.dataset.index), x: e.clientX, y: e.clientY, moving: false, id: e.pointerId };
   });
   list.addEventListener("pointermove", (e) => {
     if (!drag || e.pointerId !== drag.id) return;
-    if (!drag.moving && Math.abs(e.clientY - drag.y) < 6) return;
+    if (!drag.moving && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
     if (!drag.moving) { drag.moving = true; list.setPointerCapture(e.pointerId); list.classList.add("is-dragging"); }
     mark(target(e));
   });
