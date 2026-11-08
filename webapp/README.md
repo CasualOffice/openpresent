@@ -27,6 +27,7 @@ Then serve `webapp/` over HTTP (modules and a module worker do not load from
 | `editor.core.js` | State, the engine client and its priority queue, every command registered, keys, boot |
 | `editor.files.js` | File picker, drag and drop; `download`, through which Save and every Export pass (the desktop shell's hook, `window.__openpresentNative.save(bytes, ext, name)`) |
 | `editor.slides.js` | Thumbnails, the stage, zoom, Reading View, the slide show |
+| `editor.selection.js` | Shape selection on the stage (`VS-06`): click, Tab, drag to move, 8 resize and 1 rotate handle, nudge, Delete, undo and redo; after OpenCalc's `editor.selection.js`. One op per drag, at its end |
 | `editor.dialogs.js` | The modal: errors, the per-slide report, shortcuts, about |
 | `render.worker.js` | The engine in a worker: open, draw a slide to PNG, report, save, PDF |
 | `commands.js` | The command registry |

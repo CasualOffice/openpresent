@@ -8,7 +8,9 @@
 // a 500-slide deck must not freeze the window while its thumbnails draw.
 //
 // This is the first vertical slice (owner instruction 44): open a deck and view
-// its slides; slice 4 (`VS-04`) adds Save, Export to PDF and the slide as PNG.
+// its slides; slice 4 (`VS-04`) adds Save, Export to PDF and the slide as PNG;
+// slice 6 (`VS-06`) adds selecting, moving, resizing, rotating and deleting shapes,
+// with undo (`editor.selection.js`).
 // Every other PowerPoint command the ribbon names is registered
 // disabled, saying so, and arrives working with its own slice.
 
@@ -17,6 +19,7 @@ import { start as startRibbon, queueSync, openBackstage, icon } from "./ribbon.j
 import { TABS, FILE_RAIL, modelCommandIds } from "./ribbon.model.js";
 import { initFiles, openFilePicker, download } from "./editor.files.js";
 import * as slides from "./editor.slides.js";
+import * as selection from "./editor.selection.js";
 import { initDialogs, aboutDialog, reportDialog, shortcutsDialog, errorDialog } from "./editor.dialogs.js";
 
 const byId = (id) => document.getElementById(id);
@@ -125,12 +128,12 @@ export async function openDeck(name, bytes) {
     state.engineVersion = r.version;
     state.current = 0;
     byId("doc-name").textContent = name;
-    byId("doc-state").textContent = "Read-only";
+    byId("doc-state").textContent = "";
     document.title = `${name} - OpenPresent`;
     status(r.count === 1 ? "1 slide" : `${r.count} slides`);
     slides.load();
   } catch (e) {
-    byId("doc-state").textContent = state.deck ? "Read-only" : "";
+    byId("doc-state").textContent = "";
     status(state.deck ? `${state.deck.count} slides` : "Ready");
     errorDialog(`OpenPresent can't read ${name}. It was read in this browser only, and nothing was uploaded.`, e.message);
   } finally {
@@ -146,8 +149,8 @@ const hasDeck = () => !!state.deck;
 /* ── Save and export (`VS-04`) ──────────────────────────────────────────────
  *
  * Each asks the engine for the bytes and hands them to `download`, which the
- * desktop shell intercepts. Save goes through the one writer: unedited, which is
- * all this build can be, the file comes back byte for byte as it was opened. */
+ * desktop shell intercepts. Save goes through the one writer: unedited, the file
+ * comes back byte for byte as it was opened; edited, only the changed nodes differ. */
 
 /// The width a slide is exported at, in pixels: PowerPoint's default, 1920.
 const EXPORT_WIDTH_PX = 1920;
@@ -254,6 +257,8 @@ function bindKeys() {
   document.addEventListener("keydown", (e) => {
     if (typing(e.target) || slides.showing()) return;
     if (!byId("op-modal").hidden || document.documentElement.classList.contains("op-backstage-open")) return;
+    // Undo and redo anywhere; with a shape selected, its keys come first (`VS-06`).
+    if (state.deck && !e.target.closest?.(".op-ribbon, .rb-pop") && selection.onKey(e)) return;
     const mod = e.ctrlKey || e.metaKey;
     if (mod && !e.altKey && (e.key === "o" || e.key === "O")) { e.preventDefault(); openFilePicker(); return; }
     if (mod && !e.altKey && (e.key === "s" || e.key === "S")) { e.preventDefault(); run("file.save"); return; }
@@ -307,6 +312,7 @@ async function boot() {
     const t = localStorage.getItem("op.theme");
     if (t && t !== "auto") document.documentElement.dataset.theme = t;
   } catch { /* private mode */ }
+  selection.init();
   registerCommands();
   initDialogs(request);
   slides.init();

@@ -8,6 +8,7 @@
 
 import { state, request, dropQueued, changed, status } from "./editor.core.js";
 import { reportDialog } from "./editor.dialogs.js";
+import * as selection from "./editor.selection.js";
 
 const byId = (id) => document.getElementById(id);
 const EMU_PER_INCH = 914400;
@@ -126,6 +127,22 @@ async function drawStage() {
   if (stageUrl) URL.revokeObjectURL(stageUrl);
   stageUrl = url;
   showReport(index);
+  selection.refresh();
+}
+
+/// Slide `index` was edited (`VS-06`): draw it again on the stage, if it is there,
+/// and in its thumbnail.
+export async function redrawSlide(index) {
+  if (!state.deck) return;
+  if (index === state.current) drawStage();
+  const li = byId("thumbs").children[index];
+  if (!li) return;
+  const url = await draw(index, THUMB_CSS_WIDTH * dpr(), 3);
+  if (!url) return;
+  thumbUrls.push(url);
+  const img = li.querySelector("img");
+  img.src = url;
+  img.classList.add("is-drawn");
 }
 
 /// The status bar's count of what this slide leaves out, which opens the list.
@@ -156,6 +173,7 @@ export function go(i) {
   const next = Math.max(0, Math.min(state.deck.count - 1, i));
   if (next === state.current && byId("slide-img").src) return;
   state.current = next;
+  selection.reset(false);
   markThumb();
   changed();
   drawStage();
@@ -188,6 +206,7 @@ export function load() {
   byId("empty-state").hidden = true;
   byId("slide-frame").hidden = false;
   state.current = 0;
+  selection.reset(true);
   buildThumbs();
   markThumb();
   changed();
@@ -272,7 +291,9 @@ export function init() {
   });
   // The stage: a click on the slide's left or right part moves, as a reading view.
   byId("stage").addEventListener("click", (e) => {
-    if (!state.deck || state.zoom !== "fit" || !e.target.closest("#slide-frame")) return;
+    // In Normal view a click selects a shape (`editor.selection.js`); only the
+    // reading view pages by clicking.
+    if (!state.deck || !state.reading || state.zoom !== "fit" || !e.target.closest("#slide-frame")) return;
     const r = byId("slide-frame").getBoundingClientRect();
     go(state.current + (e.clientX < r.left + r.width / 3 ? -1 : 1));
   });
