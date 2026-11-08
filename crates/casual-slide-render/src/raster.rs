@@ -420,6 +420,26 @@ pub fn render_pixmap(
                     );
                 }
             }
+            DisplayItem::Blurred {
+                transform,
+                path,
+                color,
+                filled,
+                grow,
+                sigma,
+                ..
+            } => {
+                if let Some(p) = build_path(path) {
+                    let t = sk_transform(&scale.then_after(transform));
+                    let blur = Blur {
+                        color: *color,
+                        filled: *filled,
+                        grow: *grow,
+                        sigma: *sigma,
+                    };
+                    draw_blurred(&mut pixmap, &p, t, &blur);
+                }
+            }
             DisplayItem::GlyphRun {
                 transform,
                 face,
@@ -457,6 +477,153 @@ pub fn render_pixmap(
         }
     }
     Ok((pixmap, report))
+}
+
+/// A [`DisplayItem::Blurred`]'s look, in the item's units.
+struct Blur {
+    color: Rgba,
+    filled: bool,
+    grow: f64,
+    sigma: f64,
+}
+
+/// Paint a silhouette blurred by a Gaussian: the outline (and its inside when
+/// `filled`, grown by `grow`) is drawn into a coverage mask the size of what it can
+/// reach on the page, the mask is blurred, and the colour is laid through it.
+fn draw_blurred(pixmap: &mut Pixmap, path: &tiny_skia::Path, t: Transform, blur: &Blur) {
+    // Device pixels per item unit, for the grow and the deviation.
+    let unit = f64::from(hairline(&t));
+    if unit <= 0.0 {
+        return;
+    }
+    let unit = 1.0 / unit;
+    let sigma = (blur.sigma.max(0.0) * unit) as f32;
+    let grow = (blur.grow.max(0.0) * unit) as f32;
+    let Some(device) = path.clone().transform(t) else {
+        return;
+    };
+    let b = device.bounds();
+    let pad = grow + 3.0 * sigma + 2.0;
+    let x0 = (b.left() - pad).floor().max(0.0);
+    let y0 = (b.top() - pad).floor().max(0.0);
+    let x1 = (b.right() + pad).ceil().min(pixmap.width() as f32);
+    let y1 = (b.bottom() + pad).ceil().min(pixmap.height() as f32);
+    if x1 <= x0 || y1 <= y0 || x0.is_nan() || y0.is_nan() {
+        return;
+    }
+    let (w, h) = ((x1 - x0) as u32, (y1 - y0) as u32);
+    let Some(mut mask) = Pixmap::new(w, h) else {
+        return;
+    };
+    let local = t.post_translate(-x0, -y0);
+    let mut white = SkPaint::default();
+    white.set_color(Color::WHITE);
+    white.anti_alias = true;
+    if blur.filled {
+        mask.fill_path(path, &white, FillRule::Winding, local, None);
+    }
+    if blur.grow > 0.0 {
+        let stroke = SkStroke {
+            width: (2.0 * blur.grow) as f32,
+            line_cap: LineCap::Round,
+            line_join: LineJoin::Round,
+            ..SkStroke::default()
+        };
+        mask.stroke_path(path, &white, &stroke, local, None);
+    }
+    let mut coverage: Vec<f32> = mask.pixels().iter().map(|p| f32::from(p.alpha())).collect();
+    gaussian_blur(&mut coverage, w as usize, h as usize, sigma);
+    let alpha = f32::from(blur.color.a) / 255.0;
+    for (px, c) in mask.pixels_mut().iter_mut().zip(&coverage) {
+        let a = (c * alpha).round().clamp(0.0, 255.0);
+        let premul = |v: u8| ((f32::from(v) * a / 255.0).round().clamp(0.0, a)) as u8;
+        let a8 = a as u8;
+        *px = tiny_skia::PremultipliedColorU8::from_rgba(
+            premul(blur.color.r),
+            premul(blur.color.g),
+            premul(blur.color.b),
+            a8,
+        )
+        .unwrap_or(tiny_skia::PremultipliedColorU8::TRANSPARENT);
+    }
+    pixmap.draw_pixmap(
+        x0 as i32,
+        y0 as i32,
+        mask.as_ref(),
+        &tiny_skia::PixmapPaint::default(),
+        Transform::identity(),
+        None,
+    );
+}
+
+/// The widths of three box blurs that together approximate a Gaussian of
+/// deviation `sigma` (Kovesi, "Fast almost-Gaussian filtering", 2010), as radii.
+fn box_radii(sigma: f32) -> [usize; 3] {
+    let n = 3.0f32;
+    let ideal = (12.0 * sigma * sigma / n + 1.0).sqrt();
+    let mut lower = ideal.floor() as i64;
+    if lower % 2 == 0 {
+        lower -= 1;
+    }
+    let lower = lower.max(1);
+    let upper = lower + 2;
+    let l = lower as f32;
+    let m = ((12.0 * sigma * sigma - n * l * l - 4.0 * n * l - 3.0 * n) / (-4.0 * l - 4.0)).round()
+        as i64;
+    let mut out = [0usize; 3];
+    for (i, r) in out.iter_mut().enumerate() {
+        let width = if (i as i64) < m { lower } else { upper };
+        *r = usize::try_from((width - 1) / 2).unwrap_or(0);
+    }
+    out
+}
+
+/// Blur `data`, `w` by `h`, in place by three box passes each way: an
+/// approximation of a Gaussian of deviation `sigma` in pixels. Outside is zero.
+fn gaussian_blur(data: &mut [f32], w: usize, h: usize, sigma: f32) {
+    if sigma.is_nan() || sigma <= 0.0 || w == 0 || h == 0 || data.len() != w * h {
+        return;
+    }
+    let mut line = Vec::new();
+    for r in box_radii(sigma) {
+        if r == 0 {
+            continue;
+        }
+        for row in data.chunks_mut(w) {
+            box_pass(row, r, &mut line);
+        }
+        let mut column = vec![0.0f32; h];
+        for x in 0..w {
+            for (y, v) in column.iter_mut().enumerate() {
+                *v = data.get(y * w + x).copied().unwrap_or(0.0);
+            }
+            box_pass(&mut column, r, &mut line);
+            for (y, v) in column.iter().enumerate() {
+                if let Some(d) = data.get_mut(y * w + x) {
+                    *d = *v;
+                }
+            }
+        }
+    }
+}
+
+/// One box blur of radius `r` along `values`, from a running sum.
+fn box_pass(values: &mut [f32], r: usize, prefix: &mut Vec<f64>) {
+    prefix.clear();
+    prefix.push(0.0);
+    let mut sum = 0.0f64;
+    for v in values.iter() {
+        sum += f64::from(*v);
+        prefix.push(sum);
+    }
+    let n = values.len();
+    let width = (2 * r + 1) as f64;
+    for (i, v) in values.iter_mut().enumerate() {
+        let lo = i.saturating_sub(r);
+        let hi = (i + r + 1).min(n);
+        let total = prefix.get(hi).copied().unwrap_or(0.0) - prefix.get(lo).copied().unwrap_or(0.0);
+        *v = (total / width) as f32;
+    }
 }
 
 fn offset(cmd: PathCmd, dx: f64, dy: f64) -> PathCmd {

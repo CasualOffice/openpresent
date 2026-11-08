@@ -17,8 +17,8 @@ use casual_slide_model::presentation::{
     COORDINATE_MIN, Coordinate, POSITIVE_COORDINATE_MAX, Point,
 };
 use casual_slide_model::shape::{
-    AlternateBranch, AppNonVisual, Connection, Hyperlink, Locks, NodeKind, NonVisualDrawing,
-    ObjectId, Placeholder, ShapeNode, Transform,
+    AlternateBranch, AppNonVisual, Connection, Hyperlink, HyperlinkColor, Locks, NodeKind,
+    NonVisualDrawing, ObjectId, Placeholder, ShapeNode, Transform,
 };
 use casual_slide_model::table::Table;
 use casual_slide_model::text::TextItem;
@@ -38,6 +38,8 @@ use crate::theme::read_shape_style;
 pub const A16: &[&str] = &["http://schemas.microsoft.com/office/drawing/2014/main"];
 /// `adec:`, where `decorative` lives.
 pub const ADEC: &[&str] = &["http://schemas.microsoft.com/office/drawing/2017/decorative"];
+/// `ahyp:`, where a hyperlink's `hlinkClr` lives.
+pub const AHYP: &[&str] = &["http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor"];
 /// Markup compatibility.
 use crate::retained::{model_beside_picture, read_frame_content};
 use casual_slide_model::retained::RetainedObject;
@@ -793,11 +795,15 @@ pub(crate) fn read_hyperlink(
         highlight_click: r.attr(&mut el, "highlightClick")?,
         end_sound: r.attr(&mut el, "endSnd")?,
         sound: None,
+        color: None,
     };
     r.finish(&el);
     for child in r.children(&el)? {
-        if !child.is(ns::DML, "snd") {
-            // `extLst` stays.
+        if child.is(ns::DML, "extLst") {
+            // `extLst` stays; `ahyp:hlinkClr` in it is read too.
+            link.color = hyperlink_color(r, &child)?;
+            r.retained(&child);
+        } else if !child.is(ns::DML, "snd") {
             r.retained(&child);
         } else if link.sound.is_some() {
             r.note(K::DuplicateElement, &child, None);
@@ -806,6 +812,27 @@ pub(crate) fn read_hyperlink(
         }
     }
     Ok(link)
+}
+
+/// `ahyp:hlinkClr/@val` in a hyperlink's `extLst`, the first one. The list itself
+/// stays in the tree, so nothing here is reported.
+// spec-audit: x:drawing/2018/hyperlinkcolor:<hlinkClr>
+fn hyperlink_color(
+    r: &mut Reader<'_>,
+    ext_list: &Elem,
+) -> Result<Option<HyperlinkColor>, ImportError> {
+    for ext in r.children(ext_list)? {
+        if !ext.is(ns::DML, "ext") {
+            continue;
+        }
+        for item in r.children(&ext)? {
+            if item.is(AHYP, "hlinkClr") {
+                let mut item = item.clone();
+                return r.attr(&mut item, "val");
+            }
+        }
+    }
+    Ok(None)
 }
 
 /// `a:CT_Point2D`. `None` unless both coordinates are usable.

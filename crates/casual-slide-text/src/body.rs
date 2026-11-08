@@ -117,6 +117,7 @@ pub fn resolve_body<'a>(
     let mut fonts = Fonts {
         env,
         substitutions: Vec::new(),
+        script: None,
     };
     let mut numbering = Numbering::default();
     for paragraph in &body.paragraphs {
@@ -196,6 +197,29 @@ pub fn resolve_body<'a>(
 struct Fonts<'e> {
     env: &'e TextEnv<'e>,
     substitutions: Vec<FontSubstitution>,
+    /// The theme's script tag (`Jpan`, `Hang`, ...) for the run being styled, from
+    /// its language; picks a supplemental font when `ea` or `cs` is empty.
+    script: Option<&'static str>,
+}
+
+/// A language tag's script, as theme supplemental fonts name it. Only the East
+/// Asian scripts, whose `ea` font Office themes leave empty.
+fn script_tag(lang: Option<&str>) -> Option<&'static str> {
+    let lang = lang?.to_ascii_lowercase();
+    let mut parts = lang.split(['-', '_']);
+    let primary = parts.next()?;
+    let rest: Vec<&str> = parts.collect();
+    match primary {
+        "ja" => Some("Jpan"),
+        "ko" => Some("Hang"),
+        "zh" => {
+            let traditional = rest
+                .iter()
+                .any(|p| matches!(*p, "hant" | "tw" | "hk" | "mo"));
+            Some(if traditional { "Hant" } else { "Hans" })
+        }
+        _ => None,
+    }
 }
 
 impl Fonts<'_> {
@@ -211,8 +235,23 @@ impl Fonts<'_> {
             FontScript::Latin => collection.latin.as_ref(),
             FontScript::EastAsian => collection.ea.as_ref(),
             FontScript::ComplexScript => collection.cs.as_ref(),
-        }?;
-        font.typeface.clone().filter(|t| !t.trim().is_empty())
+        };
+        let stated = font
+            .and_then(|f| f.typeface.clone())
+            .filter(|t| !t.trim().is_empty());
+        if stated.is_some() || script == FontScript::Latin {
+            return stated;
+        }
+        // An empty `ea` or `cs` gives way to the collection's font for the run's
+        // script, as Office themes write it (`<a:ea typeface=""/>` beside
+        // `<a:font script="Jpan" .../>`): ISO 29500 20.1.4.1.16.
+        let tag = self.script?;
+        collection
+            .fonts
+            .iter()
+            .find(|f| f.script.as_deref() == Some(tag))
+            .and_then(|f| f.typeface.clone())
+            .filter(|t| !t.trim().is_empty())
     }
 
     /// A typeface as written, with `+mj-` and `+mn-` references followed.
@@ -300,6 +339,11 @@ fn run_style<'a>(
     fonts: &mut Fonts<'_>,
 ) -> RunStyle {
     let east_asian = text.chars().any(crate::cjk::is_cjk);
+    fonts.script = script_tag(
+        chain
+            .run(props, paragraph, |c| c.lang.as_deref())
+            .map(|r| r.value),
+    );
     let family = east_asian
         .then(|| run_family(chain, props, paragraph, FontScript::EastAsian, fonts))
         .flatten()
@@ -308,10 +352,13 @@ fn run_style<'a>(
         fonts.record(f);
     }
     // A hyperlinked run is drawn in the theme's `hlink` and underlined, whatever
-    // its own fill, as PowerPoint and LibreOffice draw it. The 2019 extension that
-    // asks for the text's own colour (`hlinkClr val="tx"`) is not modelled
-    // (`FH-04`).
-    let link = props.is_some_and(|c| c.hyperlink_click.is_some());
+    // its own fill, as PowerPoint and LibreOffice draw it, unless the 2019
+    // extension asks for the text's own colour (`hlinkClr val="tx"`): then only
+    // the underline is added.
+    let click = props.and_then(|c| c.hyperlink_click.as_deref());
+    let link = click.is_some();
+    let link_colour =
+        click.is_some_and(|h| h.color != Some(casual_slide_model::shape::HyperlinkColor::Text));
     RunStyle {
         family,
         size: chain.font_size(props, paragraph).value.max(1) as f32 / 100.0,
@@ -321,7 +368,7 @@ fn run_style<'a>(
         italic: chain
             .run(props, paragraph, |c| c.italic)
             .is_some_and(|b| b.value),
-        color: link
+        color: link_colour
             .then(|| hyperlink_color(fonts.env))
             .flatten()
             .unwrap_or_else(|| {
@@ -477,11 +524,15 @@ fn symbol_bullet(font: &str, ch: char) -> Option<char> {
     Some(if drawable { mapped } else { '\u{2022}' })
 }
 
-/// The Wingdings characters decks use most, as the Unicode characters they look like.
+/// The Wingdings characters decks use most, as the Unicode characters they look like,
+/// from the mapping in Unicode's Wingdings and Webdings proposal (L2/11-052): `n` is
+/// the large black square and `§` the small one.
 fn wingdings_char(ch: char) -> Option<char> {
     Some(match ch {
-        '\u{a7}' | 'n' => '\u{25aa}',
+        'n' => '\u{25a0}',
+        '\u{a7}' => '\u{25aa}',
         'l' => '\u{25cf}',
+        // `q` is ❑ (U+2751), which no bundled face draws: the nearest one that does.
         'q' | 'o' => '\u{25a1}',
         'v' => '\u{2756}',
         '\u{d8}' => '\u{27a2}',
@@ -681,6 +732,13 @@ mod tests {
     }
 
     #[test]
+    fn wingdings_n_is_the_large_black_square_and_section_sign_the_small_one() {
+        assert_eq!(symbol_bullet("Wingdings", 'n'), Some('\u{25a0}'));
+        assert_eq!(symbol_bullet("Wingdings", '\u{f06e}'), Some('\u{25a0}'));
+        assert_eq!(symbol_bullet("Wingdings", '\u{a7}'), Some('\u{25aa}'));
+    }
+
+    #[test]
     fn theme_font_references_follow_the_scheme_and_unknown_ones_give_nothing() {
         use casual_slide_model::theme::{FontCollection, TextFont};
         let face = |name: &str| TextFont {
@@ -705,6 +763,7 @@ mod tests {
         let fonts = Fonts {
             env: &env,
             substitutions: Vec::new(),
+            script: None,
         };
         assert_eq!(fonts.typeface("+mj-lt").as_deref(), Some("Calibri Light"));
         assert_eq!(fonts.typeface("+mn-lt").as_deref(), Some("Calibri"));
@@ -714,11 +773,61 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_east_asian_theme_font_takes_the_script_font_for_the_runs_language() {
+        use casual_slide_model::theme::{FontCollection, SupplementalFont, TextFont};
+        let supplemental = |script: &str, face: &str| SupplementalFont {
+            script: Some(script.to_owned()),
+            typeface: Some(face.to_owned()),
+        };
+        let scheme = FontScheme {
+            minor: Some(FontCollection {
+                latin: Some(TextFont {
+                    typeface: Some("Calibri".to_owned()),
+                    ..TextFont::default()
+                }),
+                ea: Some(TextFont {
+                    typeface: Some(String::new()),
+                    ..TextFont::default()
+                }),
+                fonts: vec![
+                    supplemental("Hang", "맑은 고딕"),
+                    supplemental("Jpan", "ＭＳ Ｐゴシック"),
+                ],
+                ..FontCollection::default()
+            }),
+            ..FontScheme::default()
+        };
+        let env = TextEnv {
+            fonts: Some(&scheme),
+            ..TextEnv::default()
+        };
+        let mut fonts = Fonts {
+            env: &env,
+            substitutions: Vec::new(),
+            script: None,
+        };
+        assert_eq!(
+            fonts.typeface("+mn-ea"),
+            None,
+            "no language, no script font"
+        );
+        fonts.script = script_tag(Some("ja-JP"));
+        assert_eq!(fonts.typeface("+mn-ea").as_deref(), Some("ＭＳ Ｐゴシック"));
+        fonts.script = script_tag(Some("ko-KR"));
+        assert_eq!(fonts.typeface("+mn-ea").as_deref(), Some("맑은 고딕"));
+        assert_eq!(fonts.typeface("+mn-lt").as_deref(), Some("Calibri"));
+        assert_eq!(script_tag(Some("zh-TW")), Some("Hant"));
+        assert_eq!(script_tag(Some("zh-CN")), Some("Hans"));
+        assert_eq!(script_tag(Some("en-US")), None);
+    }
+
+    #[test]
     fn a_substitution_is_reported_once_and_a_bundled_family_not_at_all() {
         let env = TextEnv::default();
         let mut fonts = Fonts {
             env: &env,
             substitutions: Vec::new(),
+            script: None,
         };
         fonts.record("Calibri");
         fonts.record("Calibri");
@@ -1014,6 +1123,53 @@ mod tests {
             assert_eq!(runs[0].style.underline, Some(UnderlineType::Sng));
             assert_eq!(runs[1].style.color, Rgba::BLACK);
             assert_eq!(runs[1].style.underline, None);
+        }
+
+        #[test]
+        fn a_hyperlink_asking_for_the_text_colour_keeps_the_runs_own_fill() {
+            use casual_slide_model::shape::{Hyperlink, HyperlinkColor};
+            use casual_slide_model::theme::{ColorMap, ColorScheme, ColorSchemeIndex};
+            let mut scheme = ColorScheme::default();
+            scheme.slots[ColorSchemeIndex::Hlink as usize] = Some(Color::srgb(5, 99, 193));
+            let mut map = ColorMap::default();
+            map.slots[casual_slide_model::theme::ColorMapSlot::Hlink as usize] =
+                Some(ColorSchemeIndex::Hlink);
+            let env = TextEnv {
+                colors: ResolveContext {
+                    scheme: Some(&scheme),
+                    map: Some(&map),
+                    ..ResolveContext::default()
+                },
+                fonts: None,
+            };
+            let mut linked = props(2100, false, "Arial", Some(Color::srgb(200, 10, 20)));
+            linked.hyperlink_click = Some(Box::new(Hyperlink {
+                rel_id: Some("rId2".to_owned()),
+                color: Some(HyperlinkColor::Text),
+                ..Hyperlink::default()
+            }));
+            let body = TextBody {
+                properties: None,
+                list_style: None,
+                paragraphs: vec![Paragraph {
+                    properties: None,
+                    items: vec![run("link", linked)],
+                    end_properties: None,
+                }],
+            };
+            let (resolved, _) = resolve_body(&body, &TextChain::default(), &env);
+            let style = &resolved.paragraphs[0].runs[0].style;
+            let c = style.color;
+            assert_eq!(
+                (c.r, c.g, c.b),
+                (200, 10, 20),
+                "the run's own fill, not hlink"
+            );
+            assert_eq!(
+                style.underline,
+                Some(UnderlineType::Sng),
+                "still underlined"
+            );
         }
     }
 }

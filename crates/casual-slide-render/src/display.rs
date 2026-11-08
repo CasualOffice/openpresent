@@ -329,6 +329,88 @@ pub enum DisplayItem {
         /// can give it back to a reader. Document data: never logged or reported.
         text: String,
     },
+    /// An outline's silhouette in one colour, blurred: a shadow or a glow. The
+    /// raster backend blurs it as a Gaussian (three box passes); a backend with no
+    /// blur draws [`DisplayItem::stepped`] instead.
+    Blurred {
+        /// The shape it belongs to.
+        object: Option<ObjectId>,
+        /// Where it came from.
+        layer: Layer,
+        /// The item's space onto the slide.
+        transform: Affine,
+        /// The outline.
+        path: Vec<PathCmd>,
+        /// The colour, its alpha included.
+        color: Rgba,
+        /// Whether the inside is part of the silhouette, as for a shadow; a glow
+        /// keeps only the grown outline.
+        filled: bool,
+        /// How far the silhouette grows past the outline before blurring, in the
+        /// item's units.
+        grow: f64,
+        /// The Gaussian's standard deviation, in the item's units.
+        sigma: f64,
+    },
+}
+
+/// Rings a blur is stepped into where a backend cannot blur.
+const BLUR_STEPS: usize = 6;
+
+impl DisplayItem {
+    /// A [`DisplayItem::Blurred`] as plain paths: the inside filled faintly, then
+    /// widening rings of falling opacity out to two deviations past the grown
+    /// outline. An approximation for backends with no blur; any other item is
+    /// returned as it is.
+    #[must_use]
+    pub fn stepped(&self) -> Vec<DisplayItem> {
+        let DisplayItem::Blurred {
+            object,
+            layer,
+            transform,
+            path,
+            color,
+            filled,
+            grow,
+            sigma,
+        } = self
+        else {
+            return vec![self.clone()];
+        };
+        let reach = grow.max(0.0) + 2.0 * sigma.max(0.0);
+        let alpha = f64::from(color.a);
+        let tint = |a: f64| {
+            Paint::Solid(Rgba {
+                a: a.round().clamp(0.0, 255.0) as u8,
+                ..*color
+            })
+        };
+        let item = |fill: Option<Paint>, stroke: Option<Stroke>| DisplayItem::Path {
+            object: *object,
+            layer: *layer,
+            transform: *transform,
+            path: path.clone(),
+            fill,
+            stroke,
+        };
+        let mut out = Vec::with_capacity(BLUR_STEPS + 1);
+        if *filled {
+            out.push(item(Some(tint(alpha * 0.5)), None));
+        }
+        for k in (1..=BLUR_STEPS).rev() {
+            out.push(item(
+                None,
+                Some(Stroke {
+                    paint: tint(alpha / (BLUR_STEPS as f64 * 0.9)),
+                    width: 2.0 * reach * k as f64 / BLUR_STEPS as f64,
+                    dash: Vec::new(),
+                    cap: Cap::Round,
+                    join: Join::Round,
+                }),
+            ));
+        }
+        out
+    }
 }
 
 /// A slide's paint instructions, back to front, and its size.

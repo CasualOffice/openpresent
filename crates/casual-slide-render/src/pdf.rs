@@ -594,7 +594,18 @@ fn page_content(
         num(list.width),
         num(list.height)
     );
+    // PDF has no blur here: a blurred shadow or glow is stepped into rings.
+    let mut items: Vec<std::borrow::Cow<'_, DisplayItem>> = Vec::with_capacity(list.items.len());
     for item in &list.items {
+        if matches!(item, DisplayItem::Blurred { .. }) {
+            note(report, "shadow or glow blur (stepped)");
+            items.extend(item.stepped().into_iter().map(std::borrow::Cow::Owned));
+        } else {
+            items.push(std::borrow::Cow::Borrowed(item));
+        }
+    }
+    for item in &items {
+        let item: &DisplayItem = item;
         match item {
             DisplayItem::Path {
                 transform,
@@ -664,6 +675,8 @@ fn page_content(
                     out.push_str("S\nQ\n");
                 }
             }
+            // Stepped into paths above.
+            DisplayItem::Blurred { .. } => {}
             DisplayItem::GlyphRun {
                 transform,
                 face,

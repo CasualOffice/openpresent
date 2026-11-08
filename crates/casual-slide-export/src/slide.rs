@@ -982,6 +982,13 @@ pub(crate) fn patch_hyperlink(
     b: &Hyperlink,
     a: &Hyperlink,
 ) -> std::result::Result<(), ExportError> {
+    if b.color != a.color {
+        // `ahyp:hlinkClr` is read, and its `extLst` stays as it was.
+        return Err(ExportError::UnsupportedEdit {
+            what: "a hyperlink's colour extension",
+            part: w.part.to_owned(),
+        });
+    }
     if b.rel_id != a.rel_id {
         // An empty `r:id` is an action with no target, and names no relationship.
         if a.rel_id.as_deref() == Some("") {
