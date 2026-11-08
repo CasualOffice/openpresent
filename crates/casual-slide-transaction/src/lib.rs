@@ -26,10 +26,14 @@
 //! Nothing here reads a file; offsets come from the host and are checked, never trusted.
 
 use casual_slide_model::shape::{ObjectId, ShapeNode, Transform};
-use casual_slide_model::slide::SlideParts;
+use casual_slide_model::slide::{Background, SlideParts};
+use casual_slide_model::theme::{ColorScheme, FontScheme};
+
+mod design;
 use casual_slide_model::text::{
     CharacterProperties, LineBreak, Paragraph, TextBody, TextItem, TextRun, UnderlineType,
 };
+pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE};
 
 /// An error applying an operation. Each has a stable code (`docs/20`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +55,16 @@ pub enum TxnError {
     },
     /// A restore would leave a body with no paragraph, which the schema forbids.
     EmptyBody(ObjectId),
+    /// A design operation reached a document that holds no themes or slide size, or a
+    /// master whose theme was not read (`VS-12`).
+    NoDesign,
+    /// A slide size outside `ST_SlideSizeCoordinate`, 914400 to 51206400 EMU.
+    BadSlideSize {
+        /// The width asked for.
+        cx: i64,
+        /// The height asked for.
+        cy: i64,
+    },
 }
 
 impl TxnError {
@@ -62,6 +76,8 @@ impl TxnError {
             Self::NoText(_) => "CS-TXN-0003",
             Self::OutOfRange { .. } => "CS-TXN-0004",
             Self::EmptyBody(_) => "CS-TXN-0005",
+            Self::NoDesign => "CS-TXN-0006",
+            Self::BadSlideSize { .. } => "CS-TXN-0007",
         }
     }
 }
@@ -101,6 +117,16 @@ impl core::fmt::Display for TxnError {
                 self.code(),
                 id.node,
                 id.part
+            ),
+            Self::NoDesign => write!(
+                f,
+                "[{}] no theme or slide size to change in this document",
+                self.code()
+            ),
+            Self::BadSlideSize { cx, cy } => write!(
+                f,
+                "[{}] a slide of {cx} by {cy} EMU is outside 914400 to 51206400",
+                self.code()
             ),
         }
     }
@@ -199,6 +225,36 @@ pub enum Operation {
         /// What goes in their place.
         paragraphs: Vec<Paragraph>,
     },
+    /// Design: make a master's theme colour scheme this one; `None` makes it absent
+    /// (`VS-12`). Its own inverse, with the scheme it replaced.
+    SetColorScheme {
+        /// The master's part ordinal.
+        master: u32,
+        /// What `clrScheme` becomes.
+        scheme: Option<Box<ColorScheme>>,
+    },
+    /// Design: make a master's theme font scheme this one.
+    SetFontScheme {
+        /// The master's part ordinal.
+        master: u32,
+        /// What `fontScheme` becomes.
+        scheme: Option<Box<FontScheme>>,
+    },
+    /// Design: the slide size, `sldSz`, in EMU. Content is scaled by `SetTransform`s
+    /// batched with it, so this changes the size alone.
+    SetSlideSize {
+        /// Width.
+        cx: i64,
+        /// Height.
+        cy: i64,
+    },
+    /// Design: a part's `cSld/bg`; `None` removes it, so the part inherits again.
+    SetBackground {
+        /// The slide, layout or master.
+        part: u32,
+        /// What `bg` becomes.
+        background: Option<Box<Background>>,
+    },
     /// Several operations as one: applied in order, all or nothing, one undo step.
     Batch(Vec<Operation>),
 }
@@ -213,13 +269,33 @@ impl Operation {
             | Self::DeleteRange { object, .. }
             | Self::FormatRange { object, .. }
             | Self::Restore { object, .. } => Some(*object),
+            Self::SetColorScheme { .. }
+            | Self::SetFontScheme { .. }
+            | Self::SetSlideSize { .. }
+            | Self::SetBackground { .. } => None,
             Self::Batch(ops) => ops.iter().find_map(Operation::object),
         }
     }
 
     /// The part this operation edits, for a host that shows it. The first, for a batch.
     pub fn part(&self) -> Option<u32> {
-        self.object().map(|o| o.part)
+        match self {
+            Self::SetBackground { part, .. } => Some(*part),
+            Self::Batch(ops) => ops.iter().find_map(Operation::part),
+            _ => self.object().map(|o| o.part),
+        }
+    }
+
+    /// Whether this changes the whole deck's look, a theme or the slide size, so a host
+    /// redraws every slide and not only [`Operation::part`]'s.
+    pub fn is_deck_wide(&self) -> bool {
+        match self {
+            Self::SetColorScheme { .. }
+            | Self::SetFontScheme { .. }
+            | Self::SetSlideSize { .. } => true,
+            Self::Batch(ops) => ops.iter().any(Operation::is_deck_wide),
+            _ => false,
+        }
     }
 
     /// A short name for a menu label: "Undo Typing".
@@ -232,6 +308,9 @@ impl Operation {
             Self::DeleteRange { .. } => "Delete",
             Self::FormatRange { .. } => "Format",
             Self::Restore { .. } => "Edit",
+            Self::SetColorScheme { .. } | Self::SetFontScheme { .. } => "Theme",
+            Self::SetSlideSize { .. } => "Slide Size",
+            Self::SetBackground { .. } => "Background",
             Self::Batch(ops) => ops.first().map_or("Edit", Operation::label),
         }
     }
@@ -689,7 +768,11 @@ fn parent_of(root: &mut ShapeNode, id: ObjectId) -> Option<(&mut ShapeNode, usiz
     None
 }
 
-fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnError> {
+fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Applied, TxnError> {
+    if let Some(applied) = design::apply_design(doc, &op)? {
+        return Ok(applied);
+    }
+    let parts = doc.parts_mut();
     match op {
         Operation::SetTransform { node, transform } => {
             let shape = parts
@@ -752,11 +835,16 @@ fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnErro
             count,
             paragraphs,
         } => apply_restore(body_mut(parts, object)?, object, first, count, paragraphs),
+        // Handled by `design::apply_design` above.
+        Operation::SetColorScheme { .. }
+        | Operation::SetFontScheme { .. }
+        | Operation::SetSlideSize { .. }
+        | Operation::SetBackground { .. } => Err(TxnError::NoDesign),
         Operation::Batch(ops) => {
             let mut inverses: Vec<Operation> = Vec::with_capacity(ops.len());
             let mut changed = false;
             for op in ops {
-                match apply_inner(parts, op) {
+                match apply_inner(doc, op) {
                     Ok((inverse, c)) => {
                         changed |= c;
                         inverses.push(inverse);
@@ -764,7 +852,7 @@ fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnErro
                     Err(e) => {
                         // All or nothing: take back what this batch already did.
                         for inverse in inverses.into_iter().rev() {
-                            let _ = apply_inner(parts, inverse);
+                            let _ = apply_inner(doc, inverse);
                         }
                         return Err(e);
                     }
@@ -776,9 +864,9 @@ fn apply_inner(parts: &mut SlideParts, op: Operation) -> Result<Applied, TxnErro
     }
 }
 
-/// Apply `op` to the deck's parts and return its inverse. On an error nothing changed.
-pub fn apply(parts: &mut SlideParts, op: Operation) -> Result<Operation, TxnError> {
-    apply_inner(parts, op).map(|(inverse, _)| inverse)
+/// Apply `op` to the deck and return its inverse. On an error nothing changed.
+pub fn apply<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Operation, TxnError> {
+    apply_inner(doc, op).map(|(inverse, _)| inverse)
 }
 
 /// Paired undo and redo stacks over [`apply`]. The host keeps one per open deck.
@@ -824,8 +912,12 @@ impl History {
 
     /// Apply `op`, recording its inverse and clearing redo. Returns whether anything
     /// changed; a change of nothing leaves no undo entry.
-    pub fn apply(&mut self, parts: &mut SlideParts, op: Operation) -> Result<bool, TxnError> {
-        let (inverse, changed) = apply_inner(parts, op)?;
+    pub fn apply<D: Document + ?Sized>(
+        &mut self,
+        doc: &mut D,
+        op: Operation,
+    ) -> Result<bool, TxnError> {
+        let (inverse, changed) = apply_inner(doc, op)?;
         if !changed {
             return Ok(false);
         }
@@ -887,12 +979,15 @@ impl History {
     }
 
     /// Undo the last step; returns what it applied, `None` with nothing to undo.
-    pub fn undo(&mut self, parts: &mut SlideParts) -> Result<Option<Operation>, TxnError> {
+    pub fn undo<D: Document + ?Sized>(
+        &mut self,
+        doc: &mut D,
+    ) -> Result<Option<Operation>, TxnError> {
         let Some(op) = self.undo.pop() else {
             return Ok(None);
         };
         let applied = op.clone();
-        let inverse = match apply(parts, op) {
+        let inverse = match apply(doc, op) {
             Ok(i) => i,
             Err(e) => {
                 self.undo.push(applied);
@@ -906,12 +1001,15 @@ impl History {
     }
 
     /// Redo the last undone step; returns what it applied.
-    pub fn redo(&mut self, parts: &mut SlideParts) -> Result<Option<Operation>, TxnError> {
+    pub fn redo<D: Document + ?Sized>(
+        &mut self,
+        doc: &mut D,
+    ) -> Result<Option<Operation>, TxnError> {
         let Some(op) = self.redo.pop() else {
             return Ok(None);
         };
         let applied = op.clone();
-        let inverse = match apply(parts, op) {
+        let inverse = match apply(doc, op) {
             Ok(i) => i,
             Err(e) => {
                 self.redo.push(applied);
