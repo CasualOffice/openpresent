@@ -78,6 +78,9 @@ That is OpenCalc's way with cell fills and gridlines, and what poppler's Splash 
 LibreOffice reference by stroke adjustment. Curves, slanted lines, dashes, gradients and pictures
 keep smoothed edges; round corners and ends are adjusted only up to 2 px wide. The PDF backend
 leaves this to the viewer.
+Likewise each glyph of an upright, unskewed run is placed at the nearest whole device pixel, so
+its edges meet the grid the same way wherever its line falls, as Splash places glyphs and GDI a
+baseline; outlines are still unhinted and smoothed, and rotated runs keep exact positions.
 
 Glyph paths rather than `fillText` because `fillText` re-shapes and can disagree with the engine.
 The cost is losing LCD antialiasing and hinting, which matter little at slide scale and not at all
