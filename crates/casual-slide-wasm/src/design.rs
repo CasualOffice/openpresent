@@ -191,6 +191,11 @@ impl Document for DeckDoc<'_> {
     fn review_mut(&mut self) -> Option<&mut casual_slide_transaction::Review> {
         Some(self.1)
     }
+    fn properties_mut(
+        &mut self,
+    ) -> Option<&mut casual_slide_model::properties::DocumentProperties> {
+        Some(self.0.properties_mut())
+    }
 }
 
 /// Whether an operation changes more than one slide's picture: a theme or the slide

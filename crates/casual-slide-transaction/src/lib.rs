@@ -49,6 +49,8 @@ pub use design::{Document, MAX_SLIDE_SIZE, MIN_SLIDE_SIZE};
 mod review;
 pub mod rich;
 pub use review::Review;
+mod shared;
+pub use shared::sent_form;
 
 /// An error applying an operation. Each has a stable code (`docs/20`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -332,6 +334,21 @@ pub enum Operation {
         /// What.
         text: String,
     },
+    /// Insert `text` at `at` as typed text whose every run and line break has exactly
+    /// `properties`, rather than taking them from a neighbour: typed text as it crosses
+    /// to another editor, which must format it as its sender did (`COL-01`), and the
+    /// undo of a delete in a shared session. A line feed splits the paragraph as in
+    /// [`Operation::InsertText`].
+    InsertRun {
+        /// The shape.
+        object: ObjectId,
+        /// Where, in characters.
+        at: usize,
+        /// What.
+        text: String,
+        /// The run properties it has; `None` writes no `rPr`.
+        properties: Option<Box<CharacterProperties>>,
+    },
     /// Delete `[start, end)`. Paragraphs it spans merge into the first, which keeps its
     /// own paragraph properties. Elements this model does not know stay where they were.
     DeleteRange {
@@ -543,6 +560,13 @@ pub enum Operation {
         /// What they become.
         non_visual: Option<Box<casual_slide_model::shape::NonVisualDrawing>>,
     },
+    /// File > Info: the document properties, all three parts, whole. Its inverse is the
+    /// properties it replaced, so undo gives back the very model that was read and the
+    /// writer then patches nothing.
+    SetDocumentProperties {
+        /// What they become.
+        properties: Box<casual_slide_model::properties::DocumentProperties>,
+    },
     /// Several operations as one: applied in order, all or nothing, one undo step.
     Batch(Vec<Operation>),
 }
@@ -556,12 +580,15 @@ impl Operation {
             | Self::DeleteNode { node } => Some(*node),
             Self::InsertNode { node, .. } => Some(node.id),
             Self::InsertText { object, .. }
+            | Self::InsertRun { object, .. }
             | Self::DeleteRange { object, .. }
             | Self::FormatRange { object, .. }
             | Self::FormatParagraphs { object, .. }
             | Self::Restore { object, .. } => Some(*object),
             Self::SetTable { node, .. } | Self::SetNonVisual { node, .. } => Some(*node),
-            Self::SetChart { .. } | Self::SetAuthors { .. } => None,
+            Self::SetChart { .. }
+            | Self::SetAuthors { .. }
+            | Self::SetDocumentProperties { .. } => None,
             Self::SetComments { .. } | Self::SetNotes { .. } => None,
             Self::SetColorScheme { .. }
             | Self::SetFontScheme { .. }
@@ -631,12 +658,13 @@ impl Operation {
             Self::SetLook { .. } => "Format Shape",
             Self::DeleteNode { .. } => "Delete",
             Self::InsertNode { .. } => "Insert",
-            Self::InsertText { .. } => "Typing",
+            Self::InsertText { .. } | Self::InsertRun { .. } => "Typing",
             Self::DeleteRange { .. } => "Delete",
             Self::FormatRange { .. } | Self::FormatParagraphs { .. } => "Format",
             Self::Restore { .. } => "Edit",
             Self::SetTable { .. } => "Table",
             Self::SetChart { .. } => "Chart Data",
+            Self::SetDocumentProperties { .. } => "Properties",
             Self::SetColorScheme { .. } | Self::SetFontScheme { .. } => "Theme",
             Self::SetSlideSize { .. } => "Slide Size",
             Self::SetBackground { .. } => "Background",
@@ -720,7 +748,7 @@ fn body_mut(parts: &mut SlideParts, object: ObjectId) -> Result<&mut TextBody, T
         .ok_or(TxnError::NoText(object))
 }
 
-fn properties_of(item: &TextItem) -> Option<&CharacterProperties> {
+pub(crate) fn properties_of(item: &TextItem) -> Option<&CharacterProperties> {
     match item {
         TextItem::Run(r) => r.properties.as_deref(),
         TextItem::Break(b) => b.properties.as_deref(),
@@ -858,8 +886,59 @@ fn insert_plain(p: &mut Paragraph, c: usize, text: &str) {
     );
 }
 
-fn insert_break(p: &mut Paragraph, c: usize) {
-    let properties = typing_properties(p, c);
+/// Insert plain text with these run properties, joining a run that has them where
+/// one holds the character before or starts at `c`, else as a run of its own.
+fn insert_plain_as(
+    p: &mut Paragraph,
+    c: usize,
+    text: &str,
+    properties: &Option<Box<CharacterProperties>>,
+) {
+    if text.is_empty() {
+        return;
+    }
+    let mut acc = 0usize;
+    let mut target: Option<(usize, usize)> = None;
+    for (index, item) in p.items.iter().enumerate() {
+        let len = item_length(item);
+        if let TextItem::Run(run) = item
+            && run.properties == *properties
+        {
+            if acc < c && c <= acc.saturating_add(len) {
+                target = Some((index, c - acc));
+                break;
+            }
+            if acc == c && target.is_none() {
+                target = Some((index, 0));
+            }
+        }
+        acc = acc.saturating_add(len);
+        if acc > c {
+            break;
+        }
+    }
+    if let Some((index, at)) = target
+        && let Some(TextItem::Run(run)) = p.items.get_mut(index)
+    {
+        let (left, right) = split_chars(run.text.as_deref().unwrap_or(""), at);
+        run.text = Some(format!("{left}{text}{right}"));
+        return;
+    }
+    let index = split_at(&mut p.items, c);
+    p.items.insert(
+        index,
+        TextItem::Run(TextRun {
+            properties: properties.clone(),
+            text: Some(text.to_owned()),
+        }),
+    );
+}
+
+fn insert_break(p: &mut Paragraph, c: usize, given: Option<&Option<Box<CharacterProperties>>>) {
+    let properties = match given {
+        Some(p) => p.clone(),
+        None => typing_properties(p, c),
+    };
     let index = split_at(&mut p.items, c);
     p.items
         .insert(index, TextItem::Break(LineBreak { properties }));
@@ -892,6 +971,7 @@ fn apply_insert(
     object: ObjectId,
     at: usize,
     text: &str,
+    given: Option<&Option<Box<CharacterProperties>>>,
 ) -> Result<Applied, TxnError> {
     let (first, c) = locate(body, at)?;
     let Some(before) = body.paragraphs.get(first).cloned() else {
@@ -905,7 +985,10 @@ fn apply_insert(
     let mut pending = String::new();
     let flush = |body: &mut TextBody, current: usize, c: &mut usize, pending: &mut String| {
         if let Some(p) = body.paragraphs.get_mut(current) {
-            insert_plain(p, *c, pending);
+            match given {
+                Some(properties) => insert_plain_as(p, *c, pending, properties),
+                None => insert_plain(p, *c, pending),
+            }
             *c = c.saturating_add(pending.chars().count());
         }
         pending.clear();
@@ -925,7 +1008,7 @@ fn apply_insert(
             '\u{b}' => {
                 flush(body, current, &mut c, &mut pending);
                 if let Some(p) = body.paragraphs.get_mut(current) {
-                    insert_break(p, c);
+                    insert_break(p, c, given);
                     c = c.saturating_add(1);
                 }
             }
@@ -1173,7 +1256,10 @@ fn parent_of(root: &mut ShapeNode, id: ObjectId) -> Option<(&mut ShapeNode, usiz
     None
 }
 
-fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Applied, TxnError> {
+pub(crate) fn apply_inner<D: Document + ?Sized>(
+    doc: &mut D,
+    op: Operation,
+) -> Result<Applied, TxnError> {
     if let Some(applied) = design::apply_design(doc, &op)? {
         return Ok(applied);
     }
@@ -1250,8 +1336,20 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
             Ok((Operation::DeleteNode { node: id }, true))
         }
         Operation::InsertText { object, at, text } => {
-            apply_insert(body_mut(parts, object)?, object, at, &text)
+            apply_insert(body_mut(parts, object)?, object, at, &text, None)
         }
+        Operation::InsertRun {
+            object,
+            at,
+            text,
+            properties,
+        } => apply_insert(
+            body_mut(parts, object)?,
+            object,
+            at,
+            &text,
+            Some(&properties),
+        ),
         Operation::DeleteRange { object, start, end } => {
             apply_delete(body_mut(parts, object)?, object, start, end)
         }
@@ -1277,7 +1375,8 @@ fn apply_inner<D: Document + ?Sized>(doc: &mut D, op: Operation) -> Result<Appli
         Operation::SetColorScheme { .. }
         | Operation::SetFontScheme { .. }
         | Operation::SetSlideSize { .. }
-        | Operation::SetBackground { .. } => Err(TxnError::NoDesign),
+        | Operation::SetBackground { .. }
+        | Operation::SetDocumentProperties { .. } => Err(TxnError::NoDesign),
         // Handled by `rich::apply_rich` above.
         Operation::SetTable { node, .. } => Err(TxnError::NoTable(node)),
         Operation::SetChart { part, .. } => Err(TxnError::NoChart(part)),
@@ -1430,14 +1529,22 @@ impl History {
         op: Operation,
     ) -> Result<bool, TxnError> {
         self.admit(&op)?;
-        let journaled = self.journal.is_some().then(|| op.clone());
-        let (inverse, changed) = apply_inner(doc, op)?;
-        if !changed {
-            return Ok(false);
-        }
-        if let Some(op) = journaled {
-            self.note(op, &inverse);
-        }
+        let inverse = if self.journal.is_some() {
+            // Shared: send what another copy applies the same way, and keep for undo
+            // what takes this back over others' edits (`shared`).
+            let (sent, undo, _, changed) = shared::apply_shared(doc, op)?;
+            if !changed {
+                return Ok(false);
+            }
+            self.note(sent, &undo);
+            undo
+        } else {
+            let (inverse, changed) = apply_inner(doc, op)?;
+            if !changed {
+                return Ok(false);
+            }
+            inverse
+        };
         self.applied = self.applied.saturating_add(1);
         self.pushes = self.pushes.saturating_add(1);
         self.undo.push(inverse);
@@ -1495,6 +1602,30 @@ impl History {
         self.undo.last()
     }
 
+    /// Apply an undo or redo step, journaling it; its inverse, in the shared form when
+    /// a session is on.
+    fn step<D: Document + ?Sized>(
+        &mut self,
+        doc: &mut D,
+        op: Operation,
+    ) -> Result<Operation, TxnError> {
+        if self.journal.is_some() {
+            let (sent, undo, _, _) = shared::apply_shared(doc, op)?;
+            self.note(sent, &undo);
+            Ok(undo)
+        } else {
+            apply(doc, op)
+        }
+    }
+
+    /// Give `f` the undo stack, then the redo stack, each oldest first, to rebase
+    /// over an edit another participant made (`docs/24` §Undo). The top of each is
+    /// the last entry.
+    pub fn rebase_stacks(&mut self, f: &mut dyn FnMut(&mut [Operation])) {
+        f(&mut self.undo);
+        f(&mut self.redo);
+    }
+
     /// Undo the last step; returns what it applied, `None` with nothing to undo.
     pub fn undo<D: Document + ?Sized>(
         &mut self,
@@ -1508,14 +1639,13 @@ impl History {
             return Err(e);
         }
         let applied = op.clone();
-        let inverse = match apply(doc, op) {
+        let inverse = match self.step(doc, op) {
             Ok(i) => i,
             Err(e) => {
                 self.undo.push(applied);
                 return Err(e);
             }
         };
-        self.note(applied.clone(), &inverse);
         self.seal();
         self.applied = self.applied.saturating_add(1);
         self.redo.push(inverse);
@@ -1535,14 +1665,13 @@ impl History {
             return Err(e);
         }
         let applied = op.clone();
-        let inverse = match apply(doc, op) {
+        let inverse = match self.step(doc, op) {
             Ok(i) => i,
             Err(e) => {
                 self.redo.push(applied);
                 return Err(e);
             }
         };
-        self.note(applied.clone(), &inverse);
         self.seal();
         self.applied = self.applied.saturating_add(1);
         self.undo.push(inverse);

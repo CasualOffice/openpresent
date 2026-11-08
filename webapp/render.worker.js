@@ -44,7 +44,15 @@ import init, {
   picture_crop, set_picture_crop, reset_picture, set_picture_style,
   slide_comments, comment_counts, add_comment, reply_comment, resolve_comment, delete_comment,
   notes_body, text_body_runs, selection_list, rename_shape, set_shape_hidden, move_shape_z,
+  document_info, set_document_property, set_custom_property, remove_custom_property,
+  save_deck_as, edits_applied,
 } from "./pkg/casual_slide_wasm.js";
+
+// The File tab (`FILE-01`, `editor.file.js`): `{ id, op: "file", fn, args }` calls one of
+// these by name and answers `{ value, undo, edits }`; File > Info's properties are edits
+// with an undo step each. `{ op: "save-as", ext, dropMacros }` answers the bytes, and
+// `{ op: "edits" }` the edit counter autosave polls (`SAVE-01`).
+const FILE = { document_info, set_document_property, set_custom_property, remove_custom_property };
 
 // Co-editing (`COL-04`): what `collab.js` asks of the engine.
 const COLLAB = {
@@ -220,6 +228,16 @@ self.onmessage = async (event) => {
       let value = fn(...args);
       if (ArrayBuffer.isView(value)) value = Array.from(value);
       self.postMessage({ id, ok: true, value, count: slide_count(), undo: Array.from(undo_state()) });
+    } else if (msg.op === "file") {
+      const fn = Object.hasOwn(FILE, msg.fn) ? FILE[msg.fn] : null;
+      if (!fn) throw new Error("unknown request");
+      const value = fn(...(Array.isArray(msg.args) ? msg.args : []));
+      self.postMessage({ id, ok: true, value, undo: Array.from(undo_state()), edits: edits_applied() });
+    } else if (msg.op === "save-as") {
+      const bytes = save_deck_as(String(msg.ext || ""), !!msg.dropMacros);
+      self.postMessage({ id, ok: true, bytes: bytes.buffer }, [bytes.buffer]);
+    } else if (msg.op === "edits") {
+      self.postMessage({ id, ok: true, edits: edits_applied() });
     } else if (msg.op === "report") {
       self.postMessage({ id, ok: true, lines: slide_report(msg.index) });
     } else {

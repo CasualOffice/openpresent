@@ -507,10 +507,20 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .shp-style-thumb { display: flex; align-items: center; justify-content: center; height: 34px; box-sizing: border-box; border-radius: 2px; font-size: 13px; }
 
 /* Co-editing (`COL-04`): who is here, and others' marks over the slide. */
-.collab-status { display: inline-flex; align-items: center; gap: 4px; margin-left: 12px; font-size: 12px; color: var(--op-muted-text-color); white-space: nowrap; }
-.collab-status[hidden], .bottom-status[hidden] { display: none; }
-.collab-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.collab-names { margin-left: 4px; }
+.bottom-status[hidden], .presence-people[hidden] { display: none; }
+.presence-people { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 0; border-radius: 14px; background: none; cursor: pointer; }
+.presence-people:hover { background: var(--op-surface-color); }
+.presence-people:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+.people-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font: 600 10px/1 system-ui, sans-serif; border: 2px solid var(--op-background-color); box-sizing: border-box; flex: none; }
+.people-state { font-size: 11px; color: var(--op-muted-text-color); margin-left: 4px; }
+.people-list { position: fixed; z-index: 50; min-width: 200px; padding: 4px; background: var(--op-popover-background-color); border: 1px solid var(--op-control-border-color); border-radius: 4px; box-shadow: var(--op-popover-shadow); display: flex; flex-direction: column; }
+.people-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border: 0; background: none; font: inherit; font-size: 13px; color: inherit; text-align: left; cursor: pointer; border-radius: 3px; }
+.people-row:hover:not(:disabled) { background: var(--op-surface-color); }
+.people-row:disabled { cursor: default; color: inherit; }
+.people-row-name { flex: 1; }
+.people-row-where { font-size: 11px; color: var(--op-muted-text-color); }
+.thumb-person { position: absolute; top: 2px; right: 2px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; pointer-events: none; }
+.thumb-person-name { padding: 0 4px; border-radius: 3px; font: 10px/14px system-ui, sans-serif; color: #fff; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .presence-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .presence-outline { fill: none; }
 .presence-selection { opacity: .25; }
@@ -596,3 +606,71 @@ html:not(.op-has-deck) .notes-pane { display: none; }
 .np-b { font-weight: 700; }
 .np-i { font-style: italic; }
 .np-u { text-decoration: underline; }
+
+/* The File tab (`FILE-01`). The name in the title bar reads as text until hovered;
+ * clicked, an input with the label's own type and box takes its place (OpenCalc's
+ * `button.doc-name` and `.doc-rename`, `UX-CHR-10`). */
+button.doc-name {
+  font: inherit; color: inherit; background: none; border: 0; cursor: text;
+  padding: 2px 6px; border-radius: 5px; max-width: 40vw;
+}
+button.doc-name:hover { background: var(--op-surface-color); }
+button.doc-name:focus-visible { outline: 2px solid var(--op-accent-color); outline-offset: 1px; }
+.doc-rename {
+  font: inherit; font-weight: 600; color: var(--op-text-color); padding: 2px 6px;
+  background: var(--op-popover-background-color);
+  border: 1px solid var(--op-control-border-color); border-radius: 5px;
+}
+.doc-rename:focus { outline: none; border-color: var(--op-accent-color); }
+
+/* File > Info's Properties, and Advanced Properties. */
+.op-info-props { margin-top: 28px; }
+.op-props { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; align-items: center; margin-bottom: 18px; }
+.op-prop-row { display: contents; }
+.op-prop-label { font-size: 13px; color: var(--op-muted-text-color); }
+.op-prop-value { font-size: 13px; padding: 4px 0; }
+.op-prop-input {
+  font: inherit; font-size: 13px; color: var(--op-text-color); padding: 4px 6px; min-width: 0;
+  background: transparent; border: 1px solid transparent; border-radius: 4px; resize: vertical;
+}
+.op-prop-input:hover { border-color: var(--op-control-border-color); }
+.op-prop-input:focus { outline: none; border-color: var(--op-accent-color); background: var(--op-popover-background-color); }
+.op-prop-input::placeholder { color: var(--op-faint-text-color); }
+.op-modal-box:has(.op-tabs) { width: min(92vw, 640px); max-width: min(92vw, 640px); }
+.op-modal-body .op-prop-input { border-color: var(--op-control-border-color); }
+.op-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--op-border-color); margin-bottom: 12px; }
+.op-tab { font: inherit; font-size: 13px; padding: 6px 12px; border: 0; background: none; color: var(--op-text-color); cursor: pointer; border-bottom: 2px solid transparent; }
+.op-tab[aria-selected="true"] { border-bottom-color: var(--op-accent-color); font-weight: 600; }
+.op-custom-form { display: grid; grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr) auto auto; gap: 6px; }
+.op-custom-note { min-height: 1.2em; margin: 6px 0; font-size: 12.5px; }
+.op-custom-list { border: 1px solid var(--op-border-color); border-radius: 6px; max-height: 220px; overflow: auto; }
+.op-custom-row {
+  display: grid; grid-template-columns: 1fr 1fr 90px; gap: 8px; width: 100%; padding: 5px 8px;
+  font: inherit; font-size: 13px; text-align: left; border: 0; background: none; color: var(--op-text-color); cursor: pointer;
+}
+.op-custom-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-custom-row:hover, .op-custom-row[aria-selected="true"] { background: var(--op-surface-color); }
+.op-custom-head { font-weight: 600; cursor: default; border-bottom: 1px solid var(--op-border-color); }
+.op-custom-empty { padding: 8px; font-size: 13px; }
+.op-saveas { display: grid; grid-template-columns: max-content minmax(240px, 1fr); gap: 8px 12px; align-items: center; }
+.op-saveas > p { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12.5px; }
+
+/* Autosave's recovery bar (`SAVE-01`), and its standing state in the status bar. */
+.op-recovery { padding: 6px 16px; background: color-mix(in srgb, var(--op-accent-color) 10%, var(--op-background-color)); border-bottom: 1px solid var(--op-border-color); font-size: 13px; }
+.op-recovery[hidden] { display: none; }
+.op-recovery-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.op-recovery-note { color: var(--op-muted-text-color); }
+.op-recovery-actions { display: inline-flex; gap: 6px; margin-left: auto; }
+.autosave-state { color: var(--op-danger-color); font-size: 12px; margin-left: 8px; }
+
+/* File > Print: only the slides print, one a page, landscape, edge to edge. */
+.print-sheet { display: none; }
+@media print {
+  @page { size: landscape; margin: 0; }
+  body.editor-body > *:not(.print-sheet) { display: none !important; }
+  body.editor-body { background: #fff; }
+  .print-sheet { display: block; }
+  .print-page { break-after: page; page-break-after: always; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; }
+  .print-page:last-child { break-after: auto; page-break-after: auto; }
+  .print-slide { max-width: 100%; max-height: 100%; }
+}

@@ -297,27 +297,30 @@ export const FILE_RAIL = [
   { id: "open", label: "Open", icon: "folder_open", sections: [
     { items: [F("file.open", "folder_open", "Browse", "Open a PowerPoint presentation (.pptx) from this device. It stays in this browser")] },
   ] },
-  { id: "info", label: "Info", icon: "info", sections: [
+  // Info: the properties panel beside these is drawn by `editor.file.js` (`FILE-01`).
+  { id: "info", label: "Info", icon: "info", panel: "info", sections: [
     { items: [
+      F("file.properties", "settings", "Advanced Properties", "Every summary field, and custom properties: names, types and values saved with the presentation"),
       F("file.render-report", "warning", "What this slide leaves out", "Features on the current slide this build does not draw yet, by name and count"),
-      F("file.properties", "info", "Properties", "Title, author and other properties saved with the presentation"),
       F("file.version-history", "history", "Version History", "See and restore earlier versions of this presentation"),
     ] },
   ] },
-  { id: "save", label: "Save a Copy", icon: "save", sections: [
+  { id: "save", label: "Save As", icon: "save", sections: [
     { items: [
-      F("file.save", "save", "Save", "Download this presentation (.pptx). Unedited, it is the file you opened, byte for byte (Ctrl+S)"),
-      F("file.save-copy", "save", "Save a Copy", "Download a copy of this presentation (.pptx)"),
+      F("file.save", "save", "Save", "Download this presentation under its name. Unedited, it is the file you opened, byte for byte (Ctrl+S)"),
+      F("file.save-as", "save", "Save As", "Choose a name and a type: PowerPoint Presentation, Template or Show (F12)"),
+      F("file.save-copy", "arrow_download", "Download a Copy", "Download a copy of this presentation to this device"),
+      F("file.rename", "edit", "Rename", "Give this presentation a new name. Save, Save As and Export use it"),
     ] },
   ] },
-  { id: "export", label: "Export", icon: "arrow_download", sections: [
+  { id: "export", label: "Export", icon: "arrow_export", sections: [
     { items: [
       F("file.export-pdf", "document_pdf", "Download as PDF", "Save every slide as one PDF document, with text you can search and copy"),
       F("file.export-png", "image", "Download as Image", "Save the current slide as a PNG picture, 1920 pixels wide"),
     ] },
   ] },
   { id: "print", label: "Print", icon: "print", sections: [
-    { items: [F("file.print", "print", "Print", "Print the slides (Ctrl+P)")] },
+    { items: [F("file.print", "print", "Print", "Print the slides through this browser, one slide a page (Ctrl+P)")] },
   ] },
   { id: "share", label: "Share", icon: "share", sections: [
     { items: [F("file.share", "people", "Share with people", "Invite others to view or edit this presentation")] },

@@ -531,12 +531,6 @@ impl Viewer {
         label: Option<&str>,
     ) -> Result<u32, BridgeError> {
         let ordinal = self.slide_ordinal(index)?;
-        if rel.is_some() && self.is_shared() {
-            // A picture's bytes have no way to the other participants yet (`COL-04`).
-            return Err(BridgeError::Edit(
-                casual_slide_transaction::TxnError::NotShared,
-            ));
-        }
         // In a shared session, an id from this participant's own range.
         let mint = self.shared_mint();
         let parts = self.deck.parts();
@@ -614,9 +608,9 @@ impl Viewer {
             return Err(BridgeError::NotAPicture);
         }
         let ordinal = self.slide_ordinal(index)?;
-        self.minted = self.minted.saturating_add(1);
-        let rel = format!("{NEW_REL}{}", self.minted);
-        let key = format!("openpresent-new-media/{}", self.minted);
+        // Shared, its bytes cross with it, within the wire's bound (`COL-04`).
+        self.shared_media_fits(bytes.len())?;
+        let (rel, key) = self.mint_media();
         self.deck.add_media(ordinal, &rel, &key, bytes.clone());
         self.new_media.insert(
             rel.clone(),
@@ -663,7 +657,8 @@ impl Viewer {
         let bytes = self.patch_pass(bytes)?;
         let bytes = self.chart_pass(bytes)?;
         let bytes = self.design_pass(bytes)?;
-        self.review_pass(bytes)
+        let bytes = self.review_pass(bytes)?;
+        self.properties_pass(bytes)
     }
 
     /// What Design changed in themes and the slide size (`VS-12`), last, on the file the
