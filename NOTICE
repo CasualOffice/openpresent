@@ -97,6 +97,28 @@ The XSD schemas in tools/f4/ (coreProperties.xsd, dublin-core/) are local stubs
 written for this project, not copies; see tools/f4/validate.py.
 
 ===============================================================================
+3. Fonts
+===============================================================================
+
+  crates/casual-slide-text/fonts/   copied unmodified from OpenCalc at b23c67c,
+                                    which took them from the upstream releases
+                                    named in that folder's README.md
+
+  Roboto           Apache-2.0      Google (github.com/googlefonts/roboto-2)
+  Caladea          Apache-2.0      Huerta Tipografia (github.com/huertatipografica/Caladea)
+  Carlito          SIL OFL-1.1     The Carlito Project Authors (github.com/googlefonts/carlito)
+  Liberation Sans, Serif, Mono
+                   SIL OFL-1.1     Red Hat and Google (github.com/liberationfonts/liberation-fonts),
+                                   liberation-fonts-ttf-2.1.5
+
+The OFL texts ship unmodified beside the fonts, in
+crates/casual-slide-text/fonts/LICENSES/. The OFL governs the font files only and
+has no effect on the licence of this repository's code. The fonts are
+redistributed unmodified, not sold on their own, and no Reserved Font Name is
+used for a modified font. Each face is embedded in the built engine as bytes, so
+a distributed binary carries them under these same terms.
+
+===============================================================================
 4. Test fixtures written by other software
 ===============================================================================
 

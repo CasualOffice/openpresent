@@ -12,6 +12,8 @@ runs → font resolution and fallback → itemize (bidi, script) → shape
 The same result supplies drawing, caret positions, selection rectangles and hit testing, so
 what is clicked is what is drawn.
 
+**Built so far** (2026-11-08, `casual-slide-text`): font resolution and fallback, shaping, UAX #14 line breaking, line boxes with spacing and bullets, and glyph runs. Not yet: bidi across runs, tabs, columns, autofit, caret and hit-test geometry. Each is a row in [14](14-EXECUTION-TRACKER.md) under Tier 2D.
+
 **Why this reverses OpenCalc's ADR-018.** That ADR kept shaping out of WASM because the browser
 already draws complex scripts correctly and the editor never needs engine metrics to place a
 caret. Here, the browser would give each collaborator a different wrap, and the export a third.

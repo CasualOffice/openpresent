@@ -1,0 +1,756 @@
+//! Laying out a text body whose values are already resolved: runs to shaped
+//! items, items to lines, lines to positioned glyph runs.
+//!
+//! New here (OpenCalc does not wrap). Pure: the same body and frame give the same
+//! runs on every host, because every face is bundled or supplied and nothing is
+//! asked of the system.
+//!
+//! # Rules, and what they rest on
+//!
+//! | Rule | Evidence |
+//! | --- | --- |
+//! | A line's height is the face's `usWinAscent` plus `usWinDescent` at its largest run, times the line spacing percentage; points replace it | **Inferred**: PowerPoint's single spacing matches Windows' line metrics; to be measured against `DEC-17`'s PDFs |
+//! | Extra height from spacing goes above the baseline | **Inferred** |
+//! | `spcBef` and `spcAft` as a percentage are of the first line's single height | **Inferred**: ECMA-376 21.1.2.2.11 says "of the text size" without saying which |
+//! | `spcBef` of the first paragraph and `spcAft` of the last apply only with `spcFirstLastPara` | ECMA-376 21.1.2.1.1 |
+//! | The first line starts at `marL + indent`, later lines at `marL`; a bullet sits at `marL + indent` and pushes the text to `marL`, or past itself if wider | ECMA-376 21.1.2.2.7; the push is **Inferred** |
+//! | Trailing spaces do not count towards fitting or alignment | UAX #14 practice; **Inferred** for PowerPoint |
+//! | A word wider than the line breaks between characters | **Inferred** |
+//! | `just` and `dist` anchoring are laid out as top | Not yet modelled: `T2D4-01` |
+//!
+//! Not yet here: tabs, columns, vertical and rotated text, autofit's scale,
+//! kinsoku, bidi reordering across runs. Each is a row in `docs/14`.
+
+use skrifa::raw::TableProvider;
+use skrifa::{FontRef, MetadataProvider, instance::LocationRef, prelude::Size};
+
+use crate::breaks::{Break, opportunities};
+use crate::faces::TextFaces;
+
+/// A rectangle, in points, in whatever space the caller lays out in.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Frame {
+    /// Left edge.
+    pub x: f32,
+    /// Top edge.
+    pub y: f32,
+    /// Width.
+    pub width: f32,
+    /// Height.
+    pub height: f32,
+}
+
+/// 8-bit sRGB with alpha, 255 opaque.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct Rgba {
+    /// Red.
+    pub r: u8,
+    /// Green.
+    pub g: u8,
+    /// Blue.
+    pub b: u8,
+    /// Alpha.
+    pub a: u8,
+}
+
+impl Rgba {
+    /// Opaque black, what text is drawn in when nothing says otherwise.
+    pub const BLACK: Self = Self {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 255,
+    };
+}
+
+/// How one run is drawn.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct RunStyle {
+    /// The requested family, before substitution. `None` is the default family.
+    pub family: Option<String>,
+    /// Size in points.
+    pub size: f32,
+    /// Bold.
+    pub bold: bool,
+    /// Italic.
+    pub italic: bool,
+    /// Colour.
+    pub color: Rgba,
+}
+
+/// Text with one style. A line break inside a paragraph is a `\n` in `text`.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct StyledText {
+    /// The characters.
+    pub text: String,
+    /// How they are drawn.
+    pub style: RunStyle,
+}
+
+/// Horizontal alignment of a paragraph's lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Align {
+    /// `l`.
+    #[default]
+    Left,
+    /// `ctr`.
+    Center,
+    /// `r`.
+    Right,
+    /// `just`, `justLow`, `dist`, `thaiDist`: space is spread over every line but the last.
+    Justified,
+}
+
+/// Line or paragraph spacing.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Spacing {
+    /// A multiple of single spacing, `1.0` for 100%.
+    Percent(f32),
+    /// An absolute amount, in points.
+    Points(f32),
+}
+
+impl Default for Spacing {
+    fn default() -> Self {
+        Self::Percent(1.0)
+    }
+}
+
+/// One paragraph, resolved.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ParagraphLayout {
+    /// Alignment.
+    pub align: Align,
+    /// `marL`, points.
+    pub margin_left: f32,
+    /// `marR`, points.
+    pub margin_right: f32,
+    /// `indent`, points; negative hangs the first line.
+    pub indent: f32,
+    /// `lnSpc`.
+    pub line_spacing: Spacing,
+    /// `spcBef`.
+    pub space_before: Spacing,
+    /// `spcAft`.
+    pub space_after: Spacing,
+    /// The bullet, as the text it draws.
+    pub bullet: Option<StyledText>,
+    /// The runs, in order.
+    pub runs: Vec<StyledText>,
+    /// The paragraph mark's style, which sizes an empty paragraph.
+    pub end: RunStyle,
+}
+
+/// Vertical anchoring of the text in its frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Anchor {
+    /// `t`.
+    #[default]
+    Top,
+    /// `ctr`.
+    Middle,
+    /// `b`.
+    Bottom,
+}
+
+/// Distances from the frame's edges to the text, in points.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Insets {
+    /// `lIns`.
+    pub left: f32,
+    /// `tIns`.
+    pub top: f32,
+    /// `rIns`.
+    pub right: f32,
+    /// `bIns`.
+    pub bottom: f32,
+}
+
+/// A whole body, resolved.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct BodyLayout {
+    /// Insets.
+    pub insets: Insets,
+    /// `wrap="square"`. False: lines end only where the text says.
+    pub wrap: bool,
+    /// Vertical anchoring.
+    pub anchor: Anchor,
+    /// `spcFirstLastPara`.
+    pub space_first_last: bool,
+    /// The paragraphs.
+    pub paragraphs: Vec<ParagraphLayout>,
+}
+
+/// One glyph, at its origin on the baseline.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Glyph {
+    /// Glyph id in the run's face.
+    pub id: u16,
+    /// Pen position, points.
+    pub x: f32,
+    /// Baseline, points, `y` down.
+    pub y: f32,
+}
+
+/// Glyphs in one face, size and colour, ready to outline and fill.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GlyphRun {
+    /// The face's bytes, for `skrifa` to outline. Bundled or supplied, so `'static`.
+    pub face: &'static [u8],
+    /// Size in points.
+    pub size: f32,
+    /// Fill colour.
+    pub color: Rgba,
+    /// Bold was asked for and the face has none: embolden when drawing.
+    pub synthetic_bold: bool,
+    /// The glyphs, in drawing order.
+    pub glyphs: Vec<Glyph>,
+    /// The characters these glyphs draw, for text extraction. Document data.
+    pub text: String,
+}
+
+/// What laying out a body produced.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct TextLayout {
+    /// The glyph runs, in reading order.
+    pub runs: Vec<GlyphRun>,
+    /// Height of the laid-out text, points, without insets.
+    pub content_height: f32,
+    /// Lines laid out.
+    pub lines: usize,
+    /// Each requested family that was drawn with another, once, in order of first use.
+    pub substitutions: Vec<FontSubstitution>,
+    /// Scripts in the text that no available face can draw.
+    pub missing_scripts: Vec<crate::faces::MissingScript>,
+}
+
+/// A requested family drawn with a bundled one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FontSubstitution {
+    /// The family the file asked for.
+    pub requested: String,
+    /// The bundled family drawn instead.
+    pub used: &'static str,
+    /// How close the match is.
+    pub kind: crate::substitution::SubstituteKind,
+}
+
+/// Line metrics of a face at a size, in points.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Metrics {
+    ascent: f32,
+    descent: f32,
+}
+
+fn metrics(face: &[u8], size: f32) -> Metrics {
+    let fallback = Metrics {
+        ascent: size * 0.9,
+        descent: size * 0.25,
+    };
+    let Ok(font) = FontRef::new(face) else {
+        return fallback;
+    };
+    let upem = font
+        .head()
+        .map(|h| f32::from(h.units_per_em()))
+        .unwrap_or(0.0);
+    if let (Ok(os2), true) = (font.os2(), upem > 0.0) {
+        let ascent = f32::from(os2.us_win_ascent());
+        let descent = f32::from(os2.us_win_descent());
+        if ascent + descent > 0.0 {
+            return Metrics {
+                ascent: ascent * size / upem,
+                descent: descent * size / upem,
+            };
+        }
+    }
+    let m = font.metrics(Size::new(size), LocationRef::default());
+    if m.ascent - m.descent > 0.0 {
+        Metrics {
+            ascent: m.ascent,
+            descent: -m.descent,
+        }
+    } else {
+        fallback
+    }
+}
+
+/// One shaped glyph, with its cluster as an offset into the paragraph's text.
+#[derive(Debug, Clone, Copy)]
+struct Shaped {
+    id: u16,
+    cluster: usize,
+    advance: f32,
+    x_offset: f32,
+    y_offset: f32,
+}
+
+/// Text in one face and style.
+#[derive(Debug, Clone)]
+struct Item {
+    start: usize,
+    end: usize,
+    face: Option<&'static [u8]>,
+    style: usize,
+    synthetic_bold: bool,
+    glyphs: Vec<Shaped>,
+}
+
+/// A paragraph's text, its styles, and its items, the bullet first if any.
+struct Prepared<'a> {
+    text: String,
+    styles: Vec<&'a RunStyle>,
+    items: Vec<Item>,
+    /// Byte length of the bullet's text at the start of `text`; zero without one.
+    bullet_len: usize,
+}
+
+fn same_face(a: Option<&'static [u8]>, b: Option<&'static [u8]>) -> bool {
+    match (a, b) {
+        (Some(a), Some(b)) => core::ptr::eq(a, b),
+        (None, None) => true,
+        _ => false,
+    }
+}
+
+fn prepare(paragraph: &ParagraphLayout) -> Prepared<'_> {
+    let mut prepared = Prepared {
+        text: String::new(),
+        styles: Vec::new(),
+        items: Vec::new(),
+        bullet_len: 0,
+    };
+    let bullet = paragraph.bullet.iter().filter(|b| !b.text.is_empty());
+    let has_text = paragraph.runs.iter().any(|r| !r.text.is_empty());
+    let runs = bullet
+        .clone()
+        .filter(|_| has_text)
+        .chain(paragraph.runs.iter());
+    for (index, run) in runs.enumerate() {
+        let base = prepared.text.len();
+        prepared.text.push_str(&run.text);
+        if index == 0
+            && has_text
+            && paragraph
+                .bullet
+                .as_ref()
+                .is_some_and(|b| !b.text.is_empty())
+        {
+            prepared.bullet_len = run.text.len();
+        }
+        let style = prepared.styles.len();
+        prepared.styles.push(&run.style);
+        let faces = TextFaces::new(
+            run.style.family.as_deref(),
+            run.style.bold,
+            run.style.italic,
+            &run.text,
+        );
+        // Split the run where the face drawing it changes.
+        let mut segment: Option<(usize, Option<&'static [u8]>, bool)> = None;
+        let mut close = |from: usize, to: usize, face: Option<&'static [u8]>, synth: bool| {
+            if to > from {
+                prepared.items.push(Item {
+                    start: base + from,
+                    end: base + to,
+                    face,
+                    style,
+                    synthetic_bold: synth,
+                    glyphs: Vec::new(),
+                });
+            }
+        };
+        for (offset, ch) in run.text.char_indices() {
+            let resolved = faces.resolve(ch);
+            // A line feed is never drawn; it stands alone so it shapes to nothing.
+            let face = if ch == '\n' { None } else { resolved.face };
+            let breaks_segment = ch == '\n' || segment.is_some_and(|(_, f, _)| !same_face(f, face));
+            if breaks_segment && let Some((from, f, s)) = segment.take() {
+                close(from, offset, f, s);
+            }
+            if segment.is_none() {
+                segment = Some((offset, face, resolved.synthetic_bold));
+            }
+            if ch == '\n'
+                && let Some((from, f, s)) = segment.take()
+            {
+                close(from, offset + ch.len_utf8(), f, s);
+            }
+        }
+        if let Some((from, f, s)) = segment.take() {
+            close(from, run.text.len(), f, s);
+        }
+    }
+    for item in &mut prepared.items {
+        let Some(style) = prepared.styles.get(item.style) else {
+            continue;
+        };
+        let Some(text) = prepared.text.get(item.start..item.end) else {
+            continue;
+        };
+        item.glyphs = match item.face {
+            Some(face) => crate::shape::run(face, text, style.size)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|g| Shaped {
+                    id: g.id,
+                    cluster: item.start.saturating_add(g.cluster as usize),
+                    advance: g.advance,
+                    x_offset: g.x_offset,
+                    y_offset: g.y_offset,
+                })
+                .collect(),
+            // Nothing can draw it: it advances by the width it would have, and
+            // draws nothing, so the rest of the line is where it should be.
+            None => text
+                .char_indices()
+                .filter(|&(_, ch)| ch != '\n')
+                .map(|(offset, ch)| Shaped {
+                    id: 0,
+                    cluster: item.start.saturating_add(offset),
+                    advance: crate::char_advance(
+                        &TextFaces::new(style.family.as_deref(), style.bold, style.italic, text)
+                            .resolve(ch),
+                        ch,
+                        style.size,
+                    ),
+                    x_offset: 0.0,
+                    y_offset: 0.0,
+                })
+                .collect(),
+        };
+    }
+    prepared
+}
+
+/// Advance of the text before each byte offset: `prefix[i]` is the width of the
+/// glyphs whose cluster is before `i`.
+fn prefix_widths(prepared: &Prepared<'_>) -> Vec<f32> {
+    let len = prepared.text.len();
+    let mut at = vec![0.0f32; len.saturating_add(1)];
+    for glyph in prepared.items.iter().flat_map(|i| i.glyphs.iter()) {
+        if let Some(slot) = at.get_mut(glyph.cluster.saturating_add(1)) {
+            *slot += glyph.advance;
+        }
+    }
+    let mut total = 0.0;
+    for slot in &mut at {
+        total += *slot;
+        *slot = total;
+    }
+    at
+}
+
+fn width(prefix: &[f32], from: usize, to: usize) -> f32 {
+    let a = prefix.get(from).copied().unwrap_or(0.0);
+    let b = prefix.get(to).copied().unwrap_or(a);
+    (b - a).max(0.0)
+}
+
+/// `to`, moved back over trailing white space and line feeds.
+fn trim_end(text: &str, from: usize, to: usize) -> usize {
+    text.get(from..to)
+        .map_or(to, |s| from + s.trim_end_matches(char::is_whitespace).len())
+}
+
+/// Line spans `[start, end)` for a paragraph, greedy, first line `first` wide and
+/// the rest `rest` wide. `None` for either is unbounded.
+fn break_lines(
+    text: &str,
+    prefix: &[f32],
+    skip: usize,
+    first: Option<f32>,
+    rest: Option<f32>,
+) -> Vec<(usize, usize)> {
+    const EPS: f32 = 0.01;
+    let mut lines = Vec::new();
+    let mut start = skip;
+    let mut candidate: Option<usize> = None;
+    let avail = |lines: &Vec<(usize, usize)>| if lines.is_empty() { first } else { rest };
+    let fits = |lines: &Vec<(usize, usize)>, from: usize, to: usize| {
+        avail(lines).is_none_or(|w| width(prefix, from, trim_end(text, from, to)) <= w + EPS)
+    };
+    for Break { at, mandatory } in opportunities(text) {
+        if at <= start {
+            continue;
+        }
+        if !fits(&lines, start, at) {
+            if let Some(c) = candidate.take() {
+                lines.push((start, c));
+                start = c;
+            }
+            // One word wider than the line: break it between characters.
+            while !fits(&lines, start, at) {
+                let limit = avail(&lines).unwrap_or(f32::INFINITY);
+                let mut end = start;
+                for (offset, ch) in text.get(start..at).unwrap_or("").char_indices() {
+                    let next = start + offset + ch.len_utf8();
+                    if end > start
+                        && width(prefix, start, trim_end(text, start, next)) > limit + EPS
+                    {
+                        break;
+                    }
+                    end = next;
+                }
+                if end >= at || end <= start {
+                    break;
+                }
+                lines.push((start, end));
+                start = end;
+            }
+        }
+        if mandatory {
+            lines.push((start, at));
+            start = at;
+            candidate = None;
+        } else {
+            candidate = Some(at);
+        }
+    }
+    if lines.is_empty() {
+        lines.push((skip, text.len()));
+    }
+    lines
+}
+
+/// Lay out `body` in `frame`.
+#[must_use]
+pub fn layout_body(body: &BodyLayout, frame: Frame) -> TextLayout {
+    let insets = body.insets;
+    let left = frame.x + insets.left;
+    let inner_width = (frame.width - insets.left - insets.right).max(0.0);
+    let content_height = (frame.height - insets.top - insets.bottom).max(0.0);
+    let top = frame.y + insets.top;
+
+    let mut runs: Vec<GlyphRun> = Vec::new();
+    let mut y = 0.0f32;
+    let mut lines_total = 0usize;
+    let count = body.paragraphs.len();
+
+    for (index, paragraph) in body.paragraphs.iter().enumerate() {
+        let prepared = prepare(paragraph);
+        let prefix = prefix_widths(&prepared);
+        let bullet_width = width(&prefix, 0, prepared.bullet_len);
+        let first_x = paragraph.margin_left + paragraph.indent;
+        let text_first_x = if prepared.bullet_len > 0 {
+            if paragraph.indent < 0.0 && first_x + bullet_width <= paragraph.margin_left {
+                paragraph.margin_left
+            } else {
+                first_x + bullet_width
+            }
+        } else {
+            first_x
+        };
+        let right = inner_width - paragraph.margin_right;
+        let (first_w, rest_w) = if body.wrap {
+            (
+                Some((right - text_first_x).max(0.0)),
+                Some((right - paragraph.margin_left).max(0.0)),
+            )
+        } else {
+            (None, None)
+        };
+        let spans = break_lines(
+            &prepared.text,
+            &prefix,
+            prepared.bullet_len,
+            first_w,
+            rest_w,
+        );
+
+        let end_metrics = metrics(
+            crate::faces::face_bytes_for(
+                paragraph.end.family.as_deref(),
+                paragraph.end.bold,
+                paragraph.end.italic,
+            ),
+            paragraph.end.size,
+        );
+        let mut first_single = None;
+        let mut lines_y = Vec::with_capacity(spans.len());
+        let mut height = 0.0f32;
+        for (line_index, &(start, end)) in spans.iter().enumerate() {
+            let from = if line_index == 0 { 0 } else { start };
+            let mut m: Option<Metrics> = None;
+            for item in &prepared.items {
+                if item.end <= from || item.start >= end.max(from + 1) {
+                    continue;
+                }
+                let Some(style) = prepared.styles.get(item.style) else {
+                    continue;
+                };
+                let face = item.face.unwrap_or_else(|| {
+                    crate::faces::face_bytes_for(style.family.as_deref(), style.bold, style.italic)
+                });
+                let im = metrics(face, style.size);
+                m = Some(m.map_or(im, |m| Metrics {
+                    ascent: m.ascent.max(im.ascent),
+                    descent: m.descent.max(im.descent),
+                }));
+            }
+            let m = m.unwrap_or(end_metrics);
+            let single = m.ascent + m.descent;
+            first_single.get_or_insert(single);
+            let line_height = match paragraph.line_spacing {
+                Spacing::Percent(p) => single * p,
+                Spacing::Points(p) => p,
+            };
+            height += line_height;
+            lines_y.push((height - m.descent, line_index));
+        }
+        let single = first_single.unwrap_or(end_metrics.ascent + end_metrics.descent);
+        let amount = |s: Spacing| match s {
+            Spacing::Percent(p) => single * p,
+            Spacing::Points(p) => p,
+        };
+        if index > 0 || body.space_first_last {
+            y += amount(paragraph.space_before);
+        }
+
+        for (&(start, end), &(baseline, line_index)) in spans.iter().zip(&lines_y) {
+            let baseline = y + baseline;
+            let trimmed = trim_end(&prepared.text, start, end);
+            let line_w = width(&prefix, start, trimmed);
+            let (line_x, avail) = if line_index == 0 {
+                (text_first_x, right - text_first_x)
+            } else {
+                (paragraph.margin_left, right - paragraph.margin_left)
+            };
+            let is_last = line_index + 1 == spans.len();
+            let slack = avail - line_w;
+            let (mut pen, gap_extra) = match paragraph.align {
+                Align::Left => (line_x, 0.0),
+                Align::Center => (line_x + slack / 2.0, 0.0),
+                Align::Right => (line_x + slack, 0.0),
+                Align::Justified => {
+                    let gaps = prepared
+                        .text
+                        .get(start..trimmed)
+                        .map_or(0, |s| s.chars().filter(|c| *c == ' ').count());
+                    if is_last || gaps == 0 || !body.wrap || slack <= 0.0 {
+                        (line_x, 0.0)
+                    } else {
+                        (line_x, slack / gaps as f32)
+                    }
+                }
+            };
+            let baseline = top + baseline;
+            // The bullet, on the first line only, at the first line's indent.
+            if line_index == 0 && prepared.bullet_len > 0 {
+                let mut bullet_pen = first_x;
+                let at = LinePlace {
+                    origin_x: left,
+                    baseline,
+                    gap_extra: 0.0,
+                };
+                emit(
+                    &prepared,
+                    (0, prepared.bullet_len),
+                    at,
+                    &mut bullet_pen,
+                    &mut runs,
+                );
+            }
+            let at = LinePlace {
+                origin_x: left,
+                baseline,
+                gap_extra,
+            };
+            emit(&prepared, (start, trimmed), at, &mut pen, &mut runs);
+            lines_total += 1;
+        }
+        y += height;
+        if index + 1 < count || body.space_first_last {
+            y += amount(paragraph.space_after);
+        }
+    }
+
+    let offset = match body.anchor {
+        Anchor::Top => 0.0,
+        Anchor::Middle => (content_height - y) / 2.0,
+        Anchor::Bottom => content_height - y,
+    };
+    if offset != 0.0 {
+        for glyph in runs.iter_mut().flat_map(|r| r.glyphs.iter_mut()) {
+            glyph.y += offset;
+        }
+    }
+
+    TextLayout {
+        runs,
+        content_height: y,
+        lines: lines_total,
+        substitutions: Vec::new(),
+        missing_scripts: Vec::new(),
+    }
+}
+
+/// Where one line's glyphs go.
+#[derive(Debug, Clone, Copy)]
+struct LinePlace {
+    /// The x every pen position is measured from.
+    origin_x: f32,
+    /// The line's baseline, absolute.
+    baseline: f32,
+    /// Extra advance after each space, for justified lines.
+    gap_extra: f32,
+}
+
+/// Push the glyph runs for the text in `span`, advancing `pen`.
+fn emit(
+    prepared: &Prepared<'_>,
+    span: (usize, usize),
+    at: LinePlace,
+    pen: &mut f32,
+    out: &mut Vec<GlyphRun>,
+) {
+    let (from, to) = span;
+    for item in &prepared.items {
+        if item.end <= from || item.start >= to {
+            continue;
+        }
+        let Some(style) = prepared.styles.get(item.style) else {
+            continue;
+        };
+        let mut glyphs = Vec::new();
+        for g in item
+            .glyphs
+            .iter()
+            .filter(|g| g.cluster >= from && g.cluster < to)
+        {
+            if item.face.is_some() {
+                glyphs.push(Glyph {
+                    id: g.id,
+                    x: at.origin_x + *pen + g.x_offset,
+                    y: at.baseline - g.y_offset,
+                });
+            }
+            *pen += g.advance;
+            if at.gap_extra != 0.0
+                && prepared
+                    .text
+                    .get(g.cluster..)
+                    .is_some_and(|s| s.starts_with(' '))
+            {
+                *pen += at.gap_extra;
+            }
+        }
+        if let (Some(face), false) = (item.face, glyphs.is_empty()) {
+            out.push(GlyphRun {
+                face,
+                size: style.size,
+                color: style.color,
+                synthetic_bold: item.synthetic_bold,
+                glyphs,
+                text: prepared
+                    .text
+                    .get(item.start.max(from)..item.end.min(to))
+                    .unwrap_or_default()
+                    .to_owned(),
+            });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;
