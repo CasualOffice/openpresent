@@ -71,6 +71,14 @@ A stroke is never drawn thinner than one device pixel, as PowerPoint draws a 0.5
 as a solid pixel at low zoom; a line end is sized in line widths from at least 2 pt, so a thin
 line's arrowhead stays readable (`SHAPE-02`; an estimate, not measured against PowerPoint).
 
+In the PNG backend a solid rectangle fill, and a solid undashed stroke made only of lines across
+and down the page, have their edges moved to whole pixels, at least one pixel wide, and are drawn
+unsmoothed (`FH-06`): a 0.5 pt box outline is one solid row, not two rows at two-thirds cover.
+That is OpenCalc's way with cell fills and gridlines, and what poppler's Splash does to the
+LibreOffice reference by stroke adjustment. Curves, slanted lines, dashes, gradients and pictures
+keep smoothed edges; round corners and ends are adjusted only up to 2 px wide. The PDF backend
+leaves this to the viewer.
+
 Glyph paths rather than `fillText` because `fillText` re-shapes and can disagree with the engine.
 The cost is losing LCD antialiasing and hinting, which matter little at slide scale and not at all
 in a rotated title, but do matter in small text at low zoom. `SPK-01` looks at this directly, on
