@@ -42,7 +42,7 @@ const SHAPES = ["insert.shape.rectangle", "insert.shape.oval", "insert.shape.lin
 const PRESENT = ["slideshow.from-beginning", "slideshow.from-current", "slideshow.presenter-view"];
 
 // Our own gallery swatches: plain colour pairs, not Microsoft's theme artwork.
-const THEMES = [["Office", "#ffffff", "#156082"], ["Ion", "#1e5155", "#6ad7cf"], ["Facet", "#ffffff", "#6f9a3f"], ["Slate", "#3b3b3b", "#d0a54b"], ["Retro", "#f4efe1", "#b34a3c"], ["Dusk", "#2b2d42", "#ef8354"]];
+const THEMES = [["Plain", "#ffffff", "#156082"], ["Lagoon", "#1e5155", "#6ad7cf"], ["Meadow", "#ffffff", "#6f9a3f"], ["Graphite", "#3b3b3b", "#d0a54b"], ["Paper", "#f4efe1", "#b34a3c"], ["Dusk", "#2b2d42", "#ef8354"]];
 const TRANSITIONS = [["None", "dismiss"], ["Morph", "shape_union"], ["Fade", "slide_transition"], ["Push", "arrow_next"], ["Wipe", "arrow_previous"], ["Split", "layout_row_two_split_top"], ["Reveal", "eye"], ["Cut", "cut"]];
 const ANIMATIONS = [["None", "dismiss"], ["Appear", "sparkle"], ["Fade", "text_effects_sparkle"], ["Fly In", "arrow_next"], ["Float In", "arrow_maximize"], ["Split", "layout_row_two_split_top"], ["Wipe", "arrow_previous"], ["Zoom", "zoom_in"]];
 const SHAPE_STYLES = [["Colored Outline", "#ffffff", "#156082"], ["Colored Fill", "#156082", "#156082"], ["Light 1 Fill", "#dbe9f4", "#156082"], ["Intense Effect", "#0e4a63", "#0e4a63"]];

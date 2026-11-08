@@ -228,6 +228,9 @@ function gallery(spec) {
     b.setAttribute("role", "option");
     b.title = t[0];
     if (t[1].startsWith("#")) {
+      // A swatch is our own preview, not a named theme: a click opens the
+      // command's own chooser, so the tile says that rather than a name.
+      b.title = `${spec.label}…`;
       const sw = h("span", "rb-gal-swatch");
       sw.style.background = t[1];
       const aa = h("span", "rb-gal-aa", "Aa");
