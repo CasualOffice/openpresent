@@ -379,7 +379,9 @@ impl Patch<'_, '_> {
             (Some(el), Some(b), Some(a)) => {
                 use casual_slide_model::slide::BackgroundFill;
                 let unread = match &b.fill {
-                    None => true,
+                    // A `bg` with no choice in it was read whole when it holds nothing
+                    // else: the new choice goes into it (`p:EG_Background`).
+                    None => !el.children(self.w.tree, self.w.part)?.is_empty(),
                     Some(BackgroundFill::Properties(p)) => p.has_fill && p.fill.is_none(),
                     Some(BackgroundFill::Reference(_)) => false,
                 };
