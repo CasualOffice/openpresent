@@ -63,7 +63,7 @@ Since then the work runs as **vertical slices** ([roadmap](docs/06-ROADMAP-AND-D
 | Select, move, resize, rotate, multi-select, align, delete shapes, with undo (slice 6) | ✅ Built | Drag budget, groups, CI browser run (`VS-14`) |
 | Present: slide show, Presenter View, notes, PowerPoint's keys (slice 7) | ✅ Built | Automatic advance, show settings, CI run (`VS-16`) |
 | Build slides: New Slide from a layout, duplicate, hide, reorder, delete; insert text box, picture and all 187 shapes (slice 8, `SHAPE-01`) | ✅ Built | Change layout, shape effects, freeform (`VS-08`, `SHAPE-02`) |
-| Co-edit: Share a link, see each other's edits, carets and presence (slice 9) | 🟡 Built; the CI two-page run is red on `main` (`CI-23`) | Resume, tokens, more edits on the wire (`COL-02` to `COL-08`) |
+| Co-edit: Share a link, see each other's edits, carets and presence (slice 9) | 🟡 Built; the two-browser run passes on CI (run 42515688718 at `7bc2092`) | Resume, tokens, more edits on the wire (`COL-02` to `COL-08`) |
 | Transitions and animations: six of each, played in the show, Animation Pane (slice 10) | ✅ Built | Effect options, timing, goldens (`VS-10`) |
 | Insert and edit tables and charts (column, bar, line, pie), Edit Data (slice 11) | ✅ Built | Cell typing through the text engine, merge, more chart types (`VS-20`) |
 | Themes, variants, slide size, background (slice 12) | ✅ Built | Slide Master editing (`DSN-01`) |
