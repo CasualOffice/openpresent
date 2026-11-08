@@ -135,10 +135,13 @@ function draw(g) {
 }
 
 async function paint() {
+  const deck = state.deck, at = obj();
   try {
     draw(await geometry());
   } catch (e) {
-    status(`The caret could not be placed: ${e.message}`);
+    // A deck opened, or the box closed, while the engine answered: the question was
+    // about a shape no longer open, so there is nothing to report (`UX-013`).
+    if (state.deck === deck && obj() === at) status(`The caret could not be placed: ${e.message}`);
   }
   changed();
 }

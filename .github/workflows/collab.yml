@@ -60,3 +60,6 @@ jobs:
         run: npm install --no-save --no-package-lock playwright-core@1.48.2
       - name: Two pages co-edit and save the same deck
         run: node tests/browser/collab-two-pages.mjs server/casual-slide-collab-server/target/debug/casual-slide-collab-server
+      # UX-013: the caret on a deck of another slide size, the same editor and server.
+      - name: The caret lands on the text on a 10-inch 16:9 deck
+        run: node tests/browser/caret-on-other-slide-size.mjs server/casual-slide-collab-server/target/debug/casual-slide-collab-server

@@ -125,6 +125,9 @@ async function drawStage({ quiet = false } = {}) {
   const frame = byId("slide-frame");
   frame.style.width = `${css}px`;
   frame.style.height = `${css * aspect()}px`;
+  // At Fit the stage does not scroll, but keeps a scroll offset from a zoom or from
+  // focusing the text input, which pushes the slide off the top (`UX-013`).
+  if (state.zoom === "fit") { const stage = byId("stage"); stage.scrollTop = 0; stage.scrollLeft = 0; }
   const url = await draw(index, css * dpr(), quiet ? 9 : 5);
   if (!url) return;
   // Decoded before it is shown, so the picture and the caret drawn with it change
