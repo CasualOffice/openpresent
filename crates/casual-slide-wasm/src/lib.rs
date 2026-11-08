@@ -31,8 +31,10 @@ pub use design::{BackgroundChoice, BuiltinTheme, Fit, THEMES};
 
 mod build;
 mod edit;
-pub use build::{Insert, MAX_PICTURE_BYTES};
+mod shapes;
+pub use build::{Ends, Insert, MAX_PICTURE_BYTES};
 pub use edit::{Move, Toggle};
+pub use shapes::{MAX_LINE_WIDTH, parse_color, preset_outline, theme_style};
 mod show;
 pub use show::{MAX_NOTES_CHARS, MAX_TRANSITION_MS, ShowSlide, ShowTransition};
 
@@ -1454,4 +1456,126 @@ pub fn insert_picture(
             [x as i64, y as i64, cx as i64, cy as i64],
         )
     })
+}
+
+/// The names of every preset shape the geometry engine has, sorted, for the Shapes
+/// gallery (`SHAPE-01`).
+#[wasm_bindgen]
+#[must_use]
+pub fn preset_names() -> Vec<String> {
+    casual_slide_geometry::preset_shapes()
+        .iter()
+        .map(|d| d.name.to_string())
+        .collect()
+}
+
+/// The Shapes gallery's icon for preset `name` at `w` by `h` units, as SVG path data
+/// ([`preset_outline`]); empty for a name the table lacks (`SHAPE-01`).
+#[wasm_bindgen]
+pub fn preset_icon(name: &str, w: f64, h: f64) -> String {
+    preset_outline(name, w, h).unwrap_or_default()
+}
+
+/// Insert gallery preset `preset` on slide `index` at a box in EMU; `flags` bit 0
+/// flips it horizontally, bit 1 vertically, bits 2 and 3 give a line one arrowhead or
+/// two. Named `label` and a number. Returns its node.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a name the preset table lacks.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)] // a box and its flags cross the boundary as numbers
+pub fn insert_preset(
+    index: u32,
+    preset: &str,
+    label: &str,
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+    flags: u32,
+) -> Result<u32, JsError> {
+    with_viewer(|v| {
+        let ends = match (flags >> 2) & 3 {
+            0 => Ends::Plain,
+            1 => Ends::Tail,
+            _ => Ends::Both,
+        };
+        v.insert_preset(
+            index as usize,
+            preset,
+            ends,
+            label,
+            [x as i64, y as i64, cx as i64, cy as i64],
+            (flags & 1 != 0, flags & 2 != 0),
+        )
+    })
+}
+
+/// Shape `node`'s yellow adjust handles on slide `index`: x and y in slide EMU, each.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a node the slide's top level lacks.
+#[wasm_bindgen]
+pub fn shape_handles(index: u32, node: u32) -> Result<Vec<f64>, JsError> {
+    with_viewer(|v| v.handles(index as usize, node))
+}
+
+/// Drag handle `handle` of shape `node` to a point in slide EMU; `first` starts the
+/// gesture, which `edit_break_typing` ends. Whether anything changed.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a shape or handle that is not there.
+#[wasm_bindgen]
+pub fn drag_shape_handle(
+    index: u32,
+    node: u32,
+    handle: u32,
+    x: f64,
+    y: f64,
+    first: bool,
+) -> Result<bool, JsError> {
+    with_viewer(|v| v.drag_handle(index as usize, node, handle as usize, (x, y), first))
+}
+
+/// Shape Fill: `none` or a colour, as [`parse_color`] reads it.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a colour it cannot read, or a node that takes no fill.
+#[wasm_bindgen]
+pub fn set_shape_fill(index: u32, node: u32, spec: &str) -> Result<bool, JsError> {
+    with_viewer(|v| v.set_fill(index as usize, node, spec))
+}
+
+/// Shape Outline: `what` 0 colour, 1 weight in EMU, 2 dash, 3 arrowheads.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a value it cannot read.
+#[wasm_bindgen]
+pub fn set_shape_outline(index: u32, node: u32, what: u32, value: &str) -> Result<bool, JsError> {
+    with_viewer(|v| v.set_outline(index as usize, node, what, value))
+}
+
+/// Shape Styles: theme style `row`, `column` of the gallery.
+///
+/// # Errors
+///
+/// `CS-WSM-0006` for a style the gallery lacks.
+#[wasm_bindgen]
+pub fn set_shape_style(index: u32, node: u32, row: u32, column: u32) -> Result<bool, JsError> {
+    with_viewer(|v| v.set_theme_style(index as usize, node, row, column))
+}
+
+/// Slide `index`'s ten theme colours, as the colour pickers show them.
+///
+/// # Errors
+///
+/// `CS-RND-*` for a slide that is not there.
+#[wasm_bindgen]
+pub fn slide_palette(index: u32) -> Result<Vec<String>, JsError> {
+    with_viewer(|v| v.palette(index as usize))
 }

@@ -57,6 +57,11 @@ fn each_op_applied_then_its_inverse_gives_the_model_back() {
         },
         Operation::DeleteNode { node: id(2) },
         Operation::DeleteNode { node: id(4) },
+        Operation::SetLook {
+            node: id(3),
+            properties: Box::new(look()),
+            style: Some(Box::default()),
+        },
         Operation::Batch(vec![
             Operation::SetTransform {
                 node: id(3),
@@ -141,4 +146,58 @@ fn a_step_that_changes_nothing_is_not_an_undo_step() {
         )
         .unwrap();
     assert!(!history.can_undo());
+}
+
+fn look() -> casual_slide_model::drawing::ShapeProperties {
+    use casual_slide_model::fill::Fill;
+    use casual_slide_model::geometry::{GeomGuide, Geometry, PresetGeometry, ShapeType};
+    casual_slide_model::drawing::ShapeProperties {
+        geometry: Some(Geometry::Preset(PresetGeometry {
+            preset: Some(ShapeType::RoundRect),
+            adjust: Some(vec![GeomGuide {
+                name: Some("adj".into()),
+                formula: Some("val 30000".into()),
+            }]),
+        })),
+        fill: Some(Fill::None),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn a_look_change_is_one_undo_step_and_keeps_the_transform() {
+    let mut parts = deck();
+    let start = parts.clone();
+    let mut history = History::new();
+    history
+        .apply(
+            &mut parts,
+            Operation::SetLook {
+                node: id(2),
+                properties: Box::new(look()),
+                style: None,
+            },
+        )
+        .unwrap();
+    let shape = parts.get(0).unwrap().node(id(2)).unwrap();
+    assert_eq!(shape.properties, look());
+    assert_eq!(
+        shape.transform,
+        start.get(0).unwrap().node(id(2)).unwrap().transform
+    );
+    history.undo(&mut parts).unwrap();
+    assert_eq!(parts, start);
+    assert_eq!(
+        apply(
+            &mut parts,
+            Operation::SetLook {
+                node: id(99),
+                properties: Box::default(),
+                style: None,
+            },
+        )
+        .unwrap_err()
+        .code(),
+        "CS-TXN-0001"
+    );
 }

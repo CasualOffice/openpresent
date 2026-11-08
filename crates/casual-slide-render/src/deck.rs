@@ -230,6 +230,13 @@ impl Deck {
         }
     }
 
+    /// The theme slide `index` draws with, its master's: for a host's colour pickers
+    /// (`SHAPE-01`).
+    pub fn theme_of_slide(&self, index: usize) -> Option<&Theme> {
+        let ordinal = self.parts.structure.slide(index)?;
+        self.scene(ordinal).theme
+    }
+
     /// The file's bytes exactly as they arrived, for a save that starts from them.
     pub fn source_bytes(&self) -> Vec<u8> {
         self.package.save_unedited()

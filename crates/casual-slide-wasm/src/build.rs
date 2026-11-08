@@ -65,6 +65,54 @@ pub enum Insert {
     Line,
     /// A line ending in an arrowhead.
     Arrow,
+    /// Any preset of the Shapes gallery, by its table name, which is also its
+    /// `ST_ShapeType` token (`SHAPE-01`). A line preset is a connector; its ends are
+    /// [`Ends`].
+    Preset(&'static str, Ends),
+}
+
+/// The arrowheads a line preset is drawn with, as the Lines gallery offers it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Ends {
+    /// None.
+    #[default]
+    Plain,
+    /// One at the end the drag finished on.
+    Tail,
+    /// One at each end.
+    Both,
+}
+
+/// The presets drawn as a connector, `p:cxnSp`, as PowerPoint's Lines gallery does.
+pub(crate) fn is_connector(prst: &str) -> bool {
+    matches!(
+        prst,
+        "line"
+            | "straightConnector1"
+            | "bentConnector2"
+            | "bentConnector3"
+            | "bentConnector4"
+            | "bentConnector5"
+            | "curvedConnector2"
+            | "curvedConnector3"
+            | "curvedConnector4"
+            | "curvedConnector5"
+    )
+}
+
+/// The presets that are outlines rather than solids: PowerPoint inserts them with the
+/// theme's thin line and no fill.
+fn is_outline(prst: &str) -> bool {
+    matches!(
+        prst,
+        "arc"
+            | "leftBracket"
+            | "rightBracket"
+            | "leftBrace"
+            | "rightBrace"
+            | "bracketPair"
+            | "bracePair"
+    )
 }
 
 impl Insert {
@@ -87,6 +135,7 @@ impl Insert {
             Self::Oval => "Oval",
             Self::Line => "Straight Connector",
             Self::Arrow => "Straight Arrow Connector",
+            Self::Preset(..) => "Shape",
         }
     }
 }
@@ -159,10 +208,24 @@ fn renumber_part(part: &mut SlidePart, ordinal: u32) {
 }
 
 /// The XML of one new shape, at a box in EMU.
-fn shape_xml(kind: Insert, id: u32, name: &str, rel: Option<&str>, b: [i64; 4]) -> String {
+fn shape_xml(
+    kind: Insert,
+    id: u32,
+    name: &str,
+    rel: Option<&str>,
+    b: [i64; 4],
+    flip: (bool, bool),
+) -> String {
     let [x, y, cx, cy] = b;
-    let xfrm =
-        format!("<a:xfrm><a:off x=\"{x}\" y=\"{y}\"/><a:ext cx=\"{cx}\" cy=\"{cy}\"/></a:xfrm>");
+    let flips = match flip {
+        (false, false) => "",
+        (true, false) => " flipH=\"1\"",
+        (false, true) => " flipV=\"1\"",
+        (true, true) => " flipH=\"1\" flipV=\"1\"",
+    };
+    let xfrm = format!(
+        "<a:xfrm{flips}><a:off x=\"{x}\" y=\"{y}\"/><a:ext cx=\"{cx}\" cy=\"{cy}\"/></a:xfrm>"
+    );
     let nv = |container: &str, own: &str| {
         format!(
             "<p:{container}><p:cNvPr id=\"{id}\" name=\"{name}\"/>{own}<p:nvPr/></p:{container}>"
@@ -210,6 +273,33 @@ fn shape_xml(kind: Insert, id: u32, name: &str, rel: Option<&str>, b: [i64; 4]) 
                 style(2, 1, "lt1", true)
             )
         }
+        (Insert::Preset(prst, ends), None) if is_connector(prst) => {
+            let line = match ends {
+                Ends::Plain => "",
+                Ends::Tail => "<a:ln><a:tailEnd type=\"triangle\"/></a:ln>",
+                Ends::Both => {
+                    "<a:ln><a:headEnd type=\"triangle\"/><a:tailEnd type=\"triangle\"/></a:ln>"
+                }
+            };
+            format!(
+                "<p:cxnSp>{}<p:spPr>{xfrm}<a:prstGeom prst=\"{prst}\"><a:avLst/></a:prstGeom>{line}</p:spPr>{}</p:cxnSp>",
+                nv("nvCxnSpPr", "<p:cNvCxnSpPr/>"),
+                style(1, 0, "tx1", false)
+            )
+        }
+        (Insert::Preset(prst, _), None) => {
+            let (look, font) = if is_outline(prst) {
+                (style(1, 0, "tx1", false), "")
+            } else {
+                (style(2, 1, "lt1", true), "<a:pPr algn=\"ctr\"/>")
+            };
+            format!(
+                "<p:sp>{}<p:spPr>{xfrm}<a:prstGeom prst=\"{prst}\"><a:avLst/></a:prstGeom></p:spPr>{look}\
+                 <p:txBody><a:bodyPr rtlCol=\"0\" anchor=\"ctr\"/><a:lstStyle/>\
+                 <a:p>{font}<a:endParaRPr lang=\"en-US\" dirty=\"0\"/></a:p></p:txBody></p:sp>",
+                nv("nvSpPr", "<p:cNvSpPr/>")
+            )
+        }
         (Insert::Line | Insert::Arrow, None) => {
             let line = if kind == Insert::Arrow {
                 "<a:ln><a:tailEnd type=\"triangle\"/></a:ln>"
@@ -223,6 +313,30 @@ fn shape_xml(kind: Insert, id: u32, name: &str, rel: Option<&str>, b: [i64; 4]) 
             )
         }
     }
+}
+
+/// The longest shape name a host may give, in characters.
+const MAX_NAME_CHARS: usize = 128;
+
+/// A host's shape name as XML attribute text: control characters dropped, the rest
+/// escaped, at most [`MAX_NAME_CHARS`].
+fn escape_name(name: &str) -> String {
+    let mut out = String::new();
+    for c in name
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(MAX_NAME_CHARS)
+    {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 /// The highest `cNvPr/@id` and node number in a part.
@@ -396,12 +510,14 @@ impl Viewer {
         Ok(())
     }
 
-    fn insert_node(
+    pub(crate) fn insert_node(
         &mut self,
         index: usize,
         kind: Insert,
         rel: Option<&str>,
         b: [i64; 4],
+        flip: (bool, bool),
+        label: Option<&str>,
     ) -> Result<u32, BridgeError> {
         let ordinal = self.slide_ordinal(index)?;
         let parts = self.deck.parts();
@@ -411,6 +527,8 @@ impl Viewer {
         let id = top_spid.checked_add(1).ok_or(BridgeError::BadArgument)?;
         let name = if rel.is_some() {
             format!("Picture {}", id.saturating_sub(1))
+        } else if let Some(label) = label {
+            format!("{} {}", escape_name(label), id.saturating_sub(1))
         } else {
             format!("{} {}", kind.base_name(), id.saturating_sub(1))
         };
@@ -418,7 +536,7 @@ impl Viewer {
         let b = [clamp(b[0]), clamp(b[1]), clamp(b[2]), clamp(b[3])];
         let xml = format!(
             "<p:sld {NAMESPACES}><p:cSld><p:spTree>{TREE_HEAD}{}</p:spTree></p:cSld></p:sld>",
-            shape_xml(kind, id, &name, rel, b)
+            shape_xml(kind, id, &name, rel, b, flip)
         );
         let read = read_slide(xml.as_bytes(), "ppt/slides/openpresent-insert.xml", ordinal)?;
         let mut node = read
@@ -455,7 +573,7 @@ impl Viewer {
         kind: Insert,
         b: [i64; 4],
     ) -> Result<u32, BridgeError> {
-        self.insert_node(index, kind, None, b)
+        self.insert_node(index, kind, None, b, (false, false), None)
     }
 
     /// Insert > Picture: PNG or JPEG bytes, told apart by their signature, at this box.
@@ -483,7 +601,14 @@ impl Viewer {
                 content_type: content_type.to_owned(),
             },
         );
-        self.insert_node(index, Insert::Rectangle, Some(&rel), b)
+        self.insert_node(
+            index,
+            Insert::Rectangle,
+            Some(&rel),
+            b,
+            (false, false),
+            None,
+        )
     }
 
     /// The part a new part's copy chain starts from: a layout, or a slide of the file.

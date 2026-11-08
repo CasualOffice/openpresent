@@ -15,7 +15,8 @@
 // Text (`VS-05`): `{ op: "text", fn, args }`, one of the bridge's `text_*` calls by name.
 // The slide show (`VS-07`): `{ op: "plan" }`, each slide's hidden flag and transition,
 // and `{ op: "notes", index }`, a slide's speaker notes as text. Design (`VS-12`):
-// `{ op: "design", fn, args }` and `{ op: "themes" }`. Out: `{ id, ok: true, ... }` or
+// `{ op: "design", fn, args }` and `{ op: "themes" }`. Shapes (`SHAPE-01`): `{ op: "icons",
+// size }`, every preset's name and icon path. Out: `{ id, ok: true, ... }` or
 // `{ id, ok: false, error }`, where `error` is the engine's message with its code.
 // Nothing here fetches anything but the engine itself, from this origin.
 
@@ -28,6 +29,8 @@ import init, {
   design_themes, design_apply_theme, design_slide_size, design_background,
   open_blank, slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
+  preset_names, preset_icon, insert_preset, shape_handles, drag_shape_handle,
+  set_shape_fill, set_shape_outline, set_shape_style, slide_palette,
 } from "./pkg/casual_slide_wasm.js";
 
 // Design (`VS-12`): `{ id, op: "design", fn, args }` calls one of these by name and
@@ -46,6 +49,9 @@ const TEXT = {
 const BUILD = {
   slide_layouts, slide_layout, new_slide, duplicate_slide, delete_slide, move_slide,
   hidden_slides, set_slide_hidden, insert_shape, insert_picture,
+  // Shapes (`SHAPE-01`): insert a preset, its yellow handles, Shape Format.
+  insert_preset, shape_handles, drag_shape_handle, set_shape_fill, set_shape_outline,
+  set_shape_style, slide_palette, edit_break_typing,
 };
 
 const ready = init({ module_or_path: new URL("./pkg/casual_slide_wasm_bg.wasm", import.meta.url) });
@@ -112,6 +118,12 @@ self.onmessage = async (event) => {
       self.postMessage({ id, ok: true, plan, effects });
     } else if (msg.op === "notes") {
       self.postMessage({ id, ok: true, notes: slide_notes(msg.index) });
+    } else if (msg.op === "icons") {
+      // The Shapes gallery (`SHAPE-01`): every preset's name and its icon's path data,
+      // at `size` units square, drawn by the geometry engine.
+      const size = Number(msg.size) || 32;
+      const names = Array.from(preset_names());
+      self.postMessage({ id, ok: true, names, icons: names.map((n) => preset_icon(n, size, size)) });
     } else if (msg.op === "build") {
       const fn = Object.hasOwn(BUILD, msg.fn) ? BUILD[msg.fn] : null;
       if (!fn) throw new Error("unknown request");

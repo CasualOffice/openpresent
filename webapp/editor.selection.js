@@ -194,7 +194,18 @@ function dropGhostWhenDrawn() {
   setTimeout(done, 3000);
 }
 
+/// Who draws over the selection, as the yellow adjust handles (`editor.shapes.js`):
+/// each is told the selected shape after every paint, or `null` while a drag runs.
+const painters = [];
+export function onPaint(f) { painters.push(f); }
+
 function paint() {
+  paintSelection();
+  const s = drag || text.editing() ? null : shape();
+  for (const f of painters) f(s ? { ...s, index: state.current } : null);
+}
+
+function paintSelection() {
   const l = layer();
   for (const el of [...l.children]) if (!el.classList.contains("sel-ghost")) el.remove();
   if (state.reading || !state.deck) return;

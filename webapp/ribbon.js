@@ -649,6 +649,10 @@ function closeBackstage() {
   el?.querySelector(".rb-file")?.focus();
 }
 
+/// Show tab `id`, as PowerPoint opens Shape Format on a shape just drawn. Before the
+/// ribbon is built it does nothing.
+export let selectTab = () => {};
+
 /// Build the shell before `anchor` (the workspace). Returns the ribbon.
 export async function start(anchor) {
   if (el) return el;
@@ -718,6 +722,7 @@ export async function start(anchor) {
     fit(panels.get(id));
     queueSync();
   }
+  selectTab = (id) => { if (panels.has(id)) select(id); };
 
   const applyLayout = (v) => {
     el.classList.toggle("rb-simplified", v === "simplified");
