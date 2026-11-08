@@ -14,6 +14,8 @@ This is the rule for opening and closing work. [06](06-ROADMAP-AND-DELIVERY.md) 
 A task belongs to exactly one tier or phase. Tracker rows that are wider than a task are **tier rows**, and are
 split into tasks when the tier opens.
 
+**Slices (owner instruction 44).** After Phase 1, the unit above a task is a **vertical slice**: a thin feature a user can use, cut through model, layout, render, UI and save, with an outcome, an end point and a time box ([06](06-ROADMAP-AND-DELIVERY.md) §After Phase 1). A slice opens and closes as a phase does below, and only the owner closes one. Depth is added in later passes, each a task.
+
 ## Phase lifecycle
 
 ```
