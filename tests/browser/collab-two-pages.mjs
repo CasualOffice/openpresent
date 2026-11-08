@@ -39,12 +39,26 @@ async function waitForServer() {
   fail(`the server did not answer on ${ORIGIN}`);
 }
 
+/// Poll `fn` in the page until it returns true. Not `page.waitForFunction`: that
+/// rebuilds the predicate from a string inside the page, which the editor's CSP
+/// (`script-src 'self' 'wasm-unsafe-eval'`, no `unsafe-eval`) rightly refuses (`CI-23`).
+/// `page.evaluate` sends the function over the DevTools protocol instead, which CSP
+/// does not govern, so the editor's policy stays exactly as it ships.
+async function until(page, fn, what, timeout = 20000) {
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    if (await page.evaluate(fn)) return;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  fail(`timed out after ${timeout} ms waiting for ${what}`);
+}
+
 /// Open the editor and wait for its engine and first slide.
 async function open(page, url) {
   page.on("dialog", (d) => fail(`a ${d.type()} dialog appeared: ${d.message()}`));
   page.on("pageerror", (e) => fail(`a page error: ${e.message}`));
   await page.goto(url);
-  await page.waitForFunction(() => document.querySelector("#thumbs .thumb") !== null, null, { timeout: 30000 });
+  await page.locator("#thumbs .thumb").first().waitFor({ state: "attached", timeout: 30000 });
 }
 
 /// The title placeholder's centre on the blank deck's first slide.
@@ -55,11 +69,11 @@ async function clickTitle(page) {
 
 /// Wait until this page has nothing unacknowledged and nothing arrives for a while.
 async function settle(page) {
-  await page.waitForFunction(async () => {
+  await until(page, async () => {
     const core = await import("/editor.core.js");
     const r = await core.request({ op: "collab", fn: "collab_unacknowledged", args: [] }, { priority: 9 });
     return r.value === false;
-  }, null, { timeout: 20000, polling: 200 });
+  }, "every edit to be acknowledged");
 }
 
 async function bytesOf(page) {
@@ -99,7 +113,7 @@ async function main() {
     await ada.keyboard.press("Escape");
     await grace.addInitScript(() => sessionStorage.setItem("op.name", "Grace"));
     await open(grace, link);
-    await ada.waitForFunction(() => document.querySelectorAll("#presence-people .people-badge").length === 2, null, { timeout: 20000 });
+    await until(ada, () => document.querySelectorAll("#presence-people .people-badge").length === 2, "two people present");
     // Both type into the title at once.
     await clickTitle(ada);
     await clickTitle(grace);

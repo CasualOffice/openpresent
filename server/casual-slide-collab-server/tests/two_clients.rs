@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use casual_slide_model::shape::{NodeKind, ObjectId, ShapeNode};
 use casual_slide_model::slide::{CommonSlideData, SlideKind, SlidePart, SlideParts};
-use casual_slide_model::text::{Paragraph, TextBody, TextItem, TextRun};
 use casual_slide_model::text::CharacterProperties;
+use casual_slide_model::text::{Paragraph, TextBody, TextItem, TextRun};
 use casual_slide_transaction::collab::wire::{Codec, Id, SlideEngine, WireOp, WireTransform};
 use casual_slide_transaction::collab::{
     ClientId, ClientMessage, ClientSession, Engine, Presence, Replica, ServerMessage,
@@ -101,9 +101,7 @@ impl Codec for Plain {
 impl Replica<SlideEngine> for Copy {
     type Error = String;
     fn apply_remote(&mut self, op: &WireOp) -> Result<(), String> {
-        let op = op
-            .operation(&Plain)
-            .map_err(|e| e.to_string())?;
+        let op = op.operation(&Plain).map_err(|e| e.to_string())?;
         apply(&mut self.0, op)
             .map(|_| ())
             .map_err(|e| e.to_string())
